@@ -180,6 +180,9 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
 }
 .inbox-badge {
   width: 22px;
@@ -198,6 +201,34 @@
   margin: 0;
   font-size: 0.83rem;
   color: var(--ink);
+  flex: 1;
+}
+.inbox-chevron {
+  color: var(--ink-faint);
+  font-size: 0.9rem;
+}
+
+.inbox-list {
+  margin: 0 1.1rem 1.2rem;
+}
+.inbox-item {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.inbox-item:last-child {
+  border-bottom: none;
+}
+.inbox-item .tx-row {
+  padding: 0;
+  border-bottom: none;
+}
+.inbox-item.done {
+  opacity: 0.5;
+}
+.inbox-done-note {
+  margin: 0.3rem 0 0;
+  font-size: 0.78rem;
+  color: var(--accent);
 }
 
 .section-label {

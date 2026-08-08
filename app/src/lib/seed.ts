@@ -87,6 +87,22 @@ export const seedTransactions: Transaction[] = [
     aiRaw: 'uber 18.40',
     deletedAt: null,
   },
+  {
+    // Uncategorized — Tier 1/2 parsing landed the amount but the parser
+    // wasn't confident on category, so it degraded to the inbox (doc 04,
+    // doc 07 "The inbox") instead of guessing or erroring. Test data for
+    // the Inbox screen: nothing else in the app currently produces one.
+    id: 'tx-4',
+    accountId: 'acc-visa',
+    categoryId: null,
+    amountCents: -3200,
+    currency: 'CAD',
+    occurredOn: isoDaysAgo(0),
+    note: null,
+    source: 'ai',
+    aiRaw: 'sushi jantar uns 32',
+    deletedAt: null,
+  },
 ];
 
 const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)

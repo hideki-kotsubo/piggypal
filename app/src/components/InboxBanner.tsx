@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useStore } from '../lib/store';
 
 // docs/07 D25: banner only, count-gated — never a permanent tab.
@@ -7,9 +8,10 @@ export function InboxBanner() {
   if (count === 0) return null;
 
   return (
-    <div className="inbox-banner">
+    <Link to="/inbox" className="inbox-banner">
       <div className="inbox-badge">{count}</div>
       <p>{count} {count === 1 ? 'entry needs' : 'entries need'} a category</p>
-    </div>
+      <span className="inbox-chevron">›</span>
+    </Link>
   );
 }
