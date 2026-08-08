@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { EntryZone } from './components/EntryZone';
 import { InboxBanner } from './components/InboxBanner';
 import { BudgetBars } from './components/BudgetBars';
@@ -18,9 +19,9 @@ export default function App() {
     <main className="home">
       <div className="app-bar">
         <span className="wordmark">piggypal</span>
-        <button className="kebab" aria-label="Settings">
+        <Link to="/accounts" className="kebab" aria-label="Settings">
           <span /><span /><span />
-        </button>
+        </Link>
       </div>
 
       <EntryZone onSubmitted={setToast} />
