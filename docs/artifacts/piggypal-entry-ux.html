@@ -1,0 +1,802 @@
+<title>piggypal — manual entry UX</title>
+<style>
+  :root {
+    --bg: #eef0ea;
+    --surface: #ffffff;
+    --surface-sunken: #f4f5f0;
+    --ink: #1e211c;
+    --ink-muted: #5c6259;
+    --ink-faint: #8b9186;
+    --line: #dadedb;
+    --accent: #3f7d69;
+    --accent-ink: #ffffff;
+    --accent-soft: #dceae3;
+    --warn: #b8752e;
+    --warn-soft: #f3e3d0;
+    --shadow: 0 30px 60px -25px rgba(30, 33, 28, 0.35);
+
+    --serif: Charter, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141713;
+      --surface: #1d211b;
+      --surface-sunken: #171a15;
+      --ink: #edeee7;
+      --ink-muted: #9ba398;
+      --ink-faint: #6b7267;
+      --line: #2c322a;
+      --accent: #6fbfa0;
+      --accent-ink: #0f1512;
+      --accent-soft: #24352c;
+      --warn: #d99a52;
+      --warn-soft: #3a2c1c;
+      --shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141713;
+    --surface: #1d211b;
+    --surface-sunken: #171a15;
+    --ink: #edeee7;
+    --ink-muted: #9ba398;
+    --ink-faint: #6b7267;
+    --line: #2c322a;
+    --accent: #6fbfa0;
+    --accent-ink: #0f1512;
+    --accent-soft: #24352c;
+    --warn: #d99a52;
+    --warn-soft: #3a2c1c;
+    --shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.6);
+  }
+  :root[data-theme="light"] {
+    --bg: #eef0ea;
+    --surface: #ffffff;
+    --surface-sunken: #f4f5f0;
+    --ink: #1e211c;
+    --ink-muted: #5c6259;
+    --ink-faint: #8b9186;
+    --line: #dadedb;
+    --accent: #3f7d69;
+    --accent-ink: #ffffff;
+    --accent-soft: #dceae3;
+    --warn: #b8752e;
+    --warn-soft: #f3e3d0;
+    --shadow: 0 30px 60px -25px rgba(30, 33, 28, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  body { overflow-x: hidden; }
+
+  .page {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 4rem 1.5rem 6rem;
+  }
+
+  .intro {
+    max-width: 40rem;
+    margin-bottom: 3.5rem;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 0.9rem;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: clamp(1.9rem, 4vw, 2.6rem);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    margin: 0 0 0.9rem;
+  }
+  .lede {
+    font-size: 1.02rem;
+    line-height: 1.6;
+    color: var(--ink-muted);
+    margin: 0;
+    max-width: 38rem;
+  }
+  .lede b { color: var(--ink); font-weight: 600; }
+
+  /* ---- stage: three phone frames ---- */
+  .stage {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2.25rem;
+    align-items: start;
+  }
+  @media (max-width: 920px) {
+    .stage { grid-template-columns: 1fr; max-width: 24rem; margin: 0 auto; }
+  }
+
+  .frame-block { margin: 0; }
+  .frame-head {
+    margin-bottom: 1rem;
+  }
+  .frame-step {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    display: block;
+    margin-bottom: 0.3rem;
+  }
+  .frame-title {
+    font-weight: 600;
+    font-size: 1rem;
+    margin: 0 0 0.25rem;
+  }
+  .frame-sub {
+    font-size: 0.87rem;
+    color: var(--ink-muted);
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .phone {
+    position: relative;
+    width: 100%;
+    max-width: 300px;
+    margin: 1.4rem auto 0;
+    border-radius: 34px;
+    background: linear-gradient(180deg, #2a2e27, #14161200);
+    background-color: var(--ink);
+    padding: 10px;
+    box-shadow: var(--shadow);
+  }
+  :root[data-theme="light"] .phone,
+  @media (prefers-color-scheme: light) { }
+  .phone .notch {
+    position: absolute;
+    top: 10px; left: 50%;
+    transform: translateX(-50%);
+    width: 84px; height: 18px;
+    background: var(--ink);
+    border-radius: 0 0 12px 12px;
+    z-index: 2;
+  }
+  .screen {
+    position: relative;
+    background: var(--surface);
+    border-radius: 26px;
+    overflow: hidden;
+    min-height: 560px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .app-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.6rem 1.1rem 0.6rem;
+  }
+  .wordmark {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 1.05rem;
+    letter-spacing: -0.01em;
+  }
+  .kebab {
+    display: flex;
+    gap: 3px;
+    padding: 6px;
+  }
+  .kebab span {
+    width: 3.5px; height: 3.5px;
+    border-radius: 50%;
+    background: var(--ink-faint);
+    display: block;
+  }
+
+  /* entry zone */
+  .entry-zone {
+    margin: 0.6rem 1.1rem 0;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--surface-sunken);
+    overflow: hidden;
+  }
+  .entry-input {
+    padding: 0.8rem 0.9rem;
+    font-size: 0.87rem;
+    color: var(--ink-faint);
+    border-bottom: 1px solid transparent;
+  }
+  .entry-input.active {
+    color: var(--ink);
+    border-bottom-color: var(--line);
+    background: var(--surface);
+  }
+  .entry-input .caret {
+    display: inline-block;
+    width: 1px; height: 1em;
+    background: var(--accent);
+    vertical-align: -0.15em;
+    margin-left: 2px;
+    animation: blink 1.1s step-end infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .keypad-panel { padding: 0.7rem 0.7rem 0.85rem; }
+  .amount-preview {
+    font-family: var(--serif);
+    font-size: 1.9rem;
+    font-variant-numeric: tabular-nums;
+    padding: 0.1rem 0.4rem 0.5rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.15rem;
+  }
+  .amount-preview .cur { font-size: 1.05rem; color: var(--ink-faint); }
+  .amount-preview .zero { color: var(--ink-faint); }
+
+  .pill-row {
+    display: flex;
+    gap: 6px;
+    margin: 0.1rem 0.4rem 0.6rem;
+  }
+  .pill-tap {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 0.28rem 0.55rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+  }
+  .pill-tap svg { opacity: 0.55; }
+
+  .keys {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .key {
+    font-family: var(--sans);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.95rem;
+    text-align: center;
+    padding: 0.55rem 0;
+    border-radius: 10px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--ink);
+  }
+  .key.done {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 2px;
+  }
+  .chip {
+    font-size: 0.76rem;
+    padding: 0.34rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink-muted);
+  }
+  .chip.picked {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+  }
+  .chip.ghost { color: var(--ink-faint); border-style: dashed; }
+  .toggle-pill {
+    margin-left: auto;
+    font-size: 0.72rem;
+    font-family: var(--mono);
+    padding: 0.3rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: var(--ink-faint);
+  }
+
+  /* inbox banner */
+  .inbox-banner {
+    margin: 0.7rem 1.1rem 0;
+    background: var(--warn-soft);
+    border-radius: 14px;
+    padding: 0.65rem 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .inbox-badge {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--warn);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .inbox-banner p {
+    margin: 0;
+    font-size: 0.78rem;
+    color: var(--ink);
+    flex: 1;
+  }
+  .chev { color: var(--ink-faint); flex-shrink: 0; }
+
+  /* budgets */
+  .section-label {
+    font-family: var(--mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 1.05rem 1.1rem 0.5rem;
+  }
+  .budget-row { margin: 0 1.1rem 0.65rem; }
+  .budget-row .labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    margin-bottom: 0.3rem;
+  }
+  .budget-row .labels .name { color: var(--ink); }
+  .budget-row .labels .amt {
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-muted);
+  }
+  .track {
+    height: 6px;
+    border-radius: 4px;
+    background: var(--accent-soft);
+    overflow: hidden;
+  }
+  .fill { height: 100%; background: var(--accent); border-radius: 4px; }
+  .fill.over { background: var(--warn); }
+
+  /* trend */
+  .trend-card {
+    margin: 0.9rem 1.1rem 0;
+    padding: 0.7rem 0.8rem 0.5rem;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+  }
+  .trend-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.35rem;
+  }
+  .trend-head .t { font-size: 0.78rem; color: var(--ink-muted); }
+  .trend-head .v {
+    font-family: var(--serif);
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* recent list */
+  .recent { margin: 0.9rem 1.1rem 1.2rem; flex: 1; }
+  .tx-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.83rem;
+  }
+  .tx-row:last-child { border-bottom: none; }
+  .tx-main { display: flex; flex-direction: column; }
+  .tx-note { color: var(--ink); }
+  .tx-meta {
+    font-family: var(--mono);
+    font-size: 0.66rem;
+    color: var(--ink-faint);
+    margin-top: 0.1rem;
+  }
+  .tx-amt { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .tx-amt.out { color: var(--ink); }
+  .tx-amt.in { color: var(--accent); }
+  .see-all {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    justify-content: center;
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+    padding-top: 0.6rem;
+  }
+
+  /* inbox screen (frame 3) */
+  .inbox-list { margin: 0.5rem 1.1rem 1rem; flex: 1; }
+  .inbox-item {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 0.65rem 0.75rem;
+    margin-bottom: 0.6rem;
+  }
+  .inbox-item.done { opacity: 0.45; }
+  .inbox-item-top {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.45rem;
+  }
+  .inbox-item-top .raw {
+    font-size: 0.78rem;
+    color: var(--ink-muted);
+  }
+  .inbox-item-top .raw b { color: var(--ink); font-weight: 600; }
+  .inbox-item-top .amt {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+  .inbox-item.done .amt::after {
+    content: " \2713";
+    color: var(--accent);
+  }
+
+  /* callout pins */
+  .pin {
+    position: absolute;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: var(--surface);
+    font-size: 0.66rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 0 3px var(--surface);
+    z-index: 3;
+  }
+
+  .legend {
+    list-style: none;
+    margin: 1.1rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+  .legend li {
+    display: flex;
+    gap: 0.55rem;
+    font-size: 0.83rem;
+    line-height: 1.45;
+    color: var(--ink-muted);
+  }
+  .legend .num {
+    flex-shrink: 0;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: var(--surface);
+    font-size: 0.63rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0.1rem;
+  }
+  .legend b { color: var(--ink); font-weight: 600; }
+
+  /* calls-to-confirm */
+  .calls {
+    margin-top: 4rem;
+    padding-top: 2.5rem;
+    border-top: 1px solid var(--line);
+    max-width: 42rem;
+  }
+  .calls h2 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 1.35rem;
+    margin: 0 0 1.4rem;
+  }
+  .call {
+    display: grid;
+    grid-template-columns: 1.6rem 1fr;
+    gap: 0.2rem 0.9rem;
+    margin-bottom: 1.6rem;
+  }
+  .call .n {
+    font-family: var(--serif);
+    color: var(--ink-faint);
+    font-size: 1.1rem;
+  }
+  .call h3 {
+    grid-column: 2;
+    margin: 0 0 0.35rem;
+    font-size: 0.98rem;
+    font-weight: 600;
+  }
+  .call p {
+    grid-column: 2;
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.6;
+    color: var(--ink-muted);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .caret { animation: none; }
+  }
+</style>
+
+<div class="page">
+  <header class="intro">
+    <p class="eyebrow">piggypal &middot; manual-entry UI/UX proposal</p>
+    <h1>One entry zone, two ways in</h1>
+    <p class="lede">
+      The MVP scope calls for a &lt;3s manual flow and a single AI text box,
+      unified as a "type or tap" home. Below: the same entry zone in its
+      default state, mid-tap-entry, and where ambiguous entries land &mdash;
+      the inbox &mdash; one tap from being categorized. UI copy is shown in
+      English here; <b>UI language itself is still open question #5</b> in
+      01-scope-and-decisions.md.
+    </p>
+  </header>
+
+  <section class="stage">
+    <!-- FRAME 1: HOME DEFAULT -->
+    <figure class="frame-block">
+      <div class="frame-head">
+        <span class="frame-step">01 &middot; home, idle</span>
+        <h2 class="frame-title">Everything on one screen</h2>
+        <p class="frame-sub">No tabs to check. Budget, trend, and recent activity are all glanceable without navigating anywhere.</p>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="pin" style="top: 92px; left: 14px;">1</div>
+          <div class="pin" style="top: 172px; left: 14px;">2</div>
+          <div class="app-bar">
+            <span class="wordmark">piggypal</span>
+            <div class="kebab"><span></span><span></span><span></span></div>
+          </div>
+          <div class="entry-zone">
+            <div class="entry-input">type or tap what you spent&hellip;<span class="caret"></span></div>
+          </div>
+          <div class="inbox-banner">
+            <div class="inbox-badge">3</div>
+            <p>3 entries need a category</p>
+            <svg class="chev" width="7" height="12" viewBox="0 0 7 12" fill="none"><path d="M1 1L6 6L1 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="section-label">August &middot; budgets</div>
+          <div class="budget-row">
+            <div class="labels"><span class="name">Mercado</span><span class="amt">$420 / $600</span></div>
+            <div class="track"><div class="fill" style="width: 70%;"></div></div>
+          </div>
+          <div class="budget-row">
+            <div class="labels"><span class="name">Transporte</span><span class="amt">$204 / $180</span></div>
+            <div class="track"><div class="fill over" style="width: 100%;"></div></div>
+          </div>
+          <div class="trend-card">
+            <div class="trend-head"><span class="t">Last 30 days</span><span class="v">$1,840</span></div>
+            <svg width="100%" height="46" viewBox="0 0 240 46" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="tg1" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="var(--accent)" stop-opacity="0.35"/>
+                  <stop offset="1" stop-color="var(--accent)" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path d="M0,34 L20,30 L40,32 L60,20 L80,24 L100,14 L120,18 L140,10 L160,16 L180,8 L200,12 L220,6 L240,10 L240,46 L0,46 Z" fill="url(#tg1)"/>
+              <path d="M0,34 L20,30 L40,32 L60,20 L80,24 L100,14 L120,18 L140,10 L160,16 L180,8 L200,12 L220,6 L240,10" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+              <circle cx="240" cy="10" r="3" fill="var(--accent)"/>
+            </svg>
+          </div>
+          <div class="section-label">Recent</div>
+          <div class="recent">
+            <div class="tx-row">
+              <div class="tx-main"><span class="tx-note">Mercado</span><span class="tx-meta">ontem &middot; ai</span></div>
+              <span class="tx-amt out">&minus;$45.00</span>
+            </div>
+            <div class="tx-row">
+              <div class="tx-main"><span class="tx-note">Sal&aacute;rio</span><span class="tx-meta">2 days ago &middot; manual</span></div>
+              <span class="tx-amt in">+$3,200.00</span>
+            </div>
+            <div class="tx-row">
+              <div class="tx-main"><span class="tx-note">Uber</span><span class="tx-meta">2 days ago &middot; ai</span></div>
+              <span class="tx-amt out">&minus;$18.40</span>
+            </div>
+            <div class="see-all">see all
+              <svg width="6" height="10" viewBox="0 0 6 10" fill="none"><path d="M1 1L5 5L1 9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ol class="legend">
+        <li><span class="num">1</span><span><b>Always visible, always on top.</b> No "+" button to find first &mdash; the entry zone is the top of the screen, not a modal.</span></li>
+        <li><span class="num">2</span><span><b>Banner, not a tab.</b> Only appears when count &gt; 0 and should trend to zero &mdash; a permanent nav item would misrepresent it as an ongoing section.</span></li>
+      </ol>
+    </figure>
+
+    <!-- FRAME 2: TAP ENTRY ACTIVE -->
+    <figure class="frame-block">
+      <div class="frame-head">
+        <span class="frame-step">02 &middot; tap entry, mid-flow</span>
+        <h2 class="frame-title">Tapping the box expands it</h2>
+        <p class="frame-sub">Amount pad + category chips replace the placeholder. Account and currency default silently as two small pills, revealed as full pickers only on tap. Typing free text instead skips straight to parsing &mdash; same box, two paths.</p>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="pin" style="top: 210px; left: 14px;">3</div>
+          <div class="pin" style="top: 300px; right: 14px; left:auto;">4</div>
+          <div class="pin" style="top: 122px; left: 100px;">5</div>
+          <div class="app-bar">
+            <span class="wordmark">piggypal</span>
+            <div class="kebab"><span></span><span></span><span></span></div>
+          </div>
+          <div class="entry-zone">
+            <div class="entry-input active">12<span class="caret"></span></div>
+            <div class="keypad-panel">
+              <div class="pill-row">
+                <span class="pill-tap">Visa (CAD)<svg width="7" height="5" viewBox="0 0 7 5" fill="none"><path d="M1 1L3.5 4L6 1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <span class="pill-tap">JPY<svg width="7" height="5" viewBox="0 0 7 5" fill="none"><path d="M1 1L3.5 4L6 1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              </div>
+              <div class="amount-preview"><span class="cur">&yen;</span>1,200<span class="zero"></span></div>
+              <div class="keys">
+                <div class="key">1</div><div class="key">2</div><div class="key">3</div>
+                <div class="key">4</div><div class="key">5</div><div class="key">6</div>
+                <div class="key">7</div><div class="key">8</div><div class="key">9</div>
+                <div class="key">&#9003;</div><div class="key">0</div>
+                <div class="key done"><svg width="13" height="10" viewBox="0 0 13 10" fill="none"><path d="M1 5L4.5 8.5L12 1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              </div>
+              <div class="chip-row">
+                <div class="chip picked">Caf&eacute;</div>
+                <div class="chip">Mercado</div>
+                <div class="chip">Transporte</div>
+                <div class="chip ghost">+ more</div>
+                <div class="toggle-pill">&minus; expense</div>
+              </div>
+            </div>
+          </div>
+          <div class="section-label">August &middot; budgets</div>
+          <div class="budget-row">
+            <div class="labels"><span class="name">Mercado</span><span class="amt">$420 / $600</span></div>
+            <div class="track"><div class="fill" style="width: 70%;"></div></div>
+          </div>
+          <div class="budget-row">
+            <div class="labels"><span class="name">Transporte</span><span class="amt">$204 / $180</span></div>
+            <div class="track"><div class="fill over" style="width: 100%;"></div></div>
+          </div>
+          <div class="recent" style="margin-top: 0.4rem;">
+            <div class="section-label" style="margin: 0 0 0.4rem;">Recent</div>
+            <div class="tx-row">
+              <div class="tx-main"><span class="tx-note">Mercado</span><span class="tx-meta">ontem &middot; ai</span></div>
+              <span class="tx-amt out">&minus;$45.00</span>
+            </div>
+            <div class="tx-row">
+              <div class="tx-main"><span class="tx-note">Sal&aacute;rio</span><span class="tx-meta">2 days ago &middot; manual</span></div>
+              <span class="tx-amt in">+$3,200.00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ol class="legend">
+        <li><span class="num">3</span><span><b>Chips ranked by frequency,</b> account and date defaulted silently (today, primary account) &mdash; only surfaced if the user taps to change them.</span></li>
+        <li><span class="num">4</span><span><b>Confirm auto-submits.</b> Tapping a category both picks it and saves &mdash; no separate save step. Toast with 5s undo follows.</span></li>
+        <li><span class="num">5</span><span><b>Account &amp; currency collapse to two small pills, not chip rows</b> &mdash; revealed as a full frequency-ranked picker only when tapped, same as everything else that's defaulted-and-hidden here. Account defaults to the most recent transaction's account; currency defaults to <i>that account's last-used</i> currency (JPY, from repeat entries on this trip), not necessarily its native one. Picking a different account resets the currency default to the new account's own currency.</span></li>
+      </ol>
+    </figure>
+
+    <!-- FRAME 3: INBOX -->
+    <figure class="frame-block">
+      <div class="frame-head">
+        <span class="frame-step">03 &middot; inbox</span>
+        <h2 class="frame-title">Where ambiguity lands</h2>
+        <p class="frame-sub">Never an error, never blocked &mdash; amount and date are always saved. One tap assigns a category and trains the parser.</p>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="pin" style="top: 230px; left: 14px;">6</div>
+          <div class="app-bar">
+            <span class="wordmark">Inbox</span>
+            <div class="kebab"><span></span><span></span><span></span></div>
+          </div>
+          <div class="inbox-list">
+            <div class="inbox-item">
+              <div class="inbox-item-top">
+                <span class="raw">&ldquo;<b>35 ifood</b>&rdquo; &middot; today</span>
+                <span class="amt">$35.00</span>
+              </div>
+              <div class="chip-row">
+                <div class="chip">Mercado</div>
+                <div class="chip">Restaurante</div>
+                <div class="chip">Delivery</div>
+                <div class="chip ghost">+ more</div>
+              </div>
+            </div>
+            <div class="inbox-item">
+              <div class="inbox-item-top">
+                <span class="raw">&ldquo;<b>parking 8</b>&rdquo; &middot; yesterday</span>
+                <span class="amt">$8.00</span>
+              </div>
+              <div class="chip-row">
+                <div class="chip">Transporte</div>
+                <div class="chip">Lazer</div>
+                <div class="chip ghost">+ more</div>
+              </div>
+            </div>
+            <div class="inbox-item done">
+              <div class="inbox-item-top">
+                <span class="raw">&ldquo;<b>15 caf&eacute;</b>&rdquo; &middot; 2 days ago</span>
+                <span class="amt">$15.00</span>
+              </div>
+              <div class="chip-row">
+                <div class="chip picked">Caf&eacute;</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ol class="legend">
+        <li><span class="num">6</span><span><b>Raw utterance stays visible</b> until categorized &mdash; the user is confirming what the parser saw, not guessing blind. Tapping advances/dims the item in place, no return-to-list round trip.</span></li>
+      </ol>
+    </figure>
+  </section>
+
+  <section class="calls">
+    <h2>Two calls worth confirming</h2>
+    <div class="call">
+      <span class="n">A</span>
+      <h3>App shell: single scroll, or bottom tabs?</h3>
+      <p>
+        Frames above assume one continuous Home screen &mdash; entry, budgets,
+        trend, and recent all stacked, with only Settings and "see all
+        transactions" as drill-ins. The alternative is a conventional bottom
+        tab bar (Home / Transactions / Budgets / Settings). Single-scroll is
+        more minimal and keeps entry literally one thumb-reach from anything
+        else on screen; tabs are more familiar and scale better once budgets
+        or transactions need their own dedicated screen space.
+      </p>
+    </div>
+    <div class="call">
+      <span class="n">B</span>
+      <h3>Keypad visible by default, or reveal on tap?</h3>
+      <p>
+        Frame 1 shows the entry zone collapsed to a single placeholder line
+        until tapped (frame 2), keeping budgets and recent activity visible
+        by default. The alternative is entry-first: the amount pad and chips
+        always expanded, pushing budget/trend further down. That trades
+        glanceability for shaving the last bit of friction off the &lt;3s
+        target &mdash; worth deciding which matters more for the home screen's
+        first impression.
+      </p>
+    </div>
+  </section>
+</div>

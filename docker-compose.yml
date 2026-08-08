@@ -1,0 +1,24 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: piggypal
+      POSTGRES_USER: piggypal
+      POSTGRES_PASSWORD: piggypal_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U piggypal"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+# PowerSync Service (docs/02) and its own bucket-storage Postgres connection
+# are deliberately not wired up yet — the plan is a local-only vertical
+# slice first (client SQLite + entry zone UI) before adding sync/auth.
+
+volumes:
+  pgdata:

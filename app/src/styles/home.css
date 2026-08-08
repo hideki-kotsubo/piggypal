@@ -1,0 +1,319 @@
+.home {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100svh;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+}
+
+.app-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.6rem 1.1rem 0.6rem;
+}
+.wordmark {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--ink);
+}
+.kebab {
+  display: flex;
+  gap: 3px;
+  padding: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.kebab span {
+  width: 3.5px;
+  height: 3.5px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+  display: block;
+}
+.back-link {
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+  text-decoration: none;
+}
+.see-all {
+  display: block;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+  text-decoration: none;
+  padding: 0.4rem 0 1rem;
+}
+
+.entry-zone {
+  margin: 0.6rem 1.1rem 0;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+.entry-trigger {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.8rem 0.9rem;
+  font-size: 0.9rem;
+  font-family: var(--sans);
+  text-align: left;
+  color: var(--ink-faint);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.entry-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.8rem 0.9rem;
+  /* Must stay >= 16px — iOS Safari auto-zooms on focus below that,
+     regardless of the visual scale the rest of the app uses. */
+  font-size: 16px;
+  font-family: var(--sans);
+  color: var(--ink);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid transparent;
+}
+.entry-input:focus {
+  outline: none;
+  border-bottom-color: var(--line);
+  background: var(--surface);
+}
+.entry-input::placeholder {
+  color: var(--ink-faint);
+}
+
+.keypad-panel {
+  padding: 0.7rem 0.7rem 0.85rem;
+}
+
+.pill-row {
+  display: flex;
+  gap: 6px;
+  margin: 0.1rem 0.4rem 0.6rem;
+}
+.pill-tap {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.32rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+
+.amount-preview {
+  font-family: var(--serif);
+  font-size: 1.9rem;
+  font-variant-numeric: tabular-nums;
+  padding: 0.1rem 0.4rem 0.5rem;
+  color: var(--ink);
+}
+
+.keys {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.key {
+  font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 1rem;
+  text-align: center;
+  padding: 0.7rem 0;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  cursor: pointer;
+}
+.key.done {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-size: 1.3rem;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.chip {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.chip.picked {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.chip.ghost {
+  color: var(--ink-faint);
+  border-style: dashed;
+  background: none;
+}
+
+.inbox-banner {
+  margin: 0.7rem 1.1rem 0;
+  background: var(--warn-soft);
+  border-radius: 14px;
+  padding: 0.65rem 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.inbox-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--warn);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.inbox-banner p {
+  margin: 0;
+  font-size: 0.83rem;
+  color: var(--ink);
+}
+
+.section-label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 1.1rem 1.1rem 0.5rem;
+}
+.empty-note {
+  margin: 0 1.1rem;
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+
+.budget-row {
+  margin: 0 1.1rem 0.65rem;
+}
+.budget-row .labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.83rem;
+  margin-bottom: 0.3rem;
+}
+.budget-row .labels .amt {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+}
+.track {
+  height: 6px;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  overflow: hidden;
+}
+.fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+}
+.fill.over {
+  background: var(--warn);
+}
+
+.trend-card {
+  margin: 0.9rem 1.1rem 0;
+  padding: 0.7rem 0.8rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.trend-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.35rem;
+}
+.trend-head .t {
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+}
+.trend-head .v {
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.recent {
+  margin: 0 1.1rem 1.2rem;
+}
+.tx-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.87rem;
+}
+.tx-row:last-child {
+  border-bottom: none;
+}
+.tx-main {
+  display: flex;
+  flex-direction: column;
+}
+.tx-note {
+  color: var(--ink);
+}
+.tx-meta {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--ink-faint);
+  margin-top: 0.1rem;
+}
+.tx-amt {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.tx-amt.out {
+  color: var(--ink);
+}
+.tx-amt.in {
+  color: var(--accent);
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 0.83rem;
+  padding: 0.7rem 1.1rem;
+  border-radius: 999px;
+  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.4);
+  max-width: 90vw;
+  text-align: center;
+}

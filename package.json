@@ -1,0 +1,13 @@
+{
+  "name": "piggypal",
+  "private": true,
+  "workspaces": [
+    "app",
+    "api"
+  ],
+  "scripts": {
+    "dev:app": "npm run dev -w app",
+    "dev:api": "npm run dev -w api",
+    "build": "npm run build -w app && npm run build -w api"
+  }
+}

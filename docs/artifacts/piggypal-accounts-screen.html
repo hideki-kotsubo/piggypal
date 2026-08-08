@@ -1,0 +1,345 @@
+<title>piggypal — accounts screen</title>
+<style>
+  :root {
+    --bg: #eef0ea;
+    --surface: #ffffff;
+    --surface-sunken: #f4f5f0;
+    --ink: #1e211c;
+    --ink-muted: #5c6259;
+    --ink-faint: #8b9186;
+    --line: #dadedb;
+    --accent: #3f7d69;
+    --accent-ink: #ffffff;
+    --accent-soft: #dceae3;
+    --warn: #b8752e;
+    --warn-soft: #f3e3d0;
+    --danger: #a8503f;
+    --shadow: 0 30px 60px -25px rgba(30, 33, 28, 0.35);
+
+    --serif: Charter, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141713; --surface: #1d211b; --surface-sunken: #171a15;
+      --ink: #edeee7; --ink-muted: #9ba398; --ink-faint: #6b7267;
+      --line: #2c322a; --accent: #6fbfa0; --accent-ink: #0f1512;
+      --accent-soft: #24352c; --warn: #d99a52; --warn-soft: #3a2c1c;
+      --danger: #c97462;
+      --shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141713; --surface: #1d211b; --surface-sunken: #171a15;
+    --ink: #edeee7; --ink-muted: #9ba398; --ink-faint: #6b7267;
+    --line: #2c322a; --accent: #6fbfa0; --accent-ink: #0f1512;
+    --accent-soft: #24352c; --warn: #d99a52; --warn-soft: #3a2c1c;
+    --danger: #c97462;
+    --shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.6);
+  }
+  :root[data-theme="light"] {
+    --bg: #eef0ea; --surface: #ffffff; --surface-sunken: #f4f5f0;
+    --ink: #1e211c; --ink-muted: #5c6259; --ink-faint: #8b9186;
+    --line: #dadedb; --accent: #3f7d69; --accent-ink: #ffffff;
+    --accent-soft: #dceae3; --warn: #b8752e; --warn-soft: #f3e3d0;
+    --danger: #a8503f;
+    --shadow: 0 30px 60px -25px rgba(30, 33, 28, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+  body { overflow-x: hidden; }
+
+  .page { max-width: 1180px; margin: 0 auto; padding: 4rem 1.5rem 6rem; }
+
+  .intro { max-width: 40rem; margin-bottom: 3.5rem; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.09em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 0.9rem;
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 500; font-size: clamp(1.9rem, 4vw, 2.6rem);
+    line-height: 1.15; letter-spacing: -0.01em; text-wrap: balance; margin: 0 0 0.9rem;
+  }
+  .lede { font-size: 1.02rem; line-height: 1.6; color: var(--ink-muted); margin: 0; max-width: 38rem; }
+  .lede b { color: var(--ink); font-weight: 600; }
+
+  .stage {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2.5rem;
+    align-items: start;
+    max-width: 720px;
+  }
+  @media (max-width: 700px) {
+    .stage { grid-template-columns: 1fr; max-width: 24rem; margin: 0 auto; }
+  }
+
+  .frame-block { margin: 0; }
+  .frame-step {
+    font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink-faint); display: block; margin-bottom: 0.3rem;
+  }
+  .frame-title { font-weight: 600; font-size: 1rem; margin: 0 0 0.25rem; }
+  .frame-sub { font-size: 0.87rem; color: var(--ink-muted); margin: 0; line-height: 1.5; }
+
+  .phone {
+    position: relative; width: 100%; max-width: 300px; margin: 1.4rem auto 0;
+    border-radius: 34px; background-color: var(--ink); padding: 10px; box-shadow: var(--shadow);
+  }
+  .phone .notch {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 84px; height: 18px; background: var(--ink); border-radius: 0 0 12px 12px; z-index: 2;
+  }
+  .screen {
+    position: relative; background: var(--surface); border-radius: 26px;
+    overflow: hidden; min-height: 600px; display: flex; flex-direction: column;
+  }
+
+  .app-bar {
+    display: flex; align-items: center; justify-content: space-between; padding: 1.6rem 1.1rem 0.9rem;
+  }
+  .app-bar .back { display: flex; align-items: center; gap: 0.4rem; }
+  .wordmark { font-family: var(--serif); font-weight: 600; font-size: 1.05rem; letter-spacing: -0.01em; }
+  .add-btn {
+    width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center; color: var(--ink-muted);
+  }
+
+  .acc-list { margin: 0 1.1rem; flex: 1; }
+  .inst-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.6rem 0 0.3rem; font-size: 0.78rem; font-weight: 600; color: var(--ink);
+  }
+  .inst-header .chev { color: var(--ink-faint); }
+  .inst-collapsed {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.55rem 0; border-bottom: 1px solid var(--line);
+    font-size: 0.78rem; color: var(--ink-muted);
+  }
+  .inst-group { border-bottom: 1px solid var(--line); padding-bottom: 0.3rem; margin-bottom: 0.15rem; }
+  .inst-group .acc-row { border-bottom: none; padding: 0.5rem 0 0.5rem 0.1rem; }
+  .acc-row { padding: 0.75rem 0; border-bottom: 1px solid var(--line); }
+  .acc-row-top { display: flex; justify-content: space-between; align-items: baseline; }
+  .acc-name { font-size: 0.9rem; font-weight: 600; }
+  .acc-kind {
+    font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-faint);
+  }
+  .acc-bal {
+    font-variant-numeric: tabular-nums; font-size: 0.83rem; color: var(--ink-muted); margin-top: 0.15rem;
+  }
+  .acc-bal + .acc-bal { margin-top: 0.1rem; }
+
+  .goal-line {
+    display: flex; align-items: center; gap: 0.5rem; margin-top: 0.35rem;
+  }
+  .goal-track {
+    flex: 1; height: 6px; border-radius: 4px; background: var(--accent-soft); overflow: hidden;
+  }
+  .goal-fill { height: 100%; background: var(--accent); border-radius: 4px; }
+  .goal-pct {
+    font-family: var(--mono); font-size: 0.68rem; color: var(--ink-muted); flex-shrink: 0;
+  }
+  .goal-due {
+    font-family: var(--mono); font-size: 0.66rem; color: var(--ink-faint); margin-top: 0.2rem;
+  }
+
+  .archived-toggle {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.7rem 0; font-size: 0.8rem; color: var(--ink-muted);
+  }
+
+  /* edit form */
+  .edit-panel {
+    margin: 0 1.1rem 1rem; padding: 0.9rem 0.9rem 1rem; border: 1px solid var(--line);
+    border-radius: 16px; background: var(--surface-sunken);
+  }
+  .field-label {
+    font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--ink-faint); margin: 0.7rem 0 0.35rem;
+  }
+  .field-label:first-child { margin-top: 0; }
+  .text-field {
+    font-size: 0.92rem; padding: 0.5rem 0.7rem; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--surface); color: var(--ink);
+  }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-size: 0.76rem; padding: 0.34rem 0.7rem; border-radius: 999px; border: 1px solid var(--line);
+    background: var(--surface); color: var(--ink-muted);
+  }
+  .chip.picked { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+  .goal-box {
+    border: 1px solid var(--line); border-radius: 12px; padding: 0.7rem 0.8rem; margin-top: 0.3rem; background: var(--surface);
+  }
+  .goal-box-top { display: flex; justify-content: space-between; align-items: center; }
+  .goal-amt { font-family: var(--serif); font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+  .remove-link { font-size: 0.72rem; color: var(--ink-faint); text-decoration: underline; }
+  .goal-date-row { font-size: 0.78rem; color: var(--ink-muted); margin-top: 0.4rem; }
+
+  .archive-link {
+    display: block; text-align: center; font-size: 0.78rem; color: var(--danger);
+    margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid var(--line);
+  }
+
+  /* callout pins + legend, matching entry-ux artifact */
+  .pin {
+    position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--ink);
+    color: var(--surface); font-size: 0.66rem; font-weight: 700; display: flex; align-items: center;
+    justify-content: center; box-shadow: 0 0 0 3px var(--surface); z-index: 3;
+  }
+  .legend { list-style: none; margin: 1.1rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.55rem; }
+  .legend li { display: flex; gap: 0.55rem; font-size: 0.83rem; line-height: 1.45; color: var(--ink-muted); }
+  .legend .num {
+    flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; background: var(--ink); color: var(--surface);
+    font-size: 0.63rem; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 0.1rem;
+  }
+  .legend b { color: var(--ink); font-weight: 600; }
+</style>
+
+<div class="page">
+  <header class="intro">
+    <p class="eyebrow">piggypal &middot; accounts screen</p>
+    <h1>Where every account lives</h1>
+    <p class="lede">
+      Reached via Settings. Docs/10 (multi-currency) and docs/11 (savings
+      goals) both assumed this screen existed &mdash; it didn't. Same visual
+      language as the entry zone: chips, pills, expand-in-place editing, no
+      modals.
+    </p>
+  </header>
+
+  <section class="stage">
+    <!-- FRAME 1: LIST -->
+    <figure class="frame-block">
+      <div class="frame-head">
+        <span class="frame-step">01 &middot; list, grouped by institution</span>
+        <h2 class="frame-title">Groups, not one flat list</h2>
+        <p class="frame-sub">Revised from an earlier flat-list draft once the real scale surfaced: several banks in two countries plus Wise, easily 15-20 accounts.</p>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="pin" style="top: 20px; right: 40px; left: auto;">1</div>
+          <div class="pin" style="top: 118px; left: 14px;">2</div>
+          <div class="pin" style="top: 250px; left: 14px;">3</div>
+          <div class="pin" style="top: 356px; left: 14px;">4</div>
+          <div class="pin" style="top: 458px; left: 14px;">5</div>
+          <div class="app-bar">
+            <span class="wordmark">Accounts</span>
+            <span class="add-btn">+</span>
+          </div>
+          <div class="acc-list">
+            <div class="inst-group">
+              <div class="inst-header">
+                <span>TD (2)</span>
+                <svg class="chev" width="9" height="6" viewBox="0 0 9 6" fill="none"><path d="M1 1L4.5 5L8 1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div class="acc-row">
+                <div class="acc-row-top"><span class="acc-name">Visa</span><span class="acc-kind">credit</span></div>
+                <div class="acc-bal">$420.00 CAD</div>
+                <div class="acc-bal">&yen;1,200.00 JPY</div>
+              </div>
+              <div class="acc-row">
+                <div class="acc-row-top"><span class="acc-name">Checking</span><span class="acc-kind">checking</span></div>
+                <div class="acc-bal">$1,150.00 CAD</div>
+              </div>
+            </div>
+            <div class="inst-collapsed"><span>RBC (2)</span><svg width="7" height="12" viewBox="0 0 7 12" fill="none"><path d="M1 1L6 6L1 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="inst-collapsed"><span>It&aacute;u (2)</span><svg width="7" height="12" viewBox="0 0 7 12" fill="none"><path d="M1 1L6 6L1 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="inst-collapsed"><span>Wise (3)</span><svg width="7" height="12" viewBox="0 0 7 12" fill="none"><path d="M1 1L6 6L1 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="acc-row">
+              <div class="acc-row-top"><span class="acc-name">Trip Fund</span><span class="acc-kind">savings</span></div>
+              <div class="goal-line">
+                <span class="acc-bal" style="margin-top:0;">$3,200 / $5,000</span>
+              </div>
+              <div class="goal-line">
+                <div class="goal-track"><div class="goal-fill" style="width: 64%;"></div></div>
+                <span class="goal-pct">64%</span>
+              </div>
+              <div class="goal-due">due Dec 2026</div>
+            </div>
+            <div class="acc-row" style="border-bottom: none;">
+              <div class="acc-row-top"><span class="acc-name">Cash</span><span class="acc-kind">cash</span></div>
+              <div class="acc-bal">$85.00 CAD</div>
+            </div>
+            <div class="archived-toggle">
+              <span>Archived (2)</span>
+              <svg width="7" height="12" viewBox="0 0 7 12" fill="none"><path d="M1 1L6 6L1 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ol class="legend">
+        <li><span class="num">1</span><span><b>"+" opens the same form</b> shown expanded in frame 02 &mdash; no separate create-vs-edit screen.</span></li>
+        <li><span class="num">2</span><span><b>Most-recently-used institution expands by default</b>, others collapse to a count &mdash; TD's Visa shows two balance lines (CAD native, JPY from traveling, D38), neither hidden or converted.</span></li>
+        <li><span class="num">3</span><span><b>Collapsed groups are one line each</b> &mdash; RBC, It&aacute;u, Wise. Wise's currency balances group here too, the same mechanism as any bank, not a special case.</span></li>
+        <li><span class="num">4</span><span><b>Ungrouped accounts</b> (no institution set) list plainly below the groups &mdash; goal progress stays inline, no separate view.</span></li>
+        <li><span class="num">5</span><span><b>Archived accounts collapse</b> to a single line, not gone &mdash; historical data stays fully reachable, just out of the way of daily use.</span></li>
+      </ol>
+    </figure>
+
+    <!-- FRAME 2: EDIT IN PLACE -->
+    <figure class="frame-block">
+      <div class="frame-head">
+        <span class="frame-step">02 &middot; edit, expanded in place</span>
+        <h2 class="frame-title">Tapping a row expands it</h2>
+        <p class="frame-sub">Same inline-expand pattern as the inbox and entry zone &mdash; no navigation away from the list.</p>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="pin" style="top: 214px; left: 14px;">5</div>
+          <div class="pin" style="top: 300px; left: 14px;">6</div>
+          <div class="pin" style="top: 440px; left: 14px;">7</div>
+          <div class="app-bar">
+            <span class="wordmark">Accounts</span>
+            <span class="add-btn">+</span>
+          </div>
+          <div class="acc-list">
+            <div class="acc-row">
+              <div class="acc-row-top"><span class="acc-name">TD &mdash; Visa</span><span class="acc-kind">credit</span></div>
+              <div class="acc-bal">$420.00 CAD</div>
+            </div>
+          </div>
+          <div class="edit-panel">
+            <div class="field-label">institution <span style="opacity:.6;">(optional)</span></div>
+            <div class="text-field" style="color: var(--ink-faint);">&mdash;</div>
+            <div class="field-label">name</div>
+            <div class="text-field">Trip Fund</div>
+            <div class="field-label">kind</div>
+            <div class="chip-row">
+              <div class="chip">Checking</div>
+              <div class="chip">Credit</div>
+              <div class="chip">Cash</div>
+              <div class="chip picked">Savings</div>
+            </div>
+            <div class="field-label">currency</div>
+            <div class="chip-row">
+              <div class="chip picked">CAD</div>
+              <div class="chip">BRL</div>
+              <div class="chip">JPY</div>
+              <div class="chip">+ more</div>
+            </div>
+            <div class="field-label">savings goal</div>
+            <div class="goal-box">
+              <div class="goal-box-top">
+                <span class="goal-amt">$5,000.00</span>
+                <span class="remove-link">remove</span>
+              </div>
+              <div class="goal-date-row">due December 2026</div>
+            </div>
+            <a class="archive-link">Archive this account</a>
+          </div>
+        </div>
+      </div>
+      <ol class="legend">
+        <li><span class="num">5</span><span><b>Institution is optional, free text</b> &mdash; purely a grouping/display label (docs/12, D60), no linked table. Blank here since this is a standalone Trip Fund, not tied to a bank.</span></li>
+        <li><span class="num">6</span><span><b>Goal shown directly</b> because one's already set &mdash; for a new account or one without a goal, this whole box collapses to a single "+ Add a savings goal" link instead, expanding only when tapped.</span></li>
+        <li><span class="num">7</span><span><b>Archive, not delete</b> &mdash; de-emphasized text, not a red destructive button. Existing transactions on this account are untouched either way; archiving only removes it from future entry-flow pickers.</span></li>
+      </ol>
+    </figure>
+  </section>
+</div>
