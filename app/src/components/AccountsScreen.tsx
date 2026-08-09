@@ -114,7 +114,7 @@ export function AccountsScreen() {
   return (
     <main className="home">
       <div className="app-bar">
-        <Link to="/" className="back-link">← Back</Link>
+        <Link to="/settings" className="back-link">← Back</Link>
         <span className="wordmark">Accounts</span>
         <button
           className="icon-btn"

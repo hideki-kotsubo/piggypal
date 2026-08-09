@@ -19,7 +19,7 @@ export default function App() {
     <main className="home">
       <div className="app-bar">
         <span className="wordmark">piggypal</span>
-        <Link to="/accounts" className="kebab" aria-label="Settings">
+        <Link to="/settings" className="kebab" aria-label="Settings">
           <span /><span /><span />
         </Link>
       </div>

@@ -95,6 +95,21 @@ const ACCOUNT_COLUMNS: Record<keyof Account, string> = {
   archived: 'archived',
 };
 
+const CATEGORY_COLUMNS: Record<keyof Category, string> = {
+  id: 'id',
+  name: 'name',
+  kind: 'kind',
+  archived: 'archived',
+};
+
+const BUDGET_COLUMNS: Record<keyof Budget, string> = {
+  id: 'id',
+  categoryId: 'category_id',
+  month: 'month',
+  currency: 'currency',
+  amountCents: 'amount_cents',
+};
+
 // ---- one-time seed on an empty database ----
 
 async function seedIfEmpty() {
@@ -150,6 +165,11 @@ interface StoreApi extends StoreState {
   categorizeTransaction: (transactionId: string, categoryId: string) => void;
   addAccount: (account: Account) => void;
   updateAccount: (accountId: string, patch: Partial<Account>) => void;
+  addCategory: (category: Category) => void;
+  updateCategory: (categoryId: string, patch: Partial<Category>) => void;
+  addBudget: (budget: Budget) => void;
+  updateBudget: (budgetId: string, patch: Partial<Budget>) => void;
+  removeBudget: (budgetId: string) => void;
   balancesFor: (accountId: string) => { currency: string; cents: number }[];
   defaultAccountId: () => string;
   defaultCurrencyFor: (accountId: string) => string;
@@ -294,6 +314,42 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const setClause = entries.map(([k]) => `${ACCOUNT_COLUMNS[k]} = ?`).join(', ');
         const params = entries.map(([k, v]) => (k === 'archived' ? (v ? 1 : 0) : v));
         void db.execute(`UPDATE accounts SET ${setClause} WHERE id = ?`, [...params, accountId]);
+      },
+
+      addCategory(category) {
+        void db.execute(
+          `INSERT INTO categories (id, name, kind, archived) VALUES (?, ?, ?, ?)`,
+          [category.id, category.name, category.kind, category.archived ? 1 : 0],
+        );
+      },
+
+      updateCategory(categoryId, patch) {
+        const entries = Object.entries(patch) as [keyof Category, unknown][];
+        if (entries.length === 0) return;
+        const setClause = entries.map(([k]) => `${CATEGORY_COLUMNS[k]} = ?`).join(', ');
+        const params = entries.map(([k, v]) => (k === 'archived' ? (v ? 1 : 0) : v));
+        void db.execute(`UPDATE categories SET ${setClause} WHERE id = ?`, [...params, categoryId]);
+      },
+
+      addBudget(budget) {
+        void db.execute(
+          `INSERT INTO budgets (id, category_id, month, currency, amount_cents) VALUES (?, ?, ?, ?, ?)`,
+          [budget.id, budget.categoryId, budget.month, budget.currency, budget.amountCents],
+        );
+      },
+
+      updateBudget(budgetId, patch) {
+        const entries = Object.entries(patch) as [keyof Budget, unknown][];
+        if (entries.length === 0) return;
+        const setClause = entries.map(([k]) => `${BUDGET_COLUMNS[k]} = ?`).join(', ');
+        void db.execute(`UPDATE budgets SET ${setClause} WHERE id = ?`, [...entries.map(([, v]) => v), budgetId]);
+      },
+
+      // Budgets have no archived/deleted_at column (db/schema.sql) — unlike
+      // accounts/categories/transactions, there's no reason to keep a
+      // removed budget target around, so this is a real delete.
+      removeBudget(budgetId) {
+        void db.execute('DELETE FROM budgets WHERE id = ?', [budgetId]);
       },
 
       // docs/12 D58: one balance line per currency actually present, never merged.
