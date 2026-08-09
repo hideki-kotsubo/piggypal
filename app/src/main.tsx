@@ -7,6 +7,8 @@ import './styles/home.css'
 import App from './App.tsx'
 import { StoreProvider } from './lib/store'
 import { TransactionList } from './components/TransactionList'
+import { InboxScreen } from './components/InboxScreen'
+import { AccountsScreen } from './components/AccountsScreen'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -15,6 +17,8 @@ createRoot(document.getElementById('root')!).render(
         <Routes>
           <Route path="/" element={<App />} />
           <Route path="/transactions" element={<TransactionList />} />
+          <Route path="/inbox" element={<InboxScreen />} />
+          <Route path="/accounts" element={<AccountsScreen />} />
         </Routes>
       </StoreProvider>
     </BrowserRouter>

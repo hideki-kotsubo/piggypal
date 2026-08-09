@@ -28,3 +28,7 @@ npm-debug.log*
 
 # Postgres data volume is Docker-managed, not filesystem-local — nothing to
 # ignore here, but a reminder this repo assumes `docker compose up` for db.
+
+# Worktree metadata (parallel-agent worktrees, docs on this workflow are in
+# the session history, nothing here belongs in version control)
+.claude/

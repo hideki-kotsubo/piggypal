@@ -110,6 +110,6 @@ const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
   .slice(0, 10);
 
 export const seedBudgets: Budget[] = [
-  { categoryId: 'cat-mercado', month: monthStart, currency: 'CAD', amountCents: 60000 },
-  { categoryId: 'cat-transporte', month: monthStart, currency: 'CAD', amountCents: 18000 },
+  { id: 'budget-mercado', categoryId: 'cat-mercado', month: monthStart, currency: 'CAD', amountCents: 60000 },
+  { id: 'budget-transporte', categoryId: 'cat-transporte', month: monthStart, currency: 'CAD', amountCents: 18000 },
 ];

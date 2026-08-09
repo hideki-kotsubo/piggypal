@@ -1,35 +1,148 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { Account, Budget, Category, Transaction } from './types';
+import { db } from './db';
+import type { Account, AccountKind, Budget, Category, Transaction } from './types';
 import { seedAccounts, seedBudgets, seedCategories, seedTransactions } from './seed';
 
-// TEMPORARY data layer. docs/01's locked architecture (D1) is on-device
-// SQLite via wa-sqlite/PowerSync — this localStorage store is scaffolding
-// to validate the entry-zone UX (docs/07) before that infra lands. Swap
-// target for a follow-up pass, not a silent replacement of the decision.
+// Real local data layer — docs/01 D1 (on-device SQLite via wa-sqlite/
+// PowerSync web SDK), running in local-only mode (no connector passed to
+// PowerSyncDatabase in db.ts, so nothing here ever touches a network).
+// Sync/auth are a distinct, later phase. Replaces the earlier localStorage
+// scaffolding, but keeps the exact same StoreApi shape below so no
+// component needed to change.
 
-const STORAGE_KEY = 'piggypal-dev-store-v1';
+// ---- row <-> domain mapping (SQLite is snake_case, our types are camelCase) ----
+
+interface AccountRow {
+  id: string;
+  institution: string | null;
+  name: string;
+  kind: string;
+  currency: string;
+  goal_amount_cents: number | null;
+  goal_target_date: string | null;
+  archived: number;
+}
+function rowToAccount(r: AccountRow): Account {
+  return {
+    id: r.id,
+    institution: r.institution,
+    name: r.name,
+    kind: r.kind as AccountKind,
+    currency: r.currency,
+    goalAmountCents: r.goal_amount_cents,
+    goalTargetDate: r.goal_target_date,
+    archived: Boolean(r.archived),
+  };
+}
+
+interface CategoryRow {
+  id: string;
+  name: string;
+  kind: string;
+  archived: number;
+}
+function rowToCategory(r: CategoryRow): Category {
+  return { id: r.id, name: r.name, kind: r.kind as Category['kind'], archived: Boolean(r.archived) };
+}
+
+interface TransactionRow {
+  id: string;
+  account_id: string;
+  category_id: string | null;
+  amount_cents: number;
+  currency: string;
+  occurred_on: string;
+  note: string | null;
+  source: string;
+  ai_raw: string | null;
+  deleted_at: string | null;
+}
+function rowToTransaction(r: TransactionRow): Transaction {
+  return {
+    id: r.id,
+    accountId: r.account_id,
+    categoryId: r.category_id,
+    amountCents: r.amount_cents,
+    currency: r.currency,
+    occurredOn: r.occurred_on,
+    note: r.note,
+    source: r.source as Transaction['source'],
+    aiRaw: r.ai_raw,
+    deletedAt: r.deleted_at,
+  };
+}
+
+interface BudgetRow {
+  id: string;
+  category_id: string;
+  month: string;
+  currency: string;
+  amount_cents: number;
+}
+function rowToBudget(r: BudgetRow): Budget {
+  return { id: r.id, categoryId: r.category_id, month: r.month, currency: r.currency, amountCents: r.amount_cents };
+}
+
+const ACCOUNT_COLUMNS: Record<keyof Account, string> = {
+  id: 'id',
+  institution: 'institution',
+  name: 'name',
+  kind: 'kind',
+  currency: 'currency',
+  goalAmountCents: 'goal_amount_cents',
+  goalTargetDate: 'goal_target_date',
+  archived: 'archived',
+};
+
+// ---- one-time seed on an empty database ----
+
+async function seedIfEmpty() {
+  const existing = await db.getAll<{ id: string }>('SELECT id FROM accounts LIMIT 1');
+  if (existing.length > 0) return;
+
+  try {
+    await db.writeTransaction(async (tx) => {
+      for (const a of seedAccounts) {
+        await tx.execute(
+          `INSERT INTO accounts (id, institution, name, kind, currency, goal_amount_cents, goal_target_date, archived)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [a.id, a.institution, a.name, a.kind, a.currency, a.goalAmountCents, a.goalTargetDate, a.archived ? 1 : 0],
+        );
+      }
+      for (const c of seedCategories) {
+        await tx.execute(
+          `INSERT INTO categories (id, name, kind, archived) VALUES (?, ?, ?, ?)`,
+          [c.id, c.name, c.kind, c.archived ? 1 : 0],
+        );
+      }
+      for (const t of seedTransactions) {
+        await tx.execute(
+          `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_on, note, source, ai_raw, deleted_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [t.id, t.accountId, t.categoryId, t.amountCents, t.currency, t.occurredOn, t.note, t.source, t.aiRaw, t.deletedAt],
+        );
+      }
+      for (const b of seedBudgets) {
+        await tx.execute(
+          `INSERT INTO budgets (id, category_id, month, currency, amount_cents) VALUES (?, ?, ?, ?, ?)`,
+          [b.id, b.categoryId, b.month, b.currency, b.amountCents],
+        );
+      }
+    });
+  } catch (err) {
+    console.error('piggypal: seed transaction FAILED, rolled back', err);
+    throw err;
+  }
+}
+
+// ---- store ----
 
 interface StoreState {
   accounts: Account[];
   categories: Category[];
   transactions: Transaction[];
   budgets: Budget[];
-}
-
-function loadInitial(): StoreState {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as StoreState;
-  } catch {
-    // fall through to seed
-  }
-  return {
-    accounts: seedAccounts,
-    categories: seedCategories,
-    transactions: seedTransactions,
-    budgets: seedBudgets,
-  };
 }
 
 interface StoreApi extends StoreState {
@@ -48,11 +161,92 @@ interface StoreApi extends StoreState {
 const StoreContext = createContext<StoreApi | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<StoreState>(loadInitial);
+  const [ready, setReady] = useState(false);
+  const [state, setState] = useState<StoreState>({
+    accounts: [],
+    categories: [],
+    transactions: [],
+    budgets: [],
+  });
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [state]);
+    const controller = new AbortController();
+
+    seedIfEmpty()
+      .catch((err) => console.error('piggypal: seed failed', err))
+      .finally(() => {
+        if (controller.signal.aborted) return;
+
+        db.watch(
+          'SELECT * FROM accounts',
+          [],
+          {
+            onResult: (r) =>
+              setState((s) => ({ ...s, accounts: r.rows?._array.map(rowToAccount) ?? [] })),
+            onError: (err) => console.error('piggypal: accounts watch failed', err),
+          },
+          // triggerImmediate: without it, watch() only fires on a FUTURE
+          // table change — it does not proactively query current state on
+          // setup. Since seeding already happened by this point, omitting
+          // this silently starves every watch of its initial data (no
+          // error, just an empty array forever, until something else
+          // happens to write to the table).
+          { signal: controller.signal, triggerImmediate: true },
+        );
+        db.watch(
+          'SELECT * FROM categories',
+          [],
+          {
+            onResult: (r) =>
+              setState((s) => ({ ...s, categories: r.rows?._array.map(rowToCategory) ?? [] })),
+            onError: (err) => console.error('piggypal: categories watch failed', err),
+          },
+          // triggerImmediate: without it, watch() only fires on a FUTURE
+          // table change — it does not proactively query current state on
+          // setup. Since seeding already happened by this point, omitting
+          // this silently starves every watch of its initial data (no
+          // error, just an empty array forever, until something else
+          // happens to write to the table).
+          { signal: controller.signal, triggerImmediate: true },
+        );
+        db.watch(
+          'SELECT * FROM transactions ORDER BY occurred_on DESC',
+          [],
+          {
+            onResult: (r) =>
+              setState((s) => ({ ...s, transactions: r.rows?._array.map(rowToTransaction) ?? [] })),
+            onError: (err) => console.error('piggypal: transactions watch failed', err),
+          },
+          // triggerImmediate: without it, watch() only fires on a FUTURE
+          // table change — it does not proactively query current state on
+          // setup. Since seeding already happened by this point, omitting
+          // this silently starves every watch of its initial data (no
+          // error, just an empty array forever, until something else
+          // happens to write to the table).
+          { signal: controller.signal, triggerImmediate: true },
+        );
+        db.watch(
+          'SELECT * FROM budgets',
+          [],
+          {
+            onResult: (r) =>
+              setState((s) => ({ ...s, budgets: r.rows?._array.map(rowToBudget) ?? [] })),
+            onError: (err) => console.error('piggypal: budgets watch failed', err),
+          },
+          // triggerImmediate: without it, watch() only fires on a FUTURE
+          // table change — it does not proactively query current state on
+          // setup. Since seeding already happened by this point, omitting
+          // this silently starves every watch of its initial data (no
+          // error, just an empty array forever, until something else
+          // happens to write to the table).
+          { signal: controller.signal, triggerImmediate: true },
+        );
+
+        setReady(true);
+      });
+
+    return () => controller.abort();
+  }, []);
 
   const api = useMemo<StoreApi>(() => {
     const activeTx = () =>
@@ -64,29 +258,42 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ...state,
 
       addTransaction(tx) {
-        setState((s) => ({ ...s, transactions: [tx, ...s.transactions] }));
+        void db.execute(
+          `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_on, note, source, ai_raw, deleted_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [tx.id, tx.accountId, tx.categoryId, tx.amountCents, tx.currency, tx.occurredOn, tx.note, tx.source, tx.aiRaw, tx.deletedAt],
+        );
       },
 
       // docs/07 D26: categorize an inbox item in place.
       categorizeTransaction(transactionId, categoryId) {
-        setState((s) => ({
-          ...s,
-          transactions: s.transactions.map((t) =>
-            t.id === transactionId ? { ...t, categoryId } : t,
-          ),
-        }));
+        void db.execute('UPDATE transactions SET category_id = ? WHERE id = ?', [categoryId, transactionId]);
       },
 
       addAccount(account) {
-        setState((s) => ({ ...s, accounts: [...s.accounts, account] }));
+        void db.execute(
+          `INSERT INTO accounts (id, institution, name, kind, currency, goal_amount_cents, goal_target_date, archived)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            account.id,
+            account.institution,
+            account.name,
+            account.kind,
+            account.currency,
+            account.goalAmountCents,
+            account.goalTargetDate,
+            account.archived ? 1 : 0,
+          ],
+        );
       },
 
       // Also how archiving works (docs/12 D56) — updateAccount(id, { archived: true }).
       updateAccount(accountId, patch) {
-        setState((s) => ({
-          ...s,
-          accounts: s.accounts.map((a) => (a.id === accountId ? { ...a, ...patch } : a)),
-        }));
+        const entries = Object.entries(patch) as [keyof Account, unknown][];
+        if (entries.length === 0) return;
+        const setClause = entries.map(([k]) => `${ACCOUNT_COLUMNS[k]} = ?`).join(', ');
+        const params = entries.map(([k, v]) => (k === 'archived' ? (v ? 1 : 0) : v));
+        void db.execute(`UPDATE accounts SET ${setClause} WHERE id = ?`, [...params, accountId]);
       },
 
       // docs/12 D58: one balance line per currency actually present, never merged.
@@ -142,6 +349,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
     };
   }, [state]);
+
+  if (!ready) return null;
 
   return <StoreContext.Provider value={api}>{children}</StoreContext.Provider>;
 }

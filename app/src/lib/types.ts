@@ -36,6 +36,7 @@ export interface Transaction {
 }
 
 export interface Budget {
+  id: string;
   categoryId: string;
   month: string; // first of month, ISO date
   currency: string;
