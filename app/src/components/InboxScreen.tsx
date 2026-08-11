@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../lib/store';
-import { formatAmount, formatRelativeDate } from '../lib/format';
+import { accountLabel, formatAmount, formatRelativeDate } from '../lib/format';
 import type { Transaction } from '../lib/types';
 
 // docs/07 "The inbox" + D26: raw utterance stays visible until categorized;
@@ -39,13 +39,14 @@ export function InboxScreen() {
           {items.map((t) => {
             const done = Boolean(t.categoryId);
             const doneCategory = done ? store.categories.find((c) => c.id === t.categoryId) : null;
+            const account = store.accounts.find((a) => a.id === t.accountId);
             return (
               <div className={`inbox-item${done ? ' done' : ''}`} key={t.id}>
                 <div className="tx-row">
                   <div className="tx-main">
                     <span className="tx-note">{t.aiRaw ?? t.note ?? 'Uncategorized'}</span>
                     <span className="tx-meta">
-                      {formatRelativeDate(t.occurredAt)} · {t.source}
+                      {formatRelativeDate(t.occurredAt)} · {account ? accountLabel(account) : '—'}
                     </span>
                   </div>
                   <span className={`tx-amt ${t.amountCents < 0 ? 'out' : 'in'}`}>

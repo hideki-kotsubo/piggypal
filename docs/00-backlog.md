@@ -10,15 +10,24 @@ it needs doing.
 
 ## 🔵 Now
 
-- [ ] Commit the account/currency picker WIP (still uncommitted as of
-      2026-08-10 — touches EntryZone, AccountsScreen, AccountCurrencyPicker,
-      CategoriesScreen, schema.ts, store.tsx, db/schema.sql, types.ts,
-      format.ts, seed.ts, home.css, plus docs/03/10/11/12 and CLAUDE.md).
-      D60/D61 (institution) and D62-D64 (currency/goals off the account)
-      are both resolved — nothing left blocking the commit.
+*(nothing blocking right now)*
 
 ## ⚪ Next
 
+- [ ] Night mode must be user-toggleable, not just system-following —
+      requested 2026-08-10. Today `tokens.css` only has a
+      `@media (prefers-color-scheme: dark)` block, no explicit override —
+      the app follows the OS setting with no way for the user to force
+      light or dark regardless of it. Needs a three-way preference
+      (System / Light / Dark, defaulting to System) exposed in Settings,
+      persisted via the same `lib/settings.ts` localStorage pattern
+      `useAccountPickerMode` already established (docs/13). Implementation
+      likely sets a `data-theme="light"`/`"dark"` attribute on `<html>`
+      when overridden, with `tokens.css` gaining `:root[data-theme="dark"]`
+      / `:root[data-theme="light"]` blocks and guarding the existing media
+      query with `:not([data-theme="light"])` — the same pattern this
+      session's HTML artifacts (`docs/artifacts/*.html`) already use, just
+      not yet applied to the real app's stylesheet.
 - [ ] Institution field (AccountsScreen's AccountForm) should suggest from
       the user's existing institutions instead of being a bare text input —
       requested 2026-08-10. Behavior: on focus/tap, show every distinct
@@ -38,11 +47,6 @@ it needs doing.
 - [ ] Set up a test runner (Vitest, matches Vite) — no tests exist yet.
 - [ ] Decide on GitHub/Gitea setup for backlog + PR workflow (this doc is
       the interim, file-based version).
-- [ ] Remove the "manual"/"AI" source label shown on transaction list rows
-      (`t.source` in the meta line) — currently always visible, not wanted.
-- [ ] Show which account paid for each transaction directly on the list
-      row — currently the collapsed row shows category/date/source but no
-      account; account is only visible after tapping into edit mode.
 
 ## ⚫ Later / someday
 
@@ -70,17 +74,30 @@ it needs doing.
       — not yet reported by the user, but it's the identical pattern.
       Worth fixing at the same time or flagging if it turns out fine in
       practice (shorter round-trip, single table).
-- [ ] Transaction rows on Home aren't clickable/tappable — no way to open
-      details from the list. (Already addressed by the in-progress WIP —
-      TransactionList.tsx's new tap-to-expand edit form — verify once that
-      WIP is finished/committed, this may just need finishing, not new work.)
 - [ ] Date/Time fields on the transaction edit form overflow each other on
       iOS — native `<input type="date">`/`<input type="time">` side-by-side
-      layout needs a responsive fix. Untested on real iOS Safari. Part of
-      the same in-progress WIP (the two fields are new).
+      layout needs a responsive fix. Untested on real iOS Safari — same
+      shared `TransactionEditForm.tsx` used by both lists now, needs a
+      real-device check.
 
 ## ✅ Done
 
+- [x] Transaction list rows: dropped the always-visible "manual"/"AI"
+      source label, added the paying account directly to the row (both
+      `TransactionList.tsx` and `RecentList.tsx`, plus `InboxScreen.tsx`
+      for consistency — same `t.source` pattern was there too), and made
+      Home's Recent list tap-to-expand/editable, which it never was — the
+      earlier "Transaction rows on Home aren't clickable" bug had actually
+      misdiagnosed which file *is* Home; `TransactionList.tsx` is the
+      separate `/transactions` screen and was already tappable,
+      `RecentList.tsx` is Home and wasn't. Extracted the shared edit panel
+      into `TransactionEditForm.tsx` so both lists use the exact same
+      inline-edit form rather than duplicating it. `tsc -b`/`oxlint` clean;
+      visually verified working by the user in a real browser 2026-08-10.
+- [x] Visually verified the account/currency picker work (`e4962ab`) in a
+      real browser — institution grouping/editing, currency switching, and
+      the new Grouped/Capped picker scaling (docs/13). Confirmed by the
+      user 2026-08-10.
 - [x] Account picker (entry zone + transaction edit form) now scales past
       a handful of accounts — requested 2026-08-10 after a screenshot
       showed 18 accounts as one flat chip wall. Design locked and
