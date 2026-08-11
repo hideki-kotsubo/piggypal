@@ -5,6 +5,12 @@
 
 -- ── Budgeting domain (docs/03, docs/10, docs/11, docs/12) ──────────────────
 
+-- An account is a payment-method identity only — no currency, no goal.
+-- Currency is chosen per transaction (see below), independently of which
+-- account it's on; a single account's balance can span several currencies
+-- at once (accounts.balancesFor sums by transaction currency). Goals are
+-- tracked per category via `budgets`, not per account — docs/11 (account
+-- savings goals) is superseded, see docs/10 D-note.
 create table accounts (
   id                 uuid primary key,
   user_id            uuid not null,
@@ -12,9 +18,6 @@ create table accounts (
                                -- grouping/display only, no FK — see docs/12
   name               text not null,
   kind               text not null default 'checking',  -- checking | credit | cash | savings
-  currency           char(3) not null default 'CAD',
-  goal_amount_cents  bigint,  -- null = no savings goal set; any account kind — see docs/11
-  goal_target_date   date,    -- null = no target date
   archived           boolean not null default false,  -- see docs/12; mirrors categories.archived
   created_at         timestamptz not null default now(),
   updated_at         timestamptz not null default now()
@@ -38,10 +41,14 @@ create table transactions (
   account_id   uuid not null references accounts(id),
   category_id  uuid references categories(id),   -- nullable: uncategorized inbox
   amount_cents bigint not null,                  -- negative = expense, positive = income
-  currency     char(3) not null default 'CAD',   -- the purchase's own currency; may differ
-                                                  -- from accounts.currency (e.g. a JPY purchase
-                                                  -- on a CAD credit card) — see docs/10
-  occurred_on  date not null,
+  currency     char(3) not null default 'CAD',   -- the purchase's own currency, chosen
+                                                  -- independently of the account at entry
+                                                  -- time — accounts don't have a currency
+                                                  -- of their own — see docs/10
+  occurred_at  timestamp not null,  -- local wall-clock date+time, no timezone —
+                                     -- matches how every other date in this
+                                     -- schema is treated as "what the user means",
+                                     -- not a UTC instant
   note         text,
   source       text not null default 'manual',   -- manual | ai | import
   ai_raw       text,                             -- original utterance, if source = 'ai'
@@ -77,8 +84,8 @@ create table category_keywords (
 );
 
 -- Indexes the sync + app queries will lean on
-create index on transactions (user_id, occurred_on desc);
-create index on transactions (user_id, category_id, occurred_on);
+create index on transactions (user_id, occurred_at desc);
+create index on transactions (user_id, category_id, occurred_at);
 create index on budgets      (user_id, month);
 
 -- ── Auth (docs/05) — server-only, not part of the sync buckets above ───────

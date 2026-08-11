@@ -98,7 +98,8 @@ docker compose up    # local Postgres, schema auto-loaded from db/schema.sql
 - `docs/07-manual-entry-ux.md` — single-screen "type or tap" home, entry zone states, inbox interaction
 - `docs/08-csv-export.md` — local-only CSV export format and scope; server-backed full-history export is backlogged
 - `docs/09-language-and-i18n.md` — full bilingual UI, language detection, formatting
-- `docs/10-currency-and-payment-methods.md` — payment methods = accounts, per-transaction currency, per-currency budgets
-- `docs/11-savings-goals.md` — goal fields on accounts, per-currency balance, Accounts screen flagged as a prerequisite gap (not yet designed)
-- `docs/12-accounts-screen.md` — accounts list/edit screen grouped by institution, archived flag, per-currency balance display
-- `docs/artifacts/` — standalone HTML mockups (open directly in a browser): `piggypal-entry-ux.html` (doc 07), `piggypal-accounts-screen.html` (doc 12)
+- `docs/10-currency-and-payment-methods.md` — payment methods = accounts (no currency of their own, D62), per-transaction currency, per-currency budgets
+- `docs/11-savings-goals.md` — **superseded (D64)**: account-level goals removed; goal tracking is per-category via `budgets` only. Kept for historical context.
+- `docs/12-accounts-screen.md` — accounts list/edit screen grouped by institution, archived flag, per-currency balance display (no currency field, no goal UI — see docs/10 D62, docs/11 D64)
+- `docs/13-account-picker-scaling.md` — entry-zone/edit-form account picker: threshold-gated grouped-vs-capped modes, user-selectable via Settings, solo-institution label simplification. Implemented 2026-08-10.
+- `docs/artifacts/` — standalone HTML mockups (open directly in a browser): `piggypal-entry-ux.html` (doc 07), `piggypal-accounts-screen.html` (doc 12), `piggypal-picker-grouping.html` (doc 13)

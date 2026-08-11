@@ -2,14 +2,15 @@
 
 export type AccountKind = 'checking' | 'credit' | 'cash' | 'savings';
 
+// No currency, no savings goal — an account is a payment-method identity
+// only. Currency lives on the transaction (see below), chosen at entry
+// time alongside the account, independently. Goals are tracked per
+// category (see Budget), not per account — docs/11 is superseded.
 export interface Account {
   id: string;
-  institution: string | null;
+  institution: string | null; // "TD", "Itaú", "Wise" — grouping/display only, see docs/12 D60/D61
   name: string;
   kind: AccountKind;
-  currency: string;
-  goalAmountCents: number | null;
-  goalTargetDate: string | null;
   archived: boolean;
 }
 
@@ -28,7 +29,7 @@ export interface Transaction {
   categoryId: string | null;
   amountCents: number; // negative = expense, positive = income
   currency: string;
-  occurredOn: string; // ISO date
+  occurredAt: string; // local date+time, "YYYY-MM-DDTHH:MM:SS", no timezone
   note: string | null;
   source: TransactionSource;
   aiRaw: string | null;

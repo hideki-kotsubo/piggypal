@@ -18,9 +18,6 @@ interface AccountRow {
   institution: string | null;
   name: string;
   kind: string;
-  currency: string;
-  goal_amount_cents: number | null;
-  goal_target_date: string | null;
   archived: number;
 }
 function rowToAccount(r: AccountRow): Account {
@@ -29,9 +26,6 @@ function rowToAccount(r: AccountRow): Account {
     institution: r.institution,
     name: r.name,
     kind: r.kind as AccountKind,
-    currency: r.currency,
-    goalAmountCents: r.goal_amount_cents,
-    goalTargetDate: r.goal_target_date,
     archived: Boolean(r.archived),
   };
 }
@@ -52,7 +46,14 @@ interface TransactionRow {
   category_id: string | null;
   amount_cents: number;
   currency: string;
-  occurred_on: string;
+  // Genuinely nullable at runtime, whatever the column comment claims: a
+  // row written before occurred_on was renamed to occurred_at has nothing
+  // under the new name (PowerSync's schema is a view over JSON-stored
+  // data — a renamed column doesn't retroactively appear in old rows, it's
+  // just absent). Transaction.occurredAt itself stays a guaranteed string
+  // for every other consumer — this mapping is the one place that has to
+  // know the fallback exists.
+  occurred_at: string | null;
   note: string | null;
   source: string;
   ai_raw: string | null;
@@ -65,7 +66,7 @@ function rowToTransaction(r: TransactionRow): Transaction {
     categoryId: r.category_id,
     amountCents: r.amount_cents,
     currency: r.currency,
-    occurredOn: r.occurred_on,
+    occurredAt: r.occurred_at ?? '1970-01-01T00:00:00',
     note: r.note,
     source: r.source as Transaction['source'],
     aiRaw: r.ai_raw,
@@ -89,9 +90,6 @@ const ACCOUNT_COLUMNS: Record<keyof Account, string> = {
   institution: 'institution',
   name: 'name',
   kind: 'kind',
-  currency: 'currency',
-  goalAmountCents: 'goal_amount_cents',
-  goalTargetDate: 'goal_target_date',
   archived: 'archived',
 };
 
@@ -110,6 +108,29 @@ const BUDGET_COLUMNS: Record<keyof Budget, string> = {
   amountCents: 'amount_cents',
 };
 
+const TRANSACTION_COLUMNS: Record<keyof Transaction, string> = {
+  id: 'id',
+  accountId: 'account_id',
+  categoryId: 'category_id',
+  amountCents: 'amount_cents',
+  currency: 'currency',
+  occurredAt: 'occurred_at',
+  note: 'note',
+  source: 'source',
+  aiRaw: 'ai_raw',
+  deletedAt: 'deleted_at',
+};
+
+// Shared by seeding and addAccount — one place that knows the accounts
+// INSERT shape.
+async function insertAccountRow(a: Account): Promise<void> {
+  await db.execute(
+    `INSERT INTO accounts (id, institution, name, kind, archived)
+     VALUES (?, ?, ?, ?, ?)`,
+    [a.id, a.institution, a.name, a.kind, a.archived ? 1 : 0],
+  );
+}
+
 // ---- one-time seed on an empty database ----
 
 async function seedIfEmpty() {
@@ -120,9 +141,9 @@ async function seedIfEmpty() {
     await db.writeTransaction(async (tx) => {
       for (const a of seedAccounts) {
         await tx.execute(
-          `INSERT INTO accounts (id, institution, name, kind, currency, goal_amount_cents, goal_target_date, archived)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [a.id, a.institution, a.name, a.kind, a.currency, a.goalAmountCents, a.goalTargetDate, a.archived ? 1 : 0],
+          `INSERT INTO accounts (id, institution, name, kind, archived)
+           VALUES (?, ?, ?, ?, ?)`,
+          [a.id, a.institution, a.name, a.kind, a.archived ? 1 : 0],
         );
       }
       for (const c of seedCategories) {
@@ -133,9 +154,9 @@ async function seedIfEmpty() {
       }
       for (const t of seedTransactions) {
         await tx.execute(
-          `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_on, note, source, ai_raw, deleted_at)
+          `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_at, note, source, ai_raw, deleted_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [t.id, t.accountId, t.categoryId, t.amountCents, t.currency, t.occurredOn, t.note, t.source, t.aiRaw, t.deletedAt],
+          [t.id, t.accountId, t.categoryId, t.amountCents, t.currency, t.occurredAt, t.note, t.source, t.aiRaw, t.deletedAt],
         );
       }
       for (const b of seedBudgets) {
@@ -162,6 +183,8 @@ interface StoreState {
 
 interface StoreApi extends StoreState {
   addTransaction: (tx: Transaction) => void;
+  updateTransaction: (transactionId: string, patch: Partial<Transaction>) => void;
+  deleteTransaction: (transactionId: string) => void;
   categorizeTransaction: (transactionId: string, categoryId: string) => void;
   addAccount: (account: Account) => void;
   updateAccount: (accountId: string, patch: Partial<Account>) => void;
@@ -176,6 +199,14 @@ interface StoreApi extends StoreState {
   rankedAccounts: () => Account[];
   rankedCurrencies: (accountId: string) => string[];
   rankedCategories: () => Category[];
+  // Wipes every local table and reloads so seedIfEmpty repopulates fresh —
+  // a dev-stage escape hatch for exactly the situation that keeps
+  // recurring while the schema is still actively changing: old rows
+  // missing a column that didn't exist when they were written. Not a
+  // substitute for real migrations, just the honest option available
+  // before this app has any (docs/01 D1 doesn't have a migration story
+  // yet, and doesn't need one until there's a real user to migrate).
+  resetLocalData: () => Promise<void>;
 }
 
 const StoreContext = createContext<StoreApi | null>(null);
@@ -230,7 +261,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           { signal: controller.signal, triggerImmediate: true },
         );
         db.watch(
-          'SELECT * FROM transactions ORDER BY occurred_on DESC',
+          'SELECT * FROM transactions ORDER BY occurred_at DESC',
           [],
           {
             onResult: (r) =>
@@ -272,17 +303,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const activeTx = () =>
       [...state.transactions]
         .filter((t) => !t.deletedAt)
-        .sort((a, b) => (a.occurredOn < b.occurredOn ? 1 : -1));
+        .sort((a, b) => (a.occurredAt < b.occurredAt ? 1 : -1));
 
     return {
       ...state,
 
       addTransaction(tx) {
         void db.execute(
-          `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_on, note, source, ai_raw, deleted_at)
+          `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_at, note, source, ai_raw, deleted_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [tx.id, tx.accountId, tx.categoryId, tx.amountCents, tx.currency, tx.occurredOn, tx.note, tx.source, tx.aiRaw, tx.deletedAt],
+          [tx.id, tx.accountId, tx.categoryId, tx.amountCents, tx.currency, tx.occurredAt, tx.note, tx.source, tx.aiRaw, tx.deletedAt],
         );
+      },
+
+      updateTransaction(transactionId, patch) {
+        const entries = Object.entries(patch) as [keyof Transaction, unknown][];
+        if (entries.length === 0) return;
+        const setClause = entries.map(([k]) => `${TRANSACTION_COLUMNS[k]} = ?`).join(', ');
+        void db.execute(`UPDATE transactions SET ${setClause} WHERE id = ?`, [...entries.map(([, v]) => v), transactionId]);
+      },
+
+      // Soft delete (deleted_at), not a real DELETE — db/schema.sql's
+      // design principle: a device offline during a delete converges
+      // cleanly, and it's how every list already filters (activeTx()).
+      deleteTransaction(transactionId) {
+        void db.execute('UPDATE transactions SET deleted_at = ? WHERE id = ?', [
+          new Date().toISOString(),
+          transactionId,
+        ]);
       },
 
       // docs/07 D26: categorize an inbox item in place.
@@ -291,20 +339,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
 
       addAccount(account) {
-        void db.execute(
-          `INSERT INTO accounts (id, institution, name, kind, currency, goal_amount_cents, goal_target_date, archived)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            account.id,
-            account.institution,
-            account.name,
-            account.kind,
-            account.currency,
-            account.goalAmountCents,
-            account.goalTargetDate,
-            account.archived ? 1 : 0,
-          ],
-        );
+        void insertAccountRow(account);
       },
 
       // Also how archiving works (docs/12 D56) — updateAccount(id, { archived: true }).
@@ -368,10 +403,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return recent?.accountId ?? state.accounts[0]?.id ?? '';
       },
 
+      // Accounts don't have a currency of their own (see Account) — the
+      // default shown for a new entry is this account's own last-used
+      // currency if it has history, else the most recent transaction on
+      // any account, else a hardcoded fallback.
       defaultCurrencyFor(accountId) {
         const recentOnAccount = activeTx().find((t) => t.accountId === accountId);
         if (recentOnAccount) return recentOnAccount.currency;
-        return state.accounts.find((a) => a.id === accountId)?.currency ?? 'CAD';
+        return activeTx()[0]?.currency ?? 'CAD';
       },
 
       rankedAccounts() {
@@ -382,15 +421,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           .sort((a, b) => (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0));
       },
 
+      // Ranked by this account's own transaction-currency history first
+      // (accounts don't carry a currency of their own to seed with), then
+      // every currency in use on any account, then sensible defaults — so
+      // an account whose history is (or starts) single-currency is still
+      // switchable to any currency in use elsewhere.
       rankedCurrencies(accountId) {
-        const account = state.accounts.find((a) => a.id === accountId);
         const counts = new Map<string, number>();
         for (const t of activeTx()) if (t.accountId === accountId) {
           counts.set(t.currency, (counts.get(t.currency) ?? 0) + 1);
         }
-        const seen = new Set<string>(account ? [account.currency] : []);
         const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([c]) => c);
-        for (const c of ranked) seen.add(c);
+        const seen = new Set<string>(ranked);
+        for (const t of activeTx()) seen.add(t.currency);
+        for (const c of ['CAD', 'BRL', 'USD']) seen.add(c);
         return [...seen];
       },
 
@@ -402,6 +446,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return [...state.categories]
           .filter((c) => !c.archived && c.kind === 'expense')
           .sort((a, b) => (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0));
+      },
+
+      async resetLocalData() {
+        await db.writeTransaction(async (tx) => {
+          await tx.execute('DELETE FROM transactions');
+          await tx.execute('DELETE FROM budgets');
+          await tx.execute('DELETE FROM category_keywords');
+          await tx.execute('DELETE FROM categories');
+          await tx.execute('DELETE FROM accounts');
+        });
+        window.location.reload();
       },
     };
   }, [state]);

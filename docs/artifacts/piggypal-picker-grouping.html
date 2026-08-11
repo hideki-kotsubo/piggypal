@@ -1,0 +1,349 @@
+<title>piggypal — account picker, grouped by institution</title>
+<style>
+  :root {
+    --bg: #eef0ea;
+    --surface: #ffffff;
+    --surface-sunken: #f4f5f0;
+    --ink: #1e211c;
+    --ink-muted: #5c6259;
+    --ink-faint: #8b9186;
+    --line: #dadedb;
+    --accent: #3f7d69;
+    --accent-ink: #ffffff;
+    --accent-soft: #dceae3;
+    --warn: #b8752e;
+    --warn-soft: #f3e3d0;
+    --danger: #a8503f;
+    --danger-soft: #f4e1dc;
+    --shadow: 0 30px 60px -25px rgba(30, 33, 28, 0.35);
+
+    --serif: Charter, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141713; --surface: #1d211b; --surface-sunken: #171a15;
+      --ink: #edeee7; --ink-muted: #9ba398; --ink-faint: #6b7267;
+      --line: #2c322a; --accent: #6fbfa0; --accent-ink: #0f1512;
+      --accent-soft: #24352c; --warn: #d99a52; --warn-soft: #3a2c1c;
+      --danger: #c97462; --danger-soft: #3a241f;
+      --shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141713; --surface: #1d211b; --surface-sunken: #171a15;
+    --ink: #edeee7; --ink-muted: #9ba398; --ink-faint: #6b7267;
+    --line: #2c322a; --accent: #6fbfa0; --accent-ink: #0f1512;
+    --accent-soft: #24352c; --warn: #d99a52; --warn-soft: #3a2c1c;
+    --danger: #c97462; --danger-soft: #3a241f;
+    --shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.6);
+  }
+  :root[data-theme="light"] {
+    --bg: #eef0ea; --surface: #ffffff; --surface-sunken: #f4f5f0;
+    --ink: #1e211c; --ink-muted: #5c6259; --ink-faint: #8b9186;
+    --line: #dadedb; --accent: #3f7d69; --accent-ink: #ffffff;
+    --accent-soft: #dceae3; --warn: #b8752e; --warn-soft: #f3e3d0;
+    --danger: #a8503f; --danger-soft: #f4e1dc;
+    --shadow: 0 30px 60px -25px rgba(30, 33, 28, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+  body { overflow-x: hidden; }
+
+  .page { max-width: 1180px; margin: 0 auto; padding: 4rem 1.5rem 6rem; }
+
+  .intro { max-width: 42rem; margin-bottom: 1.4rem; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.09em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 0.9rem;
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 500; font-size: clamp(1.9rem, 4vw, 2.6rem);
+    line-height: 1.15; letter-spacing: -0.01em; text-wrap: balance; margin: 0 0 0.9rem;
+  }
+  .lede { font-size: 1.02rem; line-height: 1.6; color: var(--ink-muted); margin: 0; max-width: 40rem; }
+  .lede b { color: var(--ink); font-weight: 600; }
+
+  .stat-strip {
+    display: flex; flex-wrap: wrap; gap: 0.5rem 1.6rem; margin: 1.6rem 0 3rem;
+    padding: 0.9rem 1.1rem; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 12px; font-size: 0.83rem; color: var(--ink-muted);
+  }
+  .stat-strip .item { display: flex; align-items: baseline; gap: 0.4rem; }
+  .stat-strip b { color: var(--ink); font-weight: 600; font-family: var(--serif); font-size: 1.05rem; }
+
+  .stage {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2.5rem;
+    align-items: start;
+    max-width: 780px;
+  }
+  @media (max-width: 720px) {
+    .stage { grid-template-columns: 1fr; max-width: 24rem; margin: 0 auto; }
+  }
+
+  .frame-block { margin: 0; }
+  .frame-step {
+    font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink-faint); display: block; margin-bottom: 0.3rem;
+  }
+  .frame-title { font-weight: 600; font-size: 1rem; margin: 0 0 0.25rem; display: flex; align-items: center; gap: 0.5rem; }
+  .badge {
+    font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 0.18rem 0.5rem; border-radius: 999px; font-weight: 600;
+  }
+  .badge.current { background: var(--danger-soft); color: var(--danger); }
+  .badge.proposed { background: var(--accent-soft); color: var(--accent); }
+  .frame-sub { font-size: 0.87rem; color: var(--ink-muted); margin: 0; line-height: 1.5; }
+
+  .phone {
+    position: relative; width: 100%; max-width: 320px; margin: 1.4rem auto 0;
+    border-radius: 34px; background-color: var(--ink); padding: 10px; box-shadow: var(--shadow);
+  }
+  .phone .notch {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 84px; height: 18px; background: var(--ink); border-radius: 0 0 12px 12px; z-index: 2;
+  }
+  .screen {
+    position: relative; background: var(--surface); border-radius: 26px;
+    overflow: hidden; max-height: 640px; overflow-y: auto; display: flex; flex-direction: column;
+  }
+  /* live-app chrome, mirrored from home.css */
+  .app-bar { display: flex; align-items: center; justify-content: space-between; padding: 1.3rem 1.1rem 0.5rem; }
+  .wordmark { font-family: var(--serif); font-weight: 600; font-size: 1.05rem; color: var(--ink); }
+  .kebab { display: flex; gap: 3px; }
+  .kebab span { width: 4px; height: 4px; border-radius: 50%; background: var(--ink-faint); }
+
+  .entry-zone {
+    margin: 0.6rem 0.9rem 1rem; border: 1px solid var(--line); border-radius: 16px;
+    background: var(--surface-sunken); overflow: hidden;
+  }
+  .entry-trigger {
+    display: block; width: 100%; box-sizing: border-box; padding: 0.8rem 0.9rem;
+    font-size: 0.85rem; color: var(--ink-faint); background: transparent; border: none;
+  }
+  .keypad-panel { padding: 0.6rem 0.6rem 0.8rem; }
+
+  .pill-row { display: flex; gap: 6px; margin: 0.1rem 0.3rem 0.6rem; }
+  .pill-tap {
+    font-family: var(--mono); font-size: 0.7rem; font-weight: 600; padding: 0.3rem 0.55rem;
+    border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-muted);
+  }
+
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .chip {
+    font-family: var(--sans); font-size: 0.76rem; padding: 0.38rem 0.7rem; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink-muted);
+  }
+  .chip.picked { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+  /* grouped-view specific */
+  .inst-row {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 0.76rem; padding: 0.38rem 0.7rem; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink); gap: 0.5rem;
+  }
+  .inst-row .count { color: var(--ink-faint); font-family: var(--mono); font-size: 0.68rem; }
+  .inst-group {
+    grid-column: 1 / -1; width: 100%; border: 1px dashed var(--line); border-radius: 12px;
+    padding: 0.45rem 0.55rem 0.55rem; background: var(--surface-sunken);
+  }
+  .inst-group-head {
+    font-size: 0.72rem; font-weight: 600; color: var(--ink); margin-bottom: 0.4rem;
+    display: flex; align-items: center; gap: 0.35rem;
+  }
+  .inst-group-head .chev { color: var(--ink-faint); font-size: 0.65rem; }
+  .flex-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .flex-grid > * { flex: 0 0 auto; }
+  .full { flex-basis: 100%; }
+
+  .amount-preview {
+    font-family: var(--serif); font-size: 1.7rem; font-variant-numeric: tabular-nums;
+    padding: 0.1rem 0.3rem 0.4rem; color: var(--ink);
+  }
+  .keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .key {
+    font-family: var(--sans); font-size: 0.9rem; text-align: center; padding: 0.55rem 0;
+    border-radius: 10px; background: var(--surface); border: 1px solid var(--line); color: var(--ink);
+  }
+
+  ol.legend { list-style: none; margin: 1.1rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.55rem; }
+  .legend li { display: flex; gap: 0.55rem; font-size: 0.83rem; line-height: 1.45; color: var(--ink-muted); }
+  .legend .num {
+    flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; background: var(--ink); color: var(--surface);
+    font-size: 0.63rem; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 0.1rem;
+  }
+  .legend b { color: var(--ink); font-weight: 600; }
+
+  .honesty {
+    margin-top: 3.5rem; max-width: 780px; padding: 1.1rem 1.3rem; border-radius: 14px;
+    background: var(--warn-soft); color: var(--ink);
+  }
+  .honesty h2 { font-family: var(--serif); font-weight: 500; font-size: 1.15rem; margin: 0 0 0.5rem; }
+  .honesty p { font-size: 0.9rem; line-height: 1.6; margin: 0; color: var(--ink-muted); }
+  .honesty code {
+    font-family: var(--mono); font-size: 0.85em; background: var(--surface);
+    padding: 0.1rem 0.35rem; border-radius: 4px; color: var(--ink);
+  }
+</style>
+
+<div class="page">
+  <header class="intro">
+    <p class="eyebrow">piggypal &middot; entry-zone account picker</p>
+    <h1>Grouped by institution, using your real data</h1>
+    <p class="lede">
+      Same 18 accounts from your screenshot &mdash; Neo, Wise, Cash, Scotiabank,
+      Itaú, C6 Bank, Tangerine, Banco do Brasil, Bradesco, Caixa Econômica,
+      WealthSimple, Inter, NuBank. Left is what you have today; right is the
+      same picker grouped by institution, only collapsing where an
+      institution actually has more than one account.
+    </p>
+  </header>
+
+  <div class="stat-strip">
+    <span class="item"><b>18</b> accounts either way</span>
+    <span class="item"><b>13</b> top-level rows once grouped (vs. 18 flat)</span>
+    <span class="item"><b>6</b> institutions with only one account stay plain chips &mdash; no group overhead</span>
+    <span class="item"><b>5</b> institutions collapse (Neo, Itaú, C6 Bank, Inter, NuBank &mdash; 2 accounts each)</span>
+  </div>
+
+  <section class="stage">
+    <!-- BEFORE: FLAT -->
+    <figure class="frame-block">
+      <div class="frame-head">
+        <span class="frame-step">today</span>
+        <h2 class="frame-title">Flat wall <span class="badge current">your screenshot</span></h2>
+        <p class="frame-sub">Every account, one chip each, no structure &mdash; 18 pills of similar shape and weight.</p>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="app-bar">
+            <span class="wordmark">piggypal</span>
+            <div class="kebab"><span></span><span></span><span></span></div>
+          </div>
+          <div class="entry-zone">
+            <div class="entry-trigger">type or tap what you spent&hellip;</div>
+            <div class="keypad-panel">
+              <div class="pill-row">
+                <span class="pill-tap">Neo — Mastercard ▾</span>
+                <span class="pill-tap">CAD ▾</span>
+              </div>
+              <div class="chip-row">
+                <span class="chip picked">Neo — Mastercard</span>
+                <span class="chip">Wise — Checking</span>
+                <span class="chip">Cash</span>
+                <span class="chip">Neo — Checking</span>
+                <span class="chip">Scotiabank — Checking</span>
+                <span class="chip">Itaú — Checking</span>
+                <span class="chip">Itaú — Mastercard Black</span>
+                <span class="chip">C6 Bank — Conta corrente</span>
+                <span class="chip">Tangerine — Checking</span>
+                <span class="chip">C6 Bank — Mastercard</span>
+                <span class="chip">Banco do Brasil — Checking</span>
+                <span class="chip">Bradesco — Checking</span>
+                <span class="chip">Caixa Econômica — Checking</span>
+                <span class="chip">WealthSimple — Checking</span>
+                <span class="chip">Inter — Checking</span>
+                <span class="chip">Inter — Mastercard</span>
+                <span class="chip">NuBank — Checking</span>
+                <span class="chip">NuBank — Mastercard</span>
+              </div>
+              <div class="amount-preview">$0.00</div>
+              <div class="keys">
+                <span class="key">1</span><span class="key">2</span><span class="key">3</span>
+                <span class="key">4</span><span class="key">5</span><span class="key">6</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ol class="legend">
+        <li><span class="num">1</span><span>Every row is the same shape and weight &mdash; nothing tells you "these two are the same bank" except reading both labels fully.</span></li>
+        <li><span class="num">2</span><span>Chips wrap unevenly as labels get longer ("Itaú — Mastercard Black," "Banco do Brasil — Checking"), which is most of what makes this feel like a wall.</span></li>
+      </ol>
+    </figure>
+
+    <!-- AFTER: GROUPED -->
+    <figure class="frame-block">
+      <div class="frame-head">
+        <span class="frame-step">proposed</span>
+        <h2 class="frame-title">Grouped by institution <span class="badge proposed">only where it pays off</span></h2>
+        <p class="frame-sub">Single-account institutions stay plain chips. Multi-account institutions collapse to one row, tap to reveal.</p>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="app-bar">
+            <span class="wordmark">piggypal</span>
+            <div class="kebab"><span></span><span></span><span></span></div>
+          </div>
+          <div class="entry-zone">
+            <div class="entry-trigger">type or tap what you spent&hellip;</div>
+            <div class="keypad-panel">
+              <div class="pill-row">
+                <span class="pill-tap">Neo — Mastercard ▾</span>
+                <span class="pill-tap">CAD ▾</span>
+              </div>
+              <div class="flex-grid">
+                <!-- Neo: expanded, since current selection lives here -->
+                <div class="inst-group full">
+                  <div class="inst-group-head"><span class="chev">▾</span> Neo</div>
+                  <div class="chip-row">
+                    <span class="chip picked">Mastercard</span>
+                    <span class="chip">Checking</span>
+                  </div>
+                </div>
+
+                <span class="chip">Wise — Checking</span>
+                <span class="chip">Cash</span>
+                <span class="chip">Scotiabank — Checking</span>
+
+                <span class="inst-row full">Itaú <span class="count">▸ 2</span></span>
+                <span class="inst-row full">C6 Bank <span class="count">▸ 2</span></span>
+
+                <span class="chip">Tangerine — Checking</span>
+                <span class="chip">Banco do Brasil — Checking</span>
+                <span class="chip">Bradesco — Checking</span>
+                <span class="chip">Caixa Econômica — Checking</span>
+                <span class="chip">WealthSimple — Checking</span>
+
+                <span class="inst-row full">Inter <span class="count">▸ 2</span></span>
+                <span class="inst-row full">NuBank <span class="count">▸ 2</span></span>
+              </div>
+              <div class="amount-preview">$0.00</div>
+              <div class="keys">
+                <span class="key">1</span><span class="key">2</span><span class="key">3</span>
+                <span class="key">4</span><span class="key">5</span><span class="key">6</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ol class="legend">
+        <li><span class="num">1</span><span><b>Neo starts expanded</b> because the current selection ("Neo — Mastercard") lives there &mdash; same "most-recently-used opens by default" rule the Accounts screen already uses (D60/D61). Its chips drop the institution prefix since the group header already says it.</span></li>
+        <li><span class="num">2</span><span><b>Single-account institutions</b> (Wise, Cash, Scotiabank, Tangerine, Banco do Brasil, Bradesco, Caixa Econômica, WealthSimple) render as plain chips, same as today &mdash; grouping a group of one is just overhead with no payoff.</span></li>
+        <li><span class="num">3</span><span><b>Multi-account institutions</b> (Itaú, C6 Bank, Inter, NuBank) collapse to one row each. Tapping "Itaú ▸ 2" expands it the same way Neo is already shown expanded &mdash; "Checking" and "Mastercard Black" as chips.</span></li>
+      </ol>
+    </figure>
+  </section>
+
+  <div class="honesty">
+    <h2>What this does and doesn't fix</h2>
+    <p>
+      13 top-level rows instead of 18 is real, but you still have 12 distinct
+      banks &mdash; grouping can't shrink that number, only organize it. What it
+      actually buys you: rows are no longer uniform pills you have to
+      fully read to tell apart, the "which card at this bank" detail is
+      hidden until you need it, and it reuses a pattern you already have
+      (<code>docs/12</code>'s institution grouping) instead of inventing a
+      second one. If the real goal is fewer things to scan rather than
+      better-organized things to scan, the recency-capped "top 6 + more"
+      approach from earlier would cut harder, just less legibly connected
+      to how you actually think about your banks.
+    </p>
+  </div>
+</div>

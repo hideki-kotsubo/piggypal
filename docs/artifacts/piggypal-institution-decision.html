@@ -1,0 +1,359 @@
+<title>piggypal — institution field: keep or drop?</title>
+<style>
+  :root {
+    --bg: #eef0ea;
+    --surface: #ffffff;
+    --surface-sunken: #f4f5f0;
+    --ink: #1e211c;
+    --ink-muted: #5c6259;
+    --ink-faint: #8b9186;
+    --line: #dadedb;
+    --accent: #3f7d69;
+    --accent-ink: #ffffff;
+    --accent-soft: #dceae3;
+    --warn: #b8752e;
+    --warn-soft: #f3e3d0;
+    --danger: #a8503f;
+    --danger-soft: #f4e1dc;
+    --shadow: 0 30px 60px -25px rgba(30, 33, 28, 0.35);
+
+    --serif: Charter, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141713; --surface: #1d211b; --surface-sunken: #171a15;
+      --ink: #edeee7; --ink-muted: #9ba398; --ink-faint: #6b7267;
+      --line: #2c322a; --accent: #6fbfa0; --accent-ink: #0f1512;
+      --accent-soft: #24352c; --warn: #d99a52; --warn-soft: #3a2c1c;
+      --danger: #c97462; --danger-soft: #3a241f;
+      --shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141713; --surface: #1d211b; --surface-sunken: #171a15;
+    --ink: #edeee7; --ink-muted: #9ba398; --ink-faint: #6b7267;
+    --line: #2c322a; --accent: #6fbfa0; --accent-ink: #0f1512;
+    --accent-soft: #24352c; --warn: #d99a52; --warn-soft: #3a2c1c;
+    --danger: #c97462; --danger-soft: #3a241f;
+    --shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.6);
+  }
+  :root[data-theme="light"] {
+    --bg: #eef0ea; --surface: #ffffff; --surface-sunken: #f4f5f0;
+    --ink: #1e211c; --ink-muted: #5c6259; --ink-faint: #8b9186;
+    --line: #dadedb; --accent: #3f7d69; --accent-ink: #ffffff;
+    --accent-soft: #dceae3; --warn: #b8752e; --warn-soft: #f3e3d0;
+    --danger: #a8503f; --danger-soft: #f4e1dc;
+    --shadow: 0 30px 60px -25px rgba(30, 33, 28, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+  body { overflow-x: hidden; }
+
+  .page { max-width: 1180px; margin: 0 auto; padding: 4rem 1.5rem 6rem; }
+
+  .intro { max-width: 42rem; margin-bottom: 1.4rem; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.09em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 0.9rem;
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 500; font-size: clamp(1.9rem, 4vw, 2.6rem);
+    line-height: 1.15; letter-spacing: -0.01em; text-wrap: balance; margin: 0 0 0.9rem;
+  }
+  .lede { font-size: 1.02rem; line-height: 1.6; color: var(--ink-muted); margin: 0; max-width: 40rem; }
+  .lede b { color: var(--ink); font-weight: 600; }
+
+  .status-strip {
+    display: flex; flex-wrap: wrap; gap: 0.5rem 1.6rem; margin: 1.6rem 0 3rem;
+    padding: 0.9rem 1.1rem; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 12px; font-size: 0.83rem; color: var(--ink-muted);
+  }
+  .status-strip .item { display: flex; align-items: center; gap: 0.45rem; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .dot.ok { background: var(--accent); }
+  .dot.open { background: var(--warn); }
+  .status-strip b { color: var(--ink); font-weight: 600; }
+
+  .stage {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2.5rem;
+    align-items: start;
+    max-width: 760px;
+  }
+  @media (max-width: 720px) {
+    .stage { grid-template-columns: 1fr; max-width: 24rem; margin: 0 auto; }
+  }
+
+  .frame-block { margin: 0; }
+  .frame-step {
+    font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink-faint); display: block; margin-bottom: 0.3rem;
+  }
+  .frame-title { font-weight: 600; font-size: 1rem; margin: 0 0 0.25rem; display: flex; align-items: center; gap: 0.5rem; }
+  .badge {
+    font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 0.18rem 0.5rem; border-radius: 999px; font-weight: 600;
+  }
+  .badge.current { background: var(--accent-soft); color: var(--accent); }
+  .badge.proposed { background: var(--warn-soft); color: var(--warn); }
+  .frame-sub { font-size: 0.87rem; color: var(--ink-muted); margin: 0; line-height: 1.5; }
+
+  .phone {
+    position: relative; width: 100%; max-width: 300px; margin: 1.4rem auto 0;
+    border-radius: 34px; background-color: var(--ink); padding: 10px; box-shadow: var(--shadow);
+  }
+  .phone .notch {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 84px; height: 18px; background: var(--ink); border-radius: 0 0 12px 12px; z-index: 2;
+  }
+  .screen {
+    position: relative; background: var(--surface); border-radius: 26px;
+    overflow: hidden; min-height: 480px; display: flex; flex-direction: column;
+  }
+
+  .app-bar {
+    display: flex; align-items: center; justify-content: space-between; padding: 1.6rem 1.1rem 0.9rem;
+  }
+  .wordmark { font-family: var(--serif); font-weight: 600; font-size: 1.05rem; letter-spacing: -0.01em; }
+  .add-btn {
+    width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center; color: var(--ink-muted); font-size: 0.85rem;
+  }
+
+  .acc-list { margin: 0 1.1rem; flex: 1; }
+  .inst-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.6rem 0 0.3rem; font-size: 0.78rem; font-weight: 600; color: var(--ink);
+  }
+  .inst-header .chev { color: var(--ink-faint); }
+  .inst-group { border-bottom: 1px solid var(--line); padding-bottom: 0.3rem; margin-bottom: 0.15rem; }
+  .inst-group .acc-row { border-bottom: none; padding: 0.5rem 0 0.5rem 0.1rem; }
+  .acc-row { padding: 0.75rem 0; border-bottom: 1px solid var(--line); }
+  .acc-row.collide { background: var(--danger-soft); margin: 0 -0.6rem; padding: 0.75rem 0.6rem; border-radius: 8px; border-bottom: none; }
+  .acc-row-top { display: flex; justify-content: space-between; align-items: baseline; }
+  .acc-name { font-size: 0.9rem; font-weight: 600; }
+  .acc-kind {
+    font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-faint);
+  }
+  .acc-bal {
+    font-variant-numeric: tabular-nums; font-size: 0.83rem; color: var(--ink-muted); margin-top: 0.15rem;
+  }
+  .collide-flag {
+    font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.03em; color: var(--danger);
+    margin-top: 0.3rem; display: flex; align-items: center; gap: 0.3rem;
+  }
+
+  .callout {
+    margin: 0.7rem 1.1rem 1rem; padding: 0.65rem 0.75rem; border-radius: 10px;
+    font-size: 0.76rem; line-height: 1.45;
+  }
+  .callout.bad { background: var(--danger-soft); color: var(--danger); }
+  .callout.good { background: var(--accent-soft); color: var(--accent); }
+
+  ol.legend { list-style: none; margin: 1.1rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.55rem; }
+  .legend li { display: flex; gap: 0.55rem; font-size: 0.83rem; line-height: 1.45; color: var(--ink-muted); }
+  .legend .num {
+    flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; background: var(--ink); color: var(--surface);
+    font-size: 0.63rem; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 0.1rem;
+  }
+  .legend b { color: var(--ink); font-weight: 600; }
+
+  .tradeoffs {
+    margin-top: 4rem; max-width: 760px;
+  }
+  .tradeoffs h2 {
+    font-family: var(--serif); font-weight: 500; font-size: 1.5rem; margin: 0 0 1.4rem;
+  }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+  @media (max-width: 720px) { .cards { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 1.2rem 1.3rem;
+  }
+  .card h3 {
+    font-size: 0.95rem; margin: 0 0 0.9rem; display: flex; align-items: center; gap: 0.5rem;
+  }
+  .card ul { margin: 0; padding-left: 1.1rem; font-size: 0.86rem; line-height: 1.6; color: var(--ink-muted); }
+  .card ul li::marker { color: var(--ink-faint); }
+  .card ul li b { color: var(--ink); font-weight: 600; }
+
+  .footnote {
+    max-width: 760px; margin-top: 2.4rem; padding-top: 1.4rem; border-top: 1px solid var(--line);
+    font-size: 0.85rem; color: var(--ink-muted); line-height: 1.6;
+  }
+  .footnote code {
+    font-family: var(--mono); font-size: 0.82em; background: var(--surface-sunken);
+    padding: 0.1rem 0.35rem; border-radius: 4px; color: var(--ink);
+  }
+</style>
+
+<div class="page">
+  <header class="intro">
+    <p class="eyebrow">piggypal &middot; account/currency picker &mdash; open decision</p>
+    <h1>Flat list, or grouped by institution?</h1>
+    <p class="lede">
+      The account/currency picker itself is done and working &mdash; tap-to-pick
+      account, tap-to-pick currency, auto-creates a new row when a
+      (name, currency) pair doesn't exist yet. What's still open is a side
+      effect of that work: the WIP quietly dropped the <code>institution</code>
+      field and the institution-grouped Accounts list that docs/12
+      locked in as D60/D61. This compares what shipping as-is looks like
+      against restoring it.
+    </p>
+  </header>
+
+  <div class="status-strip">
+    <span class="item"><span class="dot ok"></span> Picker component &amp; wiring &mdash; <b>done</b></span>
+    <span class="item"><span class="dot ok"></span> Typecheck &amp; lint &mdash; <b>clean</b></span>
+    <span class="item"><span class="dot open"></span> Institution field (D60/D61) &mdash; <b>this decision</b></span>
+    <span class="item"><span class="dot open"></span> Commit to git &mdash; <b>pending this call</b></span>
+  </div>
+
+  <section class="stage">
+    <!-- OPTION A: FLAT (CURRENT WIP) -->
+    <figure class="frame-block">
+      <div class="frame-head">
+        <span class="frame-step">option A</span>
+        <h2 class="frame-title">Flat list <span class="badge current">current WIP</span></h2>
+        <p class="frame-sub">Every row is just a (name, currency) pair. Simpler code, but nothing distinguishes two banks that happen to use the same account name.</p>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="app-bar">
+            <span class="wordmark">Accounts</span>
+            <span class="add-btn">+</span>
+          </div>
+          <div class="acc-list">
+            <div class="acc-row collide">
+              <div class="acc-row-top"><span class="acc-name">Checking (CAD)</span><span class="acc-kind">checking</span></div>
+              <div class="acc-bal">$1,150.00 CAD</div>
+              <div class="collide-flag">&#9888; which bank?</div>
+            </div>
+            <div class="acc-row collide">
+              <div class="acc-row-top"><span class="acc-name">Checking (BRL)</span><span class="acc-kind">checking</span></div>
+              <div class="acc-bal">R$3,400.00 BRL</div>
+              <div class="collide-flag">&#9888; which bank?</div>
+            </div>
+            <div class="acc-row">
+              <div class="acc-row-top"><span class="acc-name">Visa (CAD)</span><span class="acc-kind">credit</span></div>
+              <div class="acc-bal">$420.00 CAD</div>
+            </div>
+            <div class="acc-row">
+              <div class="acc-row-top"><span class="acc-name">Wise (BRL)</span><span class="acc-kind">checking</span></div>
+              <div class="acc-bal">R$890.00 BRL</div>
+            </div>
+            <div class="acc-row" style="border-bottom: none;">
+              <div class="acc-row-top"><span class="acc-name">Cash (CAD)</span><span class="acc-kind">cash</span></div>
+              <div class="acc-bal">$85.00 CAD</div>
+            </div>
+          </div>
+          <div class="callout bad">
+            "Checking" exists at both TD and It&aacute;u &mdash; the label
+            shows currency, not which bank. At 15-20+ accounts this
+            collision is routine, not an edge case.
+          </div>
+        </div>
+      </div>
+      <ol class="legend">
+        <li><span class="num">1</span><span><b>accountLabel()</b> now renders <code>name (currency)</code> only &mdash; the two "Checking" rows are visually identical except for currency, which doesn't answer "which bank."</span></li>
+        <li><span class="num">2</span><span><b>List order is recency-only</b>, no grouping &mdash; same-named accounts at different banks sit wherever their last transaction lands, not next to each other.</span></li>
+        <li><span class="num">3</span><span><b>Picker chip row</b> (EntryZone/TransactionList) has the identical problem: two "Checking" chips, indistinguishable at a glance.</span></li>
+      </ol>
+    </figure>
+
+    <!-- OPTION B: RESTORE INSTITUTION -->
+    <figure class="frame-block">
+      <div class="frame-head">
+        <span class="frame-step">option B</span>
+        <h2 class="frame-title">Grouped by institution <span class="badge proposed">restores D60/D61</span></h2>
+        <p class="frame-sub">Same picker component, same auto-creation behavior &mdash; institution comes back as a display/grouping label layered on top.</p>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="app-bar">
+            <span class="wordmark">Accounts</span>
+            <span class="add-btn">+</span>
+          </div>
+          <div class="acc-list">
+            <div class="inst-group">
+              <div class="inst-header">
+                <span>TD</span>
+                <svg class="chev" width="9" height="6" viewBox="0 0 9 6" fill="none"><path d="M1 1L4.5 5L8 1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div class="acc-row">
+                <div class="acc-row-top"><span class="acc-name">Checking</span><span class="acc-kind">checking</span></div>
+                <div class="acc-bal">$1,150.00 CAD</div>
+              </div>
+              <div class="acc-row">
+                <div class="acc-row-top"><span class="acc-name">Visa</span><span class="acc-kind">credit</span></div>
+                <div class="acc-bal">$420.00 CAD</div>
+              </div>
+            </div>
+            <div class="inst-group">
+              <div class="inst-header">
+                <span>It&aacute;u</span>
+                <svg class="chev" width="9" height="6" viewBox="0 0 9 6" fill="none"><path d="M1 1L4.5 5L8 1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div class="acc-row" style="border-bottom: none;">
+                <div class="acc-row-top"><span class="acc-name">Checking</span><span class="acc-kind">checking</span></div>
+                <div class="acc-bal">R$3,400.00 BRL</div>
+              </div>
+            </div>
+            <div class="acc-row">
+              <div class="acc-row-top"><span class="acc-name">Wise</span><span class="acc-kind">checking</span></div>
+              <div class="acc-bal">R$890.00 BRL</div>
+            </div>
+            <div class="acc-row" style="border-bottom: none;">
+              <div class="acc-row-top"><span class="acc-name">Cash</span><span class="acc-kind">cash</span></div>
+              <div class="acc-bal">$85.00 CAD</div>
+            </div>
+          </div>
+          <div class="callout good">
+            Both "Checking" rows are unambiguous &mdash; TD &rarr; Checking vs.
+            It&aacute;u &rarr; Checking, grouped, never merged.
+          </div>
+        </div>
+      </div>
+      <ol class="legend">
+        <li><span class="num">1</span><span><b>institution</b> comes back as an optional free-text field (unchanged from D60) &mdash; nullable, no FK, display/grouping only.</span></li>
+        <li><span class="num">2</span><span><b>accountLabel()</b> reverts to <code>institution &mdash; name</code> when institution is set, falling back to bare <code>name</code> otherwise (D61) &mdash; the picker chip row inherits this for free since both read the same helper.</span></li>
+        <li><span class="num">3</span><span><b>Extra step</b>: every new-account form (including auto-creation's implicit "new row") needs an institution value to actually disambiguate &mdash; auto-created siblings would need to inherit the parent's institution, which isn't in the current WIP.</span></li>
+      </ol>
+    </figure>
+  </section>
+
+  <section class="tradeoffs">
+    <h2>What each path actually costs</h2>
+    <div class="cards">
+      <div class="card">
+        <h3><span class="badge current">A</span> Ship flat, revert the docs</h3>
+        <ul>
+          <li><b>Do:</b> update docs/12 to record D60/D61 as superseded, with the auto-creation rationale as the reason.</li>
+          <li><b>Give up:</b> bank-level disambiguation at your real 15-20+ account scale &mdash; two same-named accounts become genuinely ambiguous in both the Accounts list and the entry picker.</li>
+          <li><b>Save:</b> no schema/type/UI work left &mdash; this path is already fully coded.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3><span class="badge proposed">B</span> Restore institution</h3>
+        <ul>
+          <li><b>Do:</b> re-add <code>institution</code> to <code>types.ts</code>/<code>schema.ts</code>/<code>db/schema.sql</code>, restore grouped rendering in <code>AccountsScreen.tsx</code>, add an institution input to <code>AccountForm</code>, and decide what <code>resolveAccountForCurrency</code>'s auto-created sibling inherits as its institution.</li>
+          <li><b>Give up:</b> nothing functional &mdash; the picker's auto-creation logic is orthogonal to institution and doesn't need to change, only the label/grouping layer around it.</li>
+          <li><b>Save:</b> D60/D61 stay locked, no doc rewrite needed.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <p class="footnote">
+    Either way this needs a decision recorded before <code>docs/00-backlog.md</code>'s
+    "Now" item can be checked off and the WIP committed. Auto-creation
+    (<code>store.resolveAccountForCurrency</code>) itself isn't in question here &mdash;
+    it behaves identically under both options; only the display/grouping
+    layer changes.
+  </p>
+</div>

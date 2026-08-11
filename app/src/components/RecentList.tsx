@@ -8,7 +8,7 @@ export function RecentList() {
   const store = useStore();
   const active = [...store.transactions]
     .filter((t) => !t.deletedAt)
-    .sort((a, b) => (a.occurredOn < b.occurredOn ? 1 : -1));
+    .sort((a, b) => (a.occurredAt < b.occurredAt ? 1 : -1));
   const recent = active.slice(0, PREVIEW_COUNT);
 
   if (recent.length === 0) {
@@ -28,7 +28,7 @@ export function RecentList() {
           <div className="tx-row" key={t.id}>
             <div className="tx-main">
               <span className="tx-note">{t.note ?? 'Uncategorized'}</span>
-              <span className="tx-meta">{formatRelativeDate(t.occurredOn)} · {t.source}</span>
+              <span className="tx-meta">{formatRelativeDate(t.occurredAt)} · {t.source}</span>
             </div>
             <span className={`tx-amt ${t.amountCents < 0 ? 'out' : 'in'}`}>
               {formatAmount(t.amountCents, t.currency)}

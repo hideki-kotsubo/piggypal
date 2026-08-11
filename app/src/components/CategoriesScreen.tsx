@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import type { Budget, Category } from '../lib/types';
 
-const currentMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-  .toISOString()
-  .slice(0, 10);
+// Local date construction, not toISOString() — that's UTC and would land
+// on the wrong month for anyone in a positive-UTC-offset timezone.
+const _now = new Date();
+const currentMonth = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-01`;
 
 type OpenPanel = { type: 'edit'; id: string } | { type: 'create' } | null;
 
@@ -180,7 +181,19 @@ function BudgetsForCategory({ categoryId }: { categoryId: string }) {
   const [newAmountStr, setNewAmountStr] = useState('');
 
   const budgets = store.budgets.filter((b) => b.categoryId === categoryId && b.month === currentMonth);
-  const currencyOptions = [...new Set([newCurrency, ...store.accounts.map((a) => a.currency), 'CAD'])];
+  // Accounts don't carry a currency (see Account) — offer whatever
+  // currencies are actually in use across transactions/budgets, plus
+  // sensible defaults, same pattern as the account/currency picker.
+  const currencyOptions = [
+    ...new Set([
+      newCurrency,
+      ...store.transactions.map((t) => t.currency),
+      ...store.budgets.map((b) => b.currency),
+      'CAD',
+      'BRL',
+      'USD',
+    ]),
+  ];
 
   function amountStrFor(b: Budget) {
     return String(b.amountCents / 100);

@@ -1,11 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { accountLabel, formatAmount } from '../lib/format';
 import type { Account, AccountKind } from '../lib/types';
 
-// docs/12: name, kind, currency all read/write through the account fields
-// directly — the kind list is fixed (D53's layout), not derived from usage.
+// docs/12: name, kind, institution all read/write through the account
+// fields directly — the kind list is fixed (D53's layout), not derived
+// from usage. No currency, no savings goal — see Account.
 const ACCOUNT_KINDS: AccountKind[] = ['checking', 'credit', 'cash', 'savings'];
 const KIND_LABELS: Record<AccountKind, string> = {
   checking: 'Checking',
@@ -14,12 +15,12 @@ const KIND_LABELS: Record<AccountKind, string> = {
   savings: 'Savings',
 };
 
-function formatGoalDate(iso: string): string {
-  const date = new Date(iso + 'T00:00:00');
-  return new Intl.DateTimeFormat('en-CA', { month: 'short', year: 'numeric' }).format(date);
-}
-
-type OpenPanel = { type: 'edit'; id: string } | { type: 'create' } | null;
+// institutionSnapshot freezes the editing row's grouping key for the
+// duration of the edit session (see effectiveInstitution below) — without
+// it, typing in the Institution field (the live grouping key) reparents
+// the row into a different/new group on every keystroke, remounting
+// AccountForm and losing focus mid-edit.
+type OpenPanel = { type: 'edit'; id: string; institutionSnapshot: string | null } | { type: 'create' } | null;
 
 export function AccountsScreen() {
   const store = useStore();
@@ -37,7 +38,7 @@ export function AccountsScreen() {
     for (const t of store.transactions) {
       if (t.deletedAt) continue;
       const cur = map.get(t.accountId);
-      if (!cur || t.occurredOn > cur) map.set(t.accountId, t.occurredOn);
+      if (!cur || t.occurredAt > cur) map.set(t.accountId, t.occurredAt);
     }
     return map;
   }, [store.transactions]);
@@ -45,23 +46,35 @@ export function AccountsScreen() {
   const byRecency = (list: Account[]) =>
     [...list].sort((a, b) => (recency.get(b.id) ?? '').localeCompare(recency.get(a.id) ?? ''));
 
+  // The row currently being edited keeps the institution it had when
+  // editing started, regardless of what's been typed since — see the
+  // OpenPanel comment above. Everything else uses its live value.
+  const effectiveInstitution = useCallback(
+    (a: Account): string | null => {
+      if (openPanel?.type === 'edit' && openPanel.id === a.id) return openPanel.institutionSnapshot;
+      return a.institution;
+    },
+    [openPanel],
+  );
+
   // D60/D61: group by institution; ungrouped accounts list plainly, no header.
   const groups = useMemo(() => {
     const byInstitution = new Map<string, Account[]>();
     for (const a of active) {
-      if (!a.institution) continue;
-      const arr = byInstitution.get(a.institution) ?? [];
+      const institution = effectiveInstitution(a);
+      if (!institution) continue;
+      const arr = byInstitution.get(institution) ?? [];
       arr.push(a);
-      byInstitution.set(a.institution, arr);
+      byInstitution.set(institution, arr);
     }
     const sortByRecency = (list: Account[]) =>
       [...list].sort((a, b) => (recency.get(b.id) ?? '').localeCompare(recency.get(a.id) ?? ''));
     return [...byInstitution.entries()]
       .map(([institution, accounts]) => ({ institution, accounts: sortByRecency(accounts) }))
       .sort((a, b) => (recency.get(b.accounts[0].id) ?? '').localeCompare(recency.get(a.accounts[0].id) ?? ''));
-  }, [active, recency]);
+  }, [active, recency, effectiveInstitution]);
 
-  const ungrouped = byRecency(active.filter((a) => !a.institution));
+  const ungrouped = byRecency(active.filter((a) => !effectiveInstitution(a)));
 
   // Most-recently-used group expanded by default, others collapsed — a single
   // computed default, not re-derived after the user starts toggling groups.
@@ -74,8 +87,12 @@ export function AccountsScreen() {
     setExpandedGroups(next);
   }
 
-  function toggleRow(id: string) {
-    setOpenPanel((p) => (p?.type === 'edit' && p.id === id ? null : { type: 'edit', id }));
+  function toggleRow(account: Account) {
+    setOpenPanel((p) =>
+      p?.type === 'edit' && p.id === account.id
+        ? null
+        : { type: 'edit', id: account.id, institutionSnapshot: account.institution },
+    );
   }
 
   function renderRow(account: Account, showInstitutionInLabel: boolean) {
@@ -84,7 +101,7 @@ export function AccountsScreen() {
     const label = showInstitutionInLabel ? accountLabel(account) : account.name;
     return (
       <div className="account-block" key={account.id}>
-        <button className="account-row" onClick={() => toggleRow(account.id)}>
+        <button className="account-row" onClick={() => toggleRow(account)}>
           <div className="account-row-top">
             <span className="account-name">{label}</span>
             <span className="account-kind">{KIND_LABELS[account.kind]}</span>
@@ -100,7 +117,6 @@ export function AccountsScreen() {
               ))
             )}
           </div>
-          {account.goalAmountCents != null && <GoalProgress account={account} balances={balances} />}
         </button>
         {isEditing && (
           <div className="account-edit">
@@ -181,32 +197,6 @@ export function AccountsScreen() {
   );
 }
 
-function GoalProgress({
-  account,
-  balances,
-}: {
-  account: Account;
-  balances: { currency: string; cents: number }[];
-}) {
-  const ownBalance = balances.find((b) => b.currency === account.currency)?.cents ?? 0;
-  const goal = account.goalAmountCents ?? 0;
-  const pct = goal > 0 ? Math.min(100, Math.max(0, (ownBalance / goal) * 100)) : 0;
-  return (
-    <div className="goal-progress">
-      <div className="goal-progress-labels">
-        <span>
-          {formatAmount(ownBalance, account.currency)} / {formatAmount(goal, account.currency)}
-        </span>
-        <span>{Math.round(pct)}%</span>
-      </div>
-      <div className="track">
-        <div className="fill" style={{ width: `${pct}%` }} />
-      </div>
-      {account.goalTargetDate && <span className="goal-due">due {formatGoalDate(account.goalTargetDate)}</span>}
-    </div>
-  );
-}
-
 // D54: tapping a row expands this inline, no separate screen, for both
 // editing an existing account (account set) and creating one (account null).
 function AccountForm({ account, onDone }: { account: Account | null; onDone: () => void }) {
@@ -220,44 +210,29 @@ function AccountForm({ account, onDone }: { account: Account | null; onDone: () 
         institution: null,
         name: '',
         kind: 'checking',
-        currency: 'CAD',
-        goalAmountCents: null,
-        goalTargetDate: null,
         archived: false,
       },
   );
   const current: Account = account ?? draft;
 
-  const [pickerOpen, setPickerOpen] = useState<'kind' | 'currency' | null>(null);
-  // D55: goal fields collapse behind "+ Add a savings goal" unless already set.
-  const [goalExpanded, setGoalExpanded] = useState(() => current.goalAmountCents != null);
-  const [goalAmountStr, setGoalAmountStr] = useState(() =>
-    current.goalAmountCents != null ? String(current.goalAmountCents / 100) : '',
-  );
+  const [pickerOpen, setPickerOpen] = useState<'kind' | null>(null);
+  // Local mirrors of the free-text fields — `current.name`/`current.institution`
+  // for an existing account come straight from the store, and commit() writes
+  // through an async DB round-trip (PowerSync live query), so binding the
+  // input's value directly to them snaps the cursor to the end on every
+  // keystroke once that round-trip resolves.
+  const [nameStr, setNameStr] = useState(() => current.name);
+  const [institutionStr, setInstitutionStr] = useState(() => current.institution ?? '');
 
   function commit(patch: Partial<Account>) {
     if (isNew) setDraft((d) => ({ ...d, ...patch }));
     else store.updateAccount(current.id, patch);
   }
 
-  // D57: currency chips are the same frequency-ranked pattern as everywhere
-  // else — for an existing account that's its own transaction history; a
-  // brand-new account has none yet, so fall back to currencies already in
-  // use across other accounts.
-  const currencyOptions = isNew
-    ? [...new Set([current.currency, ...store.accounts.map((a) => a.currency), 'CAD'])]
-    : store.rankedCurrencies(current.id);
-
   function saveNew() {
     if (!current.name.trim()) return;
     store.addAccount({ ...draft, id: crypto.randomUUID() });
     onDone();
-  }
-
-  function removeGoal() {
-    commit({ goalAmountCents: null, goalTargetDate: null });
-    setGoalAmountStr('');
-    setGoalExpanded(false);
   }
 
   function archive() {
@@ -273,8 +248,12 @@ function AccountForm({ account, onDone }: { account: Account | null; onDone: () 
         <input
           className="text-input"
           placeholder="TD, Itaú, Wise…"
-          value={current.institution ?? ''}
-          onChange={(e) => commit({ institution: e.target.value || null })}
+          value={institutionStr}
+          onChange={(e) => {
+            const v = e.target.value;
+            setInstitutionStr(v);
+            commit({ institution: v || null });
+          }}
         />
       </label>
 
@@ -283,8 +262,12 @@ function AccountForm({ account, onDone }: { account: Account | null; onDone: () 
         <input
           className="text-input"
           placeholder="Visa, Checking, Trip Fund…"
-          value={current.name}
-          onChange={(e) => commit({ name: e.target.value })}
+          value={nameStr}
+          onChange={(e) => {
+            const v = e.target.value;
+            setNameStr(v);
+            commit({ name: v });
+          }}
         />
       </label>
 
@@ -310,80 +293,6 @@ function AccountForm({ account, onDone }: { account: Account | null; onDone: () 
                 {KIND_LABELS[k]}
               </button>
             ))}
-          </div>
-        )}
-      </div>
-
-      <div>
-        <div className="field-label">Currency</div>
-        <button
-          className="pill-tap"
-          onClick={() => setPickerOpen(pickerOpen === 'currency' ? null : 'currency')}
-        >
-          {current.currency} ▾
-        </button>
-        {pickerOpen === 'currency' && (
-          <div className="chip-row">
-            {currencyOptions.map((c) => (
-              <button
-                key={c}
-                className={`chip ${c === current.currency ? 'picked' : ''}`}
-                onClick={() => {
-                  commit({ currency: c });
-                  setPickerOpen(null);
-                }}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="goal-section">
-        {!goalExpanded && (
-          <button className="text-link" onClick={() => setGoalExpanded(true)}>
-            + Add a savings goal
-          </button>
-        )}
-        {goalExpanded && (
-          <div className="goal-fields">
-            <label className="field-label">
-              Goal amount ({current.currency})
-              <input
-                className="text-input"
-                type="number"
-                inputMode="decimal"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                value={goalAmountStr}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setGoalAmountStr(v);
-                  if (v.trim() === '') {
-                    commit({ goalAmountCents: null });
-                    return;
-                  }
-                  const n = parseFloat(v);
-                  if (Number.isFinite(n) && n >= 0) commit({ goalAmountCents: Math.round(n * 100) });
-                }}
-              />
-            </label>
-            <label className="field-label">
-              Target date
-              <input
-                className="text-input"
-                type="date"
-                value={current.goalTargetDate ?? ''}
-                onChange={(e) => commit({ goalTargetDate: e.target.value || null })}
-              />
-            </label>
-            {current.goalAmountCents != null && (
-              <button className="text-link" onClick={removeGoal}>
-                remove goal
-              </button>
-            )}
           </div>
         )}
       </div>

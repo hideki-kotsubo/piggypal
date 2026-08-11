@@ -47,7 +47,7 @@ const recordTransaction = {
       direction: { type: "string", enum: ["expense", "income"] },
       currency: {
         type: "string",
-        description: "ISO 4217 code. Infer only from explicit currency words/symbols (reais/R$ → BRL, ienes/¥ → JPY, euros/€ → EUR). If none mentioned, use the account's own currency — never guess a foreign currency from amount size or vocabulary alone. See docs/10."
+        description: "ISO 4217 code. Infer only from explicit currency words/symbols (reais/R$ → BRL, ienes/¥ → JPY, euros/€ → EUR). If none mentioned, use the default currency given in the prompt (accounts don't have a currency of their own, see docs/10 D62) — never guess a foreign currency from amount size or vocabulary alone."
       },
       occurred_on: {
         type: "string",
@@ -74,8 +74,10 @@ const recordTransaction = {
 ```
 You extract transactions from short utterances in Portuguese or English.
 Today is {today} ({timezone}). This entry defaults to account "{account_name}",
-currency {account_currency} — use that unless the utterance names another
-account and/or currency.
+currency {default_currency} (that account's own last-used currency, or the
+most recent transaction's currency if it has no history — accounts don't
+carry a currency of their own, see docs/10 D62) — use that unless the
+utterance names another account and/or currency.
 
 User's categories (choose category_id from these ONLY):
 {id: "…", name: "Mercado", keywords: ["mercado","grocery","superstore","costco"]}

@@ -1,5 +1,12 @@
 # 12 — Accounts Management Screen
 
+> **Partially superseded 2026-08-10 (D62-D65, see docs/10 and docs/11).**
+> Accounts no longer carry a `currency` or a savings goal — D55 and D57
+> below, the goal-progress mention in "Layout," and the Currency/Goal
+> fields in "Editing" no longer reflect the current form. Everything else
+> on this page (institution grouping, per-currency balance lines, expand-
+> in-place editing, archiving) is unchanged.
+
 ## Why this exists
 
 Multi-account/multi-currency (docs/10) and savings goals (docs/11) both
@@ -128,10 +135,10 @@ Mirrors `categories.archived` (doc 03) exactly — same pattern, same reason.
 |---|---|---|
 | D53 | Accounts screen: a list showing name, kind, per-currency balance, and inline goal progress if set | Surfaces everything docs/10 and docs/11 already assume exists, in one place |
 | D54 | Tapping a row expands it in place for editing — no separate screen | Consistent with the inline-expand pattern already used for inbox items and the entry zone |
-| D55 | Goal fields collapse behind "+ Add a savings goal" when unset, shown directly when already set | Applies D23's hide-until-touched rule correctly from the start |
+| D55 | Goal fields collapse behind "+ Add a savings goal" when unset, shown directly when already set | Applies D23's hide-until-touched rule correctly from the start. **Superseded by docs/11's D64** — account-level goals removed entirely. |
 | D56 | Accounts get `archived` (mirrors `categories.archived`), not hard delete | `transactions.account_id` is a required FK — hard delete was never actually possible once an account has history |
-| D57 | Changing an account's currency doesn't affect existing transactions, only new-entry defaults and the goal's denomination going forward | Each transaction already carries its own currency (D38); avoids a confusing "did this break my history" moment |
-| D58 | Balance shows one line per currency actually present on the account, never merged | Same currency-honesty rule as budgets (D40) |
+| D57 | Changing an account's currency doesn't affect existing transactions, only new-entry defaults and the goal's denomination going forward | Each transaction already carries its own currency (D38); avoids a confusing "did this break my history" moment. **Superseded by docs/10's D62** — accounts don't have a currency to change anymore; there's no field for this decision to apply to. |
+| D58 | Balance shows one line per currency actually present on the account, never merged | Same currency-honesty rule as budgets (D40) — unaffected by D62, still computed from transaction currency |
 | D59 | No manual reordering / `sort_order` column in v1; list order = most-recently-used | Reuses the same recency signal already computed elsewhere (D45/D46) rather than adding new stored state |
 | D60 | Accounts get an optional `institution` field (free text, grouping/display only) — revises docs/10's D43 | A flat list and "name consistently" both stop working at the real scale (15-20+ accounts across multiple banks) this app needs to support |
 | D61 | Rows display as `institution — name`, disambiguating same-named accounts at different institutions | Two banks both having a "Checking" account is a real, not hypothetical, collision at this scale |

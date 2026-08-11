@@ -3,16 +3,18 @@ import { formatAmount } from '../lib/format';
 
 export function BudgetBars() {
   const store = useStore();
-  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-    .toISOString()
-    .slice(0, 10);
+  // Local date construction, not toISOString() — that's UTC and would land
+  // on the wrong month for anyone in a positive-UTC-offset timezone (local
+  // midnight minus the offset rolls back into the previous UTC day).
+  const now = new Date();
+  const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
 
   // docs/10 D40: one bar per (category, currency) that has a budget or spend
   // this month — never merged across currencies.
   const spendByKey = new Map<string, number>();
   for (const t of store.transactions) {
     if (t.deletedAt || !t.categoryId || t.amountCents >= 0) continue;
-    if (!t.occurredOn.startsWith(monthStart.slice(0, 7))) continue;
+    if (!t.occurredAt.startsWith(monthStart.slice(0, 7))) continue;
     const key = `${t.categoryId}:${t.currency}`;
     spendByKey.set(key, (spendByKey.get(key) ?? 0) + -t.amountCents);
   }

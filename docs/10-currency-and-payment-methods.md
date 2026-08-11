@@ -133,7 +133,7 @@ Doc 04's `record_transaction` tool schema gains a `currency` field:
 ```typescript
 currency: {
   type: "string",
-  description: "ISO 4217 currency code. Infer from explicit currency words/symbols in the utterance (reais/R$ → BRL, ienes/¥ → JPY, euros/€ → EUR). If no currency is mentioned, use the account's own currency — never guess a foreign currency from amount size or vocabulary alone."
+  description: "ISO 4217 currency code. Infer from explicit currency words/symbols in the utterance (reais/R$ → BRL, ienes/¥ → JPY, euros/€ → EUR). If no currency is mentioned, use the default given in the prompt (accounts don't have a currency of their own, D62) — never guess a foreign currency from amount size or vocabulary alone."
 }
 ```
 
@@ -142,6 +142,35 @@ default silently to the last-used account (doc 07, same as manual entry),
 correctable with a tap afterward. Reliably inferring *which card* was used
 from a natural-language utterance isn't attempted; currency is inferred,
 the account is not.
+
+## Currency comes off the account entirely — revising D38/D42/D43
+
+2026-08-10: building the account/currency picker surfaced that
+`accounts.currency` was never actually load-bearing. `balancesFor`
+already summed by *transaction* currency, not the account's — the
+original Accounts-screen mockup (docs/12) already showed one account row
+with two currency balance lines. The only things that read
+`accounts.currency` were the currency field on the account-edit form
+(which users kept getting stuck on — every account defaults to one
+currency, so there was often nothing else to pick) and an
+auto-creation mechanism that silently split one real-world card into a
+separate `accounts` row per currency it had ever been swiped in,
+contradicting that same mockup.
+
+Removing `accounts.currency` outright resolves both: an account is now
+a payment-method identity only (institution + name + kind), and
+currency is chosen independently, per transaction, at entry time —
+still exactly as visible and correctable as before (docs/07's
+account/currency picker), just not tied to which account it's on.
+
+```sql
+alter table accounts drop column currency;
+```
+
+Wise's multi-currency holdings (D43) no longer need a `currency` column
+to model — `institution = 'Wise'` with distinct `name`s ("BRL", "USD",
+"CAD") already disambiguates them via docs/12's D60/D61 mechanism, same
+as any other institution's same-named accounts.
 
 ## Decisions locked in this doc
 
@@ -154,7 +183,9 @@ the account is not.
 | D40 | Budgets keyed on `(user_id, category_id, month, currency)`, one bar per combination that has budget or spend | Tracks each currency honestly with no forced conversion or silent exclusion; stays a single bar per category in the common single-currency month |
 | D41 | Trend chart plots primary-currency spend only; other currencies remain visible elsewhere (list, budgets, export) | Keeps doc 01's "one trend chart" simple; not a data-hiding decision, just a chart-scope one |
 | D42 | AI tool schema extracts `currency` from explicit words/symbols, defaults to account currency, never guesses | Same "never guess, degrade to friction not error" principle as category_id in doc 04 |
-| D43 | Multi-currency-balance providers (e.g. Wise) get one `accounts` row per actively-held currency | Fits D36 without a new schema concept; each balance already behaves independently for budgeting regardless of its real-world login. **Revised by docs/12's D60**: "grouped only by naming convention" didn't hold at the real account scale involved (15-20+ accounts across multiple banks) — grouping is now a proper (if minimal) `institution` field, which also covers Wise's own grouping as the same mechanism, not a special case. |
+| D43 | Multi-currency-balance providers (e.g. Wise) get one `accounts` row per actively-held currency | Fits D36 without a new schema concept; each balance already behaves independently for budgeting regardless of its real-world login. **Revised by docs/12's D60**: "grouped only by naming convention" didn't hold at the real account scale involved (15-20+ accounts across multiple banks) — grouping is now a proper (if minimal) `institution` field, which also covers Wise's own grouping as the same mechanism, not a special case. **Further revised by D63 below**: Wise rows are distinguished by `name`, not `currency`, since accounts no longer carry a currency at all. |
+| D62 | `accounts.currency` removed; currency lives solely on the transaction, chosen independently of the account at entry time | Never actually load-bearing (see above) — `balancesFor` already keyed on transaction currency; the account-level field only caused friction (a currency picker with nothing else to pick) and a mockup-contradicting auto-creation mechanism |
+| D63 | Wise's per-currency holdings modeled as distinct `name`s under `institution = 'Wise'`, not distinct `currency` values | D62 removes the column D43 originally used for this; docs/12's D60/D61 `institution`+`name` grouping already does the same disambiguation job |
 
 ## Still deferred
 

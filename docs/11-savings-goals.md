@@ -1,5 +1,12 @@
 # 11 — Savings Goals
 
+> **Superseded 2026-08-10 (D64).** Account-level goals (this whole doc)
+> are removed. Goal/target tracking is per **category**, via the
+> `budgets` table (docs/03) that already exists for category budgets —
+> not a new mechanism, just the existing one covering what this doc used
+> to. Kept below for historical context only; nothing on this page
+> reflects current schema or UI.
+
 ## The gap this closes
 
 `accounts.kind = 'savings'` (doc 03) has existed since the original schema,
@@ -80,4 +87,5 @@ side-effect of this doc.
 | D49 | One goal per account; a second goal means a second account | Consistent with the existing accounts-as-granular-unit philosophy (D36/D43) |
 | D50 | Goal fields available on any account kind, not gated to `kind='savings'` | `kind` is cosmetic elsewhere in this design; no reason to special-case it here |
 | D51 | Account balance becomes a general, per-currency computed value, not goal-specific | Same computation either way; goal progress is just balance compared to a target |
-| D52 | Home-screen placement for goal progress is explicitly deferred, not decided | Not yet clear whether this is a daily-glance or periodic-check-in feature |
+| D52 | Home-screen placement for goal progress is explicitly deferred, not decided | Not yet clear whether this is a daily-glance or periodic-check-in feature. **Moot as of D64** — account-level goals removed entirely. |
+| D64 | Account-level goals (D48-D52) removed; goal/target tracking is per-category via the existing `budgets` table only | An account is a payment-method identity, not a savings-target holder (docs/10 D62); category budgets already do the "target vs. actual" job this doc built a second, account-shaped version of |

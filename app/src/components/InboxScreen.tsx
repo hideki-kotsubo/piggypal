@@ -45,7 +45,7 @@ export function InboxScreen() {
                   <div className="tx-main">
                     <span className="tx-note">{t.aiRaw ?? t.note ?? 'Uncategorized'}</span>
                     <span className="tx-meta">
-                      {formatRelativeDate(t.occurredOn)} · {t.source}
+                      {formatRelativeDate(t.occurredAt)} · {t.source}
                     </span>
                   </div>
                   <span className={`tx-amt ${t.amountCents < 0 ? 'out' : 'in'}`}>

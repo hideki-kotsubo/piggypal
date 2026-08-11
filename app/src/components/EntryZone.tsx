@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useStore } from '../lib/store';
-import { accountLabel, formatAmount } from '../lib/format';
+import { nowLocal } from '../lib/format';
+import { AccountCurrencyPicker } from './AccountCurrencyPicker';
+import { AmountKeypad } from './AmountKeypad';
 import type { Transaction } from '../lib/types';
 
 interface Props {
-  onSubmitted: (message: string) => void;
+  onSubmitted: (message: string, onUndo?: () => void) => void;
 }
 
 export function EntryZone({ onSubmitted }: Props) {
@@ -15,7 +17,6 @@ export function EntryZone({ onSubmitted }: Props) {
   const [direction, setDirection] = useState<'expense' | 'income'>('expense');
   const [accountId, setAccountId] = useState<string | null>(null);
   const [currency, setCurrency] = useState<string | null>(null);
-  const [pickerOpen, setPickerOpen] = useState<'account' | 'currency' | null>(null);
 
   const resolvedAccountId = accountId ?? store.defaultAccountId();
   const resolvedCurrency = currency ?? store.defaultCurrencyFor(resolvedAccountId);
@@ -32,7 +33,6 @@ export function EntryZone({ onSubmitted }: Props) {
     setDirection('expense');
     setAccountId(null);
     setCurrency(null);
-    setPickerOpen(null);
   }
 
   function pressDigit(d: string) {
@@ -43,12 +43,6 @@ export function EntryZone({ onSubmitted }: Props) {
     setDigits((prev) => prev.slice(0, -1));
   }
 
-  function pickAccount(id: string) {
-    setAccountId(id);
-    setCurrency(null); // D46: switching account resets the currency default
-    setPickerOpen(null);
-  }
-
   function submitTap(categoryId: string) {
     if (amountCents === 0) return;
     const tx: Transaction = {
@@ -57,14 +51,14 @@ export function EntryZone({ onSubmitted }: Props) {
       categoryId,
       amountCents: direction === 'expense' ? -amountCents : amountCents,
       currency: resolvedCurrency,
-      occurredOn: new Date().toISOString().slice(0, 10),
+      occurredAt: nowLocal(),
       note: store.categories.find((c) => c.id === categoryId)?.name ?? null,
       source: 'manual',
       aiRaw: null,
       deletedAt: null,
     };
     store.addTransaction(tx);
-    onSubmitted('Added — Undo');
+    onSubmitted('Added', () => store.deleteTransaction(tx.id));
     reset();
   }
 
@@ -76,9 +70,6 @@ export function EntryZone({ onSubmitted }: Props) {
     setTypedText('');
   }
 
-  const account = store.accounts.find((a) => a.id === resolvedAccountId);
-  const rankedAccounts = store.rankedAccounts();
-  const rankedCurrencies = store.rankedCurrencies(resolvedAccountId);
   const rankedCategories = store.rankedCategories();
 
   return (
@@ -101,75 +92,32 @@ export function EntryZone({ onSubmitted }: Props) {
           </form>
 
           <div className="keypad-panel">
-          <div className="pill-row">
-            <button className="pill-tap" onClick={() => setPickerOpen(pickerOpen === 'account' ? null : 'account')}>
-              {account ? accountLabel(account) : '—'} ▾
-            </button>
-            <button className="pill-tap" onClick={() => setPickerOpen(pickerOpen === 'currency' ? null : 'currency')}>
-              {resolvedCurrency} ▾
-            </button>
-          </div>
+            <AccountCurrencyPicker
+              accountId={resolvedAccountId}
+              currency={resolvedCurrency}
+              onChange={(newAccountId, newCurrency) => {
+                setAccountId(newAccountId);
+                setCurrency(newCurrency);
+              }}
+            />
 
-          {pickerOpen === 'account' && (
+            <AmountKeypad
+              amountCents={amountCents}
+              currency={resolvedCurrency}
+              direction={direction}
+              onDigit={pressDigit}
+              onBackspace={backspace}
+              onToggleDirection={() => setDirection((d) => (d === 'expense' ? 'income' : 'expense'))}
+            />
+
             <div className="chip-row">
-              {rankedAccounts.map((a) => (
-                <button
-                  key={a.id}
-                  className={`chip ${a.id === resolvedAccountId ? 'picked' : ''}`}
-                  onClick={() => pickAccount(a.id)}
-                >
-                  {accountLabel(a)}
+              {rankedCategories.map((c) => (
+                <button key={c.id} className="chip" onClick={() => submitTap(c.id)}>
+                  {c.name}
                 </button>
               ))}
+              <button className="chip ghost" onClick={reset}>cancel</button>
             </div>
-          )}
-
-          {pickerOpen === 'currency' && (
-            <div className="chip-row">
-              {rankedCurrencies.map((c) => (
-                <button
-                  key={c}
-                  className={`chip ${c === resolvedCurrency ? 'picked' : ''}`}
-                  onClick={() => {
-                    setCurrency(c);
-                    setPickerOpen(null);
-                  }}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="amount-preview">
-            {formatAmount(amountCents, resolvedCurrency)}
-          </div>
-
-          <div className="keys">
-            {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((d) => (
-              <button key={d} className="key" onClick={() => pressDigit(d)}>
-                {d}
-              </button>
-            ))}
-            <button className="key" onClick={backspace}>⌫</button>
-            <button className="key" onClick={() => pressDigit('0')}>0</button>
-            <button
-              className="key done"
-              onClick={() => setDirection((d) => (d === 'expense' ? 'income' : 'expense'))}
-              title="Toggle expense/income"
-            >
-              {direction === 'expense' ? '−' : '+'}
-            </button>
-          </div>
-
-          <div className="chip-row">
-            {rankedCategories.map((c) => (
-              <button key={c.id} className="chip" onClick={() => submitTap(c.id)}>
-                {c.name}
-              </button>
-            ))}
-            <button className="chip ghost" onClick={reset}>cancel</button>
-          </div>
           </div>
         </>
       )}

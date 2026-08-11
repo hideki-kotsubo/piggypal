@@ -10,17 +10,24 @@ const DAYS = 30;
 export function TrendSparkline() {
   const store = useStore();
 
+  // Local date construction, not toISOString() — that's UTC and would
+  // shift which day a purchase near midnight lands on.
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const localDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
   const days: string[] = [];
   for (let i = DAYS - 1; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    days.push(d.toISOString().slice(0, 10));
+    days.push(localDate(d));
   }
 
   const spendByDay = new Map<string, number>();
   for (const t of store.transactions) {
     if (t.deletedAt || t.currency !== PRIMARY_CURRENCY || t.amountCents >= 0) continue;
-    spendByDay.set(t.occurredOn, (spendByDay.get(t.occurredOn) ?? 0) + -t.amountCents);
+    // occurredAt now carries a time too — group by its date portion only.
+    const day = t.occurredAt.slice(0, 10);
+    spendByDay.set(day, (spendByDay.get(day) ?? 0) + -t.amountCents);
   }
 
   const values = days.map((d) => spendByDay.get(d) ?? 0);

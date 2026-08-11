@@ -16,12 +16,9 @@ import { column, Schema, Table } from '@powersync/web';
 // Booleans (archived) store as integer 0/1, SQLite's own convention.
 
 const accounts = new Table({
-  institution: column.text,
+  institution: column.text, // nullable — grouping/display only, see docs/12 D60/D61
   name: column.text,
   kind: column.text, // checking | credit | cash | savings
-  currency: column.text,
-  goal_amount_cents: column.integer,
-  goal_target_date: column.text,
   archived: column.integer,
 });
 
@@ -39,7 +36,7 @@ const transactions = new Table(
     category_id: column.text,
     amount_cents: column.integer,
     currency: column.text,
-    occurred_on: column.text,
+    occurred_at: column.text, // local date+time, "YYYY-MM-DDTHH:MM:SS", no timezone
     note: column.text,
     source: column.text, // manual | ai | import
     ai_raw: column.text,

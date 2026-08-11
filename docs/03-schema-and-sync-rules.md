@@ -13,6 +13,9 @@ Stack: Postgres (Azure) → PowerSync Service (self-hosted, Docker) → SQLite (
 ## Postgres schema
 
 ```sql
+-- No currency, no goal — an account is a payment-method identity only.
+-- Currency is per-transaction (below); goals are per-category, via
+-- `budgets` — see docs/10 D62 and docs/11 D64.
 create table accounts (
   id                 uuid primary key,
   user_id            uuid not null,
@@ -20,9 +23,6 @@ create table accounts (
                                -- grouping/display only, no FK — see docs/12
   name               text not null,
   kind               text not null default 'checking',  -- checking | credit | cash | savings
-  currency           char(3) not null default 'CAD',
-  goal_amount_cents  bigint,  -- null = no savings goal set; any account kind — see docs/11
-  goal_target_date   date,    -- null = no target date
   archived           boolean not null default false,  -- see docs/12; mirrors categories.archived
   created_at         timestamptz not null default now(),
   updated_at         timestamptz not null default now()
@@ -46,9 +46,10 @@ create table transactions (
   account_id   uuid not null references accounts(id),
   category_id  uuid references categories(id),   -- nullable: uncategorized inbox
   amount_cents bigint not null,                  -- negative = expense, positive = income
-  currency     char(3) not null default 'CAD',   -- the purchase's own currency; may differ
-                                                  -- from accounts.currency (e.g. a JPY purchase
-                                                  -- on a CAD credit card) — see docs/10
+  currency     char(3) not null default 'CAD',   -- the purchase's own currency, chosen
+                                                  -- independently of the account at entry
+                                                  -- time — accounts have no currency of
+                                                  -- their own — see docs/10 D62
   occurred_on  date not null,
   note         text,
   source       text not null default 'manual',   -- manual | ai | import

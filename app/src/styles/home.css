@@ -172,6 +172,32 @@
   background: none;
 }
 
+/* docs/13 — grouped account picker: an expanded institution's accounts,
+   forced onto its own line within the surrounding chip-row's flex-wrap. */
+.picker-group {
+  flex: 1 1 100%;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  padding: 0.45rem 0.55rem 0.5rem;
+  background: var(--surface);
+}
+.picker-group-head {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.picker-group-head .chev {
+  color: var(--ink-faint);
+  font-size: 0.65rem;
+}
+
 .inbox-banner {
   margin: 0.7rem 1.1rem 0;
   background: var(--warn-soft);
@@ -307,6 +333,21 @@
   border-bottom: 1px solid var(--line);
   font-size: 0.87rem;
 }
+.tx-row-tappable {
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+}
+/* Each row is now wrapped in its own .account-block (for the expand-in-
+   place edit panel), so plain :last-child on .tx-row no longer identifies
+   the true last row — scope it to the wrapping list instead. */
+.recent .account-block:last-child .tx-row-tappable {
+  border-bottom: none;
+}
 .tx-row:last-child {
   border-bottom: none;
 }
@@ -424,22 +465,6 @@
   color: var(--ink-faint);
 }
 
-.goal-progress {
-  margin-top: 0.4rem;
-}
-.goal-progress-labels {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.78rem;
-  color: var(--ink-muted);
-  margin-bottom: 0.25rem;
-}
-.goal-due {
-  display: block;
-  font-size: 0.72rem;
-  color: var(--ink-faint);
-  margin-top: 0.2rem;
-}
 
 .archived-row {
   padding: 0.6rem 0.1rem;
@@ -514,16 +539,36 @@
 }
 .settings-row {
   display: flex;
+  width: 100%;
   justify-content: space-between;
   align-items: center;
   padding: 0.9rem 1.1rem;
-  border-bottom: 1px solid var(--line);
   font-size: 0.92rem;
+  font-family: inherit;
   color: var(--ink);
   text-decoration: none;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  cursor: pointer;
 }
 .settings-row-arrow {
   color: var(--ink-faint);
+}
+.settings-row-danger {
+  color: var(--warn);
+}
+.settings-row-static {
+  display: flex;
+  padding: 0.9rem 1.1rem 0.3rem;
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+  border-bottom: none;
+  cursor: default;
+}
+.settings-chip-row {
+  margin: 0 1.1rem 1.1rem;
 }
 .text-link {
   align-self: flex-start;
@@ -569,5 +614,46 @@
   border-radius: 999px;
   box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.4);
   max-width: 90vw;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+.toast-undo {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 700;
+  color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.currency-override-link {
+  align-self: center;
+  font-size: 0.72rem;
+}
+.edit-form-top-actions {
+  justify-content: flex-end;
+  margin: 0 0 0.3rem;
+}
+.delete-link {
+  color: var(--warn);
+}
+
+.field-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.76rem;
+  line-height: 1.4;
+  color: var(--ink-faint);
+}
+
+.field-pair {
+  display: flex;
+  gap: 10px;
+  margin: 0.7rem 0;
+}
+.field-pair .field-label {
+  flex: 1;
 }

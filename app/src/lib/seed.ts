@@ -9,9 +9,6 @@ export const seedAccounts: Account[] = [
     institution: 'TD',
     name: 'Visa',
     kind: 'credit',
-    currency: 'CAD',
-    goalAmountCents: null,
-    goalTargetDate: null,
     archived: false,
   },
   {
@@ -19,9 +16,6 @@ export const seedAccounts: Account[] = [
     institution: 'Wise',
     name: 'BRL',
     kind: 'checking',
-    currency: 'BRL',
-    goalAmountCents: null,
-    goalTargetDate: null,
     archived: false,
   },
   {
@@ -29,9 +23,6 @@ export const seedAccounts: Account[] = [
     institution: null,
     name: 'Cash',
     kind: 'cash',
-    currency: 'CAD',
-    goalAmountCents: null,
-    goalTargetDate: null,
     archived: false,
   },
 ];
@@ -44,10 +35,13 @@ export const seedCategories: Category[] = [
 ];
 
 const today = new Date();
-const isoDaysAgo = (days: number) => {
+const pad = (n: number) => String(n).padStart(2, '0');
+// Local date construction, not toISOString() — that's UTC and can land on
+// the wrong calendar day in the evening for Vancouver's negative offset.
+const isoDaysAgo = (days: number, time = '12:00:00') => {
   const d = new Date(today);
   d.setDate(d.getDate() - days);
-  return d.toISOString().slice(0, 10);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${time}`;
 };
 
 export const seedTransactions: Transaction[] = [
@@ -57,7 +51,7 @@ export const seedTransactions: Transaction[] = [
     categoryId: 'cat-mercado',
     amountCents: -4500,
     currency: 'CAD',
-    occurredOn: isoDaysAgo(1),
+    occurredAt: isoDaysAgo(1, '18:42:00'),
     note: 'Mercado',
     source: 'ai',
     aiRaw: '45 mercado ontem',
@@ -69,7 +63,7 @@ export const seedTransactions: Transaction[] = [
     categoryId: 'cat-salario',
     amountCents: 320000,
     currency: 'BRL',
-    occurredOn: isoDaysAgo(2),
+    occurredAt: isoDaysAgo(2, '09:00:00'),
     note: 'Salário',
     source: 'manual',
     aiRaw: null,
@@ -81,7 +75,7 @@ export const seedTransactions: Transaction[] = [
     categoryId: 'cat-transporte',
     amountCents: -1840,
     currency: 'CAD',
-    occurredOn: isoDaysAgo(2),
+    occurredAt: isoDaysAgo(2, '20:15:00'),
     note: 'Uber',
     source: 'ai',
     aiRaw: 'uber 18.40',
@@ -97,7 +91,7 @@ export const seedTransactions: Transaction[] = [
     categoryId: null,
     amountCents: -3200,
     currency: 'CAD',
-    occurredOn: isoDaysAgo(0),
+    occurredAt: isoDaysAgo(0, '12:30:00'),
     note: null,
     source: 'ai',
     aiRaw: 'sushi jantar uns 32',
@@ -105,9 +99,7 @@ export const seedTransactions: Transaction[] = [
   },
 ];
 
-const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
-  .toISOString()
-  .slice(0, 10);
+const monthStart = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-01`;
 
 export const seedBudgets: Budget[] = [
   { id: 'budget-mercado', categoryId: 'cat-mercado', month: monthStart, currency: 'CAD', amountCents: 60000 },
