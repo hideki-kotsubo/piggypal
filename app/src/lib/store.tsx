@@ -134,11 +134,20 @@ async function insertAccountRow(a: Account): Promise<void> {
 // ---- one-time seed on an empty database ----
 
 async function seedIfEmpty() {
-  const existing = await db.getAll<{ id: string }>('SELECT id FROM accounts LIMIT 1');
-  if (existing.length > 0) return;
-
   try {
     await db.writeTransaction(async (tx) => {
+      // The emptiness check must run inside the same transaction as the
+      // inserts below, not before it — React StrictMode's dev-mode
+      // mount→cleanup→mount double-invokes this function, and
+      // writeTransaction calls are serialized (PowerSync queues them on a
+      // mutex), so a check done *outside* the transaction can see "empty"
+      // for both concurrent calls before either has committed. Checking
+      // inside means the second call's check runs only after the first's
+      // transaction has fully committed, so it correctly sees non-empty
+      // and skips seeding instead of racing on the same hardcoded IDs.
+      const existing = await tx.getAll<{ id: string }>('SELECT id FROM accounts LIMIT 1');
+      if (existing.length > 0) return;
+
       for (const a of seedAccounts) {
         await tx.execute(
           `INSERT INTO accounts (id, institution, name, kind, archived)

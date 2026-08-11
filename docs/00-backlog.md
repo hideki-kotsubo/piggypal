@@ -82,6 +82,34 @@ it needs doing.
 
 ## ✅ Done
 
+- [x] Fixed a seeding race under React StrictMode's dev-mode
+      double-invoke — found 2026-08-11 via a real Playwright screenshot
+      pass (console showed `UNIQUE constraint failed:
+      ps_data__accounts.id`; caught, never broke the UI). `store.tsx`'s
+      seeding `useEffect` called `seedIfEmpty()` fire-and-forget; its
+      `AbortController` only cancelled the subsequent `db.watch()` calls,
+      not the seed call itself. On StrictMode's mount→cleanup→mount, two
+      `seedIfEmpty()` calls ran concurrently; the emptiness check
+      (`SELECT id FROM accounts LIMIT 1`) happened *outside*
+      `db.writeTransaction(...)`, so both calls could see "empty" before
+      either committed, and the second's insert collided on the hardcoded
+      seed IDs. Fixed by moving the check inside the same
+      `writeTransaction` via `tx.getAll(...)` (PowerSync's `Transaction`
+      extends `LockContext`, which has `getAll` alongside `execute`), so
+      the check-then-insert is atomic under SQLite's write-transaction
+      locking. `tsc -b`/`oxlint` clean; re-verified with a real Playwright
+      run against a fresh browser profile — zero console errors, same
+      screenshot output as before the fix.
+- [x] Got real browser tooling working — Playwright + Chromium installed
+      globally (`npm install -g playwright`, `playwright install
+      chromium`, `sudo playwright install-deps chromium` for the missing
+      system libraries), plus `NODE_PATH` added to `~/.bashrc`/`~/.profile`
+      so `require('playwright')` resolves without a full path in
+      interactive/login shells. This is what actually caught the seeding
+      race above — the first real end-to-end screenshot of the app ever
+      taken in this project surfaced a bug static analysis (`tsc`/`oxlint`)
+      couldn't have (2026-08-11).
+
 - [x] Transaction list rows: dropped the always-visible "manual"/"AI"
       source label, added the paying account directly to the row (both
       `TransactionList.tsx` and `RecentList.tsx`, plus `InboxScreen.tsx`
