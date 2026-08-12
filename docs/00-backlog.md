@@ -78,6 +78,12 @@ it needs doing.
 
 ## ✅ Done
 
+- [x] Added an "Events & Tickets" leaf under Recreation & Entertainment
+      to the seed taxonomy — requested 2026-08-12 after working through
+      where things like a ballgame or pool/museum admission actually
+      belong (they didn't fit Movies & Streaming, screen entertainment,
+      or Hobbies, hands-on participation — a real gap, not covered by
+      folding into Kids Activities). Verified with Playwright.
 - [x] Redesigned the seed categories into a full starter taxonomy —
       requested 2026-08-12, replacing the old 4 flat + 1 demo-group
       placeholder (Mercado/Transporte/Café/Salário, Lazer/Cinema/Museu)

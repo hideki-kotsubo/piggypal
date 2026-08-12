@@ -69,6 +69,10 @@ export const seedCategories: Category[] = [
   { id: 'cat-recreation-hobbies', name: 'Hobbies', kind: 'expense', parentId: 'cat-recreation', archived: false },
   { id: 'cat-recreation-travel', name: 'Travel', kind: 'expense', parentId: 'cat-recreation', archived: false },
   { id: 'cat-recreation-kids', name: 'Kids Activities', kind: 'expense', parentId: 'cat-recreation', archived: false },
+  // Spectator/admission spend — ballgames, pool/museum/concert tickets —
+  // distinct from screen entertainment (Movies & Streaming) and hands-on
+  // participation (Hobbies).
+  { id: 'cat-recreation-events', name: 'Events & Tickets', kind: 'expense', parentId: 'cat-recreation', archived: false },
 
   { id: 'cat-shopping', name: 'Shopping', kind: 'expense', parentId: null, archived: false },
   { id: 'cat-shopping-clothing', name: 'Clothing', kind: 'expense', parentId: 'cat-shopping', archived: false },
