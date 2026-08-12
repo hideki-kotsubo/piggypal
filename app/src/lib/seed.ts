@@ -27,17 +27,61 @@ export const seedAccounts: Account[] = [
   },
 ];
 
+// docs/14: a full starter taxonomy — 7 expense groups with 4-9 children
+// each, English (2026-08-12 decision — the app's bilingual promise, docs/09,
+// covers the UI chrome and AI parsing, not seed category names specifically).
+// Housing and Utilities are merged into one group per that same decision.
 export const seedCategories: Category[] = [
-  { id: 'cat-mercado', name: 'Mercado', kind: 'expense', parentId: null, archived: false },
-  { id: 'cat-transporte', name: 'Transporte', kind: 'expense', parentId: null, archived: false },
-  { id: 'cat-cafe', name: 'Café', kind: 'expense', parentId: null, archived: false },
-  { id: 'cat-salario', name: 'Salário', kind: 'income', parentId: null, archived: false },
-  // docs/14: a fresh group + subcategories, kept separate from the
-  // already-budgeted categories above (Mercado/Transporte) so their
-  // budget bars aren't affected by D74's "no budget field on a group".
-  { id: 'cat-lazer', name: 'Lazer', kind: 'expense', parentId: null, archived: false },
-  { id: 'cat-lazer-cinema', name: 'Cinema', kind: 'expense', parentId: 'cat-lazer', archived: false },
-  { id: 'cat-lazer-museu', name: 'Museu', kind: 'expense', parentId: 'cat-lazer', archived: false },
+  { id: 'cat-food', name: 'Food & Groceries', kind: 'expense', parentId: null, archived: false },
+  { id: 'cat-food-groceries', name: 'Groceries', kind: 'expense', parentId: 'cat-food', archived: false },
+  { id: 'cat-food-dining', name: 'Dining Out', kind: 'expense', parentId: 'cat-food', archived: false },
+  { id: 'cat-food-coffee', name: 'Coffee', kind: 'expense', parentId: 'cat-food', archived: false },
+  { id: 'cat-food-snacks', name: 'Snacks', kind: 'expense', parentId: 'cat-food', archived: false },
+  { id: 'cat-food-alcohol', name: 'Alcohol & Bars', kind: 'expense', parentId: 'cat-food', archived: false },
+
+  { id: 'cat-housing', name: 'Housing & Utilities', kind: 'expense', parentId: null, archived: false },
+  { id: 'cat-housing-rent', name: 'Rent/Mortgage', kind: 'expense', parentId: 'cat-housing', archived: false },
+  { id: 'cat-housing-proptax', name: 'Property Tax', kind: 'expense', parentId: 'cat-housing', archived: false },
+  { id: 'cat-housing-insurance', name: 'Home Insurance', kind: 'expense', parentId: 'cat-housing', archived: false },
+  { id: 'cat-housing-maintenance', name: 'Maintenance & Repairs', kind: 'expense', parentId: 'cat-housing', archived: false },
+  { id: 'cat-housing-electricity', name: 'Electricity', kind: 'expense', parentId: 'cat-housing', archived: false },
+  { id: 'cat-housing-water', name: 'Water', kind: 'expense', parentId: 'cat-housing', archived: false },
+  { id: 'cat-housing-heat', name: 'Heating/Gas', kind: 'expense', parentId: 'cat-housing', archived: false },
+  { id: 'cat-housing-internet', name: 'Internet', kind: 'expense', parentId: 'cat-housing', archived: false },
+  { id: 'cat-housing-phone', name: 'Phone', kind: 'expense', parentId: 'cat-housing', archived: false },
+
+  { id: 'cat-health', name: 'Health & Personal Care', kind: 'expense', parentId: null, archived: false },
+  { id: 'cat-health-medical', name: 'Medical', kind: 'expense', parentId: 'cat-health', archived: false },
+  { id: 'cat-health-dental', name: 'Dental', kind: 'expense', parentId: 'cat-health', archived: false },
+  { id: 'cat-health-pharmacy', name: 'Pharmacy', kind: 'expense', parentId: 'cat-health', archived: false },
+  { id: 'cat-health-vision', name: 'Vision', kind: 'expense', parentId: 'cat-health', archived: false },
+  { id: 'cat-health-fitness', name: 'Fitness/Gym', kind: 'expense', parentId: 'cat-health', archived: false },
+
+  { id: 'cat-transport', name: 'Transportation', kind: 'expense', parentId: null, archived: false },
+  { id: 'cat-transport-car', name: 'Car Costs', kind: 'expense', parentId: 'cat-transport', archived: false },
+  { id: 'cat-transport-fuel', name: 'Fuel', kind: 'expense', parentId: 'cat-transport', archived: false },
+  { id: 'cat-transport-parking', name: 'Parking', kind: 'expense', parentId: 'cat-transport', archived: false },
+  { id: 'cat-transport-transit', name: 'Transit', kind: 'expense', parentId: 'cat-transport', archived: false },
+  { id: 'cat-transport-rideshare', name: 'Rideshare', kind: 'expense', parentId: 'cat-transport', archived: false },
+
+  { id: 'cat-recreation', name: 'Recreation & Entertainment', kind: 'expense', parentId: null, archived: false },
+  { id: 'cat-recreation-movies', name: 'Movies & Streaming', kind: 'expense', parentId: 'cat-recreation', archived: false },
+  { id: 'cat-recreation-hobbies', name: 'Hobbies', kind: 'expense', parentId: 'cat-recreation', archived: false },
+  { id: 'cat-recreation-travel', name: 'Travel', kind: 'expense', parentId: 'cat-recreation', archived: false },
+  { id: 'cat-recreation-kids', name: 'Kids Activities', kind: 'expense', parentId: 'cat-recreation', archived: false },
+
+  { id: 'cat-shopping', name: 'Shopping', kind: 'expense', parentId: null, archived: false },
+  { id: 'cat-shopping-clothing', name: 'Clothing', kind: 'expense', parentId: 'cat-shopping', archived: false },
+  { id: 'cat-shopping-electronics', name: 'Electronics', kind: 'expense', parentId: 'cat-shopping', archived: false },
+  { id: 'cat-shopping-household', name: 'Household Items', kind: 'expense', parentId: 'cat-shopping', archived: false },
+
+  { id: 'cat-personal', name: 'Personal & Family', kind: 'expense', parentId: null, archived: false },
+  { id: 'cat-personal-subscriptions', name: 'Subscriptions', kind: 'expense', parentId: 'cat-personal', archived: false },
+  { id: 'cat-personal-gifts', name: 'Gifts & Donations', kind: 'expense', parentId: 'cat-personal', archived: false },
+  { id: 'cat-personal-education', name: 'Education', kind: 'expense', parentId: 'cat-personal', archived: false },
+  { id: 'cat-personal-childcare', name: 'Childcare', kind: 'expense', parentId: 'cat-personal', archived: false },
+
+  { id: 'cat-salary', name: 'Salary', kind: 'income', parentId: null, archived: false },
 ];
 
 const today = new Date();
@@ -52,13 +96,16 @@ const isoDaysAgo = (days: number, time = '12:00:00') => {
 
 export const seedTransactions: Transaction[] = [
   {
+    // aiRaw stays Portuguese deliberately — demo data for the bilingual
+    // pt-BR parsing story (docs/04/09), independent of the seed
+    // categories now being English (2026-08-12).
     id: 'tx-1',
     accountId: 'acc-visa',
-    categoryId: 'cat-mercado',
+    categoryId: 'cat-food-groceries',
     amountCents: -4500,
     currency: 'CAD',
     occurredAt: isoDaysAgo(1, '18:42:00'),
-    note: 'Mercado',
+    note: 'Groceries',
     source: 'ai',
     aiRaw: '45 mercado ontem',
     deletedAt: null,
@@ -66,11 +113,11 @@ export const seedTransactions: Transaction[] = [
   {
     id: 'tx-2',
     accountId: 'acc-wise',
-    categoryId: 'cat-salario',
+    categoryId: 'cat-salary',
     amountCents: 320000,
     currency: 'BRL',
     occurredAt: isoDaysAgo(2, '09:00:00'),
-    note: 'Salário',
+    note: 'Salary',
     source: 'manual',
     aiRaw: null,
     deletedAt: null,
@@ -78,7 +125,7 @@ export const seedTransactions: Transaction[] = [
   {
     id: 'tx-3',
     accountId: 'acc-visa',
-    categoryId: 'cat-transporte',
+    categoryId: 'cat-transport-rideshare',
     amountCents: -1840,
     currency: 'CAD',
     occurredAt: isoDaysAgo(2, '20:15:00'),
@@ -107,7 +154,10 @@ export const seedTransactions: Transaction[] = [
 
 const monthStart = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-01`;
 
+// Budgeted on leaves, not the Food/Transportation groups — D74: a group's
+// budget bar would show $0 spent (nothing logs directly to a group once
+// it has children) and look phantom/broken.
 export const seedBudgets: Budget[] = [
-  { id: 'budget-mercado', categoryId: 'cat-mercado', month: monthStart, currency: 'CAD', amountCents: 60000 },
-  { id: 'budget-transporte', categoryId: 'cat-transporte', month: monthStart, currency: 'CAD', amountCents: 18000 },
+  { id: 'budget-groceries', categoryId: 'cat-food-groceries', month: monthStart, currency: 'CAD', amountCents: 60000 },
+  { id: 'budget-rideshare', categoryId: 'cat-transport-rideshare', month: monthStart, currency: 'CAD', amountCents: 18000 },
 ];

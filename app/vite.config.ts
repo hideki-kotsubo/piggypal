@@ -36,7 +36,7 @@ export default defineConfig({
   server: {
     port: 3001, // Set the development server port to 3000
     host: "0.0.0.0",
-    allowedHosts: ["app.piggypal.codexbase.dev"],
+    allowedHosts: ["app.piggypal.codexbase.dev","app-beta.piggypal.codexbase.dev"],
   },
   // @powersync/web ships web workers + WASM (wa-sqlite) — must be excluded
   // from pre-bundling and workers built as ES modules, or the WASM/worker

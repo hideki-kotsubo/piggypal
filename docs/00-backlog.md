@@ -78,6 +78,30 @@ it needs doing.
 
 ## ✅ Done
 
+- [x] Redesigned the seed categories into a full starter taxonomy —
+      requested 2026-08-12, replacing the old 4 flat + 1 demo-group
+      placeholder (Mercado/Transporte/Café/Salário, Lazer/Cinema/Museu)
+      with 7 real expense groups (Food & Groceries, Housing & Utilities,
+      Health & Personal Care, Transportation, Recreation & Entertainment,
+      Shopping, Personal & Family — Housing and Utilities merged per the
+      user's choice) and 35 leaf subcategories, all English (also the
+      user's choice — the app's bilingual promise, docs/09, covers UI
+      chrome and AI parsing, not seed category names specifically).
+      Retargeted the two seed transactions/budgets that used to point at
+      flat categories onto real leaves (Groceries, Rideshare under
+      Transportation) rather than the new group categories themselves —
+      D74 means a group's budget bar would show $0 spent and look
+      phantom/broken, since nothing logs directly to a group once it has
+      children. Kept `aiRaw` on the seed transactions in Portuguese
+      deliberately — that's demo data for the bilingual pt-BR parsing
+      story, independent of the (now English) category names. Verified
+      with Playwright: Home's budget bars show real progress
+      ($45/$600 Groceries, $18.40/$180 Rideshare), `CategoriesScreen`
+      renders all 7 groups with correct children, and the entry-zone
+      picker shows all 7 as collapsed group chips (every top-level
+      expense category is a group now — a real stress test of the
+      picker's group-collapse mechanism at actual intended scale).
+      `tsc -b`/`oxlint` clean, zero console errors.
 - [x] Category groups: "+ Add subcategory" directly from the parent
       (docs/14 D75) — requested 2026-08-11, the user found picking a
       parent from the Group chip row backwards for the common case (you're
