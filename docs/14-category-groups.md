@@ -82,6 +82,20 @@ Creating/editing a category gains a "Group" chip picker: "None
 parent never appears as a choice). Reuses the same expand-in-place edit
 pattern already in place.
 
+## Adding a subcategory from its parent, not by selecting one
+
+2026-08-11, revising the "Group field" section above: the user found
+picking a parent from the Group chip row backwards for the common case —
+you're already looking at "Lazer" and want to add "Cinema" under it, not
+create "Cinema" from scratch and then go hunting for "Lazer" in a picker.
+A top-level category's edit panel now has a **"+ Add subcategory"**
+action that opens the create form with that category pre-filled as the
+parent (name/section header both reflect it — "New subcategory of
+Lazer") and the new category's `kind` inherited from the parent. The
+Group field itself stays exactly as designed above (still shown, still
+editable, just pre-populated) — this is a second *entry point* into the
+same create flow, not a second mechanism.
+
 ## Decisions locked in this doc
 
 | # | Decision | Why |
@@ -91,3 +105,4 @@ pattern already in place.
 | D72 | The picker reflects whatever hierarchy exists directly — no user-facing Grouped/Capped setting like docs/13's account picker | This grouping is authored (deliberately built in `CategoriesScreen`), not inferred from scale — there's no ambiguity about display preference to ask the user to resolve |
 | D73 | Extract a shared `CategoryPicker` component, replacing the three separate flat `rankedCategories()` consumers (`EntryZone`, `InboxScreen`, `TransactionEditForm`) | One place to build the grouped-chip-row logic instead of three; avoids the surfaces drifting out of sync |
 | D74 | Budget rollup is deferred; `CategoriesScreen` hides the budget section entirely for a category that has children, rather than showing a budget that silently only tracks direct (near-always-zero) spend | Showing a budget field on a group category without rollup would be actively misleading — the bar would look phantom/broken since almost no spend logs directly to a group once it has subcategories |
+| D75 | A top-level category's edit panel gets a "+ Add subcategory" action, pre-filling the create form's parent (and inherited `kind`) — the Group field stays as an alternate entry point, unchanged | The common case is "I'm looking at the parent and want to add to it," not "I'm creating something new and need to go find its parent" |

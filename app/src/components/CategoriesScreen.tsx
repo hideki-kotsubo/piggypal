@@ -8,7 +8,7 @@ import type { Budget, Category } from '../lib/types';
 const _now = new Date();
 const currentMonth = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-01`;
 
-type OpenPanel = { type: 'edit'; id: string } | { type: 'create' } | null;
+type OpenPanel = { type: 'edit'; id: string } | { type: 'create'; parentId: string | null } | null;
 
 // docs/14: no full collapse/expand grouping here (that solved the picker's
 // crowding problem, docs/13-style) — this is a management list, not a
@@ -65,7 +65,11 @@ export function CategoriesScreen() {
         </button>
         {isEditing && (
           <div className="account-edit">
-            <CategoryForm category={category} onDone={() => setOpenPanel(null)} />
+            <CategoryForm
+              category={category}
+              onDone={() => setOpenPanel(null)}
+              onAddSubcategory={(parentId) => setOpenPanel({ type: 'create', parentId })}
+            />
           </div>
         )}
       </div>
@@ -80,7 +84,7 @@ export function CategoriesScreen() {
         <button
           className="icon-btn"
           aria-label="Add category"
-          onClick={() => setOpenPanel((p) => (p?.type === 'create' ? null : { type: 'create' }))}
+          onClick={() => setOpenPanel((p) => (p?.type === 'create' ? null : { type: 'create', parentId: null }))}
         >
           +
         </button>
@@ -88,8 +92,16 @@ export function CategoriesScreen() {
 
       {openPanel?.type === 'create' && (
         <section className="account-create">
-          <div className="section-label">New category</div>
-          <CategoryForm category={null} onDone={() => setOpenPanel(null)} />
+          <div className="section-label">
+            {openPanel.parentId
+              ? `New subcategory of ${store.categories.find((c) => c.id === openPanel.parentId)?.name ?? '…'}`
+              : 'New category'}
+          </div>
+          <CategoryForm
+            category={null}
+            initialParentId={openPanel.parentId}
+            onDone={() => setOpenPanel(null)}
+          />
         </section>
       )}
 
@@ -124,13 +136,30 @@ export function CategoriesScreen() {
   );
 }
 
-function CategoryForm({ category, onDone }: { category: Category | null; onDone: () => void }) {
+function CategoryForm({
+  category,
+  onDone,
+  initialParentId = null,
+  onAddSubcategory,
+}: {
+  category: Category | null;
+  onDone: () => void;
+  // Set when opened via a parent's own "+ Add subcategory" (below) — lets
+  // creating a subcategory skip hunting for its parent in the Group chip
+  // row, matching how it's reached: from the parent itself.
+  initialParentId?: string | null;
+  onAddSubcategory?: (parentId: string) => void;
+}) {
   const store = useStore();
   const isNew = category === null;
 
-  const [draft, setDraft] = useState<Category>(
-    () => category ?? { id: '', name: '', kind: 'expense', parentId: null, archived: false },
-  );
+  const [draft, setDraft] = useState<Category>(() => {
+    if (category) return category;
+    // Subcategory inherits its parent's kind — a group and its children
+    // are always the same kind (expense group, expense children).
+    const parent = initialParentId ? store.categories.find((p) => p.id === initialParentId) : null;
+    return { id: '', name: '', kind: parent?.kind ?? 'expense', parentId: initialParentId, archived: false };
+  });
   const current: Category = category ?? draft;
   const [pickerOpen, setPickerOpen] = useState<'kind' | 'group' | null>(null);
 
@@ -234,6 +263,15 @@ function CategoryForm({ category, onDone }: { category: Category | null; onDone:
           silently only count its own direct spend (no rollup this pass),
           which would look phantom/broken once it has subcategories. */}
       {!isNew && current.kind === 'expense' && !hasChildren && <BudgetsForCategory categoryId={current.id} />}
+
+      {/* Only a top-level category can take children (D70's 2-level cap) —
+          this is the direct "add from the parent" flow the Group field's
+          own picker was the indirect alternative to. */}
+      {!isNew && !current.parentId && onAddSubcategory && (
+        <button className="text-link" onClick={() => onAddSubcategory(current.id)}>
+          + Add subcategory
+        </button>
+      )}
 
       {isNew ? (
         <div className="form-actions">

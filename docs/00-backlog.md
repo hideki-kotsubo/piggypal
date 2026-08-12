@@ -78,6 +78,19 @@ it needs doing.
 
 ## ✅ Done
 
+- [x] Category groups: "+ Add subcategory" directly from the parent
+      (docs/14 D75) — requested 2026-08-11, the user found picking a
+      parent from the Group chip row backwards for the common case (you're
+      looking at "Lazer," want to add "Cinema" under it, not create
+      "Cinema" then hunt for "Lazer"). A top-level category's edit panel
+      now has a "+ Add subcategory" action that opens the create form
+      pre-filled with that category as parent (kind inherited too), header
+      reading "New subcategory of Lazer." Same create flow, new entry
+      point — the Group field itself is unchanged. Verified with
+      Playwright: opened Café (a plain category), tapped "+ Add
+      subcategory," confirmed the header and pre-selected Group pill,
+      saved "Espresso," confirmed it appeared as "↳ Espresso" right under
+      Café. `tsc -b`/`oxlint` clean, zero console errors.
 - [x] Category groups & subcategories, minimal pass — brainstormed
       2026-08-11, design written to docs/14-category-groups.md (D70-D74)
       before coding, per user's request to start minimal (picker fix
