@@ -3,6 +3,7 @@ import { useStore } from '../lib/store';
 import { nowLocal } from '../lib/format';
 import { AccountCurrencyPicker } from './AccountCurrencyPicker';
 import { AmountKeypad } from './AmountKeypad';
+import { CategoryPicker } from './CategoryPicker';
 import type { Transaction } from '../lib/types';
 
 interface Props {
@@ -70,8 +71,6 @@ export function EntryZone({ onSubmitted }: Props) {
     setTypedText('');
   }
 
-  const rankedCategories = store.rankedCategories();
-
   return (
     <div className="entry-zone">
       {!expanded && (
@@ -110,12 +109,8 @@ export function EntryZone({ onSubmitted }: Props) {
               onToggleDirection={() => setDirection((d) => (d === 'expense' ? 'income' : 'expense'))}
             />
 
+            <CategoryPicker selectedId={null} onPick={submitTap} />
             <div className="chip-row">
-              {rankedCategories.map((c) => (
-                <button key={c.id} className="chip" onClick={() => submitTap(c.id)}>
-                  {c.name}
-                </button>
-              ))}
               <button className="chip ghost" onClick={reset}>cancel</button>
             </div>
           </div>

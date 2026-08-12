@@ -25,6 +25,7 @@ const accounts = new Table({
 const categories = new Table({
   name: column.text,
   kind: column.text, // expense | income
+  parent_id: column.text, // nullable — 2-level cap enforced app-side, see docs/14 D70
   icon: column.text,
   sort_order: column.integer,
   archived: column.integer,

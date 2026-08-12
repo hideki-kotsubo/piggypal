@@ -656,4 +656,10 @@
 }
 .field-pair .field-label {
   flex: 1;
+  /* Flex items default to min-width: auto, which for a native date/time
+     input means "don't shrink below the OS's rendered content width" —
+     on iOS Safari that's wide enough to overflow this pair at narrow
+     phone widths (confirmed: 302px of content in a 282px container at
+     320px viewport) instead of the two fields sharing space evenly. */
+  min-width: 0;
 }

@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { accountLabel, formatAmount, formatRelativeDate } from '../lib/format';
+import { CategoryPicker } from './CategoryPicker';
 import type { Transaction } from '../lib/types';
 
 // docs/07 "The inbox" + D26: raw utterance stays visible until categorized;
 // tapping a chip categorizes in place, no return to a list.
 export function InboxScreen() {
   const store = useStore();
-  const chipCategories = store.rankedCategories();
 
   // Snapshot which transactions were uncategorized when this screen opened.
   // The store filters categoryId === null, so once categorizeTransaction()
@@ -57,18 +57,10 @@ export function InboxScreen() {
                 {done ? (
                   <p className="inbox-done-note">✓ Categorized as {doneCategory?.name ?? '…'}</p>
                 ) : (
-                  <div className="chip-row">
-                    {chipCategories.map((c) => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        className="chip"
-                        onClick={() => store.categorizeTransaction(t.id, c.id)}
-                      >
-                        {c.name}
-                      </button>
-                    ))}
-                  </div>
+                  <CategoryPicker
+                    selectedId={null}
+                    onPick={(categoryId) => store.categorizeTransaction(t.id, categoryId)}
+                  />
                 )}
               </div>
             );

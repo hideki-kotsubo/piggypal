@@ -10,6 +10,36 @@ const currentMonth = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padSta
 
 type OpenPanel = { type: 'edit'; id: string } | { type: 'create' } | null;
 
+// docs/14: no full collapse/expand grouping here (that solved the picker's
+// crowding problem, docs/13-style) — this is a management list, not a
+// quick-pick, so a lighter touch is enough: children sort right after
+// their parent and get a "↳" prefix so the hierarchy is visible at a
+// glance. A child whose parent got archived out from under it (archiving
+// doesn't cascade) falls back to the end of the list rather than
+// disappearing silently.
+function orderedWithChildren(list: Category[]): Category[] {
+  const ids = new Set(list.map((c) => c.id));
+  const byParent = new Map<string, Category[]>();
+  const orphans: Category[] = [];
+  for (const c of list) {
+    if (!c.parentId) continue;
+    if (!ids.has(c.parentId)) {
+      orphans.push(c);
+      continue;
+    }
+    const arr = byParent.get(c.parentId) ?? [];
+    arr.push(c);
+    byParent.set(c.parentId, arr);
+  }
+  const result: Category[] = [];
+  for (const c of list) {
+    if (c.parentId) continue;
+    result.push(c, ...(byParent.get(c.id) ?? []));
+  }
+  result.push(...orphans);
+  return result;
+}
+
 export function CategoriesScreen() {
   const store = useStore();
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
@@ -17,8 +47,8 @@ export function CategoriesScreen() {
 
   const active = store.categories.filter((c) => !c.archived);
   const archived = store.categories.filter((c) => c.archived);
-  const expense = active.filter((c) => c.kind === 'expense');
-  const income = active.filter((c) => c.kind === 'income');
+  const expense = orderedWithChildren(active.filter((c) => c.kind === 'expense'));
+  const income = orderedWithChildren(active.filter((c) => c.kind === 'income'));
 
   function toggleRow(id: string) {
     setOpenPanel((p) => (p?.type === 'edit' && p.id === id ? null : { type: 'edit', id }));
@@ -30,7 +60,7 @@ export function CategoriesScreen() {
       <div className="account-block" key={category.id}>
         <button className="account-row" onClick={() => toggleRow(category.id)}>
           <div className="account-row-top">
-            <span className="account-name">{category.name}</span>
+            <span className="account-name">{category.parentId ? `↳ ${category.name}` : category.name}</span>
           </div>
         </button>
         {isEditing && (
@@ -99,10 +129,20 @@ function CategoryForm({ category, onDone }: { category: Category | null; onDone:
   const isNew = category === null;
 
   const [draft, setDraft] = useState<Category>(
-    () => category ?? { id: '', name: '', kind: 'expense', archived: false },
+    () => category ?? { id: '', name: '', kind: 'expense', parentId: null, archived: false },
   );
   const current: Category = category ?? draft;
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState<'kind' | 'group' | null>(null);
+
+  // docs/14 D70: exactly 2 levels, enforced app-side — a category that
+  // already has children can't itself become a subcategory (no group
+  // field offered), and an existing subcategory never appears as a
+  // choice of parent for anyone else.
+  const hasChildren = !isNew && store.categories.some((c) => !c.archived && c.parentId === current.id);
+  const eligibleParents = store.categories.filter(
+    (c) => !c.archived && !c.parentId && c.kind === current.kind && c.id !== current.id,
+  );
+  const parentCategory = current.parentId ? store.categories.find((c) => c.id === current.parentId) : null;
 
   function commit(patch: Partial<Category>) {
     if (isNew) setDraft((d) => ({ ...d, ...patch }));
@@ -135,18 +175,18 @@ function CategoryForm({ category, onDone }: { category: Category | null; onDone:
 
       <div>
         <div className="field-label">Kind</div>
-        <button className="pill-tap" onClick={() => setPickerOpen((o) => !o)}>
+        <button className="pill-tap" onClick={() => setPickerOpen(pickerOpen === 'kind' ? null : 'kind')}>
           {current.kind === 'expense' ? 'Expense' : 'Income'} ▾
         </button>
-        {pickerOpen && (
+        {pickerOpen === 'kind' && (
           <div className="chip-row">
             {(['expense', 'income'] as const).map((k) => (
               <button
                 key={k}
                 className={`chip ${k === current.kind ? 'picked' : ''}`}
                 onClick={() => {
-                  commit({ kind: k });
-                  setPickerOpen(false);
+                  commit({ kind: k, parentId: null });
+                  setPickerOpen(null);
                 }}
               >
                 {k === 'expense' ? 'Expense' : 'Income'}
@@ -156,8 +196,44 @@ function CategoryForm({ category, onDone }: { category: Category | null; onDone:
         )}
       </div>
 
-      {/* Budgets are a spend-limit concept — doesn't apply to income categories */}
-      {!isNew && current.kind === 'expense' && <BudgetsForCategory categoryId={current.id} />}
+      {!hasChildren && (
+        <div>
+          <div className="field-label">Group</div>
+          <button className="pill-tap" onClick={() => setPickerOpen(pickerOpen === 'group' ? null : 'group')}>
+            {parentCategory ? parentCategory.name : 'None (top-level)'} ▾
+          </button>
+          {pickerOpen === 'group' && (
+            <div className="chip-row">
+              <button
+                className={`chip ${current.parentId === null ? 'picked' : ''}`}
+                onClick={() => {
+                  commit({ parentId: null });
+                  setPickerOpen(null);
+                }}
+              >
+                None (top-level)
+              </button>
+              {eligibleParents.map((p) => (
+                <button
+                  key={p.id}
+                  className={`chip ${current.parentId === p.id ? 'picked' : ''}`}
+                  onClick={() => {
+                    commit({ parentId: p.id });
+                    setPickerOpen(null);
+                  }}
+                >
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* D74: hidden for a category with children — a group's budget would
+          silently only count its own direct spend (no rollup this pass),
+          which would look phantom/broken once it has subcategories. */}
+      {!isNew && current.kind === 'expense' && !hasChildren && <BudgetsForCategory categoryId={current.id} />}
 
       {isNew ? (
         <div className="form-actions">

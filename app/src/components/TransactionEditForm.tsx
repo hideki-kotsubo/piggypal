@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../lib/store';
 import { AccountCurrencyPicker } from './AccountCurrencyPicker';
 import { AmountKeypad } from './AmountKeypad';
+import { CategoryPicker } from './CategoryPicker';
 import type { Transaction } from '../lib/types';
 
 // occurredAt is "YYYY-MM-DDTHH:MM:SS" — split for the two native inputs,
@@ -21,7 +22,14 @@ function combine(date: string, time: string): string {
 export function TransactionEditForm({ transaction, onDone }: { transaction: Transaction; onDone: () => void }) {
   const store = useStore();
   const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
-  const rankedCategories = store.rankedCategories();
+  // Local mirror of the Note field — `transaction.note` comes straight
+  // from the store, and commit() writes through an async DB round-trip
+  // (PowerSync live query), so binding the input's value directly to it
+  // snaps the cursor to the end on every keystroke once that round-trip
+  // resolves. Same fix as AccountsScreen's Name/Institution fields: local
+  // state updates synchronously for display, the store write happens on
+  // the side.
+  const [noteStr, setNoteStr] = useState(() => transaction.note ?? '');
   const category = store.categories.find((c) => c.id === transaction.categoryId);
   const direction: 'expense' | 'income' = transaction.amountCents < 0 ? 'expense' : 'income';
 
@@ -81,20 +89,13 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
           {category?.name ?? 'Uncategorized'} ▾
         </button>
         {categoryPickerOpen && (
-          <div className="chip-row">
-            {rankedCategories.map((c) => (
-              <button
-                key={c.id}
-                className={`chip ${c.id === transaction.categoryId ? 'picked' : ''}`}
-                onClick={() => {
-                  commit({ categoryId: c.id });
-                  setCategoryPickerOpen(false);
-                }}
-              >
-                {c.name}
-              </button>
-            ))}
-          </div>
+          <CategoryPicker
+            selectedId={transaction.categoryId}
+            onPick={(categoryId) => {
+              commit({ categoryId });
+              setCategoryPickerOpen(false);
+            }}
+          />
         )}
       </div>
 
@@ -124,8 +125,12 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
         Note
         <input
           className="text-input"
-          value={transaction.note ?? ''}
-          onChange={(e) => commit({ note: e.target.value || null })}
+          value={noteStr}
+          onChange={(e) => {
+            const v = e.target.value;
+            setNoteStr(v);
+            commit({ note: v || null });
+          }}
         />
       </label>
     </div>

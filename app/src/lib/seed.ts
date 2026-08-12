@@ -28,10 +28,16 @@ export const seedAccounts: Account[] = [
 ];
 
 export const seedCategories: Category[] = [
-  { id: 'cat-mercado', name: 'Mercado', kind: 'expense', archived: false },
-  { id: 'cat-transporte', name: 'Transporte', kind: 'expense', archived: false },
-  { id: 'cat-cafe', name: 'Café', kind: 'expense', archived: false },
-  { id: 'cat-salario', name: 'Salário', kind: 'income', archived: false },
+  { id: 'cat-mercado', name: 'Mercado', kind: 'expense', parentId: null, archived: false },
+  { id: 'cat-transporte', name: 'Transporte', kind: 'expense', parentId: null, archived: false },
+  { id: 'cat-cafe', name: 'Café', kind: 'expense', parentId: null, archived: false },
+  { id: 'cat-salario', name: 'Salário', kind: 'income', parentId: null, archived: false },
+  // docs/14: a fresh group + subcategories, kept separate from the
+  // already-budgeted categories above (Mercado/Transporte) so their
+  // budget bars aren't affected by D74's "no budget field on a group".
+  { id: 'cat-lazer', name: 'Lazer', kind: 'expense', parentId: null, archived: false },
+  { id: 'cat-lazer-cinema', name: 'Cinema', kind: 'expense', parentId: 'cat-lazer', archived: false },
+  { id: 'cat-lazer-museu', name: 'Museu', kind: 'expense', parentId: 'cat-lazer', archived: false },
 ];
 
 const today = new Date();

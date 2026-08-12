@@ -26,3 +26,39 @@ export function useAccountPickerMode(): [AccountPickerMode, (mode: AccountPicker
   }
   return [mode, setMode];
 }
+
+export type ThemeMode = 'system' | 'light' | 'dark';
+
+const THEME_MODE_KEY = 'piggypal:theme-mode';
+
+function readThemeMode(): ThemeMode {
+  const stored = localStorage.getItem(THEME_MODE_KEY);
+  return stored === 'light' || stored === 'dark' ? stored : 'system';
+}
+
+// tokens.css keys dark/light overrides off this attribute (guarding the
+// existing prefers-color-scheme block with :not([data-theme="light"])).
+// 'system' means "no override" — remove the attribute so the media query
+// alone decides.
+function applyThemeMode(mode: ThemeMode) {
+  if (mode === 'system') {
+    delete document.documentElement.dataset.theme;
+  } else {
+    document.documentElement.dataset.theme = mode;
+  }
+}
+
+// Runs on import, before first paint, so the stored preference applies
+// immediately rather than flashing system-default and then switching once
+// SettingsScreen mounts — main.tsx imports this module for its side effect.
+applyThemeMode(readThemeMode());
+
+export function useThemeMode(): [ThemeMode, (mode: ThemeMode) => void] {
+  const [mode, setModeState] = useState<ThemeMode>(readThemeMode);
+  function setMode(next: ThemeMode) {
+    localStorage.setItem(THEME_MODE_KEY, next);
+    applyThemeMode(next);
+    setModeState(next);
+  }
+  return [mode, setMode];
+}

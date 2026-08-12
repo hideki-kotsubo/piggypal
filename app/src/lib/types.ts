@@ -14,10 +14,14 @@ export interface Account {
   archived: boolean;
 }
 
+// parentId nullable, exactly 2 levels deep — enforced app-side only (a
+// category that already has a parent is never itself offered as a parent)
+// — see docs/14 D70.
 export interface Category {
   id: string;
   name: string;
   kind: 'expense' | 'income';
+  parentId: string | null;
   archived: boolean;
 }
 

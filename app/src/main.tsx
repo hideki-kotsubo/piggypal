@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './styles/tokens.css'
 import './index.css'
 import './styles/home.css'
+import './lib/settings' // applies stored theme-mode before first paint
 import App from './App.tsx'
 import { StoreProvider } from './lib/store'
 import { TransactionList } from './components/TransactionList'

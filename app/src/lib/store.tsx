@@ -34,10 +34,17 @@ interface CategoryRow {
   id: string;
   name: string;
   kind: string;
+  parent_id: string | null;
   archived: number;
 }
 function rowToCategory(r: CategoryRow): Category {
-  return { id: r.id, name: r.name, kind: r.kind as Category['kind'], archived: Boolean(r.archived) };
+  return {
+    id: r.id,
+    name: r.name,
+    kind: r.kind as Category['kind'],
+    parentId: r.parent_id,
+    archived: Boolean(r.archived),
+  };
 }
 
 interface TransactionRow {
@@ -97,6 +104,7 @@ const CATEGORY_COLUMNS: Record<keyof Category, string> = {
   id: 'id',
   name: 'name',
   kind: 'kind',
+  parentId: 'parent_id',
   archived: 'archived',
 };
 
@@ -157,8 +165,8 @@ async function seedIfEmpty() {
       }
       for (const c of seedCategories) {
         await tx.execute(
-          `INSERT INTO categories (id, name, kind, archived) VALUES (?, ?, ?, ?)`,
-          [c.id, c.name, c.kind, c.archived ? 1 : 0],
+          `INSERT INTO categories (id, name, kind, parent_id, archived) VALUES (?, ?, ?, ?, ?)`,
+          [c.id, c.name, c.kind, c.parentId, c.archived ? 1 : 0],
         );
       }
       for (const t of seedTransactions) {
@@ -362,8 +370,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       addCategory(category) {
         void db.execute(
-          `INSERT INTO categories (id, name, kind, archived) VALUES (?, ?, ?, ?)`,
-          [category.id, category.name, category.kind, category.archived ? 1 : 0],
+          `INSERT INTO categories (id, name, kind, parent_id, archived) VALUES (?, ?, ?, ?, ?)`,
+          [category.id, category.name, category.kind, category.parentId, category.archived ? 1 : 0],
         );
       },
 

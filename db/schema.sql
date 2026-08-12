@@ -28,6 +28,10 @@ create table categories (
   user_id     uuid not null,
   name        text not null,
   kind        text not null default 'expense',   -- expense | income
+  parent_id   uuid references categories(id),    -- nullable; exactly 2
+                                                   -- levels, enforced
+                                                   -- app-side only — see
+                                                   -- docs/14 D70
   icon        text,                              -- emoji or icon key
   sort_order  int not null default 0,
   archived    boolean not null default false,

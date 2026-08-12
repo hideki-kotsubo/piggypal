@@ -14,20 +14,6 @@ it needs doing.
 
 ## ⚪ Next
 
-- [ ] Night mode must be user-toggleable, not just system-following —
-      requested 2026-08-10. Today `tokens.css` only has a
-      `@media (prefers-color-scheme: dark)` block, no explicit override —
-      the app follows the OS setting with no way for the user to force
-      light or dark regardless of it. Needs a three-way preference
-      (System / Light / Dark, defaulting to System) exposed in Settings,
-      persisted via the same `lib/settings.ts` localStorage pattern
-      `useAccountPickerMode` already established (docs/13). Implementation
-      likely sets a `data-theme="light"`/`"dark"` attribute on `<html>`
-      when overridden, with `tokens.css` gaining `:root[data-theme="dark"]`
-      / `:root[data-theme="light"]` blocks and guarding the existing media
-      query with `:not([data-theme="light"])` — the same pattern this
-      session's HTML artifacts (`docs/artifacts/*.html`) already use, just
-      not yet applied to the real app's stylesheet.
 - [ ] Institution field (AccountsScreen's AccountForm) should suggest from
       the user's existing institutions instead of being a bare text input —
       requested 2026-08-10. Behavior: on focus/tap, show every distinct
@@ -69,18 +55,88 @@ it needs doing.
 
 ## 🐛 Bugs
 
-- [ ] Same root cause likely affects the transaction edit form's Note
-      field (`TransactionList.tsx`, bound directly to `transaction.note`)
-      — not yet reported by the user, but it's the identical pattern.
-      Worth fixing at the same time or flagging if it turns out fine in
-      practice (shorter round-trip, single table).
-- [ ] Date/Time fields on the transaction edit form overflow each other on
-      iOS — native `<input type="date">`/`<input type="time">` side-by-side
-      layout needs a responsive fix. Untested on real iOS Safari — same
-      shared `TransactionEditForm.tsx` used by both lists now, needs a
-      real-device check.
+- [ ] Date/Time fields (`.field-pair` in `TransactionEditForm`) still
+      overflow each other on real iOS Safari — confirmed by the user
+      2026-08-11 on an actual device (app.piggypal.codexbase.dev,
+      hard-refreshed), after `min-width: 0` on `.field-pair .field-label`
+      measurably fixed the same overflow in Playwright's WebKit (Linux/GTK
+      port): at 320px viewport, container/content width matched exactly
+      post-fix (282px = 282px) there. The `min-width: 0` fix is still in
+      place — it's a real, correct fix for the "flex items don't shrink
+      below native-control content width" mechanism, it's just not
+      sufficient on real iOS Safari, which renders these controls
+      differently than Linux WebKit does. Screenshot showed "Aug 10, 2026"
+      (month-name date format) vs. the numeric "08/11/2026" my WebKit test
+      rendered — worth checking whether iOS's locale-driven longer date
+      format is consuming more intrinsic width than accounted for, or
+      whether iOS enforces some other minimum (touch-target sizing on the
+      native control) that CSS width/min-width alone can't override.
+      Needs iteration against a real iOS device or an iOS-accurate remote
+      testing service — Linux WebKit has now been shown to diverge from
+      real iOS Safari on this specific bug, not just theoretically.
+      Deferred — parked per user 2026-08-11, revisit later.
 
 ## ✅ Done
+
+- [x] Category groups & subcategories, minimal pass — brainstormed
+      2026-08-11, design written to docs/14-category-groups.md (D70-D74)
+      before coding, per user's request to start minimal (picker fix
+      only, budget rollup explicitly deferred). `categories.parent_id`
+      added (nullable self-referencing FK, 2-level cap enforced app-side
+      — types.ts, schema.ts, db/schema.sql, docs/03, store.tsx). Built a
+      shared `CategoryPicker.tsx` (mirroring `AccountCurrencyPicker`'s
+      grouped-chip-row mechanics, but no Grouped/Capped mode setting —
+      this hierarchy is authored by the user in `CategoriesScreen`, not
+      inferred from scale, so the picker just reflects whatever exists)
+      and wired it into all three places that used to render
+      `rankedCategories()` flat: `EntryZone`, `InboxScreen`,
+      `TransactionEditForm`. A group stays directly selectable as the
+      first chip inside its own expanded body (D71). `CategoriesScreen`
+      gained a Group field in the category edit form (chip picker of
+      eligible same-kind, non-subcategory parents) and D74's guard: the
+      budget section is hidden entirely for a category with children, to
+      avoid a silently-non-rolling-up budget looking phantom/broken.
+      Also lightly restructured `CategoriesScreen`'s own flat list so
+      children sort right after their parent with a "↳" prefix, since a
+      management list needs the hierarchy visible even without full
+      grouping UI. Verified with Playwright end to end: built a
+      Lazer→Cinema/Museu hierarchy via seed data, confirmed the
+      EntryZone picker shows "Lazer ▸ 2" collapsed and expands to
+      Lazer/Cinema/Museu chips, confirmed `CategoriesScreen` shows the
+      "↳" nesting, and confirmed the budget section is hidden for Lazer
+      but present for Cinema. `tsc -b`/`oxlint` clean, zero console
+      errors. Known follow-up spotted but not fixed (out of scope this
+      pass): `CategoriesScreen`'s Name field has the same cursor-jump
+      bug already fixed elsewhere (Name/Institution, Note) — `value`
+      bound directly to the live store category, no local mirror yet.
+- [x] Night mode is now user-toggleable (System / Light / Dark, default
+      System) — requested 2026-08-10, built 2026-08-11. Added
+      `useThemeMode` to `lib/settings.ts` (same localStorage pattern as
+      `useAccountPickerMode`), which sets a `data-theme="light"`/`"dark"`
+      attribute on `<html>` (or removes it for System). `tokens.css` gained
+      explicit `:root[data-theme="dark"]`/`:root[data-theme="light"]`
+      override blocks, and the existing `prefers-color-scheme: dark` block
+      is now guarded with `:not([data-theme="light"])` so an explicit Light
+      override wins even when the OS is dark — same pattern already used in
+      `docs/artifacts/*.html`. The module applies the stored preference on
+      import (side-effect import added to `main.tsx`, before first render)
+      so there's no flash of the wrong theme on load. Toggle chips added to
+      Settings under a new "Appearance" section. Verified with Playwright:
+      clicking each chip flips `data-theme` and the computed `--bg` value,
+      the choice persists across reload, and switching back to System
+      removes the attribute — screenshots confirm both Light and Dark
+      render correctly, no console errors.
+
+- [x] Fixed the transaction edit form's Note field having the same
+      cursor-jump-while-typing bug as AccountsScreen's Name/Institution
+      fields — `value` was bound directly to `transaction.note` (live
+      store state), and `commit()` writes through `store.updateTransaction`
+      — an async DB round-trip — with no local state in between, so the
+      cursor snapped to the end on every keystroke. Fixed with the same
+      local-mirror pattern (`noteStr`). Verified behaviorally, not just by
+      type-check: scripted a mid-string insert with Playwright (typed "X"
+      after "Hello" in "Hello world") and confirmed the result was
+      "HelloX world," not "Hello worldX" (2026-08-11).
 
 - [x] Fixed a seeding race under React StrictMode's dev-mode
       double-invoke — found 2026-08-11 via a real Playwright screenshot

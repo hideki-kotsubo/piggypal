@@ -102,4 +102,5 @@ docker compose up    # local Postgres, schema auto-loaded from db/schema.sql
 - `docs/11-savings-goals.md` — **superseded (D64)**: account-level goals removed; goal tracking is per-category via `budgets` only. Kept for historical context.
 - `docs/12-accounts-screen.md` — accounts list/edit screen grouped by institution, archived flag, per-currency balance display (no currency field, no goal UI — see docs/10 D62, docs/11 D64)
 - `docs/13-account-picker-scaling.md` — entry-zone/edit-form account picker: threshold-gated grouped-vs-capped modes, user-selectable via Settings, solo-institution label simplification. Implemented 2026-08-10.
+- `docs/14-category-groups.md` — category hierarchy: nullable self-referencing `parent_id`, 2-level cap, shared `CategoryPicker` across EntryZone/InboxScreen/TransactionEditForm. Budget rollup explicitly deferred (D74). Minimal pass implemented 2026-08-11.
 - `docs/artifacts/` — standalone HTML mockups (open directly in a browser): `piggypal-entry-ux.html` (doc 07), `piggypal-accounts-screen.html` (doc 12), `piggypal-picker-grouping.html` (doc 13)

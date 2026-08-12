@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom';
 import { useStore } from '../lib/store';
-import { ACCOUNT_PICKER_SCALE_THRESHOLD, useAccountPickerMode } from '../lib/settings';
+import { ACCOUNT_PICKER_SCALE_THRESHOLD, useAccountPickerMode, useThemeMode } from '../lib/settings';
 
 export function SettingsScreen() {
   const store = useStore();
   const [pickerMode, setPickerMode] = useAccountPickerMode();
+  const [themeMode, setThemeMode] = useThemeMode();
   // docs/13 D69 — only surface this once it'd actually do something,
   // rather than a control that's a no-op below the threshold.
   const showPickerModeSetting = store.accounts.filter((a) => !a.archived).length > ACCOUNT_PICKER_SCALE_THRESHOLD;
@@ -37,6 +38,28 @@ export function SettingsScreen() {
           <span>Categories</span>
           <span className="settings-row-arrow">›</span>
         </Link>
+      </div>
+
+      <div className="section-label">Appearance</div>
+      <div className="chip-row settings-chip-row">
+        <button
+          className={`chip ${themeMode === 'system' ? 'picked' : ''}`}
+          onClick={() => setThemeMode('system')}
+        >
+          System
+        </button>
+        <button
+          className={`chip ${themeMode === 'light' ? 'picked' : ''}`}
+          onClick={() => setThemeMode('light')}
+        >
+          Light
+        </button>
+        <button
+          className={`chip ${themeMode === 'dark' ? 'picked' : ''}`}
+          onClick={() => setThemeMode('dark')}
+        >
+          Dark
+        </button>
       </div>
 
       {showPickerModeSetting && (
