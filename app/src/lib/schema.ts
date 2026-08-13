@@ -39,6 +39,7 @@ const transactions = new Table(
     currency: column.text,
     occurred_at: column.text, // local date+time, "YYYY-MM-DDTHH:MM:SS", no timezone
     note: column.text,
+    merchant: column.text, // nullable, free text — display/grouping only, see docs/15
     source: column.text, // manual | ai | import
     ai_raw: column.text,
     deleted_at: column.text,

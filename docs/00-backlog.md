@@ -42,19 +42,45 @@ it needs doing.
       and pig-imagery cultural sensitivity, not the collision itself).
 - [ ] Server-backed full-history CSV export (docs/08-csv-export.md, D30) —
       for users whose local 18-month window has aged out older transactions.
-- [ ] PowerSync connector wiring — sync/auth/AI pipeline/Stripe are all
-      fully specified in docs/02-06 but intentionally not implemented yet
-      (deliberate local-only-first build order).
+- [ ] Location/merchant follow-ups still open after docs/15 D78 and
+      docs/16-18: showing merchant on TransactionList/RecentList rows
+      (search/filter itself shipped, docs/18, but rows still don't show
+      merchant directly — only findable via search/filter or opening the
+      transaction), Tier 2 AI merchant extraction once the server AI
+      pipeline itself exists (docs/16 D92 keeps Tier 1 merchant-free), and
+      the merchant-string dedup problem ("Costco" vs "COSTCO #412" vs
+      "Costco Gas" fragmenting a spend-by-merchant total) — still not
+      solved.
+- [ ] Server-side AI pipeline (Tier 2) + sync/auth/Stripe — fully specified
+      in docs/02-06 but intentionally not implemented yet (deliberate
+      local-only-first build order). Tier 1 (on-device, free, offline) is
+      now real — docs/16.
 - [ ] Recurring transactions — explicitly out of MVP scope (docs/01).
 - [ ] Household sharing — explicitly out of MVP scope (docs/01).
-- [ ] Voice input, simple version — speech-to-text feeding the existing
-      on-device rule-based parser (Tier 1), no LLM involved. Voice itself is
-      already listed as deferred/out of MVP in docs/01, framed there as
-      "reuse same pipeline later" — this scopes a first cut to the free-tier
-      Tier 1 path specifically rather than waiting on the Tier 2 AI pipeline.
+- [ ] docs/04 learning loop (writing corrections back into
+      `category_keywords` when a user resolves an Inbox item) and its
+      dedupe guard (same amount+date within 2 minutes) — both explicitly
+      deferred by docs/16 D91.
 
 ## 🐛 Bugs
 
+- [ ] `BudgetBars.tsx:19` throws `Uncaught TypeError: Cannot mix BigInt and
+      other types, use explicit conversions` — reported 2026-08-12. Root
+      cause: `store.tsx:75` maps `amountCents: r.amount_cents` straight from
+      the raw SQLite row with no conversion, and the SQLite driver (wa-sqlite
+      via PowerSync) returns `INTEGER` columns as native JS `bigint`, not
+      `number` — `types.ts` declares `amountCents: number`, but at runtime
+      it's actually a `bigint`, and TS has no way to catch that mismatch
+      since the row mapper does no runtime coercion. `BudgetBars.tsx:19`
+      (`(spendByKey.get(key) ?? 0) + -t.amountCents`) mixes the `bigint`
+      with a plain-number `0`/accumulator, which throws. `store.tsx:444`
+      has the identical mixing pattern (`(totals.get(...) ?? 0) +
+      t.amountCents`) — likely reproduces wherever that total is consumed
+      (trend/home totals), not just this one call site. Not yet fixed;
+      real fix is probably at the source — coerce `amount_cents`/
+      `amountCents` (and likely `budgets.amount_cents`, same column type)
+      to `Number(...)` once in `store.tsx`'s row mappers rather than
+      patching every arithmetic call site individually.
 - [ ] Date/Time fields (`.field-pair` in `TransactionEditForm`) still
       overflow each other on real iOS Safari — confirmed by the user
       2026-08-11 on an actual device (app.piggypal.codexbase.dev,
@@ -78,6 +104,55 @@ it needs doing.
 
 ## ✅ Done
 
+- [x] Tier 1 local rule-based parser + voice input (docs/16) — implemented
+      2026-08-12. `parser.ts`: pure, closed-vocabulary amount/currency/
+      date/category/account extraction (bilingual pt-BR/en), never-guess
+      degrades to the existing uncategorized inbox. `category_keywords`
+      seeded with a small bilingual starter vocabulary and wired into
+      `store.tsx` (was a fully unused table before this). `EntryZone`'s
+      typed-text box actually works now instead of toasting "not wired up
+      yet"; a feature-detected mic button transcribes speech into the same
+      field via the Web Speech API, no separate parse path. Merchant
+      extraction, the docs/04 learning loop, and its dedupe guard
+      explicitly deferred (D91-92, tracked above). Verified with
+      Playwright: "45 mercado ontem" inserts Groceries dated yesterday,
+      an unmatched utterance degrades correctly to the inbox with the
+      right toast copy, an amount-free utterance soft-blocks without
+      inserting and keeps the text editable, mic button renders in
+      Chromium. `tsc -b`/`oxlint` clean.
+- [x] Dedicated transaction screen (docs/17) — implemented 2026-08-12.
+      New `/transactions/:id` route (`TransactionScreen.tsx`) replaces
+      inline expand-in-place editing for transactions specifically
+      (Accounts/Categories unchanged); back navigation uses `navigate(-1)`
+      since the screen is now reachable from three places. Tap-entry
+      auto-navigates to the new transaction's screen post-insert instead
+      of toasting — answers the reported pain point of clicking straight
+      back into a just-created transaction to fill in Note/Location/
+      Date-Time. Verified with Playwright: Recent-row tap, Transactions-
+      list-row tap, and tap-entry submission all land on the dedicated
+      screen correctly; Back returns to the right place from each.
+      `tsc -b`/`oxlint` clean.
+- [x] Transaction search & filter (docs/18) — implemented 2026-08-12.
+      Search (note+merchant substring) and filter chips (Category,
+      Account, Location, Date range) added inline atop `/transactions`
+      (confirmed with the user over the artifact's separate-screen
+      staging), filter state in `useSearchParams()` so it survives the
+      Back navigation docs/17 introduced, results total shown per
+      currency present — never blended (docs/10). Verified with
+      Playwright: "Costco" search correctly narrows to 2 rows summing
+      -$129.20; "This month" preset correctly shows separate CAD and BRL
+      totals; filtered state survives a full page reload. `tsc -b`/
+      `oxlint` clean.
+- [x] Location/merchant on transactions (docs/15) — implemented 2026-08-12.
+      Nullable `merchant` column on `transactions`, a "Location" field in
+      `TransactionEditForm` right below Note (same local-mirror-state
+      autosave pattern), and `store.rankedMerchants()` feeding a
+      recency-ranked, live-substring-filtered suggestion chip row (D79).
+      Tier 1 never attempts extraction (D77); AI wiring, list-row display,
+      the search/filter screen, and merchant-string dedup are explicitly
+      deferred (D78, tracked as a follow-up above). Seed data extended
+      with a repeat "Costco" merchant across two transactions to exercise
+      the recency ranking.
 - [x] Added an "Events & Tickets" leaf under Recreation & Entertainment
       to the seed taxonomy — requested 2026-08-12 after working through
       where things like a ballgame or pool/museum admission actually

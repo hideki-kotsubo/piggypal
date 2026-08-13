@@ -1,0 +1,127 @@
+# 16 — Tier 1 Local Parser + Voice Input
+
+## The problem
+
+Docs/04 specs a two-tier entry pipeline, but until now zero of it existed
+in code: `format.ts` had only display formatting, `category_keywords` was
+a fully unused table, and `EntryZone`'s typed-text box was a stub that
+just toasted "isn't wired up yet." That leaves free-tier users (and anyone
+offline) with tap-entry as the only real input path. This closes the
+Tier 1 half for real — free, offline, on-device — plus voice as a thin
+input layer on top, matching the backlog's "Voice input, simple version"
+item.
+
+## Scope for this pass — Tier 1 only, merchant stays out, learning loop deferred
+
+- **No Tier 2 changes.** The server LLM path (docs/04's `/api/parse`) is
+  still fully unimplemented — this doc doesn't touch it.
+- **Merchant/location extraction stays out of scope.** Discussed directly:
+  open-vocabulary proper nouns are a materially fuzzier extraction problem
+  than the closed vocab below, and a wrong guess is worse than a blank
+  field — the same reasoning docs/15 D77 already used to keep merchant
+  Tier-2-only. Flagged as a real possible future extension, not
+  attempted here.
+- **The docs/04 learning loop is deferred.** This pass seeds and *reads*
+  `category_keywords`; it does not write new keywords back when a user
+  corrects an Inbox item. A real, separate piece of future work.
+- **The docs/04 dedupe guard is deferred** (same amount+date within 2
+  minutes → "looks like a duplicate?").
+
+## `parser.ts` — a pure, closed-vocabulary module
+
+`app/src/lib/parser.ts` has no React/store imports. `parseUtterance(text,
+ctx)` returns `{ amountCents, direction, currency, occurredAt, categoryId,
+accountId }` — every field nullable except `direction`, and null means
+"caller applies its own default," never a guess:
+
+- **Amount**: digit forms first (`R$45,00`, `45,00`, `45.00`, `45`,
+  `$18.40`) — a bare integer "45" → 4500 cents, matching docs/04's
+  tool-schema description verbatim. A small bilingual number-word table
+  (1–19 + tens, "quarenta e cinco"/"forty five") is a fallback only when
+  no digits appear — whole-dollar amounts only, no cents from word form.
+- **Currency**: explicit symbol/word map only (`r$`/reais→BRL,
+  `¥`/ienes/yen→JPY, `€`/euros→EUR, us$/usd/dólares→USD, cad/c$→CAD). A
+  bare `$` matches nothing → falls through to the caller's default, per
+  docs/04's "never infer from amount size or vocabulary alone."
+- **Date**: closed set only — hoje/today, ontem/yesterday, anteontem,
+  "last <weekday>" (en) / "<weekday> passada" / "última <weekday>" (pt).
+  No match → `null`, caller uses now.
+- **Category**: matches `category_keywords` plus each category's own bare
+  name, substring-contains against the full utterance. Exactly one
+  distinct category matched → that id; zero or two-or-more → `null`
+  (never-guess, same rule docs/04 already uses for Tier 2).
+- **Account**: exact-name matching only, no fuzzy matching (docs/04
+  verbatim). An utterance naming both an account's institution and its
+  bare name ("no Visa do TD") is trusted even when the bare name alone is
+  shared by another account elsewhere; bare-name-only matches are trusted
+  only when exactly one account carries that name. No match → `null`,
+  caller falls back to `store.defaultAccountId()`.
+- **Direction**: defaults `expense`; a small bilingual income-trigger list
+  (recebi, salário, deposit, received, got paid, paycheck, income) flips
+  it.
+
+## `category_keywords`: seeded, not learned yet
+
+The table existed in schema since docs/03 but had zero rows and zero
+readers anywhere in the app. `seed.ts` now ships a small bilingual starter
+vocabulary (`seedCategoryKeywords`) across a handful of leaf categories —
+not exhaustive, same "starter, not full taxonomy" spirit as
+`seedCategories` itself — so the parser has something to match against on
+a fresh account. `store.tsx` reads the table into `store.categoryKeywords`
+via a `db.watch`, alongside the existing four.
+
+## `EntryZone`'s typed submit: parse, insert, or degrade to Inbox
+
+`submitTyped` no longer shows the stub toast. It calls `parseUtterance`
+and:
+- **No amount found at all** → soft-blocks: shows a toast, doesn't insert,
+  leaves the text in the field to edit. Docs/04's literal failure-mode
+  table says "save raw utterance as draft," but there's no draft concept
+  anywhere in the schema (`amount_cents` is `NOT NULL`) — this is a
+  deliberate, flagged deviation from that literal wording.
+- **Amount found, category ambiguous/unmatched** → inserts anyway
+  (`source: 'ai'`, `aiRaw: <original text>`, `categoryId: null`), which
+  lands it in the existing uncategorized-inbox flow (docs/07) with zero
+  Inbox-side changes needed — exactly docs/04's "never blocks, worst case
+  lands in inbox" principle.
+- **Amount and category both resolve** → inserts directly, `note` set to
+  the resolved category's name — matching the existing seed-data
+  precedent for AI-sourced rows (`note = category.name` when categorized,
+  `null` when not), so `RecentList`'s note-based row label doesn't show
+  "Uncategorized" for a successfully-parsed entry.
+
+Unlike tap-entry's post-submit auto-navigate (docs/17), typed/voice entry
+keeps the toast+undo pattern (`onSubmitted('Added'` or `'Added to your
+inbox — needs a category', undoFn)`) — it doesn't get an auto-navigate
+behavior in this pass, so the two `EntryZone` submit paths now genuinely
+differ in post-submit UX by design.
+
+## Voice: a thin layer, no separate parse path
+
+A mic button next to the typed-entry field (feature-detected, hidden
+entirely when unsupported — a real gap on desktop Firefox) uses the
+browser's built-in `SpeechRecognition`/`webkitSpeechRecognition` to
+transcribe speech straight into the same text field. There is no separate
+voice-parsing path — whatever lands in the field gets parsed by
+`parseUtterance` exactly the same way typed text does.
+
+**Worth knowing, not a blocker**: despite costing nothing on our side,
+most browsers' built-in speech recognition still round-trips through the
+browser vendor's own cloud service — this isn't genuinely offline
+speech-to-text, just free of *our* AI cost. A fully offline in-browser
+model is a much bigger undertaking and out of scope here. Recognition
+language defaults to `navigator.language` (best-effort — no language
+toggle exists yet, docs/09 is spec-only) rather than the UI's own
+hardcoded `en-CA` display locale.
+
+## Decisions locked in this doc
+
+| # | Decision | Why |
+|---|---|---|
+| D90 | Tier 1 is a pure `parser.ts` module, closed-vocabulary throughout, never-guess-degrades to `categoryId: null` | Matches docs/04's own "ambiguity degrades to friction, never data loss" principle; a pure module with no store/React imports is easy to reason about independent of the UI that drives it |
+| D91 | `category_keywords` is seeded with a small starter bilingual vocabulary and read in this pass; the docs/04 learning loop (writing corrections back) is explicitly deferred | The parser needs something to match against on a fresh account; writing back corrections is a distinct, separable piece of work not required to make Tier 1 useful |
+| D92 | Merchant/location extraction stays out of scope for Tier 1, flagged as a real possible future extension | Same reasoning as docs/15 D77 — open-vocabulary proper nouns are a fuzzier problem than the closed category/account/date vocab above |
+| D93 | Voice input is a thin Web Speech layer that only populates the existing text field — no separate parse path; genuinely-offline STT is out of scope | Reuses the exact same Tier 1 parser typed input already goes through; a fully offline model is a much bigger undertaking than this pass |
+| D94 | Unparseable-amount input soft-blocks with a toast (text stays editable) rather than docs/04's undefined "draft" concept | `amount_cents` is `NOT NULL` in the schema — there's no draft row shape to save into |
+
+**Implemented 2026-08-12.**

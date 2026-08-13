@@ -35,6 +35,7 @@ export interface Transaction {
   currency: string;
   occurredAt: string; // local date+time, "YYYY-MM-DDTHH:MM:SS", no timezone
   note: string | null;
+  merchant: string | null; // "Costco", "Uber" — display/grouping only, see docs/15
   source: TransactionSource;
   aiRaw: string | null;
   deletedAt: string | null;
@@ -46,4 +47,15 @@ export interface Budget {
   month: string; // first of month, ISO date
   currency: string;
   amountCents: number;
+}
+
+// docs/16: vocabulary the Tier 1 rule-based parser matches against, on top
+// of each category's own bare name. Seeded with a small bilingual starter
+// set; the docs/04 learning loop (writing new keywords from Inbox
+// corrections) is explicitly deferred — this pass only seeds and reads.
+export interface CategoryKeyword {
+  id: string;
+  categoryId: string;
+  keyword: string;
+  hits: number;
 }

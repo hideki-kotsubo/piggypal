@@ -30,7 +30,15 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
   // state updates synchronously for display, the store write happens on
   // the side.
   const [noteStr, setNoteStr] = useState(() => transaction.note ?? '');
+  // Same local-mirror reasoning as noteStr above — docs/15.
+  const [merchantStr, setMerchantStr] = useState(() => transaction.merchant ?? '');
   const category = store.categories.find((c) => c.id === transaction.categoryId);
+  // docs/15 D79: recency order comes from the store; narrowing by the
+  // typed substring (contains, not just starts-with — same rule as the
+  // Institution-autosuggest backlog item) is this component's own job.
+  const merchantSuggestions = store
+    .rankedMerchants(transaction.id)
+    .filter((m) => m.toLowerCase().includes(merchantStr.toLowerCase()));
   const direction: 'expense' | 'income' = transaction.amountCents < 0 ? 'expense' : 'income';
 
   function commit(patch: Partial<Transaction>) {
@@ -133,6 +141,36 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
           }}
         />
       </label>
+
+      <label className="field-label">
+        Location
+        <input
+          className="text-input"
+          placeholder="optional…"
+          value={merchantStr}
+          onChange={(e) => {
+            const v = e.target.value;
+            setMerchantStr(v);
+            commit({ merchant: v || null });
+          }}
+        />
+      </label>
+      {merchantSuggestions.length > 0 && (
+        <div className="chip-row">
+          {merchantSuggestions.map((m) => (
+            <button
+              key={m}
+              className={`chip ${m === merchantStr ? 'picked' : ''}`}
+              onClick={() => {
+                setMerchantStr(m);
+                commit({ merchant: m });
+              }}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

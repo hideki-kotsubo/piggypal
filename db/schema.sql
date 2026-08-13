@@ -54,6 +54,9 @@ create table transactions (
                                      -- schema is treated as "what the user means",
                                      -- not a UTC instant
   note         text,
+  merchant     text,    -- nullable, free text ("Costco", "Uber") — display/
+                         -- grouping only, no FK, same shape as
+                         -- accounts.institution — see docs/15
   source       text not null default 'manual',   -- manual | ai | import
   ai_raw       text,                             -- original utterance, if source = 'ai'
   deleted_at   timestamptz,

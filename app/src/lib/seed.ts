@@ -1,4 +1,4 @@
-import type { Account, Budget, Category, Transaction } from './types';
+import type { Account, Budget, Category, CategoryKeyword, Transaction } from './types';
 
 // Placeholder seed data so the Home screen has something real to render
 // against during UI development — not representative of any real user.
@@ -110,6 +110,7 @@ export const seedTransactions: Transaction[] = [
     currency: 'CAD',
     occurredAt: isoDaysAgo(1, '18:42:00'),
     note: 'Groceries',
+    merchant: 'Costco',
     source: 'ai',
     aiRaw: '45 mercado ontem',
     deletedAt: null,
@@ -122,6 +123,7 @@ export const seedTransactions: Transaction[] = [
     currency: 'BRL',
     occurredAt: isoDaysAgo(2, '09:00:00'),
     note: 'Salary',
+    merchant: null,
     source: 'manual',
     aiRaw: null,
     deletedAt: null,
@@ -134,6 +136,7 @@ export const seedTransactions: Transaction[] = [
     currency: 'CAD',
     occurredAt: isoDaysAgo(2, '20:15:00'),
     note: 'Uber',
+    merchant: 'Uber',
     source: 'ai',
     aiRaw: 'uber 18.40',
     deletedAt: null,
@@ -150,8 +153,26 @@ export const seedTransactions: Transaction[] = [
     currency: 'CAD',
     occurredAt: isoDaysAgo(0, '12:30:00'),
     note: null,
+    merchant: null,
     source: 'ai',
     aiRaw: 'sushi jantar uns 32',
+    deletedAt: null,
+  },
+  {
+    // Second Costco visit, older — gives rankedMerchants() (docs/15 D79)
+    // a real recency-vs-frequency case to sort: this is Costco's oldest
+    // occurrence, tx-1 is its most recent, so "Costco" should surface
+    // ranked by tx-1's date, not this one's.
+    id: 'tx-5',
+    accountId: 'acc-visa',
+    categoryId: 'cat-shopping-household',
+    amountCents: -8420,
+    currency: 'CAD',
+    occurredAt: isoDaysAgo(14, '16:05:00'),
+    note: 'Household',
+    merchant: 'Costco',
+    source: 'manual',
+    aiRaw: null,
     deletedAt: null,
   },
 ];
@@ -164,4 +185,24 @@ const monthStart = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-01`;
 export const seedBudgets: Budget[] = [
   { id: 'budget-groceries', categoryId: 'cat-food-groceries', month: monthStart, currency: 'CAD', amountCents: 60000 },
   { id: 'budget-rideshare', categoryId: 'cat-transport-rideshare', month: monthStart, currency: 'CAD', amountCents: 18000 },
+];
+
+// docs/16: a small bilingual starter vocabulary for the Tier 1 rule-based
+// parser to match against, on top of each category's own bare name —
+// without this the parser has nothing to work with on a fresh account.
+// Not exhaustive (same "starter, not full taxonomy" spirit as
+// seedCategories) — real vocabulary is meant to grow from the docs/04
+// learning loop, which this pass doesn't implement yet.
+let kwId = 0;
+function kw(categoryId: string, keyword: string): CategoryKeyword {
+  kwId += 1;
+  return { id: `ckw-${kwId}`, categoryId, keyword, hits: 1 };
+}
+export const seedCategoryKeywords: CategoryKeyword[] = [
+  ...['mercado', 'grocery', 'groceries', 'supermercado', 'supermarket'].map((k) => kw('cat-food-groceries', k)),
+  ...['restaurante', 'restaurant', 'jantar', 'almoço', 'lunch', 'dinner'].map((k) => kw('cat-food-dining', k)),
+  ...['café', 'cafe', 'coffee', 'cafezinho'].map((k) => kw('cat-food-coffee', k)),
+  ...['uber', 'corrida', 'taxi', '99'].map((k) => kw('cat-transport-rideshare', k)),
+  ...['gasolina', 'gas', 'combustível', 'combustivel'].map((k) => kw('cat-transport-fuel', k)),
+  ...['salário', 'salario', 'salary', 'recebi', 'pagamento', 'paycheck'].map((k) => kw('cat-salary', k)),
 ];

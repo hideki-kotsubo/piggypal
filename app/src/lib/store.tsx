@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { db } from './db';
-import type { Account, AccountKind, Budget, Category, Transaction } from './types';
-import { seedAccounts, seedBudgets, seedCategories, seedTransactions } from './seed';
+import type { Account, AccountKind, Budget, Category, CategoryKeyword, Transaction } from './types';
+import { seedAccounts, seedBudgets, seedCategories, seedCategoryKeywords, seedTransactions } from './seed';
 
 // Real local data layer — docs/01 D1 (on-device SQLite via wa-sqlite/
 // PowerSync web SDK), running in local-only mode (no connector passed to
@@ -62,6 +62,7 @@ interface TransactionRow {
   // know the fallback exists.
   occurred_at: string | null;
   note: string | null;
+  merchant: string | null;
   source: string;
   ai_raw: string | null;
   deleted_at: string | null;
@@ -75,6 +76,7 @@ function rowToTransaction(r: TransactionRow): Transaction {
     currency: r.currency,
     occurredAt: r.occurred_at ?? '1970-01-01T00:00:00',
     note: r.note,
+    merchant: r.merchant,
     source: r.source as Transaction['source'],
     aiRaw: r.ai_raw,
     deletedAt: r.deleted_at,
@@ -90,6 +92,16 @@ interface BudgetRow {
 }
 function rowToBudget(r: BudgetRow): Budget {
   return { id: r.id, categoryId: r.category_id, month: r.month, currency: r.currency, amountCents: r.amount_cents };
+}
+
+interface CategoryKeywordRow {
+  id: string;
+  category_id: string;
+  keyword: string;
+  hits: number;
+}
+function rowToCategoryKeyword(r: CategoryKeywordRow): CategoryKeyword {
+  return { id: r.id, categoryId: r.category_id, keyword: r.keyword, hits: r.hits };
 }
 
 const ACCOUNT_COLUMNS: Record<keyof Account, string> = {
@@ -124,6 +136,7 @@ const TRANSACTION_COLUMNS: Record<keyof Transaction, string> = {
   currency: 'currency',
   occurredAt: 'occurred_at',
   note: 'note',
+  merchant: 'merchant',
   source: 'source',
   aiRaw: 'ai_raw',
   deletedAt: 'deleted_at',
@@ -171,15 +184,21 @@ async function seedIfEmpty() {
       }
       for (const t of seedTransactions) {
         await tx.execute(
-          `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_at, note, source, ai_raw, deleted_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [t.id, t.accountId, t.categoryId, t.amountCents, t.currency, t.occurredAt, t.note, t.source, t.aiRaw, t.deletedAt],
+          `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_at, note, merchant, source, ai_raw, deleted_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [t.id, t.accountId, t.categoryId, t.amountCents, t.currency, t.occurredAt, t.note, t.merchant, t.source, t.aiRaw, t.deletedAt],
         );
       }
       for (const b of seedBudgets) {
         await tx.execute(
           `INSERT INTO budgets (id, category_id, month, currency, amount_cents) VALUES (?, ?, ?, ?, ?)`,
           [b.id, b.categoryId, b.month, b.currency, b.amountCents],
+        );
+      }
+      for (const k of seedCategoryKeywords) {
+        await tx.execute(
+          `INSERT INTO category_keywords (id, category_id, keyword, hits) VALUES (?, ?, ?, ?)`,
+          [k.id, k.categoryId, k.keyword, k.hits],
         );
       }
     });
@@ -196,6 +215,7 @@ interface StoreState {
   categories: Category[];
   transactions: Transaction[];
   budgets: Budget[];
+  categoryKeywords: CategoryKeyword[];
 }
 
 interface StoreApi extends StoreState {
@@ -216,6 +236,7 @@ interface StoreApi extends StoreState {
   rankedAccounts: () => Account[];
   rankedCurrencies: (accountId: string) => string[];
   rankedCategories: () => Category[];
+  rankedMerchants: (excludeTransactionId?: string) => string[];
   // Wipes every local table and reloads so seedIfEmpty repopulates fresh —
   // a dev-stage escape hatch for exactly the situation that keeps
   // recurring while the schema is still actively changing: old rows
@@ -235,6 +256,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     categories: [],
     transactions: [],
     budgets: [],
+    categoryKeywords: [],
   });
 
   useEffect(() => {
@@ -309,6 +331,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           // happens to write to the table).
           { signal: controller.signal, triggerImmediate: true },
         );
+        db.watch(
+          'SELECT * FROM category_keywords',
+          [],
+          {
+            onResult: (r) =>
+              setState((s) => ({ ...s, categoryKeywords: r.rows?._array.map(rowToCategoryKeyword) ?? [] })),
+            onError: (err) => console.error('piggypal: category_keywords watch failed', err),
+          },
+          { signal: controller.signal, triggerImmediate: true },
+        );
 
         setReady(true);
       });
@@ -327,9 +359,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       addTransaction(tx) {
         void db.execute(
-          `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_at, note, source, ai_raw, deleted_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [tx.id, tx.accountId, tx.categoryId, tx.amountCents, tx.currency, tx.occurredAt, tx.note, tx.source, tx.aiRaw, tx.deletedAt],
+          `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_at, note, merchant, source, ai_raw, deleted_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [tx.id, tx.accountId, tx.categoryId, tx.amountCents, tx.currency, tx.occurredAt, tx.note, tx.merchant, tx.source, tx.aiRaw, tx.deletedAt],
         );
       },
 
@@ -463,6 +495,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return [...state.categories]
           .filter((c) => !c.archived && c.kind === 'expense')
           .sort((a, b) => (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0));
+      },
+
+      // docs/15 D79: recency-ranked, not frequency — same signal as the
+      // account/currency defaults (D45/D46). activeTx() is already sorted
+      // occurredAt DESC, so a Set's insertion order (first-seen-wins) gives
+      // exactly "most recently used first" for free.
+      //
+      // excludeTransactionId matters because the edit form autosaves the
+      // Location field per keystroke (same pattern as Note): without
+      // excluding the row being edited, its own in-progress text round-
+      // trips through the DB and reappears here as a "suggestion" of
+      // itself mid-typing.
+      rankedMerchants(excludeTransactionId) {
+        const seen = new Set<string>();
+        for (const t of activeTx()) {
+          if (t.merchant && t.id !== excludeTransactionId) seen.add(t.merchant);
+        }
+        return [...seen];
       },
 
       async resetLocalData() {

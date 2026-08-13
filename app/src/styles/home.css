@@ -38,6 +38,15 @@
   font-size: 0.85rem;
   color: var(--ink-muted);
   text-decoration: none;
+  /* docs/17: TransactionScreen uses a <button onClick={() => navigate(-1)}>
+     with this same class (its back target varies by where it was opened
+     from, unlike every other screen's fixed-route <Link>) — reset button
+     chrome so it's visually identical to the <Link> usages elsewhere. */
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
 }
 .see-all {
   display: block;
@@ -69,8 +78,13 @@
   cursor: pointer;
 }
 
+.entry-input-row {
+  display: flex;
+  align-items: center;
+}
 .entry-input {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   box-sizing: border-box;
   padding: 0.8rem 0.9rem;
   /* Must stay >= 16px — iOS Safari auto-zooms on focus below that,
@@ -89,6 +103,30 @@
 }
 .entry-input::placeholder {
   color: var(--ink-faint);
+}
+
+/* docs/16 — voice input, a thin layer over the same typed-text field
+   above. No existing icon-button primitive fit cleanly (.icon-btn, if any,
+   is sized for larger screen-header glyphs elsewhere), so this is new. */
+.mic-btn {
+  flex-shrink: 0;
+  width: 2.2rem;
+  height: 2.2rem;
+  margin-right: 0.4rem;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+.mic-btn.listening {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
 }
 
 .keypad-panel {
@@ -341,6 +379,11 @@
   text-align: left;
   font-family: inherit;
   cursor: pointer;
+  /* docs/17: rows now navigate to /transactions/:id via <Link>, not a
+     local expand toggle — reset anchor chrome so it still reads as a
+     plain row, not a link. */
+  color: inherit;
+  text-decoration: none;
 }
 /* Each row is now wrapped in its own .account-block (for the expand-in-
    place edit panel), so plain :last-child on .tx-row no longer identifies
@@ -481,6 +524,14 @@
 .account-edit {
   padding: 0.2rem 0.1rem 0.9rem;
 }
+/* docs/17 — TransactionScreen renders .account-form directly as a screen's
+   main content, not inline inside .account-edit within an already-inset
+   .recent/.accounts-list list (which is where every other .account-form
+   usage gets its horizontal margin from). Matches those same 1.1rem
+   values so this screen isn't edge-to-edge unlike every other one. */
+.transaction-screen-content {
+  margin: 0.4rem 1.1rem 1.2rem;
+}
 .account-form {
   display: flex;
   flex-direction: column;
@@ -503,7 +554,12 @@
   font-size: 16px;
   font-family: var(--sans);
   color: var(--ink);
-  background: var(--surface);
+  /* var(--surface), not var(--surface-sunken), was the same white as the
+     containing .home card itself — every text input in the app blended
+     invisibly into its own card, told apart only by a 1px border. Matches
+     docs/artifacts/piggypal-location-field.html's own .text-input, which
+     uses the sunken fill so inputs read as visibly recessed. */
+  background: var(--surface-sunken);
   border: 1px solid var(--line);
   border-radius: 10px;
 }
@@ -662,4 +718,71 @@
      phone widths (confirmed: 302px of content in a 282px container at
      320px viewport) instead of the two fields sharing space evenly. */
   min-width: 0;
+}
+
+/* docs/18 — search & filter, inline atop the Transactions list. No
+   search-input/icon-input styling existed anywhere in the app before
+   this; filter chip rows/panels reuse .chip/.chip.picked/.chip-row/
+   .chip.ghost unchanged. .tx-filters carries the horizontal inset for
+   the whole block (matches .recent/.accounts-list's 1.1rem convention —
+   nothing inside it needs its own horizontal margin). */
+.tx-filters {
+  margin: 0.6rem 1.1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.search-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 12px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--line);
+}
+.search-input-row svg {
+  flex-shrink: 0;
+  color: var(--ink-faint);
+}
+.search-input-row input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  font-size: 0.87rem;
+  color: var(--ink);
+  font-family: inherit;
+}
+.search-input-row input::placeholder {
+  color: var(--ink-faint);
+}
+.search-input-row input:focus {
+  outline: none;
+}
+/* Collapsed filter triggers — same convention as AccountCurrencyPicker's
+   account/currency pills, just wrapping since there can be up to 4. A
+   trigger with a value picked turns accent-colored (.active) instead of
+   also duplicating that value as a separate pill elsewhere — showing the
+   same selection twice read as redundant. */
+.filter-trigger-row {
+  margin: 0;
+  flex-wrap: wrap;
+}
+.pill-tap.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.totals-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 0.9rem 1.1rem 0.3rem;
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+}
+.totals-row b {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
 }

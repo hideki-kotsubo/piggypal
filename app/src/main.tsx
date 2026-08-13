@@ -8,6 +8,7 @@ import './lib/settings' // applies stored theme-mode before first paint
 import App from './App.tsx'
 import { StoreProvider } from './lib/store'
 import { TransactionList } from './components/TransactionList'
+import { TransactionScreen } from './components/TransactionScreen'
 import { InboxScreen } from './components/InboxScreen'
 import { AccountsScreen } from './components/AccountsScreen'
 import { CategoriesScreen } from './components/CategoriesScreen'
@@ -20,6 +21,7 @@ createRoot(document.getElementById('root')!).render(
         <Routes>
           <Route path="/" element={<App />} />
           <Route path="/transactions" element={<TransactionList />} />
+          <Route path="/transactions/:id" element={<TransactionScreen />} />
           <Route path="/inbox" element={<InboxScreen />} />
           <Route path="/settings" element={<SettingsScreen />} />
           <Route path="/accounts" element={<AccountsScreen />} />
