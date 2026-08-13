@@ -39,7 +39,11 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
   const merchantSuggestions = store
     .rankedMerchants(transaction.id)
     .filter((m) => m.toLowerCase().includes(merchantStr.toLowerCase()));
-  const direction: 'expense' | 'income' = transaction.amountCents < 0 ? 'expense' : 'income';
+  // <= 0, not < 0 — a brand-new blank transaction (docs/19's "+" quick-add)
+  // starts at exactly $0, which a real, already-entered transaction never
+  // is; treating that as expense (the common case) rather than income
+  // gives digit entry the right sign from the first tap.
+  const direction: 'expense' | 'income' = transaction.amountCents <= 0 ? 'expense' : 'income';
 
   function commit(patch: Partial<Transaction>) {
     store.updateTransaction(transaction.id, patch);

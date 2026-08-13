@@ -87,9 +87,10 @@ docker compose up    # local Postgres, schema auto-loaded from db/schema.sql
 - Entities: accounts, categories, transactions, monthly budgets, category_keywords.
 - Views: current-month budget vs spent, transaction list with search/filter
   (docs/18), one trend chart.
-- Input: quick manual entry (<3s), a typed/voice text box parsed on-device
-  (docs/16, Tier 1 only — free, offline), and Tier 2's paid online LLM path
-  once docs/04's server half is built.
+- Input: a "+" quick-add that jumps straight to a blank transaction's
+  screen (docs/19) for manual entry, a typed/voice text box parsed
+  on-device (docs/16, Tier 1 only — free, offline), and Tier 2's paid
+  online LLM path once docs/04's server half is built.
 - Explicitly deferred: multi-currency *conversion*/FX rollup (tracking
   multiple currencies side by side is in v1, see docs/10), recurring
   transactions, household sharing, CSV/bank import, transfers-as-linked-pairs,
@@ -111,7 +112,7 @@ docker compose up    # local Postgres, schema auto-loaded from db/schema.sql
 - `docs/04-ai-entry-pipeline.md` — tool schema, prompt, learning loop, failure modes
 - `docs/05-auth-and-devices.md` — magic link + JWT flows, why auth is opt-in (free tier never signs in), device/rekey handling
 - `docs/06-subscription-and-billing.md` — Stripe checkout/webhook flow, subscription-gate enforcement, cancellation data policy
-- `docs/07-manual-entry-ux.md` — single-screen "type or tap" home, entry zone states, inbox interaction
+- `docs/07-manual-entry-ux.md` — single-screen "type or tap" home, entry zone states, inbox interaction. Its D26 inline-categorize-in-place inbox mechanic is superseded by docs/20.
 - `docs/08-csv-export.md` — local-only CSV export format and scope; server-backed full-history export is backlogged
 - `docs/09-language-and-i18n.md` — full bilingual UI, language detection, formatting
 - `docs/10-currency-and-payment-methods.md` — payment methods = accounts (no currency of their own, D62), per-transaction currency, per-currency budgets
@@ -123,4 +124,8 @@ docker compose up    # local Postgres, schema auto-loaded from db/schema.sql
 - `docs/16-ai-entry-tier1.md` — Tier 1 of docs/04 implemented for real: a pure closed-vocabulary `parser.ts` (amount/currency/date/category/account, bilingual), `category_keywords` seeded, and voice input as a thin Web Speech layer over the same typed-text field. Merchant extraction, the docs/04 learning loop, and the dedupe guard explicitly deferred (D91-92). Implemented 2026-08-12.
 - `docs/17-transaction-screen.md` — dedicated `/transactions/:id` screen replacing inline expand-in-place for transactions (Accounts/Categories unchanged); tap-entry auto-navigates there post-insert instead of toasting. Implemented 2026-08-12.
 - `docs/18-transaction-search-filter.md` — search + filter chips (Category/Account/Location/Date range) added inline atop `/transactions`, URL-search-param state, per-currency totals (never blended, docs/10). Implemented 2026-08-12.
+- `docs/19-quick-add-skips-inline-form.md` — Home's "+" now creates a blank transaction immediately and jumps straight to its docs/17 screen, replacing the old inline amount-pad/category-chip panel; typed/voice entry (docs/16) unchanged, just visually merged into the same always-visible row. Implemented 2026-08-13.
+- `docs/20-inbox-list-style.md` — Inbox rows now use the same tappable-row style as TransactionList/RecentList/Search (docs/17/18), linking to the edit screen to categorize instead of an inline per-row `CategoryPicker`. Supersedes docs/07 D26's snapshot/dim-to-done mechanic. Implemented 2026-08-13.
+- `docs/21-sunken-zone-styling.md` — shared "sunken zone" card pattern (sunken fill + hairline border + radius) formalized as `--radius-lg/md/sm` tokens; reserved for zones (entry-zone, account-create, search row, form fields), not list rows. `.trend-card`/`.goal-box` promoted to full tier; `.picker-group`'s dashed/un-sunken look kept deliberately distinct. Implemented 2026-08-13.
+- `docs/22-parse-preview.md` — Tier 1 parse results now confirmed in an inline preview (amount/category/when/account, with parsed-vs-defaulted markers) before insert, instead of writing directly. Fixes voice having no commit affordance at all; typed entry goes through the same preview (D95-97). Implemented 2026-08-13.
 - `docs/artifacts/` — standalone HTML mockups (open directly in a browser): `piggypal-entry-ux.html` (doc 07), `piggypal-accounts-screen.html` (doc 12), `piggypal-picker-grouping.html` (doc 13), `piggypal-location-field.html` (doc 15 brainstorm — its three frames shipped as docs/16-18, each diverging in some way from the mockup's literal staging; see each doc's own notes)

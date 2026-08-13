@@ -60,33 +60,21 @@
 .entry-zone {
   margin: 0.6rem 1.1rem 0;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   background: var(--surface-sunken);
   overflow: hidden;
 }
-.entry-trigger {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 0.8rem 0.9rem;
-  font-size: 0.9rem;
-  font-family: var(--sans);
-  text-align: left;
-  color: var(--ink-faint);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-}
-
 .entry-input-row {
   display: flex;
   align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.4rem;
 }
 .entry-input {
   flex: 1;
   min-width: 0;
   box-sizing: border-box;
-  padding: 0.8rem 0.9rem;
+  padding: 0.8rem 0.3rem;
   /* Must stay >= 16px — iOS Safari auto-zooms on focus below that,
      regardless of the visual scale the rest of the app uses. */
   font-size: 16px;
@@ -105,14 +93,32 @@
   color: var(--ink-faint);
 }
 
+/* docs/19 — the primary "add a transaction" action now that tap-entry's
+   old inline amount-pad/category panel is gone; jumps straight to a
+   blank transaction's screen (docs/17). Accent-filled so it stays as
+   discoverable as the old full-width trigger button was. */
+.add-btn {
+  flex-shrink: 0;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: var(--accent-ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* docs/16 — voice input, a thin layer over the same typed-text field
    above. No existing icon-button primitive fit cleanly (.icon-btn, if any,
    is sized for larger screen-header glyphs elsewhere), so this is new. */
 .mic-btn {
+  position: relative;
   flex-shrink: 0;
   width: 2.2rem;
   height: 2.2rem;
-  margin-right: 0.4rem;
   border-radius: 50%;
   border: 1px solid var(--line);
   background: var(--surface);
@@ -128,9 +134,121 @@
   border-color: var(--accent);
   color: var(--accent-ink);
 }
+/* Recording indicator: a halo breathing out of the mic button. The filled
+   accent state alone read as "selected" more than "live" — speech capture
+   is time-bounded and the user needs to know it's actively listening right
+   now, so the cue has to be a moving one.
+   The 4px spread is a hard ceiling, not a taste call: `.entry-zone` is
+   `overflow: hidden` for its rounded corners (docs/21) and the button sits
+   ~5.7px below the zone's top edge, so anything larger gets cropped flat
+   on the top and right. Measured, not guessed — an earlier expanding ring
+   at 1.9x scale clipped visibly. */
+.mic-btn.listening {
+  animation: mic-pulse 1.5s ease-in-out infinite;
+}
+/* Translucent accent rather than --accent-soft: that token is nearly the
+   same value as --surface-sunken behind it, so the halo washed out against
+   the entry zone. Mixing the accent with transparent keeps it legible on
+   both themes without needing a second hardcoded colour. */
+@keyframes mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent); }
+  50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 45%, transparent); }
+}
+/* Reduced motion still needs a live-vs-idle distinction, so the halo stays
+   — it just holds still instead of breathing. */
+@media (prefers-reduced-motion: reduce) {
+  .mic-btn.listening {
+    animation: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+}
 
-.keypad-panel {
-  padding: 0.7rem 0.7rem 0.85rem;
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Parse preview — what Tier 1 understood, shown for confirmation before
+   anything is written. Sits inside the entry zone's own sunken card
+   (docs/21), so it carries no fill of its own; a top hairline separates it
+   from the input row above. */
+.parse-preview {
+  border-top: 1px solid var(--line);
+  padding: 0.7rem 0.75rem 0.75rem;
+}
+.parse-label {
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.55rem;
+}
+.parse-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.parse-field {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+.parse-field .k {
+  color: var(--ink-faint);
+  width: 4.4rem;
+  flex-shrink: 0;
+}
+.parse-field .v {
+  padding: 0.22rem 0.6rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-weight: 600;
+}
+/* An unmatched category isn't an error — it just routes to the inbox — so
+   it reads as a warning tone, not the accent used for resolved values. */
+.parse-field .v-warn {
+  background: var(--warn-soft);
+  font-weight: 500;
+}
+.parse-field .defaulted {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.parse-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+.parse-confirm {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .pill-row {
@@ -212,10 +330,14 @@
 
 /* docs/13 — grouped account picker: an expanded institution's accounts,
    forced onto its own line within the surrounding chip-row's flex-wrap. */
+/* docs/21 D104 — dashed border + un-sunken fill kept deliberately, not
+   promoted: dashed already means "expanded/temporary" elsewhere in the
+   account picker. Radius alone moves onto the shared scale (no-op, was
+   already 12px). */
 .picker-group {
   flex: 1 1 100%;
   border: 1px dashed var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 0.45rem 0.55rem 0.5rem;
   background: var(--surface);
 }
@@ -272,29 +394,6 @@
   font-size: 0.9rem;
 }
 
-.inbox-list {
-  margin: 0 1.1rem 1.2rem;
-}
-.inbox-item {
-  padding: 0.6rem 0;
-  border-bottom: 1px solid var(--line);
-}
-.inbox-item:last-child {
-  border-bottom: none;
-}
-.inbox-item .tx-row {
-  padding: 0;
-  border-bottom: none;
-}
-.inbox-item.done {
-  opacity: 0.5;
-}
-.inbox-done-note {
-  margin: 0.3rem 0 0;
-  font-size: 0.78rem;
-  color: var(--accent);
-}
-
 .section-label {
   font-family: var(--mono);
   font-size: 0.68rem;
@@ -337,11 +436,14 @@
   background: var(--warn);
 }
 
+/* docs/21 D103 — promoted to full tier: had the border+radius half of
+   the sunken-zone pattern already, just missing the fill. */
 .trend-card {
   margin: 0.9rem 1.1rem 0;
   padding: 0.7rem 0.8rem 0.5rem;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
 }
 .trend-head {
   display: flex;
@@ -517,7 +619,7 @@
   margin: 0.6rem 1.1rem 0;
   padding: 0.8rem 0.9rem;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   background: var(--surface-sunken);
 }
 
@@ -561,7 +663,7 @@
      uses the sunken fill so inputs read as visibly recessed. */
   background: var(--surface-sunken);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
 }
 .goal-section {
   display: flex;
@@ -573,10 +675,12 @@
   flex-direction: column;
   gap: 0.6rem;
 }
+/* docs/21 D103 — promoted to full tier, same reasoning as .trend-card. */
 .goal-box {
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   padding: 0.5rem 0.6rem;
+  background: var(--surface-sunken);
 }
 .goal-box-top {
   display: flex;
@@ -737,7 +841,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.55rem 0.7rem;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: var(--surface-sunken);
   border: 1px solid var(--line);
 }

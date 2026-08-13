@@ -1,78 +1,66 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../lib/store';
-import { nowLocal } from '../lib/format';
+import { accountLabel, formatAmount, formatRelativeDate, nowLocal } from '../lib/format';
 import { parseUtterance } from '../lib/parser';
 import { isSpeechInputSupported, startSpeechInput } from '../lib/speechInput';
-import { AccountCurrencyPicker } from './AccountCurrencyPicker';
-import { AmountKeypad } from './AmountKeypad';
-import { CategoryPicker } from './CategoryPicker';
 import type { Transaction } from '../lib/types';
 
 interface Props {
   onSubmitted: (message: string, onUndo?: () => void) => void;
 }
 
+// What the parser understood, resolved against the store's defaults, held
+// for confirmation before anything is written. Each `*Parsed` flag records
+// whether the value came out of the utterance or from a fallback, so the
+// preview can show the user which is which instead of presenting a
+// defaulted account as though they'd said it.
+interface Preview {
+  text: string;
+  amountCents: number; // already signed by direction
+  currency: string;
+  currencyParsed: boolean;
+  accountId: string;
+  accountParsed: boolean;
+  categoryId: string | null;
+  occurredAt: string;
+  dateParsed: boolean;
+}
+
 export function EntryZone({ onSubmitted }: Props) {
   const store = useStore();
   const navigate = useNavigate();
-  const [expanded, setExpanded] = useState(false);
   const [typedText, setTypedText] = useState('');
-  const [digits, setDigits] = useState(''); // POS-style: rightmost 2 digits = cents
-  const [direction, setDirection] = useState<'expense' | 'income'>('expense');
-  const [accountId, setAccountId] = useState<string | null>(null);
-  const [currency, setCurrency] = useState<string | null>(null);
+  const [preview, setPreview] = useState<Preview | null>(null);
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<{ stop: () => void } | null>(null);
 
-  const resolvedAccountId = accountId ?? store.defaultAccountId();
-  const resolvedCurrency = currency ?? store.defaultCurrencyFor(resolvedAccountId);
-  const amountCents = digits === '' ? 0 : Number(digits);
-
-  function open() {
-    setExpanded(true);
-  }
-
-  function reset() {
-    setExpanded(false);
-    setTypedText('');
-    setDigits('');
-    setDirection('expense');
-    setAccountId(null);
-    setCurrency(null);
-  }
-
-  function pressDigit(d: string) {
-    setDigits((prev) => (prev + d).slice(-9)); // cap so amounts can't grow unbounded
-  }
-
-  function backspace() {
-    setDigits((prev) => prev.slice(0, -1));
-  }
-
-  function submitTap(categoryId: string) {
-    if (amountCents === 0) return;
+  // docs/19: "+" used to open an inline amount-pad + category-chip panel
+  // (tap a category chip to submit) before landing on the transaction's
+  // screen (docs/17). That extra step is gone — tapping "+" creates a
+  // blank transaction immediately and jumps straight to its screen, where
+  // amount/category/account/currency/date-time/note/location are all
+  // editable in one place instead of two. Same "everything is a live row,
+  // nothing is an unsaved draft" convention as the rest of this app (see
+  // docs/16 D94) — the blank row is real the instant it's created, same
+  // as tap-entry always was.
+  function startBlank() {
+    const accountId = store.defaultAccountId();
+    const currency = store.defaultCurrencyFor(accountId);
     const tx: Transaction = {
       id: crypto.randomUUID(),
-      accountId: resolvedAccountId,
-      categoryId,
-      amountCents: direction === 'expense' ? -amountCents : amountCents,
-      currency: resolvedCurrency,
+      accountId,
+      categoryId: null,
+      amountCents: 0,
+      currency,
       occurredAt: nowLocal(),
-      note: store.categories.find((c) => c.id === categoryId)?.name ?? null,
-      merchant: null, // tap-entry is Tier 1 — never attempts extraction, see docs/15 D77
+      note: null,
+      merchant: null,
       source: 'manual',
       aiRaw: null,
       deletedAt: null,
     };
     store.addTransaction(tx);
-    reset();
-    // docs/17: land straight on the new transaction's dedicated screen
-    // instead of a toast — Note/Location/Date-Time are one tap away there
-    // instead of requiring a hunt back through Recent afterward (the
-    // motivating pain point). No separate undo affordance needed: the
-    // screen's own "Delete transaction" action covers it, and a 5s toast
-    // would be cut short by the navigation anyway.
     navigate(`/transactions/${tx.id}`);
   }
 
@@ -82,9 +70,15 @@ export function EntryZone({ onSubmitted }: Props) {
   // in the schema. An ambiguous/no-match category degrades into the
   // existing uncategorized inbox (docs/07) exactly like tap-entry's
   // never-guess principle elsewhere in this app.
-  function submitTyped(e: React.FormEvent) {
-    e.preventDefault();
-    const text = typedText.trim();
+  //
+  // This no longer inserts directly — it resolves the parse into a preview
+  // the user confirms (see the parse-preview panel below). Voice needed a
+  // commit affordance of its own (a transcript can't reach the old
+  // Enter-only submit without raising a keyboard, which defeats speaking
+  // in the first place), and showing what the parser understood before
+  // writing suits both paths, so both go through it.
+  function buildPreview(rawText: string) {
+    const text = rawText.trim();
     if (!text) return;
 
     const result = parseUtterance(text, {
@@ -95,45 +89,77 @@ export function EntryZone({ onSubmitted }: Props) {
     });
 
     if (result.amountCents === null) {
-      onSubmitted("Couldn't find an amount — try rephrasing, or use the pad below");
+      onSubmitted("Couldn't find an amount — try rephrasing, or tap + below");
       return;
     }
 
-    const parsedAccountId = result.accountId ?? store.defaultAccountId();
-    const parsedCurrency = result.currency ?? store.defaultCurrencyFor(parsedAccountId);
-    const category = result.categoryId ? store.categories.find((c) => c.id === result.categoryId) : undefined;
+    const accountId = result.accountId ?? store.defaultAccountId();
+    setPreview({
+      text,
+      amountCents: result.direction === 'expense' ? -result.amountCents : result.amountCents,
+      currency: result.currency ?? store.defaultCurrencyFor(accountId),
+      currencyParsed: result.currency !== null,
+      accountId,
+      accountParsed: result.accountId !== null,
+      categoryId: result.categoryId,
+      occurredAt: result.occurredAt ?? nowLocal(),
+      dateParsed: result.occurredAt !== null,
+    });
+  }
+
+  function submitTyped(e: React.FormEvent) {
+    e.preventDefault();
+    buildPreview(typedText);
+  }
+
+  function confirmPreview() {
+    if (!preview) return;
+    const category = preview.categoryId ? store.categories.find((c) => c.id === preview.categoryId) : undefined;
 
     const tx: Transaction = {
       id: crypto.randomUUID(),
-      accountId: parsedAccountId,
-      categoryId: result.categoryId,
-      amountCents: result.direction === 'expense' ? -result.amountCents : result.amountCents,
-      currency: parsedCurrency,
-      occurredAt: result.occurredAt ?? nowLocal(),
+      accountId: preview.accountId,
+      categoryId: preview.categoryId,
+      amountCents: preview.amountCents,
+      currency: preview.currency,
+      occurredAt: preview.occurredAt,
       note: category?.name ?? null,
       merchant: null, // Tier 1 never attempts merchant extraction, see docs/15 D77
       source: 'ai',
-      aiRaw: text,
+      aiRaw: preview.text,
       deletedAt: null,
     };
     store.addTransaction(tx);
+    setPreview(null);
     setTypedText('');
     onSubmitted(
-      result.categoryId ? 'Added' : 'Added to your inbox — needs a category',
+      preview.categoryId ? 'Added' : 'Added to your inbox — needs a category',
       () => store.deleteTransaction(tx.id),
     );
   }
 
+  // Editing the text invalidates a preview built from the old wording, so
+  // it's dropped rather than left showing a stale parse.
+  function editText(next: string) {
+    setTypedText(next);
+    setPreview(null);
+  }
+
   // Voice only fills the text field above — no separate parse path, it's
-  // parsed the same way on submit either way. Feature-detected: the mic
-  // button doesn't render at all when unsupported (e.g. desktop Firefox).
+  // parsed the same way either way (docs/16 D93). It does go straight into
+  // the preview on transcription, since that's the whole point of the
+  // hands-free path. Feature-detected: the mic button doesn't render at all
+  // when unsupported (e.g. desktop Firefox).
   function toggleVoice() {
     if (listening) {
       recognitionRef.current?.stop();
       return;
     }
     const handle = startSpeechInput({
-      onResult: (transcript) => setTypedText(transcript),
+      onResult: (transcript) => {
+        setTypedText(transcript);
+        buildPreview(transcript);
+      },
       onError: () => setListening(false),
       onEnd: () => setListening(false),
     });
@@ -144,65 +170,85 @@ export function EntryZone({ onSubmitted }: Props) {
 
   return (
     <div className="entry-zone">
-      {!expanded && (
-        <button className="entry-trigger" onClick={open}>
-          type or tap what you spent…
-        </button>
-      )}
+      <form onSubmit={submitTyped}>
+        <div className="entry-input-row">
+          <button type="button" className="add-btn" onClick={startBlank} aria-label="Add a transaction">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M7 1V13M1 7H13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          </button>
+          <input
+            className="entry-input"
+            placeholder={listening ? 'listening…' : 'type or say what you spent…'}
+            value={typedText}
+            onChange={(e) => editText(e.target.value)}
+          />
+          {isSpeechInputSupported() && (
+            <button
+              type="button"
+              className={`mic-btn ${listening ? 'listening' : ''}`}
+              onClick={toggleVoice}
+              aria-label={listening ? 'Stop voice input' : 'Start voice input'}
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <rect x="5" y="1" width="4" height="7" rx="2" stroke="currentColor" strokeWidth="1.3" />
+                <path d="M2.5 6.5C2.5 9 4.5 11 7 11C9.5 11 11.5 9 11.5 6.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                <path d="M7 11V13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              </svg>
+            </button>
+          )}
+          {/* The pulsing ring and the placeholder are both purely visual —
+              this is the same state for anyone using a screen reader. */}
+          <span className="sr-only" role="status">{listening ? 'Listening' : ''}</span>
+        </div>
 
-      {expanded && (
-        <>
-          <form onSubmit={submitTyped}>
-            <div className="entry-input-row">
-              <input
-                className="entry-input"
-                placeholder="type or tap what you spent…"
-                value={typedText}
-                onChange={(e) => setTypedText(e.target.value)}
-              />
-              {isSpeechInputSupported() && (
-                <button
-                  type="button"
-                  className={`mic-btn ${listening ? 'listening' : ''}`}
-                  onClick={toggleVoice}
-                  aria-label={listening ? 'Stop voice input' : 'Start voice input'}
-                >
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <rect x="5" y="1" width="4" height="7" rx="2" stroke="currentColor" strokeWidth="1.3" />
-                    <path d="M2.5 6.5C2.5 9 4.5 11 7 11C9.5 11 11.5 9 11.5 6.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-                    <path d="M7 11V13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-                  </svg>
-                </button>
-              )}
+        {preview && (
+          <div className="parse-preview">
+            <p className="parse-label">understood</p>
+            <div className="parse-fields">
+              <div className="parse-field">
+                <span className="k">Amount</span>
+                <span className="v">{formatAmount(preview.amountCents, preview.currency)}</span>
+                {!preview.currencyParsed && <span className="defaulted">default currency</span>}
+              </div>
+              <div className="parse-field">
+                <span className="k">Category</span>
+                {preview.categoryId ? (
+                  <span className="v">{store.categories.find((c) => c.id === preview.categoryId)?.name}</span>
+                ) : (
+                  <span className="v v-warn">Uncategorized — goes to your inbox</span>
+                )}
+              </div>
+              <div className="parse-field">
+                <span className="k">When</span>
+                <span className="v">{formatRelativeDate(preview.occurredAt)}</span>
+                {!preview.dateParsed && <span className="defaulted">default</span>}
+              </div>
+              <div className="parse-field">
+                <span className="k">Account</span>
+                <span className="v">
+                  {(() => {
+                    const account = store.accounts.find((a) => a.id === preview.accountId);
+                    return account ? accountLabel(account) : '—';
+                  })()}
+                </span>
+                {!preview.accountParsed && <span className="defaulted">default</span>}
+              </div>
             </div>
-          </form>
-
-          <div className="keypad-panel">
-            <AccountCurrencyPicker
-              accountId={resolvedAccountId}
-              currency={resolvedCurrency}
-              onChange={(newAccountId, newCurrency) => {
-                setAccountId(newAccountId);
-                setCurrency(newCurrency);
-              }}
-            />
-
-            <AmountKeypad
-              amountCents={amountCents}
-              currency={resolvedCurrency}
-              direction={direction}
-              onDigit={pressDigit}
-              onBackspace={backspace}
-              onToggleDirection={() => setDirection((d) => (d === 'expense' ? 'income' : 'expense'))}
-            />
-
-            <CategoryPicker selectedId={null} onPick={submitTap} />
-            <div className="chip-row">
-              <button className="chip ghost" onClick={reset}>cancel</button>
+            <div className="parse-actions">
+              <button type="button" className="chip ghost" onClick={() => setPreview(null)}>
+                Edit
+              </button>
+              <button type="button" className="parse-confirm" onClick={confirmPreview}>
+                <svg width="13" height="10" viewBox="0 0 13 10" fill="none" aria-hidden="true">
+                  <path d="M1 5L4.5 8.5L12 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Save
+              </button>
             </div>
           </div>
-        </>
-      )}
+        )}
+      </form>
     </div>
   );
 }

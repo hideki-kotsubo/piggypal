@@ -104,6 +104,93 @@ it needs doing.
 
 ## ✅ Done
 
+- [x] Voice transcripts never saved — reported 2026-08-13 ("I see the
+      transcript of what I said but the app doesn't save the new entry").
+      Not a parser bug: `speechInput`'s `onResult` only filled the text
+      field (docs/16 D93), and the only submit trigger was Enter *inside*
+      the input — there was no submit button in the entry zone at all, so
+      a transcript couldn't be committed without raising a keyboard, which
+      defeats the hands-free path. Fixed via the parse-preview panel
+      (docs/22 D95-97) rather than a bare submit button, per the user's
+      request for the confirmation treatment from the location-field
+      artifact's frame 1: Tier 1's reading (amount/category/when/account,
+      each marked parsed-vs-defaulted) is shown for confirmation, and the
+      Save button doubles as the missing commit affordance. Typed entry
+      now goes through the same preview — a deliberate, flagged behavior
+      change costing one extra tap against the <3s target, reversible to
+      voice-only. Verified with Playwright against a stubbed
+      SpeechRecognition: a fired transcript ("45 mercado ontem") renders
+      the preview and Save persists it to the full list as Groceries /
+      yesterday / -$45.00; an unmatched category shows the inbox warn
+      tone; Edit dismisses without writing and preserves the text; an
+      amount-free utterance still soft-blocks with no preview and no
+      insert. `tsc -b`/`oxlint` clean, zero console errors.
+- [x] Mic recording indicator (docs/22) — requested 2026-08-13. The
+      `listening` state was a static accent fill that read as "selected"
+      rather than "live"; now the button carries a breathing halo, the
+      placeholder switches to "listening…", and a `role="status"` region
+      announces "Listening" (new `.sr-only` utility — the stylesheet had
+      no screen-reader convention). The halo's 4px spread is a measured
+      ceiling: a first attempt at a ring expanding to 1.9x scale clipped
+      flat against `.entry-zone`'s `overflow: hidden` (docs/21), which
+      leaves only ~5.7px clearance above the button and ~7.4px to its
+      right — caught by measuring in the browser, not by type-check.
+      Halo colour is a `color-mix` of `--accent` rather than
+      `--accent-soft`, which washed out against `--surface-sunken`.
+      Verified with Playwright: halo fits on all sides, box-shadow
+      measurably varies across the cycle (1.19px → 3.90px → 2.95px),
+      `prefers-reduced-motion` disables the animation but keeps a static
+      halo, both themes resolve a visible colour, and voice → preview →
+      save still works after the CSS change.
+
+- [x] Formalized the "sunken zone" card pattern (docs/21) — brainstormed
+      2026-08-13 after noticing the Home entry box's styling (sunken fill +
+      hairline border + radius) had been independently re-derived four
+      times at four different radii (`.entry-zone`, `.account-create`,
+      `.search-input-row`, `.text-input`), plus three partial copies
+      missing the fill (`.trend-card`, `.goal-box`, `.picker-group`).
+      `tokens.css` gained a theme-independent radius scale
+      (`--radius-lg/md/sm`); the four full-tier components now reference
+      it instead of literals; `.trend-card` and `.goal-box` promoted to
+      full tier (sunken fill added); `.picker-group`'s dashed/un-sunken
+      look kept deliberately, it's a distinct "expanded" signal, not a
+      miss. Explicit rule locked in: the box is for zones (grouping unlike
+      controls into one interactive unit), not for list rows — Accounts/
+      Transactions/Settings row lists confirmed flat on purpose, untouched.
+      CSS-only, no component/JSX changes.
+- [x] Inbox list now matches TransactionList/RecentList/Search's row style
+      (docs/20) — reported 2026-08-13: many pending items each rendering a
+      full always-expanded `CategoryPicker` (7 top-level groups) looked
+      cluttered, and the screen's deliberate "keep a just-categorized item
+      visible, dimmed" mechanic (docs/07 D26) read as confusing at a
+      glance ("previously categorized items showing as uncategorized") —
+      not a data bug, but a real UX miss now that a full edit screen
+      exists to send someone to instead. Rows are now plain
+      `.tx-row.tx-row-tappable` links to `/transactions/:id` (docs/17);
+      D26's snapshot-on-mount/dim-to-done bookkeeping is gone entirely —
+      a live `categoryId === null` filter, same as everywhere else,
+      turned out to just be correct once categorizing happens on a
+      separate screen. Verified with Playwright: categorizing an item via
+      its edit screen and returning to Inbox drops it from the list
+      immediately, count goes from 1 to 0 with nothing stale left behind.
+      `tsc -b`/`oxlint` clean.
+- [x] Quick-add skips the inline amount-pad/category panel (docs/19) —
+      implemented 2026-08-13, requested after seeing docs/17's screen in
+      practice: tapping "+" now creates a blank transaction immediately
+      (amountCents: 0, categoryId: null, default account/currency/now)
+      and jumps straight to its dedicated screen instead of stopping at an
+      inline keypad + category-chip step first. `EntryZone.tsx` lost its
+      collapsed/expanded toggle entirely — one persistent row now (+ /
+      type-or-say field / mic), `AccountCurrencyPicker`/`AmountKeypad`/
+      `CategoryPicker` no longer imported there. Also fixed a genuine $0
+      edge case in `TransactionEditForm`'s direction default (`<= 0` not
+      `< 0` — a blank transaction is exactly $0, a state no real
+      transaction is ever actually in, and was defaulting to income).
+      Typed/voice Tier 1 entry (docs/16) unaffected. Verified with
+      Playwright: "+" lands on a blank screen with "−" (expense)
+      pre-selected, digit entry produces the right amount/sign, typed
+      entry ("45 mercado ontem") still inserts and toasts correctly.
+      `tsc -b`/`oxlint` clean.
 - [x] Tier 1 local rule-based parser + voice input (docs/16) — implemented
       2026-08-12. `parser.ts`: pure, closed-vocabulary amount/currency/
       date/category/account extraction (bilingual pt-BR/en), never-guess

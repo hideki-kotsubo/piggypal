@@ -1,28 +1,20 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../lib/store';
-import { accountLabel, formatAmount, formatRelativeDate } from '../lib/format';
-import { CategoryPicker } from './CategoryPicker';
-import type { Transaction } from '../lib/types';
+import { accountLabel, formatAmount, formatRelativeDate, formatTime } from '../lib/format';
 
-// docs/07 "The inbox" + D26: raw utterance stays visible until categorized;
-// tapping a chip categorizes in place, no return to a list.
+// docs/20: rows are the same tappable-list style as TransactionList/
+// RecentList/Search (docs/17/18) — tap through to the transaction's full
+// edit screen to pick a category (or fill in anything else) there,
+// instead of each row carrying its own always-expanded CategoryPicker
+// inline. Supersedes docs/07 D26's "stays put, dims to done" mechanic:
+// that existed only because a live categoryId===null filter would make a
+// row vanish out from under an inline picker the instant you tapped a
+// chip. Navigating to a separate screen and back naturally remounts this
+// one, so a live filter is simply correct now — no snapshot-on-mount/
+// done-state bookkeeping needed, same as the list this now matches.
 export function InboxScreen() {
   const store = useStore();
-
-  // Snapshot which transactions were uncategorized when this screen opened.
-  // The store filters categoryId === null, so once categorizeTransaction()
-  // fires the item would otherwise vanish from a live-filtered list on the
-  // next render — the opposite of D26's "in place, no disappearing." Keeping
-  // this screen's own id list stable lets an item stay put and switch to a
-  // dim/done state instead.
-  const [ids] = useState<string[]>(() =>
-    store.transactions.filter((t) => !t.deletedAt && !t.categoryId).map((t) => t.id),
-  );
-
-  const items = ids
-    .map((id) => store.transactions.find((t) => t.id === id))
-    .filter((t): t is Transaction => t !== undefined && !t.deletedAt);
+  const items = store.transactions.filter((t) => !t.deletedAt && !t.categoryId);
 
   return (
     <main className="home">
@@ -35,34 +27,21 @@ export function InboxScreen() {
       {items.length === 0 ? (
         <p className="empty-note">Nothing needs a category.</p>
       ) : (
-        <div className="inbox-list">
+        <div className="recent" style={{ marginTop: '0.5rem' }}>
           {items.map((t) => {
-            const done = Boolean(t.categoryId);
-            const doneCategory = done ? store.categories.find((c) => c.id === t.categoryId) : null;
             const account = store.accounts.find((a) => a.id === t.accountId);
             return (
-              <div className={`inbox-item${done ? ' done' : ''}`} key={t.id}>
-                <div className="tx-row">
-                  <div className="tx-main">
-                    <span className="tx-note">{t.aiRaw ?? t.note ?? 'Uncategorized'}</span>
-                    <span className="tx-meta">
-                      {formatRelativeDate(t.occurredAt)} · {account ? accountLabel(account) : '—'}
-                    </span>
-                  </div>
-                  <span className={`tx-amt ${t.amountCents < 0 ? 'out' : 'in'}`}>
-                    {formatAmount(t.amountCents, t.currency)}
+              <Link key={t.id} to={`/transactions/${t.id}`} className="tx-row tx-row-tappable">
+                <div className="tx-main">
+                  <span className="tx-note">{t.aiRaw ?? t.note ?? 'Uncategorized'}</span>
+                  <span className="tx-meta">
+                    {formatRelativeDate(t.occurredAt)}, {formatTime(t.occurredAt)} · {account ? accountLabel(account) : '—'}
                   </span>
                 </div>
-
-                {done ? (
-                  <p className="inbox-done-note">✓ Categorized as {doneCategory?.name ?? '…'}</p>
-                ) : (
-                  <CategoryPicker
-                    selectedId={null}
-                    onPick={(categoryId) => store.categorizeTransaction(t.id, categoryId)}
-                  />
-                )}
-              </div>
+                <span className={`tx-amt ${t.amountCents < 0 ? 'out' : 'in'}`}>
+                  {formatAmount(t.amountCents, t.currency)}
+                </span>
+              </Link>
             );
           })}
         </div>
