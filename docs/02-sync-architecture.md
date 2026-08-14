@@ -54,8 +54,13 @@ Sync rules are SQL with parameters from the JWT:
 
 - Bucket keyed on `request.user_id()` → each device pulls only its owner's rows.
 - Transactions windowed to 18 months on-device; older history via API.
-- Future: a second bucket keyed on `household_id` enables family sharing
-  without schema changes.
+- **This "future" note is now a real design**: see
+  docs/24-household-sharing.md (household_id replaces user_id as the
+  partition key on shared tables) and docs/25-p2p-device-sync.md (a
+  separate, non-PowerSync transport for free-tier and offline device
+  sync). Both are design-only as of 2026-08-14, not yet implemented — this
+  doc's topology diagram above still describes the paid-tier path
+  accurately.
 
 ## Conflict policy (v1)
 

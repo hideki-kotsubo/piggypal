@@ -93,9 +93,12 @@ docker compose up    # local Postgres, schema auto-loaded from db/schema.sql
   online LLM path once docs/04's server half is built.
 - Explicitly deferred: multi-currency *conversion*/FX rollup (tracking
   multiple currencies side by side is in v1, see docs/10), recurring
-  transactions, household sharing, CSV/bank import, transfers-as-linked-pairs,
+  transactions, CSV/bank import, transfers-as-linked-pairs,
   server-backed full-history CSV export (v1 export is local-only, see
   docs/08), the docs/04 learning loop and dedupe guard (docs/16).
+  Household sharing is no longer deferred-and-undesigned — see docs/24 and
+  docs/25 — but it's design-only as of 2026-08-14, nothing below has been
+  built for it yet.
 
 ## Working style
 
@@ -128,4 +131,7 @@ docker compose up    # local Postgres, schema auto-loaded from db/schema.sql
 - `docs/20-inbox-list-style.md` — Inbox rows now use the same tappable-row style as TransactionList/RecentList/Search (docs/17/18), linking to the edit screen to categorize instead of an inline per-row `CategoryPicker`. Supersedes docs/07 D26's snapshot/dim-to-done mechanic. Implemented 2026-08-13.
 - `docs/21-sunken-zone-styling.md` — shared "sunken zone" card pattern (sunken fill + hairline border + radius) formalized as `--radius-lg/md/sm` tokens; reserved for zones (entry-zone, account-create, search row, form fields), not list rows. `.trend-card`/`.goal-box` promoted to full tier; `.picker-group`'s dashed/un-sunken look kept deliberately distinct. Implemented 2026-08-13.
 - `docs/22-parse-preview.md` — Tier 1 parse results now confirmed in an inline preview (amount/category/when/account, with parsed-vs-defaulted markers) before insert, instead of writing directly. Fixes voice having no commit affordance at all; typed entry goes through the same preview (D95-97). Implemented 2026-08-13.
+- `docs/23-quick-add-cancel-and-done.md` — leaving `/transactions/:id` (back arrow or new "Done" button) deletes the transaction if it's still exactly $0.00, fixing quick-add's stray blank rows; autosave elsewhere unchanged (D105-107). Implemented 2026-08-13.
+- `docs/24-household-sharing.md` — reopens docs/01/05's "households deferred/single-user" calls at the user's request. `household_id` replaces `user_id` as the sync partition key on accounts/categories/transactions/budgets; adds `paid_by_user_id`/`created_by_user_id` on transactions and `owner_user_id` on accounts; defines the merge algorithm for two independently-used devices connecting (categories merge by seed id, accounts always move never merge, budgets resolve collisions to the higher amount). Track-and-report only, no settlement/split math. Design only (D108-D114), not implemented — 2026-08-14.
+- `docs/25-p2p-device-sync.md` — new transport, independent of PowerSync: WebRTC data channel + QR-code signaling (serverless, works fully offline), manual both-sides-acked sync sessions. Available to every tier, not a free-tier fallback — paid households can use it too as a fast/offline supplement to PowerSync. Flags a real unverified risk (WebRTC SDP may not fit in one QR code) as needing a spike before implementation. Design only (D115-D120), not implemented — 2026-08-14.
 - `docs/artifacts/` — standalone HTML mockups (open directly in a browser): `piggypal-entry-ux.html` (doc 07), `piggypal-accounts-screen.html` (doc 12), `piggypal-picker-grouping.html` (doc 13), `piggypal-location-field.html` (doc 15 brainstorm — its three frames shipped as docs/16-18, each diverging in some way from the mockup's literal staging; see each doc's own notes)

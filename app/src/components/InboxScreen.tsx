@@ -33,7 +33,7 @@ export function InboxScreen() {
             return (
               <Link key={t.id} to={`/transactions/${t.id}`} className="tx-row tx-row-tappable">
                 <div className="tx-main">
-                  <span className="tx-note">{t.aiRaw ?? t.note ?? 'Uncategorized'}</span>
+                  <span className="tx-note">{t.aiRaw ?? t.note ?? 'No note'}</span>
                   <span className="tx-meta">
                     {formatRelativeDate(t.occurredAt)}, {formatTime(t.occurredAt)} · {account ? accountLabel(account) : '—'}
                   </span>

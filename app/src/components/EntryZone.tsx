@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { accountLabel, formatAmount, formatRelativeDate, nowLocal } from '../lib/format';
+import { getLocalUserId } from '../lib/identity';
 import { parseUtterance } from '../lib/parser';
 import { isSpeechInputSupported, startSpeechInput } from '../lib/speechInput';
 import type { Transaction } from '../lib/types';
@@ -33,7 +34,7 @@ export function EntryZone({ onSubmitted }: Props) {
   const [typedText, setTypedText] = useState('');
   const [preview, setPreview] = useState<Preview | null>(null);
   const [listening, setListening] = useState(false);
-  const recognitionRef = useRef<{ stop: () => void } | null>(null);
+  const recognitionRef = useRef<{ stop: () => void; abort: () => void } | null>(null);
 
   // docs/19: "+" used to open an inline amount-pad + category-chip panel
   // (tap a category chip to submit) before landing on the transaction's
@@ -59,6 +60,8 @@ export function EntryZone({ onSubmitted }: Props) {
       source: 'manual',
       aiRaw: null,
       deletedAt: null,
+      paidByUserId: getLocalUserId(),
+      createdByUserId: getLocalUserId(),
     };
     store.addTransaction(tx);
     navigate(`/transactions/${tx.id}`);
@@ -128,6 +131,8 @@ export function EntryZone({ onSubmitted }: Props) {
       source: 'ai',
       aiRaw: preview.text,
       deletedAt: null,
+      paidByUserId: getLocalUserId(),
+      createdByUserId: getLocalUserId(),
     };
     store.addTransaction(tx);
     setPreview(null);
@@ -152,7 +157,14 @@ export function EntryZone({ onSubmitted }: Props) {
   // when unsupported (e.g. desktop Firefox).
   function toggleVoice() {
     if (listening) {
-      recognitionRef.current?.stop();
+      // Give-up path: abort() cuts the mic immediately and discards
+      // whatever's been captured, rather than stop()'s "deliver a final
+      // result anyway" behavior — the user pressed this because they
+      // don't want anything transcribed. Clearing `listening` here rather
+      // than waiting on onEnd keeps the button responsive even on
+      // browsers where onend fires late or not at all after an abort.
+      recognitionRef.current?.abort();
+      setListening(false);
       return;
     }
     const handle = startSpeechInput({

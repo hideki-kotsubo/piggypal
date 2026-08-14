@@ -19,6 +19,17 @@ create table accounts (
   name               text not null,
   kind               text not null default 'checking',  -- checking | credit | cash | savings
   archived           boolean not null default false,  -- see docs/12; mirrors categories.archived
+  owner_user_id      uuid not null,  -- whose payment instrument this is —
+                               -- docs/24 D110. Not a sync-partition key
+                               -- like user_id (which stays as-is pending
+                               -- docs/24's broader household_id migration,
+                               -- not done here) — a real per-row fact,
+                               -- shown in the UI only once a household has
+                               -- 2+ members. No explicit `references
+                               -- users(id)`, matching user_id's own
+                               -- convention above — users is defined later
+                               -- in this file's server-only section, kept
+                               -- decoupled from the sync-domain tables.
   created_at         timestamptz not null default now(),
   updated_at         timestamptz not null default now()
 );
@@ -60,6 +71,12 @@ create table transactions (
   source       text not null default 'manual',   -- manual | ai | import
   ai_raw       text,                             -- original utterance, if source = 'ai'
   deleted_at   timestamptz,
+  paid_by_user_id     uuid not null,  -- whose money this was — mutable,
+                                       -- editable any time — docs/24 D110
+  created_by_user_id  uuid not null,  -- who logged the row — set once at
+                                       -- insert, never patched after —
+                                       -- docs/24 D110. Deliberately not the
+                                       -- same column: see docs/24 for why.
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now()
 );

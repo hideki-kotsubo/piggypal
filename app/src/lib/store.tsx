@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { db } from './db';
+import { getLocalUserId } from './identity';
 import type { Account, AccountKind, Budget, Category, CategoryKeyword, Transaction } from './types';
 import { seedAccounts, seedBudgets, seedCategories, seedCategoryKeywords, seedTransactions } from './seed';
 
@@ -19,6 +20,7 @@ interface AccountRow {
   name: string;
   kind: string;
   archived: number;
+  owner_user_id: string | null; // see rowToAccount's fallback note
 }
 function rowToAccount(r: AccountRow): Account {
   return {
@@ -27,6 +29,12 @@ function rowToAccount(r: AccountRow): Account {
     name: r.name,
     kind: r.kind as AccountKind,
     archived: Boolean(r.archived),
+    // Same "column added after some rows already existed" situation as
+    // occurred_at below — genuinely null for any account written before
+    // this column existed. Falls back to this device's own identity
+    // rather than leaving it empty, since every pre-existing local
+    // account was, definitionally, owned by whoever's device it's on.
+    ownerUserId: r.owner_user_id ?? getLocalUserId(),
   };
 }
 
@@ -66,6 +74,8 @@ interface TransactionRow {
   source: string;
   ai_raw: string | null;
   deleted_at: string | null;
+  paid_by_user_id: string | null; // see rowToTransaction's fallback note
+  created_by_user_id: string | null;
 }
 function rowToTransaction(r: TransactionRow): Transaction {
   return {
@@ -80,6 +90,13 @@ function rowToTransaction(r: TransactionRow): Transaction {
     source: r.source as Transaction['source'],
     aiRaw: r.ai_raw,
     deletedAt: r.deleted_at,
+    // Genuinely null for any row written before these columns existed —
+    // same PowerSync-is-a-view-over-JSON situation occurred_at's own
+    // fallback above documents. docs/24's real backfill rule (paid_by =
+    // created_by = the pre-sharing owner) collapses to "this device" in
+    // today's single-user-per-device world, so that's the fallback here.
+    paidByUserId: r.paid_by_user_id ?? getLocalUserId(),
+    createdByUserId: r.created_by_user_id ?? getLocalUserId(),
   };
 }
 
@@ -110,6 +127,7 @@ const ACCOUNT_COLUMNS: Record<keyof Account, string> = {
   name: 'name',
   kind: 'kind',
   archived: 'archived',
+  ownerUserId: 'owner_user_id',
 };
 
 const CATEGORY_COLUMNS: Record<keyof Category, string> = {
@@ -140,15 +158,17 @@ const TRANSACTION_COLUMNS: Record<keyof Transaction, string> = {
   source: 'source',
   aiRaw: 'ai_raw',
   deletedAt: 'deleted_at',
+  paidByUserId: 'paid_by_user_id',
+  createdByUserId: 'created_by_user_id',
 };
 
 // Shared by seeding and addAccount — one place that knows the accounts
 // INSERT shape.
 async function insertAccountRow(a: Account): Promise<void> {
   await db.execute(
-    `INSERT INTO accounts (id, institution, name, kind, archived)
-     VALUES (?, ?, ?, ?, ?)`,
-    [a.id, a.institution, a.name, a.kind, a.archived ? 1 : 0],
+    `INSERT INTO accounts (id, institution, name, kind, archived, owner_user_id)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [a.id, a.institution, a.name, a.kind, a.archived ? 1 : 0, a.ownerUserId],
   );
 }
 
@@ -171,9 +191,9 @@ async function seedIfEmpty() {
 
       for (const a of seedAccounts) {
         await tx.execute(
-          `INSERT INTO accounts (id, institution, name, kind, archived)
-           VALUES (?, ?, ?, ?, ?)`,
-          [a.id, a.institution, a.name, a.kind, a.archived ? 1 : 0],
+          `INSERT INTO accounts (id, institution, name, kind, archived, owner_user_id)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [a.id, a.institution, a.name, a.kind, a.archived ? 1 : 0, a.ownerUserId],
         );
       }
       for (const c of seedCategories) {
@@ -184,9 +204,9 @@ async function seedIfEmpty() {
       }
       for (const t of seedTransactions) {
         await tx.execute(
-          `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_at, note, merchant, source, ai_raw, deleted_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [t.id, t.accountId, t.categoryId, t.amountCents, t.currency, t.occurredAt, t.note, t.merchant, t.source, t.aiRaw, t.deletedAt],
+          `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_at, note, merchant, source, ai_raw, deleted_at, paid_by_user_id, created_by_user_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [t.id, t.accountId, t.categoryId, t.amountCents, t.currency, t.occurredAt, t.note, t.merchant, t.source, t.aiRaw, t.deletedAt, t.paidByUserId, t.createdByUserId],
         );
       }
       for (const b of seedBudgets) {
@@ -359,9 +379,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       addTransaction(tx) {
         void db.execute(
-          `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_at, note, merchant, source, ai_raw, deleted_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [tx.id, tx.accountId, tx.categoryId, tx.amountCents, tx.currency, tx.occurredAt, tx.note, tx.merchant, tx.source, tx.aiRaw, tx.deletedAt],
+          `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_at, note, merchant, source, ai_raw, deleted_at, paid_by_user_id, created_by_user_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [tx.id, tx.accountId, tx.categoryId, tx.amountCents, tx.currency, tx.occurredAt, tx.note, tx.merchant, tx.source, tx.aiRaw, tx.deletedAt, tx.paidByUserId, tx.createdByUserId],
         );
       },
 

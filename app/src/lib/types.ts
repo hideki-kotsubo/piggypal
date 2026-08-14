@@ -12,6 +12,11 @@ export interface Account {
   name: string;
   kind: AccountKind;
   archived: boolean;
+  // Whose payment instrument this is — docs/24 D110. Real even in
+  // today's single-device local-only mode (getLocalUserId()); only shown
+  // in the UI once a household has 2+ members, but every account needs a
+  // value from day one so there's nothing to backfill later.
+  ownerUserId: string;
 }
 
 // parentId nullable, exactly 2 levels deep — enforced app-side only (a
@@ -39,6 +44,13 @@ export interface Transaction {
   source: TransactionSource;
   aiRaw: string | null;
   deletedAt: string | null;
+  // docs/24 D110 — deliberately two different facts, not one:
+  // paidByUserId is whose money this was (mutable, editable any time);
+  // createdByUserId is who logged the row (set once at insert, never
+  // patched after). Both real from day one, same reasoning as
+  // Account.ownerUserId above.
+  paidByUserId: string;
+  createdByUserId: string;
 }
 
 export interface Budget {

@@ -130,5 +130,14 @@ Handler responsibilities, in order:
 - Multi-currency *conversion* (each currency is tracked and budgeted on its
   own terms — docs/10 — but no FX rates, no unified single-number rollup)
 - Recurring transactions
-- Shared/household budgets
 - Transfer-between-accounts as linked pair (model as two transactions for now)
+
+**Shared/household budgets** — no longer out of scope, superseded by
+docs/24-household-sharing.md (2026-08-14, design only). That doc adds
+`household_id` to `accounts`/`categories`/`transactions`/`budgets` as the
+new sync partition key (replacing `user_id` in that role on these four
+tables), plus `paid_by_user_id`/`created_by_user_id` on `transactions` and
+`owner_user_id` on `accounts`, and rewrites the bucket definition below
+accordingly. The schema and sync rules in this doc are the pre-sharing
+baseline — not yet updated in place, so the two docs can be diffed against
+each other.

@@ -175,6 +175,15 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
           ))}
         </div>
       )}
+
+      {/* Every field above already autosaves on change — this button isn't
+          a "commit my edits" step. It exists so it's visually obvious the
+          data is saved and that leaving (same as the back arrow) is safe,
+          instead of the only affordance being an app-bar back arrow that
+          doesn't look like a save action. */}
+      <div className="form-actions">
+        <button className="save-btn" onClick={onDone}>Done</button>
+      </div>
     </div>
   );
 }

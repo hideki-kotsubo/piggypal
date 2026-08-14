@@ -250,7 +250,7 @@ export function TransactionList() {
             return (
               <Link key={t.id} to={`/transactions/${t.id}`} className="tx-row tx-row-tappable">
                 <div className="tx-main">
-                  <span className="tx-note">{t.note ?? 'Uncategorized'}</span>
+                  <span className="tx-note">{t.note ?? 'No note'}</span>
                   <span className="tx-meta">
                     {category?.name ?? 'Uncategorized'} · {formatRelativeDate(t.occurredAt)}, {formatTime(t.occurredAt)} · {account ? accountLabel(account) : '—'}
                   </span>

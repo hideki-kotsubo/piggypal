@@ -36,6 +36,48 @@ it needs doing.
 
 ## ⚫ Later / someday
 
+- [ ] Household sharing (multi-user) + P2P device sync — designed
+      2026-08-14, docs/24-household-sharing.md and
+      docs/25-p2p-device-sync.md (D108-D120, +D117a, +D113 revised).
+      Reopens docs/01's "households deferred" call and docs/05's
+      "single-user per account" call, deliberately, per the user. Two
+      parts: a data model (`household_id` replaces `user_id` as the sync
+      partition key on accounts/categories/transactions/budgets;
+      `paid_by_user_id`/`created_by_user_id` on transactions;
+      `owner_user_id` on accounts; a merge algorithm for two
+      independently-seeded devices connecting) and a new transport
+      (WebRTC + QR-code signaling, manual both-sides-acked sync, available
+      to every tier — not just paid, not a PowerSync replacement). Still
+      design-only for the server/schema/transport work (households and
+      household_members tables, sync rules, API validation, actual pairing
+      UI, WebRTC wiring) — none of that is built. Two prep items *are*
+      done, ahead of the rest: `seed.ts`'s fixed-slug ids for
+      accounts/transactions/budgets are now generated (D113, revised
+      broader than first scoped — budgets needed it too, for the same
+      reason accounts did), verified with `tsc -b`/`oxlint`/Playwright;
+      and the QR/SDP-size risk flagged in docs/25 is resolved by a real
+      spike (D117a) — captured actual `RTCPeerConnection` offers
+      (586-1005 bytes across offline/STUN/multi-interface cases) all fit
+      one QR code with headroom against the format's ~2953-byte ceiling.
+      Residual open item, not yet tested: physical two-device scan
+      reliability at the resulting module density (version ~20-25,
+      screen-to-screen). Also now done: the local-only-safe slice of the
+      data model itself — `owner_user_id`/`paid_by_user_id`/
+      `created_by_user_id` are real columns (local SQLite schema + Postgres
+      `db/schema.sql`), backed by a new `app/src/lib/identity.ts`
+      (`getLocalUserId()` — closes a docs/05 D11 gap: this had never been
+      implemented since nothing needed a local user identity before now),
+      populated on every insert path and backfilled on read for
+      pre-existing rows. Verified with `tsc -b`/`oxlint` and a Playwright
+      pass that reads actual row values back out of SQLite (seeded data,
+      a real quick-add transaction, and a real new account all checked).
+      `household_id` deliberately still not added anywhere, local or
+      server — `schema.ts`'s own stated principle (no sync-partition
+      columns locally until there's something to partition) applies to it
+      the same way it already applied to `user_id`. Still fully unbuilt:
+      `households`/`household_members` tables, sync rules, API validation,
+      the merge algorithm itself, and any owner/payer/creator UI (correctly
+      invisible per D110 until a household has 2+ members).
 - [ ] Revisit "piggypal" naming once there's a working product to react to
       (parked 2026-08-07 — see docs/01 item 5 for full context: name space
       is saturated, piggypal's real gaps are signaling private/local-first
@@ -104,6 +146,16 @@ it needs doing.
 
 ## ✅ Done
 
+- [x] Quick-add's blank $0.00/uncategorized transaction survived cancel —
+      reported 2026-08-13. Home's "+" (docs/19) inserts a live row before
+      navigating to its edit screen; backing out with no edits left it
+      behind. Fixed (docs/23, D105): leaving the screen deletes the row if
+      it's still exactly $0.00 (every other entry path already requires a
+      nonzero amount to insert at all, so that's an unambiguous "untouched
+      quick-add" signal). Also added an explicit "Done" button to the edit
+      form (D107) — autosave was already correct but gave no visible
+      confirmation typing was saved or that the back arrow was safe to tap.
+      Verified via Playwright (2026-08-13).
 - [x] Voice transcripts never saved — reported 2026-08-13 ("I see the
       transcript of what I said but the app doesn't save the new entry").
       Not a parser bug: `speechInput`'s `onResult` only filled the text

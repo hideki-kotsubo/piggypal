@@ -29,6 +29,7 @@ interface SpeechRecognitionLike {
   onend: (() => void) | null;
   start: () => void;
   stop: () => void;
+  abort: () => void;
 }
 type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
 
@@ -50,7 +51,7 @@ export interface SpeechInputHandlers {
 // No language toggle exists yet (docs/09 is spec-only) — navigator.language
 // is a best-effort default, genuinely imperfect if the OS locale doesn't
 // match what the user actually speaks. Revisit once docs/09 ships.
-export function startSpeechInput(handlers: SpeechInputHandlers): { stop: () => void } | null {
+export function startSpeechInput(handlers: SpeechInputHandlers): { stop: () => void; abort: () => void } | null {
   const Ctor = getSpeechRecognitionCtor();
   if (!Ctor) return null;
 
@@ -59,6 +60,13 @@ export function startSpeechInput(handlers: SpeechInputHandlers): { stop: () => v
   recognition.interimResults = false;
   recognition.maxAlternatives = 1;
   recognition.onresult = (event) => {
+    // continuous is unset (false), which per spec should auto-stop the
+    // mic once a final result comes in — but several real implementations
+    // (notably Android Chrome) don't honor that and keep the mic open
+    // indefinitely, waiting for an explicit stop(). Calling it here
+    // ourselves is what actually turns the mic off; the browser doing it
+    // too is harmless (stop() on an already-stopping session is a no-op).
+    recognition.stop();
     const transcript = event.results[0]?.[0]?.transcript ?? '';
     handlers.onResult(transcript);
   };
@@ -66,5 +74,12 @@ export function startSpeechInput(handlers: SpeechInputHandlers): { stop: () => v
   recognition.onend = () => handlers.onEnd?.();
   recognition.start();
 
-  return { stop: () => recognition.stop() };
+  return {
+    stop: () => recognition.stop(),
+    // For the user bailing out mid-recording: abort() cuts the mic
+    // immediately and discards whatever's been captured so far, unlike
+    // stop() which still tries to deliver a final (possibly garbled,
+    // half-spoken) result via onresult.
+    abort: () => recognition.abort(),
+  };
 }

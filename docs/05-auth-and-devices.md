@@ -125,5 +125,9 @@ create table refresh_tokens (
 ## Explicitly out of scope for v1
 
 - Social login / passwords — magic link only.
-- Household/shared accounts — this model is single-user per account; revisit
-  alongside the household_id bucket noted in 02-sync-architecture.md.
+- ~~Household/shared accounts — this model is single-user per account~~ —
+  **reopened 2026-08-14**, see docs/24-household-sharing.md (the household
+  data model) and docs/25-p2p-device-sync.md (a QR-pairing-code join flow
+  that doesn't require magic-link auth at all, since free tier never
+  signs in — D10 still holds unchanged). Design only, not yet implemented;
+  the magic-link flows above are still accurate for the paid path.

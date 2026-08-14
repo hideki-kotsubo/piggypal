@@ -20,7 +20,7 @@ pt-BR/English.
 
 | Area | In v1 | Deferred |
 |---|---|---|
-| Entities | accounts, categories, transactions, monthly budgets | goals, recurring rules, households |
+| Entities | accounts, categories, transactions, monthly budgets | goals, recurring rules — **households reopened 2026-08-14, see docs/24-household-sharing.md and docs/25-p2p-device-sync.md (design only, not yet implemented)** |
 | Input | manual (<3s flow), AI text box | voice, CSV/bank import (reuse same pipeline later) |
 | Views | month budget vs spent, transaction list, one trend chart | reports, forecasts |
 | Money | multi-currency, tracked per transaction & budgeted per currency (docs/10) | conversion math / unified cross-currency rollup |

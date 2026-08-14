@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { accountLabel, formatAmount } from '../lib/format';
+import { getLocalUserId } from '../lib/identity';
 import type { Account, AccountKind } from '../lib/types';
 
 // docs/12: name, kind, institution all read/write through the account
@@ -211,6 +212,7 @@ function AccountForm({ account, onDone }: { account: Account | null; onDone: () 
         name: '',
         kind: 'checking',
         archived: false,
+        ownerUserId: getLocalUserId(),
       },
   );
   const current: Account = account ?? draft;

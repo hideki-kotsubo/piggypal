@@ -4,12 +4,19 @@ import { column, Schema, Table } from '@powersync/web';
 // refresh_tokens/subscriptions, which docs/05 and docs/06 both describe as
 // server-only, never part of the sync buckets.
 //
-// `user_id` is deliberately omitted from every table below: it exists in
-// Postgres purely for sync-bucket partitioning across many users, but a
-// single device's local DB only ever holds one user's data — there's
-// nothing to partition locally. Auth/sync aren't wired up yet (this is
-// still a local-only slice, docs/01 D1), so there's no real user_id to
-// carry anyway. Add it when the sync phase begins, not before.
+// `user_id`/`household_id` are deliberately omitted from every table below:
+// they exist in Postgres purely for sync-bucket partitioning across many
+// users, but a single device's local DB only ever holds one user's data —
+// there's nothing to partition locally. Add them when the sync phase
+// begins, not before.
+//
+// `owner_user_id`/`paid_by_user_id`/`created_by_user_id` (docs/24 D110)
+// are NOT partition keys, though — they're real per-row facts (whose
+// account, who paid, who logged it) that are true even in single-device
+// local-only mode, so they're here already, populated from
+// identity.ts's getLocalUserId(). Not user-visible yet (docs/24: shown
+// only once a household has 2+ members) — just laid down now so there's
+// nothing to backfill later.
 //
 // PowerSync auto-adds a TEXT `id` primary key to every table — matches
 // D5's client-generated UUIDs, so it's never declared explicitly here.
@@ -20,6 +27,7 @@ const accounts = new Table({
   name: column.text,
   kind: column.text, // checking | credit | cash | savings
   archived: column.integer,
+  owner_user_id: column.text, // docs/24 D110 — whose payment instrument this is
 });
 
 const categories = new Table({
@@ -43,6 +51,11 @@ const transactions = new Table(
     source: column.text, // manual | ai | import
     ai_raw: column.text,
     deleted_at: column.text,
+    // docs/24 D110 — paid_by_user_id (mutable, whose money it was) vs
+    // created_by_user_id (immutable, who logged it) are deliberately
+    // separate columns, not one.
+    paid_by_user_id: column.text,
+    created_by_user_id: column.text,
   },
   { indexes: { by_account: ['account_id'], by_category: ['category_id'] } },
 );
