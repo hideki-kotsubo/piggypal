@@ -38,7 +38,12 @@ it needs doing.
 
 - [ ] Household sharing (multi-user) + P2P device sync — designed
       2026-08-14, docs/24-household-sharing.md and
-      docs/25-p2p-device-sync.md (D108-D120, +D117a, +D113 revised).
+      docs/25-p2p-device-sync.md (D108-D120, +D117a, +D113 revised). A UI
+      sketch for the payer/creator/owner surface itself (docs/26,
+      D121-D124, `docs/artifacts/piggypal-household-sharing.html`) is done
+      too — badge on list rows, chip vs. caption on the edit screen, owner
+      prefix on Accounts, a bare members list in Settings — but it's a
+      mockup, not implementation.
       Reopens docs/01's "households deferred" call and docs/05's
       "single-user per account" call, deliberately, per the user. Two
       parts: a data model (`household_id` replaces `user_id` as the sync
@@ -78,6 +83,35 @@ it needs doing.
       `households`/`household_members` tables, sync rules, API validation,
       the merge algorithm itself, and any owner/payer/creator UI (correctly
       invisible per D110 until a household has 2+ members).
+      2026-08-14, later same day: a direct question ("I want my phone,
+      tablet, and laptop on one account — how?") surfaced a real gap —
+      docs/25's P2P pairing didn't distinguish "my own second device" from
+      "a different person," so both ran through the household-merge
+      algorithm identically, which would've fragmented one person's data
+      across fake household members. Fixed in docs/25 (D125-D127, +
+      cross-ref in docs/24): pairing now asks "your own device, or
+      someone else's?" before anything else. Own-device mode unifies
+      identity (the joining device adopts the other's `getLocalUserId()`,
+      pre-existing local data asked-before-rewritten, reusing docs/05
+      D14's exact pattern) instead of running the two-person merge;
+      accounts still don't auto-merge even then (same unsolved class of
+      problem as merchant dedup — flagged, not solved, manual cleanup
+      available). Paid tier never had this problem — same-email sign-in
+      already gives every device the same server `user_id` and PowerSync
+      keeps them in sync automatically, no pairing ceremony at all.
+      Design only — no code changes from this addendum.
+- [ ] "Merge account" as its own explicit action, not only something that
+      happens automatically at pairing time — flagged 2026-08-14, future
+      work, not designed. Idea: a standalone Settings entry point (paid
+      *or* free) for reconciling two datasets that grew up separately —
+      e.g. someone who ran the app on two devices for months without ever
+      pairing them, or two already-paid users who each subscribed
+      independently and now want to combine into one shared household
+      (which also reopens the billing question docs/24 explicitly deferred
+      — who's billed, what happens to the second subscription). Likely
+      reuses docs/25 D125-D127's identity-unification mechanics and docs/05
+      D14's ask-before-merging pattern rather than inventing a third one,
+      but that's a guess, not a plan — needs its own design pass.
 - [ ] Revisit "piggypal" naming once there's a working product to react to
       (parked 2026-08-07 — see docs/01 item 5 for full context: name space
       is saturated, piggypal's real gaps are signaling private/local-first

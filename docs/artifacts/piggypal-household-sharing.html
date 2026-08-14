@@ -1,0 +1,397 @@
+<title>piggypal — household sharing surfaces</title>
+<style>
+  :root {
+    --bg: #eef0ea;
+    --surface: #ffffff;
+    --surface-sunken: #f4f5f0;
+    --ink: #1e211c;
+    --ink-muted: #5c6259;
+    --ink-faint: #8b9186;
+    --line: #dadedb;
+    --accent: #3f7d69;
+    --accent-ink: #ffffff;
+    --accent-soft: #dceae3;
+    --warn: #b8752e;
+    --warn-soft: #f3e3d0;
+    --danger: #a8503f;
+    --shadow: 0 30px 60px -25px rgba(30, 33, 28, 0.35);
+
+    --serif: Charter, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141713; --surface: #1d211b; --surface-sunken: #171a15;
+      --ink: #edeee7; --ink-muted: #9ba398; --ink-faint: #6b7267;
+      --line: #2c322a; --accent: #6fbfa0; --accent-ink: #0f1512;
+      --accent-soft: #24352c; --warn: #d99a52; --warn-soft: #3a2c1c;
+      --danger: #c97462;
+      --shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141713; --surface: #1d211b; --surface-sunken: #171a15;
+    --ink: #edeee7; --ink-muted: #9ba398; --ink-faint: #6b7267;
+    --line: #2c322a; --accent: #6fbfa0; --accent-ink: #0f1512;
+    --accent-soft: #24352c; --warn: #d99a52; --warn-soft: #3a2c1c;
+    --danger: #c97462;
+    --shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.6);
+  }
+  :root[data-theme="light"] {
+    --bg: #eef0ea; --surface: #ffffff; --surface-sunken: #f4f5f0;
+    --ink: #1e211c; --ink-muted: #5c6259; --ink-faint: #8b9186;
+    --line: #dadedb; --accent: #3f7d69; --accent-ink: #ffffff;
+    --accent-soft: #dceae3; --warn: #b8752e; --warn-soft: #f3e3d0;
+    --danger: #a8503f;
+    --shadow: 0 30px 60px -25px rgba(30, 33, 28, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+  body { overflow-x: hidden; }
+
+  .page { max-width: 1180px; margin: 0 auto; padding: 4rem 1.5rem 6rem; }
+
+  .intro { max-width: 42rem; margin-bottom: 2.4rem; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.09em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 0.9rem;
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 500; font-size: clamp(1.9rem, 4vw, 2.6rem);
+    line-height: 1.15; letter-spacing: -0.01em; text-wrap: balance; margin: 0 0 0.9rem;
+  }
+  .lede { font-size: 1.02rem; line-height: 1.6; color: var(--ink-muted); margin: 0 0 0.9rem; max-width: 40rem; }
+  .lede b { color: var(--ink); font-weight: 600; }
+  .lede code { font-family: var(--mono); font-size: 0.88em; background: var(--surface-sunken); border: 1px solid var(--line); border-radius: 4px; padding: 0.05em 0.35em; }
+
+  .scope-note {
+    display: flex; gap: 0.6rem; align-items: flex-start; max-width: 40rem;
+    background: var(--warn-soft); border-radius: 12px; padding: 0.7rem 0.9rem;
+    font-size: 0.85rem; line-height: 1.55; color: var(--ink);
+  }
+  .scope-note b { color: var(--ink); }
+
+  .stage {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2.5rem 2rem;
+    align-items: start;
+    max-width: 900px;
+    margin-top: 3rem;
+  }
+  @media (max-width: 760px) {
+    .stage { grid-template-columns: 1fr; max-width: 24rem; margin: 3rem auto 0; }
+  }
+
+  .frame-block { margin: 0; }
+  .frame-step {
+    font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink-faint); display: block; margin-bottom: 0.3rem;
+  }
+  .frame-title { font-weight: 600; font-size: 1rem; margin: 0 0 0.25rem; }
+  .frame-sub { font-size: 0.87rem; color: var(--ink-muted); margin: 0; line-height: 1.5; }
+
+  .phone {
+    position: relative; width: 100%; max-width: 300px; margin: 1.4rem auto 0;
+    border-radius: 34px; background-color: var(--ink); padding: 10px; box-shadow: var(--shadow);
+  }
+  .phone .notch {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 84px; height: 18px; background: var(--ink); border-radius: 0 0 12px 12px; z-index: 2;
+  }
+  .screen {
+    position: relative; background: var(--surface); border-radius: 26px;
+    overflow: hidden; min-height: 560px; display: flex; flex-direction: column;
+  }
+
+  .app-bar {
+    display: flex; align-items: center; justify-content: space-between; padding: 1.6rem 1.1rem 0.9rem;
+  }
+  .wordmark { font-family: var(--serif); font-weight: 600; font-size: 1.05rem; letter-spacing: -0.01em; }
+  .back { font-size: 0.8rem; color: var(--ink-muted); }
+  .add-btn {
+    width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center; color: var(--ink-muted); font-size: 0.85rem;
+  }
+
+  .section-label {
+    font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--ink-faint); margin: 0.9rem 1.1rem 0.4rem;
+  }
+
+  /* ---- transaction rows ---- */
+  .tx-list { margin: 0 1.1rem; flex: 1; }
+  .tx-row { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; border-bottom: 1px solid var(--line); gap: 0.6rem; }
+  .tx-row:last-child { border-bottom: none; }
+  .tx-left { display: flex; align-items: center; gap: 0.55rem; min-width: 0; }
+  .tx-main { display: flex; flex-direction: column; min-width: 0; }
+  .tx-note { font-size: 0.87rem; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tx-meta { font-family: var(--mono); font-size: 0.66rem; color: var(--ink-faint); margin-top: 0.15rem; }
+  .tx-amt { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 0.87rem; flex-shrink: 0; }
+
+  /* proposed only — not yet in tokens.css. Reuses the app's existing
+     "accent = mine, outline = not-mine" convention (chip.picked,
+     pill-tap.active) instead of inventing a per-person color system,
+     which is a bigger call this sketch deliberately isn't making. */
+  .payer-badge {
+    width: 19px; height: 19px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 0.62rem; font-weight: 700;
+  }
+  .payer-badge.mine { background: var(--accent); color: var(--accent-ink); }
+  .payer-badge.theirs { background: var(--surface); color: var(--ink-muted); border: 1px solid var(--line); }
+
+  /* ---- transaction edit form ---- */
+  .edit-panel { margin: 0.4rem 1.1rem 1rem; display: flex; flex-direction: column; gap: 0.65rem; }
+  .field-label {
+    font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .text-field {
+    font-size: 0.9rem; padding: 0.5rem 0.7rem; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--surface-sunken); color: var(--ink);
+  }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    display: flex; align-items: center; gap: 0.32rem;
+    font-size: 0.78rem; padding: 0.34rem 0.7rem 0.34rem 0.5rem; border-radius: 999px; border: 1px solid var(--line);
+    background: var(--surface); color: var(--ink-muted);
+  }
+  .chip.picked { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .chip.picked .payer-badge.theirs { background: var(--accent-ink); border-color: var(--accent-ink); color: var(--accent); }
+  .chip .payer-badge { width: 15px; height: 15px; font-size: 0.55rem; }
+
+  .provenance {
+    font-size: 0.76rem; color: var(--ink-faint); font-style: italic; padding-top: 0.1rem;
+  }
+
+  /* ---- accounts list ---- */
+  .acc-list { margin: 0 1.1rem; flex: 1; }
+  .inst-header {
+    font-size: 0.78rem; font-weight: 600; color: var(--ink); padding: 0.6rem 0 0.3rem;
+  }
+  .acc-row { padding: 0.7rem 0; border-bottom: 1px solid var(--line); }
+  .acc-row:last-child { border-bottom: none; }
+  .acc-row-top { display: flex; justify-content: space-between; align-items: baseline; }
+  .acc-name { font-size: 0.9rem; font-weight: 600; }
+  .acc-name .owner-prefix { font-weight: 400; color: var(--ink-muted); }
+  .acc-kind {
+    font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-faint);
+  }
+  .acc-bal { font-variant-numeric: tabular-nums; font-size: 0.83rem; color: var(--ink-muted); margin-top: 0.15rem; }
+
+  /* ---- settings / household ---- */
+  .settings-list { margin: 0 1.1rem; }
+  .settings-row {
+    display: flex; justify-content: space-between; align-items: center; padding: 0.85rem 0;
+    border-bottom: 1px solid var(--line); font-size: 0.9rem;
+  }
+  .member-row {
+    display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0; border-bottom: 1px solid var(--line);
+  }
+  .member-row:last-child { border-bottom: none; }
+  .member-name { font-size: 0.87rem; }
+  .member-you { font-size: 0.7rem; color: var(--ink-faint); margin-left: 0.35rem; }
+  .member-badge { width: 26px; height: 26px; font-size: 0.72rem; }
+
+  /* ---- callout pins + legend ---- */
+  .pin {
+    position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--ink);
+    color: var(--surface); font-size: 0.66rem; font-weight: 700; display: flex; align-items: center;
+    justify-content: center; box-shadow: 0 0 0 3px var(--surface); z-index: 3;
+  }
+  .legend { list-style: none; margin: 1.1rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.55rem; }
+  .legend li { display: flex; gap: 0.55rem; font-size: 0.83rem; line-height: 1.45; color: var(--ink-muted); }
+  .legend .num {
+    flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; background: var(--ink); color: var(--surface);
+    font-size: 0.63rem; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 0.1rem;
+  }
+  .legend b { color: var(--ink); font-weight: 600; }
+  .legend code { font-family: var(--mono); font-size: 0.85em; }
+</style>
+
+<div class="page">
+  <header class="intro">
+    <p class="eyebrow">piggypal &middot; household sharing, UI surfaces</p>
+    <h1>Where payer, logger, and owner show up</h1>
+    <p class="lede">
+      docs/24 locked the data model &mdash; <code>paid_by_user_id</code>
+      (mutable), <code>created_by_user_id</code> (immutable), and
+      <code>owner_user_id</code> on accounts (mutable) &mdash; but explicitly
+      left the UI undesigned (D110: <b>correctly invisible until a household
+      has 2+ members</b>). This sketch is that missing surface: four places
+      the columns become visible, once there's someone else to show.
+    </p>
+    <div class="scope-note">
+      <span>&#9888;</span>
+      <span><b>Not in scope here</b> (per docs/24's own boundaries): balance/settlement math ("Bob owes Alice"), pairing/QR UI, and any per-person color system &mdash; badges below reuse the app's existing <b>accent&nbsp;=&nbsp;mine / outline&nbsp;=&nbsp;not-mine</b> convention rather than inventing one.</span>
+    </div>
+  </header>
+
+  <section class="stage">
+    <!-- FRAME 1: TRANSACTION LIST -->
+    <figure class="frame-block">
+      <div class="frame-head">
+        <span class="frame-step">01 &middot; recent list</span>
+        <h2 class="frame-title">A badge, not a new row</h2>
+        <p class="frame-sub">Solo households (today) render exactly as-is &mdash; no badge, no layout shift. The badge only appears once a second member exists.</p>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="pin" style="top: 103px; left: 2px;">1</div>
+          <div class="pin" style="top: 118px; left: 178px;">2</div>
+          <div class="app-bar"><span class="wordmark">piggypal</span><span class="add-btn">+</span></div>
+          <div class="section-label">recent</div>
+          <div class="tx-list">
+            <div class="tx-row">
+              <div class="tx-left">
+                <span class="payer-badge mine">A</span>
+                <div class="tx-main">
+                  <span class="tx-note">Groceries</span>
+                  <span class="tx-meta">today &middot; Alice &mdash; Visa</span>
+                </div>
+              </div>
+              <span class="tx-amt">-$45.00</span>
+            </div>
+            <div class="tx-row">
+              <div class="tx-left">
+                <span class="payer-badge theirs">B</span>
+                <div class="tx-main">
+                  <span class="tx-note">Hydro bill</span>
+                  <span class="tx-meta">yesterday &middot; Bob &mdash; Checking</span>
+                </div>
+              </div>
+              <span class="tx-amt">-$84.20</span>
+            </div>
+            <div class="tx-row">
+              <div class="tx-left">
+                <span class="payer-badge mine">A</span>
+                <div class="tx-main">
+                  <span class="tx-note">Uber</span>
+                  <span class="tx-meta">2 days ago &middot; Alice &mdash; Visa</span>
+                </div>
+              </div>
+              <span class="tx-amt">-$18.40</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ol class="legend">
+        <li><span class="num">1</span><span><b>Filled circle = paid by you</b>, outline = paid by the other member &mdash; reuses <code>.chip.picked</code>'s existing accent-fill language, just circular instead of pill-shaped.</span></li>
+        <li><span class="num">2</span><span>The existing <code>tx-meta</code> line (date &middot; account) is unchanged in structure &mdash; the account label itself now carries the owner prefix from Frame&nbsp;3, so payer and owner read together without a third line.</span></li>
+      </ol>
+    </figure>
+
+    <!-- FRAME 2: TRANSACTION EDIT FORM -->
+    <figure class="frame-block">
+      <div class="frame-head">
+        <span class="frame-step">02 &middot; transaction edit screen</span>
+        <h2 class="frame-title">Paid by is a chip, logged by is a caption</h2>
+        <p class="frame-sub">Matches the mutable/immutable split in docs/24 D110 &mdash; one's an interactive picker, the other is plain text with no tap target.</p>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="pin" style="top: 260px; left: 14px;">3</div>
+          <div class="pin" style="top: 420px; left: 14px;">4</div>
+          <div class="app-bar"><span class="back">&larr; Back</span></div>
+          <div class="edit-panel">
+            <div class="field-label">amount</div>
+            <div class="text-field">-$84.20 CAD</div>
+            <div class="field-label">account</div>
+            <div class="chip-row">
+              <div class="chip picked">Bob &mdash; Checking</div>
+              <div class="chip">Alice &mdash; Visa</div>
+            </div>
+            <div class="field-label">paid by</div>
+            <div class="chip-row">
+              <div class="chip"><span class="payer-badge mine">A</span>You</div>
+              <div class="chip picked"><span class="payer-badge theirs">B</span>Bob</div>
+            </div>
+            <div class="field-label">note</div>
+            <div class="text-field">Hydro bill</div>
+            <p class="provenance">Logged by Bob &middot; yesterday, 6:42pm</p>
+          </div>
+        </div>
+      </div>
+      <ol class="legend">
+        <li><span class="num">3</span><span><b>"Paid by" is a chip row</b> like Account/Category &mdash; <code>paid_by_user_id</code> is mutable any time per D110, so it gets the same tap-to-change affordance as everything else in this form.</span></li>
+        <li><span class="num">4</span><span><b>"Logged by" is italic caption text, not a chip</b> &mdash; <code>created_by_user_id</code> is immutable (set once at insert), so it deliberately gets no tap target. Provenance to read, not a field to edit.</span></li>
+      </ol>
+    </figure>
+
+    <!-- FRAME 3: ACCOUNTS LIST -->
+    <figure class="frame-block">
+      <div class="frame-head">
+        <span class="frame-step">03 &middot; accounts list</span>
+        <h2 class="frame-title">Owner replaces the blank institution slot</h2>
+        <p class="frame-sub">docs/24's own example &mdash; "Alice &mdash; Visa" &mdash; used verbatim. The owner prefix takes the same visual slot institution already uses.</p>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="pin" style="top: 130px; left: 14px;">5</div>
+          <div class="pin" style="top: 260px; left: 14px;">6</div>
+          <div class="app-bar"><span class="wordmark">Accounts</span><span class="add-btn">+</span></div>
+          <div class="acc-list">
+            <div class="inst-header">TD</div>
+            <div class="acc-row">
+              <div class="acc-row-top"><span class="acc-name"><span class="owner-prefix">Alice &mdash;</span> Visa</span><span class="acc-kind">credit</span></div>
+              <div class="acc-bal">$420.00 CAD</div>
+            </div>
+            <div class="inst-header">Scotiabank</div>
+            <div class="acc-row">
+              <div class="acc-row-top"><span class="acc-name"><span class="owner-prefix">Bob &mdash;</span> Checking</span><span class="acc-kind">checking</span></div>
+              <div class="acc-bal">$1,150.00 CAD</div>
+            </div>
+            <div class="acc-row">
+              <div class="acc-row-top"><span class="acc-name">Wise</span><span class="acc-kind">multi&#8209;currency</span></div>
+              <div class="acc-bal">R$640.22 BRL</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ol class="legend">
+        <li><span class="num">5</span><span><b>Owner prefix, same slot as today's "institution &mdash; name" pattern</b> &mdash; a solo household still renders "Visa" alone, exactly as now (docs/24: "no UI change" below 2 members).</span></li>
+        <li><span class="num">6</span><span><b>Unprefixed rows stay unprefixed</b> &mdash; Wise here has no owner set yet (nullable at the data layer until someone edits it), so it degrades to today's look rather than showing a placeholder.</span></li>
+      </ol>
+    </figure>
+
+    <!-- FRAME 4: SETTINGS / HOUSEHOLD -->
+    <figure class="frame-block">
+      <div class="frame-head">
+        <span class="frame-step">04 &middot; settings</span>
+        <h2 class="frame-title">One new section: who's in this</h2>
+        <p class="frame-sub">Just a members list &mdash; this sketch stops at "who are Alice and Bob," not "how they got paired." The pairing/QR flow itself is docs/25, still fully undesigned.</p>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="pin" style="top: 175px; left: 14px;">7</div>
+          <div class="app-bar"><span class="back">&larr; Back</span><span class="wordmark">Settings</span><span style="width:26px;"></span></div>
+          <div class="section-label">household</div>
+          <div class="settings-list">
+            <div class="member-row">
+              <span class="payer-badge mine member-badge">A</span>
+              <span class="member-name">Alice<span class="member-you">you</span></span>
+            </div>
+            <div class="member-row">
+              <span class="payer-badge theirs member-badge">B</span>
+              <span class="member-name">Bob</span>
+            </div>
+          </div>
+          <div class="section-label">appearance</div>
+          <div class="settings-list">
+            <div class="settings-row"><span>Theme</span><span style="color: var(--ink-faint); font-size: 0.8rem;">System</span></div>
+          </div>
+        </div>
+      </div>
+      <ol class="legend">
+        <li><span class="num">7</span><span><b>Read-only membership list</b>, same visual family as the badges elsewhere on this page &mdash; no invite/leave/settle actions drawn here, since none of that is designed yet (docs/24's own open questions list "household leave/unmerge" as not covered).</span></li>
+      </ol>
+    </figure>
+  </section>
+</div>

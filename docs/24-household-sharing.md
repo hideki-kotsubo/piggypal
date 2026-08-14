@@ -83,7 +83,14 @@ math isn't.
 Triggered once two devices agree to connect (docs/25 covers how that
 agreement happens — pairing code + signaling; this section covers what
 happens to the data once they have). Runs as one atomic operation, not a
-background reconciliation:
+background reconciliation.
+
+**Assumes the two sides are actually different people.** docs/25's
+"own device vs. someone else's" fork (D125-D127, added 2026-08-14) resolves
+*whose* identity a device's rows carry before this algorithm ever runs —
+pairing your own second device unifies identity instead of running this
+merge as a two-person household. Everything below is the "someone else's"
+path.
 
 1. **Categories — merge by `id`.** Seed categories already use fixed,
    deterministic slugs (`cat-food`, `cat-housing-rent`, ...) — see
@@ -166,6 +173,12 @@ multi-household switching is out of scope, not designed.
   would coexist post-merge. Flagged, not solved.
 - Multi-household membership (one user in two shared households at once)
   is possible in the data model but has no UI story.
+- Standalone "merge account" action (not just the pairing-time flow) for
+  reconciling two datasets that grew up separately — including two already
+  -paid users combining into one household, which reopens the billing
+  question above in a sharper form (two active subscriptions, one
+  household). Flagged 2026-08-14, tracked in docs/00-backlog.md, not
+  designed.
 
 ## Decisions locked in this doc
 

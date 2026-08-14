@@ -29,6 +29,13 @@ pt-BR/English.
 ## Tiers
 
 - **Free**: single device, manual entry, on-device rule-based AI parsing.
+  This is where **every** user starts — there's no paid-first signup path;
+  Free is the default the app installs into, and Paid is an opt-in
+  upgrade a user chooses later, never a precondition of first use.
+  Clarified explicitly 2026-08-14 (docs/24 D114's household tier
+  inheritance and docs/25's free-vs-paid P2P/PowerSync split both assume
+  this progression, so it's worth stating outright rather than leaving it
+  implied).
 - **Paid**: multi-device sync + LLM-powered entry.
 - Rationale: the hardest feature (sync) and the marginal-cost feature (LLM)
   are the paid ones — clean story, honest costs.

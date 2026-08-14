@@ -105,6 +105,65 @@ data, so it doesn't need the subscription gate, but it is still a server
 component that has to be hosted. Explicitly out of v1 — QR/in-person
 pairing ships first; this is a later enhancement, not a blocker.
 
+## Own device vs. someone else's — the identity question
+
+Surfaced 2026-08-14 by a direct question: "I want my phone, tablet, and
+laptop on the same account — how does that work?" The honest answer
+exposed a real gap. On the **paid** path this already works with zero new
+mechanism: sign into the same email everywhere (docs/05), each device gets
+back the *same* server-side `user_id`, and PowerSync's `user_id`-keyed
+bucket keeps all of them in lockstep automatically — no pairing ceremony
+at all. On the **free/P2P** path, nothing distinguished "pairing my own
+second device" from "pairing with a different person" — both ran through
+docs/24's household-merge algorithm exactly the same way, which is wrong
+for the solo case: every device generates its own `getLocalUserId()`
+(`identity.ts`), so a phone and tablet belonging to one person would show
+up as two different people. Concretely: `paid_by_user_id`/`owner_user_id`
+badges (docs/26) would fragment one person's spending across two fake
+household members, and accounts (D112: never merged, always moved) would
+duplicate — "Visa" from the phone and "Visa" from the tablet landing as
+two separate rows instead of being recognized as the same card.
+
+**The fix is an explicit fork at the start of pairing, not a new merge
+algorithm.** docs/24's actual data-level merge (categories dedupe by seed
+id, accounts/transactions move, budgets resolve to the greater amount) is
+unchanged either way — what differs is only which *identity* a device's
+rows carry going forward, decided before that merge runs:
+
+1. Before scanning/generating the pairing QR, the app asks: **"Is this
+   your own device, or someone else's?"**
+2. **Someone else's** → today's docs/24 behavior, unchanged. Each side
+   keeps its own `getLocalUserId()`; that becomes their distinct
+   `household_member` identity.
+3. **My own device** → identity unification instead. The *joining*
+   device overwrites its stored `getLocalUserId()` value to match the
+   device it's pairing with, rather than keeping the one it generated on
+   first launch. If the joining device already has pre-existing local
+   data (it wasn't a fresh install — it had been used standalone under
+   its own, now-being-discarded id), that data's `owner_user_id`/
+   `paid_by_user_id`/`created_by_user_id` needs rewriting to the adopted
+   id too, or every pre-existing row stays mislabeled as a different
+   "person" forever. This is the exact same shape of decision docs/05 D14
+   already made for the PowerSync path ("device joining an existing
+   account with pre-existing standalone local data: ask before merging,
+   never silently rekey or silently discard") — reused here rather than
+   inventing a second UX pattern: ask before rewriting, offer to keep the
+   device's prior data separate instead if declined.
+4. Once identity is resolved (adopted or kept distinct), docs/24's normal
+   data merge runs exactly as already designed — this step only decided
+   *whose* the rows are, not how they combine.
+
+**Accounts still don't auto-merge, even in "my own device" mode** — and
+that's a deliberate non-fix, not an oversight. There's no reliable way to
+tell "this is genuinely the same real Visa, entered independently on two
+devices" from "I happen to have two different Visas" — that's the same
+unsolved fuzzy-matching problem already flagged for merchant-string dedup
+(docs/00-backlog). Post-pairing, two "Visa" rows are still a real
+possibility, now both correctly owned by the same person — the user
+archives the duplicate manually, same as any accidental double-entry
+today. This is strictly better than the pre-pairing state (two fully
+disconnected datasets), just not fully automatic.
+
 ## Sync semantics: manual, both-sides-confirmed
 
 Unlike PowerSync's continuous background replication, P2P sync is a
@@ -159,6 +218,9 @@ to verify, not a guarantee yet).
 | D118 | Sync is a manual, user-triggered, both-sides-acked session, not continuous background replication | Matches how the user described wanting it to work; there's no always-on server for a P2P link to stay connected to anyway |
 | D119 | First sync with a new peer runs docs/24's merge algorithm; subsequent syncs are incremental via the same LWW policy docs/03 already uses for PowerSync | One conflict policy across both transports instead of two to reason about |
 | D120 | 3+ member households converge via repeated pairwise P2P syncs, not a multi-party session | Keeps the transport layer pairwise-simple; eventual consistency across a household is good enough, matching the LWW policy already in place |
+| D125 | Pairing asks "your own device, or someone else's?" before running any merge; the docs/24 data-merge algorithm itself is unchanged either way — only whether identity gets unified or kept distinct changes | Solo multi-device sync and household sharing were being conflated: every device's own `getLocalUserId()` was being treated as a distinct person unconditionally, which is correct for a different person and wrong for your own second device |
+| D126 | "My own device" mode overwrites the joining device's `getLocalUserId()` to match the device it's pairing with; pre-existing local data on the joining device gets asked-before-rewritten to the adopted id, reusing docs/05 D14's exact "ask before merging, never silently rekey or discard" pattern | A silent identity swap would either strand pre-existing rows under an orphaned id or silently relabel them; D14 already solved this shape of problem for the PowerSync path — no reason to invent a second pattern for P2P |
+| D127 | Accounts still never auto-merge in "my own device" mode, matching D112 | No reliable way to distinguish "same real account, entered on two devices" from "coincidentally same name" — same class of unsolved problem as merchant-string dedup (docs/00-backlog). Manual archive-the-duplicate is an acceptable, already-available fallback |
 
 **Not yet implemented** — design only. The QR/SDP-size question is now
 resolved by spike (D117a); the one remaining pre-implementation unknown is
