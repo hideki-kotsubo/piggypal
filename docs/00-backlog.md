@@ -100,6 +100,52 @@ it needs doing.
       already gives every device the same server `user_id` and PowerSync
       keeps them in sync automatically, no pairing ceremony at all.
       Design only — no code changes from this addendum.
+      2026-08-14, later still: a UI sketch for the pairing flow itself
+      (docs/27-p2p-pairing-ui-sketch.md, D128-D131,
+      `docs/artifacts/piggypal-p2p-pairing.html`) — Settings entry point,
+      the own-device-vs-someone-else fork as two full-screen cards, both
+      sides of the QR exchange, the D126 merge prompt, and the both-sides
+      -acked confirmed state.
+      2026-08-14, same day, later still: the pairing prototype itself is
+      real. New: `app/src/lib/pairing.ts` (pure WebRTC offer/answer/
+      data-channel logic, no QR/camera involved — directly testable),
+      `PairingScreen.tsx` (the choice → show/scan → synced flow from
+      docs/27), `peers.ts` (a minimal localStorage peer list — just enough
+      for frame 1/5, not the fully-designed feature docs/25 flags as
+      still open), and a `qrcode`/`qr-scanner` dependency pair for QR
+      generation and camera-based scanning. Wired into Settings under a
+      new "Sync" section. One real deviation from the docs/27 sketch
+      surfaced during the build: a real handshake needs both devices to
+      show *and* scan (whoever goes first shows-then-scans, the other
+      scans-then-shows-back), so there's an added "who goes first" choice
+      the sketch didn't draw — flagged in `PairingScreen.tsx`'s own
+      comment. Verified, not just typed-checked: two real
+      `RTCPeerConnection`s completing an actual handshake with a correct
+      hello/ack (D118, concretely — see `exchangeHello`), a generated QR
+      round-tripping through a real decode back to the exact original
+      payload, and the full click-through UI (both role branches, camera
+      permission + fake-device video, both themes) rendering with zero
+      console errors. `tsc -b`/`oxlint` clean.
+      Deliberately not done: D125-D127's actual identity unification
+      (the "own device" choice is captured but doesn't yet rewrite
+      `getLocalUserId()` or merge pre-existing data — frame 4's D126
+      sheet isn't wired up) and docs/24's real data merge — "Synced" today
+      confirms the connection and handshake are real, not that any
+      transaction/account/category data moved. Also still open: real
+      two-device physical QR-scan reliability (a fake-video-device test
+      isn't the same as a camera reading a real screen — docs/25's own
+      flagged unknown, unchanged), and peer management beyond a bare list
+      (no rename/forget/manual re-sync).
+      2026-08-14, confirmed on real hardware: the user tested an actual
+      connection, which established successfully — and found level-M QR
+      density slow for a weaker device's camera to resolve, answering
+      docs/25's own previously-flagged-but-unverified "physical scan
+      reliability" question for real (D132). Fixed by dropping to
+      error-correction level L at a larger render size, the exact
+      mitigation docs/25 had already named as the right first move: for a
+      real ~650-byte offer this takes the code from a 93×93 module grid to
+      85×85, each module ~28% physically larger at the same render width.
+      Decode correctness reverified after the change.
 - [ ] "Merge account" as its own explicit action, not only something that
       happens automatically at pairing time — flagged 2026-08-14, future
       work, not designed. Idea: a standalone Settings entry point (paid

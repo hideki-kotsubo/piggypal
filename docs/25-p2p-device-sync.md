@@ -222,7 +222,40 @@ to verify, not a guarantee yet).
 | D126 | "My own device" mode overwrites the joining device's `getLocalUserId()` to match the device it's pairing with; pre-existing local data on the joining device gets asked-before-rewritten to the adopted id, reusing docs/05 D14's exact "ask before merging, never silently rekey or discard" pattern | A silent identity swap would either strand pre-existing rows under an orphaned id or silently relabel them; D14 already solved this shape of problem for the PowerSync path — no reason to invent a second pattern for P2P |
 | D127 | Accounts still never auto-merge in "my own device" mode, matching D112 | No reliable way to distinguish "same real account, entered on two devices" from "coincidentally same name" — same class of unsolved problem as merchant-string dedup (docs/00-backlog). Manual archive-the-duplicate is an acceptable, already-available fallback |
 
-**Not yet implemented** — design only. The QR/SDP-size question is now
-resolved by spike (D117a); the one remaining pre-implementation unknown is
-physical two-device scan reliability at the module densities measured
-above, not data size.
+**Partially implemented, 2026-08-14.** The transport and the docs/27
+pairing UI are real: `app/src/lib/pairing.ts` (pure WebRTC offer/answer/
+data-channel logic — no QR/camera code, so it's directly testable) plus
+`PairingScreen.tsx` (the choice → show/scan → synced flow, wired into
+Settings). QR generation (`qrcode`) and camera scanning (`qr-scanner`) are
+real dependencies, not stubs. Verified: two real `RTCPeerConnection`s
+completing a genuine handshake with a correct hello/ack exchange (D118,
+made concrete — see `exchangeHello` in `pairing.ts`), a generated QR
+round-tripping through an actual decode back to the exact original
+payload, and the full click-through UI (including camera permission +
+fake-device video) rendering with no console errors in both themes.
+
+**Still not implemented, deliberately deferred**: D125-D127's identity
+unification itself (the "own device" choice is captured in the UI but
+doesn't yet rewrite `getLocalUserId()` or prompt to merge pre-existing
+data — frame 4's D126 merge sheet isn't wired up) and docs/24's actual
+data merge (categories/accounts/transactions/budgets) — "Synced" today
+means the connection and handshake are real, not that any transaction
+data moved. Also still open: remembering peers beyond one localStorage
+list with no manage/forget UI, and relay-assisted remote signaling
+(unchanged from before, still explicitly out of scope).
+
+**The physical scan-reliability question is answered — the flagged risk
+was real.** The user tested on actual hardware (not a fake-video-device
+simulation): a real connection established successfully, but level-M
+density was slow for a weaker device's camera to resolve. Fixed by taking
+the exact mitigation this doc already named as the right first move
+(D117a) before it was known to be needed: dropped to error-correction
+level L and increased the rendered size. For a real ~650-byte offer, that
+took the code from a 93×93 module grid to 85×85 — fewer modules *and*
+~28% more physical size per module at the same render width (measured:
+2.58px → 3.29px per module). Decode correctness reverified after the
+change (D132).
+
+| # | Decision | Why |
+|---|---|---|
+| D132 | QR generation uses error-correction level L (not M) at a larger render size, confirmed by a real-device test that level M was slow to scan on weaker hardware | Closes D117a's flagged-but-unverified risk with a real answer instead of a computed one; L was already the named mitigation, just not yet known to be necessary until tested |

@@ -1,11 +1,27 @@
 import { Link } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { ACCOUNT_PICKER_SCALE_THRESHOLD, useAccountPickerMode, useThemeMode } from '../lib/settings';
+import { usePairedPeers } from '../lib/peers';
+
+// "synced just now" / "N minutes/hours ago" — finer-grained than
+// format.ts's formatRelativeDate (which only resolves to whole calendar
+// days), needed here since a peer synced 20 minutes ago and one synced
+// yesterday should read differently, not both collapse to "today".
+function formatSyncedAgo(iso: string): string {
+  const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  const days = Math.round(hours / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
+}
 
 export function SettingsScreen() {
   const store = useStore();
   const [pickerMode, setPickerMode] = useAccountPickerMode();
   const [themeMode, setThemeMode] = useThemeMode();
+  const [peers] = usePairedPeers();
   // docs/13 D69 — only surface this once it'd actually do something,
   // rather than a control that's a no-op below the threshold.
   const showPickerModeSetting = store.accounts.filter((a) => !a.archived).length > ACCOUNT_PICKER_SCALE_THRESHOLD;
@@ -39,6 +55,27 @@ export function SettingsScreen() {
           <span className="settings-row-arrow">›</span>
         </Link>
       </div>
+
+      <div className="section-label">Sync</div>
+      <div className="accounts-list">
+        <Link to="/settings/pair" className="settings-row">
+          <span>+ Connect a device</span>
+          <span className="settings-row-arrow">›</span>
+        </Link>
+      </div>
+      {peers.length > 0 && (
+        <>
+          <div className="section-label">Paired devices</div>
+          <div className="accounts-list">
+            {peers.map((p) => (
+              <div key={p.id} className="settings-row settings-row-static">
+                <span>{p.label}</span>
+                <span style={{ color: 'var(--ink-faint)', fontSize: '0.8rem' }}>synced {formatSyncedAgo(p.lastSyncedAt)}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       <div className="section-label">Appearance</div>
       <div className="chip-row settings-chip-row">

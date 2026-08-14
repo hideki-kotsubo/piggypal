@@ -13,6 +13,7 @@ import { InboxScreen } from './components/InboxScreen'
 import { AccountsScreen } from './components/AccountsScreen'
 import { CategoriesScreen } from './components/CategoriesScreen'
 import { SettingsScreen } from './components/SettingsScreen'
+import { PairingScreen } from './components/PairingScreen'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -24,6 +25,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/transactions/:id" element={<TransactionScreen />} />
           <Route path="/inbox" element={<InboxScreen />} />
           <Route path="/settings" element={<SettingsScreen />} />
+          <Route path="/settings/pair" element={<PairingScreen />} />
           <Route path="/accounts" element={<AccountsScreen />} />
           <Route path="/categories" element={<CategoriesScreen />} />
         </Routes>

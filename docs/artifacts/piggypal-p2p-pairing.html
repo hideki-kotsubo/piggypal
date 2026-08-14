@@ -1,0 +1,417 @@
+<title>P2P Device Pairing</title>
+<style>
+  :root {
+    --bg: #eef0ea;
+    --surface: #ffffff;
+    --surface-sunken: #f4f5f0;
+    --ink: #1e211c;
+    --ink-muted: #5c6259;
+    --ink-faint: #8b9186;
+    --line: #dadedb;
+    --accent: #3f7d69;
+    --accent-ink: #ffffff;
+    --accent-soft: #dceae3;
+    --warn: #b8752e;
+    --warn-soft: #f3e3d0;
+    --danger: #a8503f;
+    --shadow: 0 30px 60px -25px rgba(30, 33, 28, 0.35);
+
+    --serif: Charter, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141713; --surface: #1d211b; --surface-sunken: #171a15;
+      --ink: #edeee7; --ink-muted: #9ba398; --ink-faint: #6b7267;
+      --line: #2c322a; --accent: #6fbfa0; --accent-ink: #0f1512;
+      --accent-soft: #24352c; --warn: #d99a52; --warn-soft: #3a2c1c;
+      --danger: #c97462;
+      --shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141713; --surface: #1d211b; --surface-sunken: #171a15;
+    --ink: #edeee7; --ink-muted: #9ba398; --ink-faint: #6b7267;
+    --line: #2c322a; --accent: #6fbfa0; --accent-ink: #0f1512;
+    --accent-soft: #24352c; --warn: #d99a52; --warn-soft: #3a2c1c;
+    --danger: #c97462;
+    --shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.6);
+  }
+  :root[data-theme="light"] {
+    --bg: #eef0ea; --surface: #ffffff; --surface-sunken: #f4f5f0;
+    --ink: #1e211c; --ink-muted: #5c6259; --ink-faint: #8b9186;
+    --line: #dadedb; --accent: #3f7d69; --accent-ink: #ffffff;
+    --accent-soft: #dceae3; --warn: #b8752e; --warn-soft: #f3e3d0;
+    --danger: #a8503f;
+    --shadow: 0 30px 60px -25px rgba(30, 33, 28, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+  body { overflow-x: hidden; }
+
+  .page { max-width: 1180px; margin: 0 auto; padding: 4rem 1.5rem 6rem; }
+
+  .intro { max-width: 42rem; margin-bottom: 2.4rem; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.09em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 0.9rem;
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 500; font-size: clamp(1.9rem, 4vw, 2.6rem);
+    line-height: 1.15; letter-spacing: -0.01em; text-wrap: balance; margin: 0 0 0.9rem;
+  }
+  .lede { font-size: 1.02rem; line-height: 1.6; color: var(--ink-muted); margin: 0 0 0.9rem; max-width: 40rem; }
+  .lede b { color: var(--ink); font-weight: 600; }
+  .lede code { font-family: var(--mono); font-size: 0.88em; background: var(--surface-sunken); border: 1px solid var(--line); border-radius: 4px; padding: 0.05em 0.35em; }
+
+  .scope-note {
+    display: flex; gap: 0.6rem; align-items: flex-start; max-width: 40rem;
+    background: var(--warn-soft); border-radius: 12px; padding: 0.7rem 0.9rem;
+    font-size: 0.85rem; line-height: 1.55; color: var(--ink);
+  }
+  .scope-note b { color: var(--ink); }
+
+  .stage {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2.5rem 2rem;
+    align-items: start;
+    max-width: 1180px;
+    margin-top: 3rem;
+  }
+  @media (max-width: 980px) {
+    .stage { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 640px; margin: 3rem auto 0; }
+  }
+  @media (max-width: 620px) {
+    .stage { grid-template-columns: 1fr; max-width: 24rem; }
+  }
+
+  .frame-block { margin: 0; }
+  .frame-step {
+    font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink-faint); display: block; margin-bottom: 0.3rem;
+  }
+  .frame-title { font-weight: 600; font-size: 1rem; margin: 0 0 0.25rem; }
+  .frame-sub { font-size: 0.87rem; color: var(--ink-muted); margin: 0; line-height: 1.5; }
+
+  .phone {
+    position: relative; width: 100%; max-width: 280px; margin: 1.4rem auto 0;
+    border-radius: 34px; background-color: var(--ink); padding: 10px; box-shadow: var(--shadow);
+  }
+  .phone .notch {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 84px; height: 18px; background: var(--ink); border-radius: 0 0 12px 12px; z-index: 2;
+  }
+  .screen {
+    position: relative; background: var(--surface); border-radius: 26px;
+    overflow: hidden; min-height: 560px; display: flex; flex-direction: column;
+  }
+
+  .app-bar {
+    display: flex; align-items: center; justify-content: space-between; padding: 1.6rem 1.1rem 0.9rem;
+  }
+  .wordmark { font-family: var(--serif); font-weight: 600; font-size: 1.05rem; letter-spacing: -0.01em; }
+  .back { font-size: 0.8rem; color: var(--ink-muted); }
+  .add-btn {
+    width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center; color: var(--ink-muted); font-size: 0.85rem;
+  }
+
+  .section-label {
+    font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--ink-faint); margin: 0.9rem 1.1rem 0.4rem;
+  }
+
+  /* ---- entry point: sync settings row + peer list ---- */
+  .settings-list { margin: 0 1.1rem; }
+  .settings-row {
+    display: flex; justify-content: space-between; align-items: center; padding: 0.85rem 0;
+    border-bottom: 1px solid var(--line); font-size: 0.9rem;
+  }
+  .sync-cta {
+    margin: 0.3rem 1.1rem 1rem; padding: 0.75rem 0.9rem; border-radius: 12px;
+    background: var(--accent-soft); color: var(--accent); font-weight: 600; font-size: 0.87rem;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .peer-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0; border-bottom: 1px solid var(--line); }
+  .peer-row:last-child { border-bottom: none; }
+  .peer-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+  .peer-main { display: flex; flex-direction: column; min-width: 0; }
+  .peer-name { font-size: 0.87rem; }
+  .peer-meta { font-family: var(--mono); font-size: 0.66rem; color: var(--ink-faint); margin-top: 0.1rem; }
+
+  /* ---- the choice: own device vs someone else ---- */
+  .choice-stack { margin: 1rem 1.1rem; display: flex; flex-direction: column; gap: 0.7rem; }
+  .choice-card {
+    border: 1px solid var(--line); border-radius: 14px; padding: 0.9rem 1rem;
+    background: var(--surface-sunken); display: flex; flex-direction: column; gap: 0.25rem;
+  }
+  .choice-card.picked { background: var(--accent-soft); border-color: var(--accent); }
+  .choice-icon { font-size: 1.15rem; }
+  .choice-title { font-weight: 600; font-size: 0.92rem; }
+  .choice-sub { font-size: 0.78rem; color: var(--ink-muted); line-height: 1.45; }
+
+  /* ---- QR show / scan ---- */
+  .qr-stage { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1rem 1.4rem; gap: 1rem; }
+  .qr-box {
+    width: 168px; height: 168px; border-radius: 14px; background:
+      repeating-conic-gradient(var(--ink) 0% 25%, var(--surface) 0% 50%) 0 0 / 14px 14px;
+    border: 1px solid var(--line);
+  }
+  .qr-caption { font-size: 0.85rem; color: var(--ink-muted); text-align: center; max-width: 16rem; line-height: 1.5; }
+  .qr-status {
+    font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.04em; color: var(--accent);
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+  .pulse-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+  .offline-note {
+    font-size: 0.72rem; color: var(--ink-faint); display: flex; align-items: center; gap: 0.35rem;
+  }
+
+  .camera-view {
+    position: relative; width: 100%; flex: 1; background: #10120f; display: flex; align-items: center; justify-content: center;
+  }
+  .scan-target {
+    width: 150px; height: 150px; border: 2px dashed rgba(255,255,255,0.55); border-radius: 14px;
+  }
+  .camera-caption {
+    position: absolute; bottom: 1.2rem; left: 0; right: 0; text-align: center;
+    font-size: 0.78rem; color: rgba(255,255,255,0.85);
+  }
+
+  /* ---- merge-prompt sheet ---- */
+  .sheet-overlay {
+    position: absolute; inset: 0; background: rgba(15, 17, 13, 0.55);
+    display: flex; align-items: flex-end; z-index: 4;
+  }
+  .sheet {
+    width: 100%; background: var(--surface); border-radius: 20px 20px 0 0; padding: 1.1rem 1.1rem 1.3rem;
+    box-shadow: 0 -12px 30px -12px rgba(0,0,0,0.35);
+  }
+  .sheet-title { font-weight: 600; font-size: 0.95rem; margin: 0 0 0.4rem; }
+  .sheet-body { font-size: 0.83rem; color: var(--ink-muted); line-height: 1.55; margin: 0 0 1rem; }
+  .sheet-actions { display: flex; flex-direction: column; gap: 0.55rem; }
+  .sheet-btn {
+    text-align: center; padding: 0.65rem; border-radius: 10px; font-size: 0.85rem; font-weight: 600;
+  }
+  .sheet-btn.primary { background: var(--accent); color: var(--accent-ink); }
+  .sheet-btn.secondary { background: var(--surface-sunken); color: var(--ink); border: 1px solid var(--line); }
+
+  /* ---- synced confirmation ---- */
+  .confirm-stage { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.9rem; padding: 1rem; }
+  .confirm-check {
+    width: 52px; height: 52px; border-radius: 50%; background: var(--accent); color: var(--accent-ink);
+    display: flex; align-items: center; justify-content: center; font-size: 1.4rem;
+  }
+  .confirm-title { font-weight: 600; font-size: 0.98rem; }
+  .confirm-sub { font-size: 0.82rem; color: var(--ink-muted); text-align: center; max-width: 15rem; line-height: 1.5; }
+
+  /* ---- callout pins + legend ---- */
+  .pin {
+    position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--ink);
+    color: var(--surface); font-size: 0.66rem; font-weight: 700; display: flex; align-items: center;
+    justify-content: center; box-shadow: 0 0 0 3px var(--surface); z-index: 5;
+  }
+  .legend { list-style: none; margin: 1.1rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.55rem; }
+  .legend li { display: flex; gap: 0.55rem; font-size: 0.83rem; line-height: 1.45; color: var(--ink-muted); }
+  .legend .num {
+    flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; background: var(--ink); color: var(--surface);
+    font-size: 0.63rem; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 0.1rem;
+  }
+  .legend b { color: var(--ink); font-weight: 600; }
+  .legend code { font-family: var(--mono); font-size: 0.85em; }
+</style>
+
+<div class="page">
+  <header class="intro">
+    <p class="eyebrow">piggypal &middot; P2P device pairing, UI sketch</p>
+    <h1>What pairing two devices actually looks like</h1>
+    <p class="lede">
+      docs/25 locked the transport (WebRTC + QR-code signaling) and docs/25
+      D125-D127 locked the identity fork ("your own device, or someone
+      else's?"), but nothing yet showed what a person actually taps
+      through. Five frames: the entry point, the fork itself, both sides of
+      the QR exchange, the own-device merge prompt, and the confirmed state.
+    </p>
+    <div class="scope-note">
+      <span>&#9888;</span>
+      <span><b>Not in scope here</b>: relay-assisted remote signaling (docs/25 explicitly defers this &mdash; every frame below assumes both devices are physically together), peer
+      rename/forget management (docs/25: "needed for a real UI but not designed here"), and the actual WebRTC/camera code &mdash; this is the screen sequence only, not the implementation.</span>
+    </div>
+  </header>
+
+  <section class="stage">
+    <!-- FRAME 1: ENTRY POINT -->
+    <figure class="frame-block">
+      <div class="frame-head">
+        <span class="frame-step">01 &middot; settings</span>
+        <h2 class="frame-title">One entry point for every pairing</h2>
+        <p class="frame-sub">Same "Connect a device" action whether it's your own second device, a first-time household pairing, or a peer you've already paired before.</p>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="pin" style="top: 108px; left: 14px;">1</div>
+          <div class="pin" style="top: 210px; left: 14px;">2</div>
+          <div class="app-bar"><span class="back">&larr; Back</span><span class="wordmark">Settings</span><span style="width:26px;"></span></div>
+          <div class="section-label">sync</div>
+          <div class="sync-cta"><span>+ Connect a device</span><span>&rsaquo;</span></div>
+          <div class="section-label">paired devices</div>
+          <div class="settings-list">
+            <div class="peer-row">
+              <span class="peer-dot"></span>
+              <div class="peer-main">
+                <span class="peer-name">Bob's phone</span>
+                <span class="peer-meta">synced 2 hours ago</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ol class="legend">
+        <li><span class="num">1</span><span><b>"Connect a device"</b> is the single entry point into everything that follows &mdash; frame 2's fork happens immediately after tapping it.</span></li>
+        <li><span class="num">2</span><span>A previously-paired peer with a last-synced time. Shown here just to establish the entry point has a "returning" state &mdash; the row's own tap behavior (re-sync now vs. manage/forget) isn't designed, per docs/25's own note.</span></li>
+      </ol>
+    </figure>
+
+    <!-- FRAME 2: THE CHOICE -->
+    <figure class="frame-block">
+      <div class="frame-head">
+        <span class="frame-step">02 &middot; the fork</span>
+        <h2 class="frame-title">Asked before anything else connects</h2>
+        <p class="frame-sub">docs/25 D125 &mdash; this single choice decides whether identity gets unified (own device) or kept distinct (a household member), before any QR is even shown.</p>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="pin" style="top: 175px; left: 14px;">3</div>
+          <div class="pin" style="top: 280px; left: 14px;">4</div>
+          <div class="app-bar"><span class="back">&larr; Cancel</span></div>
+          <div class="section-label">who are you connecting with?</div>
+          <div class="choice-stack">
+            <div class="choice-card">
+              <span class="choice-icon">&#128241;&#128242;</span>
+              <span class="choice-title">This is my own device</span>
+              <span class="choice-sub">Phone, tablet, laptop &mdash; all you. Everything on the new device becomes yours too.</span>
+            </div>
+            <div class="choice-card picked">
+              <span class="choice-icon">&#128101;</span>
+              <span class="choice-title">Someone else's device</span>
+              <span class="choice-sub">A partner, roommate, or family member. You'll each keep your own identity, sharing one household.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ol class="legend">
+        <li><span class="num">3</span><span><b>"My own device"</b> &mdash; leads to identity unification (frame 4's merge prompt can follow). No badges, no "logged by" distinction ever appears for data merged this way &mdash; it's all just you.</span></li>
+        <li><span class="num">4</span><span><b>"Someone else's device"</b> &mdash; runs docs/24's household-merge unchanged; this is the path that eventually produces docs/26's payer badges.</span></li>
+      </ol>
+    </figure>
+
+    <!-- FRAME 3: SHOW YOUR CODE -->
+    <figure class="frame-block">
+      <div class="frame-head">
+        <span class="frame-step">03 &middot; this device</span>
+        <h2 class="frame-title">Show this to the other device</h2>
+        <p class="frame-sub">docs/25's spike confirmed a real offer fits comfortably in this code &mdash; no server, no internet required to get this far.</p>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="pin" style="top: 195px; left: 14px;">5</div>
+          <div class="pin" style="top: 400px; left: 14px;">6</div>
+          <div class="app-bar"><span class="back">&larr; Cancel</span></div>
+          <div class="qr-stage">
+            <div class="qr-box"></div>
+            <p class="qr-caption">Have the other device scan this code.</p>
+            <div class="qr-status"><span class="pulse-dot"></span>Waiting for scan&hellip;</div>
+            <div class="offline-note">&#9889; Works with no internet connection</div>
+          </div>
+        </div>
+      </div>
+      <ol class="legend">
+        <li><span class="num">5</span><span>The code encodes this device's WebRTC offer &mdash; regenerated fresh each pairing attempt, never reused (docs/25's spike measured real offers at 586-1005 bytes, well within one code's capacity).</span></li>
+        <li><span class="num">6</span><span><b>"Waiting for scan"</b> is a live status, not a spinner with no meaning &mdash; it clears the moment the other device's answer comes back in frame 4.</span></li>
+      </ol>
+    </figure>
+
+    <!-- FRAME 4: SCAN + MERGE PROMPT -->
+    <figure class="frame-block">
+      <div class="frame-head">
+        <span class="frame-step">04 &middot; the other device</span>
+        <h2 class="frame-title">Scan, then confirm what happens to existing data</h2>
+        <p class="frame-sub">docs/25 D126 &mdash; only appears in "my own device" mode, and only if this device already had standalone data. Mirrors docs/05 D14's existing pattern exactly.</p>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="pin" style="top: 90px; left: 200px;">7</div>
+          <div class="pin" style="top: 300px; left: 200px;">8</div>
+          <div class="camera-view">
+            <div class="scan-target"></div>
+            <p class="camera-caption">Point at the other device's code</p>
+          </div>
+          <div class="sheet-overlay">
+            <div class="sheet">
+              <p class="sheet-title">Merge this device's data?</p>
+              <p class="sheet-body">This device has 5 existing transactions and 2 accounts, created before pairing. Merge them into your account, or keep them separate?</p>
+              <div class="sheet-actions">
+                <div class="sheet-btn primary">Merge into my account</div>
+                <div class="sheet-btn secondary">Keep this device separate</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ol class="legend">
+        <li><span class="num">7</span><span>Connection succeeds the instant both codes are exchanged &mdash; the camera view is what's briefly visible underneath before the sheet appears.</span></li>
+        <li><span class="num">8</span><span><b>Never silent either way</b> &mdash; "Keep separate" doesn't discard anything, same non-destructive default docs/05 D14 already established for the PowerSync path. A fresh device with no prior data skips this sheet entirely.</span></li>
+      </ol>
+    </figure>
+
+    <!-- FRAME 5: SYNCED -->
+    <figure class="frame-block">
+      <div class="frame-head">
+        <span class="frame-step">05 &middot; both sides</span>
+        <h2 class="frame-title">Confirmed once, not per side</h2>
+        <p class="frame-sub">docs/25 D118 &mdash; this only shows once both devices have acked. Every sync after this first one is one tap on the entry point's peer row, no fork or QR again.</p>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="pin" style="top: 250px; left: 200px;">9</div>
+          <div class="pin" style="top: 420px; left: 14px;">10</div>
+          <div class="app-bar"><span class="wordmark">Settings</span></div>
+          <div class="confirm-stage">
+            <div class="confirm-check">&#10003;</div>
+            <p class="confirm-title">Synced with this device</p>
+            <p class="confirm-sub">All data exchanged and confirmed on both sides.</p>
+          </div>
+          <div class="section-label">paired devices</div>
+          <div class="settings-list">
+            <div class="peer-row">
+              <span class="peer-dot"></span>
+              <div class="peer-main">
+                <span class="peer-name">Bob's phone</span>
+                <span class="peer-meta">synced 2 hours ago</span>
+              </div>
+            </div>
+            <div class="peer-row">
+              <span class="peer-dot"></span>
+              <div class="peer-main">
+                <span class="peer-name">This device</span>
+                <span class="peer-meta">synced just now</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ol class="legend">
+        <li><span class="num">9</span><span>The checkmark state is the visible half of D118's "both acks in" rule &mdash; a connection that dropped mid-sync never reaches this screen (docs/25's own open question: what that retry looks like isn't designed yet).</span></li>
+        <li><span class="num">10</span><span>Back on frame 1's list, now with a second entry &mdash; this is what makes every sync after the first a one-tap action instead of repeating frames 2-4.</span></li>
+      </ol>
+    </figure>
+  </section>
+</div>
