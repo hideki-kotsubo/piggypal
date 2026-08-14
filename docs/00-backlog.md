@@ -146,6 +146,22 @@ it needs doing.
       real ~650-byte offer this takes the code from a 93×93 module grid to
       85×85, each module ~28% physically larger at the same render width.
       Decode correctness reverified after the change.
+      Still slow after that — the user's next observation. The remaining
+      lever was the payload itself, not the QR settings: `pairing.ts` was
+      JSON-wrapping the SDP (`{"sdp":"...","type":"offer"}`), which costs
+      bytes two ways — the wrapper structure, and JSON escaping every
+      `\r\n` line-ending as four literal characters instead of two raw
+      bytes. Fixed by dropping the wrapper (`type` is now passed from
+      context instead of traveling in the payload — whoever's decoding
+      already knows whether it's an offer or an answer) and collapsing
+      CRLF to bare LF before encoding, restored on decode. Confirmed
+      empirically, not assumed, that browsers' SDP parsers accept the
+      LF-only encoding despite the spec calling for CRLF (D133) — a real
+      connection + hello/ack still completed correctly. Measured: 647 →
+      569 bytes (12%), 85×85 → 81×81 modules, 3.29px → 3.46px per module —
+      each module now ~34% larger than the original level-M/JSON encoding
+      this feature shipped with, stacking on top of D132's fix. Decode
+      correctness reverified again.
 - [ ] "Merge account" as its own explicit action, not only something that
       happens automatically at pairing time — flagged 2026-08-14, future
       work, not designed. Idea: a standalone Settings entry point (paid

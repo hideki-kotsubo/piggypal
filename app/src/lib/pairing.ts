@@ -37,12 +37,23 @@ function waitForChannelOpen(channel: RTCDataChannel): Promise<RTCDataChannel> {
   });
 }
 
+// docs/25 D132's real-device finding — QR scan speed on weaker cameras is
+// sensitive to every byte, not just the error-correction/render-size
+// knobs already tuned. Two sources of pure encoding overhead removed
+// here, on top of that: no JSON wrapper (the `type` field never needs to
+// travel — whoever's decoding already knows from context whether they're
+// reading an offer or an answer, so it's passed as a parameter instead),
+// and CRLF stripped to bare LF before encoding (SDP requires CRLF per
+// spec, but browsers' own SDP parsers accept bare LF in practice — this
+// alone saves 1 byte per line, and avoiding JSON.stringify's escaping of
+// \r\n as four literal characters saves another 2 bytes per line on top
+// of that). Restored on decode; the wire format is otherwise unchanged.
 function encodeDescription(desc: RTCSessionDescription): string {
-  return JSON.stringify({ sdp: desc.sdp, type: desc.type });
+  return desc.sdp.replace(/\r\n/g, '\n');
 }
 
-function decodeDescription(payload: string): RTCSessionDescriptionInit {
-  return JSON.parse(payload) as RTCSessionDescriptionInit;
+function decodeDescription(payload: string, type: RTCSdpType): RTCSessionDescriptionInit {
+  return { sdp: payload.replace(/\n/g, '\r\n'), type };
 }
 
 export interface OfferSession {
@@ -87,7 +98,7 @@ export async function answerOffer(offerPayload: string): Promise<AnswerSession> 
     );
   });
 
-  await pc.setRemoteDescription(decodeDescription(offerPayload));
+  await pc.setRemoteDescription(decodeDescription(offerPayload, 'offer'));
   const answer = await pc.createAnswer();
   await pc.setLocalDescription(answer);
   await waitForIceGatheringComplete(pc);
@@ -100,7 +111,7 @@ export async function answerOffer(offerPayload: string): Promise<AnswerSession> 
 // handshake. From here, `session.channelPromise` resolves once ICE/DTLS
 // actually finishes, same as the answering side.
 export async function completeOffer(session: OfferSession, answerPayload: string): Promise<void> {
-  await session.pc.setRemoteDescription(decodeDescription(answerPayload));
+  await session.pc.setRemoteDescription(decodeDescription(answerPayload, 'answer'));
 }
 
 // docs/25 D118's "both sides confirm" made concrete at the smallest

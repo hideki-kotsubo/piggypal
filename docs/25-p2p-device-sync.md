@@ -256,6 +256,27 @@ took the code from a 93×93 module grid to 85×85 — fewer modules *and*
 2.58px → 3.29px per module). Decode correctness reverified after the
 change (D132).
 
+Still slow after that fix — the user's next observation. The remaining
+lever wasn't QR settings at all, it was the payload itself: `encodeDescription`/
+`decodeDescription` in `pairing.ts` were wrapping the SDP in
+`JSON.stringify({ sdp, type })`, which costs bytes two ways — the
+`{"sdp":"...","type":"offer"}` structure itself, and JSON escaping every
+`\r\n` line-ending in the SDP as four literal characters instead of the
+two raw bytes they are. Fixed by dropping the JSON wrapper entirely
+(`type` never needs to travel — `answerOffer` always decodes an offer,
+`completeOffer` always decodes an answer, so it's passed as a parameter
+from context instead) and stripping CRLF to bare LF before encoding,
+restored on decode. SDP officially requires CRLF per spec, but browsers'
+own parsers accept bare LF in practice — confirmed empirically, not
+assumed: a real `setLocalDescription`/`setRemoteDescription` round trip
+with the LF-only encoding still completed a genuine connection and
+hello/ack exchange correctly (D133). Measured effect on a real offer: 647
+→ 569 bytes (12%), 85×85 → 81×81 modules, 3.29px → 3.46px per module —
+stacked on top of D132's fix, each module is now ~34% larger than the
+original level-M/JSON encoding this doc shipped with. Decode correctness
+reverified again after the change.
+
 | # | Decision | Why |
 |---|---|---|
 | D132 | QR generation uses error-correction level L (not M) at a larger render size, confirmed by a real-device test that level M was slow to scan on weaker hardware | Closes D117a's flagged-but-unverified risk with a real answer instead of a computed one; L was already the named mitigation, just not yet known to be necessary until tested |
+| D133 | The offer/answer payload is the raw SDP with CRLF collapsed to LF, not JSON-wrapped with an explicit `type` field | Removes pure encoding overhead (JSON structure + escaping) with no loss of information — `type` is always known from which step of the flow is decoding, and browsers accept LF-only SDP in `set{Local,Remote}Description` despite the spec calling for CRLF, confirmed with a real connection test, not assumed |
