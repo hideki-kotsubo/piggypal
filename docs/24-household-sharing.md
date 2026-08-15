@@ -205,13 +205,26 @@ UI doesn't crash. `db/schema.sql` mirrors the same three columns for
 consistency (no FK to `users`, matching `user_id`'s own existing
 convention in that file).
 
-**Deliberately not done in this pass**: `household_id` on any table —
-`schema.ts`'s own stated principle ("a single device's local DB only ever
-holds one user's data... add sync-partition columns when sync begins, not
-before") applies to `household_id` exactly as it did to `user_id`, so it
-stays out of the local schema until there's an actual second household
-member to partition against. Also not done: the `households`/
-`household_members` Postgres tables, sync rule changes, API validation,
-the merge algorithm's actual code, and any UI surface for
-owner/payer/creator (correctly invisible per D110 until a household has
-2+ members).
+**The merge algorithm itself is now real too, 2026-08-14** — via docs/25's
+P2P transport, not the still-unbuilt PowerSync/households path.
+`store.applyPeerDataset()` implements every rule above (categories by id,
+accounts/transactions always moved, budgets resolve to the greater
+amount) directly against local SQLite, with no `household_id` column
+involved — the local schema was never going to get one (see below), and
+it turns out the merge rules don't actually need it: they apply just as
+well to "this device's plain table set" as they would to a
+`household_id`-partitioned bucket. docs/25's own updated status has the
+full implementation and verification details, including D125-D127's
+identity unification (also now real, not just captured-but-inert).
+
+**Deliberately not done**: `household_id` on any table — `schema.ts`'s
+own stated principle ("a single device's local DB only ever holds one
+user's data... add sync-partition columns when sync begins, not before")
+applies to `household_id` exactly as it did to `user_id`, and the P2P
+merge's success without it suggests it may never be needed locally, only
+server-side once PowerSync sync exists. Also not done: the `households`/
+`household_members` Postgres tables, sync rule changes, API validation —
+all still specifically about the PowerSync/paid path, untouched by this
+pass — and any UI surface for owner/payer/creator (correctly invisible
+per D110 until a household has 2+ members; docs/26 has the sketch for
+when that UI does get built).

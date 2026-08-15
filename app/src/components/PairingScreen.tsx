@@ -1,23 +1,22 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
 import QrScanner from 'qr-scanner';
-import { answerOffer, completeOffer, exchangeHello, startOffer } from '../lib/pairing';
+import { answerOffer, completeOffer, exchangeHello, exchangeJson, startOffer } from '../lib/pairing';
 import type { AnswerSession, OfferSession } from '../lib/pairing';
+import { getLocalUserId } from '../lib/identity';
 import { usePairedPeers } from '../lib/peers';
+import { useStore } from '../lib/store';
+import type { MergeSummary, PeerDataset } from '../lib/types';
 
-// docs/27's sketch (frames 2-5), implemented for real. One deliberate
-// deviation from the sketch, flagged when this was built: the sketch drew
-// "show your code" and "scan + confirm" as two different devices' single
-// screens. A real handshake needs *both* devices to both show and scan —
-// whoever goes first shows-then-scans, the other scans-then-shows-back —
-// so this adds a "who goes first" choice the sketch simplified away.
-//
-// docs/25 D125-D127 (own-device identity unification) and docs/24's
-// actual data merge are explicitly NOT implemented here yet — this proves
-// the transport and the UI flow. "Synced" below means the two devices
-// really connected and confirmed a hello/ack over a real WebRTC data
-// channel (D118), not that any transaction/account/category data moved.
+// docs/27's sketch (frames 2-5), implemented for real, now with docs/24's
+// actual merge wired in (previously stubbed — see docs/00-backlog). One
+// deliberate deviation from the sketch, flagged when this was first
+// built: the sketch drew "show your code" and "scan + confirm" as two
+// different devices' single screens. A real handshake needs *both*
+// devices to both show and scan — whoever goes first shows-then-scans,
+// the other scans-then-shows-back — so this adds a "who goes first"
+// choice the sketch simplified away.
 
 type IdentityChoice = 'own-device' | 'someone-else';
 type Role = 'show-first' | 'scan-first';
@@ -29,8 +28,10 @@ type Step =
   | { kind: 'scan-for-answer'; session: OfferSession }
   | { kind: 'scan-for-offer' }
   | { kind: 'show-answer'; session: AnswerSession }
-  | { kind: 'connecting' }
-  | { kind: 'synced'; peerLabel: string }
+  | { kind: 'merge-prompt'; channel: RTCDataChannel; peerLabel: string; existingAccounts: number; existingTransactions: number }
+  | { kind: 'merging' }
+  | { kind: 'synced'; peerLabel: string; summary: MergeSummary }
+  | { kind: 'cancelled' }
   | { kind: 'error'; message: string };
 
 function guessDeviceLabel(): string {
@@ -45,6 +46,7 @@ function guessDeviceLabel(): string {
 
 export function PairingScreen() {
   const navigate = useNavigate();
+  const store = useStore();
   const [, recordSync] = usePairedPeers();
   const [identity, setIdentity] = useState<IdentityChoice | null>(null);
   const [step, setStep] = useState<Step>({ kind: 'choice' });
@@ -67,37 +69,84 @@ export function PairingScreen() {
     }
   }
 
-  const handleScannedOffer = useCallback(
-    async (offerPayload: string) => {
-      try {
-        const session = await answerOffer(offerPayload);
-        setStep({ kind: 'show-answer', session });
-        const channel = await session.channelPromise;
-        const { peerLabel } = await exchangeHello(channel, guessDeviceLabel());
-        recordSync(peerLabel);
-        setStep({ kind: 'synced', peerLabel });
-      } catch {
-        setStep({ kind: 'error', message: "Couldn't complete pairing — try again." });
-      }
-    },
-    [recordSync],
-  );
+  // Runs the actual docs/24 merge: exchange full local datasets over the
+  // now-open channel, apply the peer's data with store.applyPeerDataset,
+  // land on a real "synced" summary instead of the placeholder copy this
+  // screen originally shipped with.
+  async function performMerge(channel: RTCDataChannel, peerLabel: string, adoptPeerIdentity: boolean) {
+    setStep({ kind: 'merging' });
+    try {
+      const localDataset: PeerDataset = {
+        localUserId: getLocalUserId(),
+        categories: store.categories,
+        accounts: store.accounts,
+        transactions: store.transactions,
+        budgets: store.budgets,
+      };
+      const peerDataset = await exchangeJson<PeerDataset>(channel, localDataset);
+      const summary = await store.applyPeerDataset(peerDataset, adoptPeerIdentity);
+      recordSync(peerLabel);
+      setStep({ kind: 'synced', peerLabel, summary });
+    } catch {
+      setStep({ kind: 'error', message: 'Connection dropped before syncing finished.' });
+    }
+  }
 
-  const handleScannedAnswer = useCallback(
-    async (session: OfferSession, answerPayload: string) => {
-      try {
-        await completeOffer(session, answerPayload);
-        setStep({ kind: 'connecting' });
-        const channel = await session.channelPromise;
-        const { peerLabel } = await exchangeHello(channel, guessDeviceLabel());
-        recordSync(peerLabel);
-        setStep({ kind: 'synced', peerLabel });
-      } catch {
-        setStep({ kind: 'error', message: 'Connection dropped before syncing finished.' });
+  // Shared by both roles once their data channel is open — docs/25 D125:
+  // only the *joining* device in "my own device" mode (the one that
+  // scanned someone else's already-showing code) ever unifies identity;
+  // the device that showed its code first stays canonical. "someone
+  // else" mode never unifies identity at all, regardless of role.
+  async function afterHandshake(channel: RTCDataChannel, role: 'offerer' | 'answerer') {
+    try {
+      const { peerLabel, peerLocalUserId } = await exchangeHello(channel, guessDeviceLabel(), getLocalUserId());
+
+      // Already the same identity (e.g. re-pairing after an earlier
+      // own-device merge already unified them) — nothing to ask about or
+      // rewrite, skip straight to a plain merge.
+      const isJoiningDeviceInOwnDeviceMode =
+        identity === 'own-device' && role === 'answerer' && peerLocalUserId !== getLocalUserId();
+      if (isJoiningDeviceInOwnDeviceMode) {
+        // docs/25 D126: ask before rewriting this device's existing data
+        // — but only if there's anything to ask about. Skips straight to
+        // the merge for a genuinely fresh device, matching D126's "a
+        // fresh device with no prior data skips this sheet entirely."
+        const existingAccounts = store.accounts.length;
+        const existingTransactions = store.transactions.length;
+        if (existingAccounts > 0 || existingTransactions > 0) {
+          setStep({ kind: 'merge-prompt', channel, peerLabel, existingAccounts, existingTransactions });
+          return;
+        }
+        await performMerge(channel, peerLabel, true);
+        return;
       }
-    },
-    [recordSync],
-  );
+
+      await performMerge(channel, peerLabel, false);
+    } catch {
+      setStep({ kind: 'error', message: 'Connection dropped before syncing finished.' });
+    }
+  }
+
+  async function handleScannedOffer(offerPayload: string) {
+    try {
+      const session = await answerOffer(offerPayload);
+      setStep({ kind: 'show-answer', session });
+      const channel = await session.channelPromise;
+      await afterHandshake(channel, 'answerer');
+    } catch {
+      setStep({ kind: 'error', message: "Couldn't complete pairing — try again." });
+    }
+  }
+
+  async function handleScannedAnswer(session: OfferSession, answerPayload: string) {
+    try {
+      await completeOffer(session, answerPayload);
+      const channel = await session.channelPromise;
+      await afterHandshake(channel, 'offerer');
+    } catch {
+      setStep({ kind: 'error', message: 'Connection dropped before syncing finished.' });
+    }
+  }
 
   return (
     <main className="home">
@@ -169,9 +218,25 @@ export function PairingScreen() {
         <QrShowStep payload={step.session.answerPayload} caption="Show this back to the first device." />
       )}
 
-      {step.kind === 'connecting' && (
+      {step.kind === 'merge-prompt' && (
         <div className="qr-stage">
-          <p className="qr-caption">Connecting…</p>
+          <p className="qr-caption">
+            This device already has {step.existingAccounts} account{step.existingAccounts === 1 ? '' : 's'} and{' '}
+            {step.existingTransactions} transaction{step.existingTransactions === 1 ? '' : 's'}. Merge them into your
+            account, or keep this device separate?
+          </p>
+          <button className="save-btn" onClick={() => void performMerge(step.channel, step.peerLabel, true)}>
+            Merge into my account
+          </button>
+          <button className="text-link" onClick={() => setStep({ kind: 'cancelled' })}>
+            Keep this device separate
+          </button>
+        </div>
+      )}
+
+      {step.kind === 'merging' && (
+        <div className="qr-stage">
+          <p className="qr-caption">Syncing…</p>
         </div>
       )}
 
@@ -179,9 +244,20 @@ export function PairingScreen() {
         <div className="qr-stage">
           <div className="confirm-check">✓</div>
           <p className="qr-caption">
-            Connected to <b>{step.peerLabel}</b>. {identity === 'own-device' ? 'Identity unification' : 'Household data merge'} isn't
-            wired up yet — this confirms the connection and handshake work end to end.
+            Synced with <b>{step.peerLabel}</b>. Added {step.summary.categoriesAdded} categories,{' '}
+            {step.summary.accountsAdded} accounts, {step.summary.transactionsAdded} transactions,{' '}
+            {step.summary.budgetsAdded} budgets
+            {step.summary.budgetsUpdated > 0 ? ` (${step.summary.budgetsUpdated} updated)` : ''}.
           </p>
+          <button className="save-btn" onClick={() => navigate('/settings')}>
+            Done
+          </button>
+        </div>
+      )}
+
+      {step.kind === 'cancelled' && (
+        <div className="qr-stage">
+          <p className="qr-caption">Pairing cancelled — nothing on this device was changed.</p>
           <button className="save-btn" onClick={() => navigate('/settings')}>
             Done
           </button>
@@ -215,13 +291,8 @@ function QrShowStep({
 
   useEffect(() => {
     if (!canvasRef.current) return;
-    // docs/25's own flagged risk, confirmed by a real device: level M was
-    // dense enough (module count, not physical size) to slow scanning on
-    // weaker hardware. Dropping to L is the mitigation that doc already
-    // named as the right first move — a screen-to-screen scan is a clean
-    // signal source, not worn/dirty like print, so the lower redundancy
-    // is a reasonable trade. Larger render size too, so each module is
-    // physically bigger for the same module count.
+    // docs/25 D132: level L (not M) at a larger render size — a real
+    // device test found M too dense to scan quickly on weaker hardware.
     void QRCode.toCanvas(canvasRef.current, payload, { errorCorrectionLevel: 'L', width: 280 });
   }, [payload]);
 

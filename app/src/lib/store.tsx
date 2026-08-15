@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { db } from './db';
-import { getLocalUserId } from './identity';
-import type { Account, AccountKind, Budget, Category, CategoryKeyword, Transaction } from './types';
+import { getLocalUserId, setLocalUserId } from './identity';
+import type { Account, AccountKind, Budget, Category, CategoryKeyword, MergeSummary, PeerDataset, Transaction } from './types';
 import { seedAccounts, seedBudgets, seedCategories, seedCategoryKeywords, seedTransactions } from './seed';
 
 // Real local data layer — docs/01 D1 (on-device SQLite via wa-sqlite/
@@ -265,6 +265,13 @@ interface StoreApi extends StoreState {
   // before this app has any (docs/01 D1 doesn't have a migration story
   // yet, and doesn't need one until there's a real user to migrate).
   resetLocalData: () => Promise<void>;
+  // docs/25 D119 / docs/24: applies a peer's full dataset (received over
+  // a P2P sync) using docs/24's merge rules. adoptPeerIdentity is docs/25
+  // D125-D127's own-device identity unification — true only for the
+  // joining device in "my own device" pairing, false for every other
+  // case (someone-else pairing, or the non-joining side of an own-device
+  // pairing).
+  applyPeerDataset: (peer: PeerDataset, adoptPeerIdentity: boolean) => Promise<MergeSummary>;
 }
 
 const StoreContext = createContext<StoreApi | null>(null);
@@ -544,6 +551,128 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           await tx.execute('DELETE FROM accounts');
         });
         window.location.reload();
+      },
+
+      // docs/24's merge algorithm, implemented against local SQLite
+      // directly rather than a household_id-partitioned bucket — there's
+      // no household_id column locally (schema.ts's own principle: no
+      // sync-partition columns until there's something to partition), so
+      // "merge" here just means "apply the same per-table rules docs/24
+      // specifies, against the one local dataset this device has."
+      async applyPeerDataset(peer, adoptPeerIdentity) {
+        const summary: MergeSummary = {
+          categoriesAdded: 0,
+          accountsAdded: 0,
+          transactionsAdded: 0,
+          budgetsAdded: 0,
+          budgetsUpdated: 0,
+        };
+
+        await db.writeTransaction(async (tx) => {
+          // docs/25 D126: rewrite this device's own existing rows to the
+          // peer's identity BEFORE inserting the peer's rows — the peer's
+          // own rows already carry that same id by construction (it's
+          // their getLocalUserId()), so once this rewrite lands, every
+          // row this device ends up with (old-and-relabeled, plus
+          // newly-merged-in) agrees on one identity. Only rewrites if the
+          // ids actually differ, so calling this twice (or against a peer
+          // that's already the same person) is a safe no-op.
+          if (adoptPeerIdentity) {
+            const oldId = getLocalUserId();
+            const newId = peer.localUserId;
+            if (oldId !== newId) {
+              await tx.execute('UPDATE accounts SET owner_user_id = ? WHERE owner_user_id = ?', [newId, oldId]);
+              await tx.execute('UPDATE transactions SET paid_by_user_id = ? WHERE paid_by_user_id = ?', [newId, oldId]);
+              await tx.execute('UPDATE transactions SET created_by_user_id = ? WHERE created_by_user_id = ?', [
+                newId,
+                oldId,
+              ]);
+              setLocalUserId(newId);
+            }
+          }
+
+          // Categories — merge by id (docs/24): seed categories share
+          // deterministic ids across installs, so an id that already
+          // exists locally is the same category, not a new one.
+          for (const c of peer.categories) {
+            const existing = await tx.getAll<{ id: string }>('SELECT id FROM categories WHERE id = ?', [c.id]);
+            if (existing.length > 0) continue;
+            await tx.execute(`INSERT INTO categories (id, name, kind, parent_id, archived) VALUES (?, ?, ?, ?, ?)`, [
+              c.id,
+              c.name,
+              c.kind,
+              c.parentId,
+              c.archived ? 1 : 0,
+            ]);
+            summary.categoriesAdded += 1;
+          }
+
+          // Accounts — never merged, always moved (docs/24 D112): each is
+          // a real, distinct payment instrument. The existence check is
+          // defensive only (D113 already makes id collisions practically
+          // impossible), not a merge rule.
+          for (const a of peer.accounts) {
+            const existing = await tx.getAll<{ id: string }>('SELECT id FROM accounts WHERE id = ?', [a.id]);
+            if (existing.length > 0) continue;
+            await tx.execute(
+              `INSERT INTO accounts (id, institution, name, kind, archived, owner_user_id) VALUES (?, ?, ?, ?, ?, ?)`,
+              [a.id, a.institution, a.name, a.kind, a.archived ? 1 : 0, a.ownerUserId],
+            );
+            summary.accountsAdded += 1;
+          }
+
+          // Transactions — always inserted as distinct events, same
+          // defensive-only existence check as accounts.
+          for (const t of peer.transactions) {
+            const existing = await tx.getAll<{ id: string }>('SELECT id FROM transactions WHERE id = ?', [t.id]);
+            if (existing.length > 0) continue;
+            await tx.execute(
+              `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_at, note, merchant, source, ai_raw, deleted_at, paid_by_user_id, created_by_user_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                t.id,
+                t.accountId,
+                t.categoryId,
+                t.amountCents,
+                t.currency,
+                t.occurredAt,
+                t.note,
+                t.merchant,
+                t.source,
+                t.aiRaw,
+                t.deletedAt,
+                t.paidByUserId,
+                t.createdByUserId,
+              ],
+            );
+            summary.transactionsAdded += 1;
+          }
+
+          // Budgets — docs/24's one real collision case: two pre-existing
+          // budgets for the same (category, month, currency) resolve to
+          // the greater amount, not a duplicate row.
+          for (const b of peer.budgets) {
+            const existing = await tx.getAll<{ id: string; amount_cents: number }>(
+              'SELECT id, amount_cents FROM budgets WHERE category_id = ? AND month = ? AND currency = ?',
+              [b.categoryId, b.month, b.currency],
+            );
+            if (existing.length === 0) {
+              await tx.execute(`INSERT INTO budgets (id, category_id, month, currency, amount_cents) VALUES (?, ?, ?, ?, ?)`, [
+                b.id,
+                b.categoryId,
+                b.month,
+                b.currency,
+                b.amountCents,
+              ]);
+              summary.budgetsAdded += 1;
+            } else if (b.amountCents > existing[0].amount_cents) {
+              await tx.execute('UPDATE budgets SET amount_cents = ? WHERE id = ?', [b.amountCents, existing[0].id]);
+              summary.budgetsUpdated += 1;
+            }
+          }
+        });
+
+        return summary;
       },
     };
   }, [state]);

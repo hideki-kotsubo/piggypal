@@ -234,15 +234,44 @@ round-tripping through an actual decode back to the exact original
 payload, and the full click-through UI (including camera permission +
 fake-device video) rendering with no console errors in both themes.
 
-**Still not implemented, deliberately deferred**: D125-D127's identity
-unification itself (the "own device" choice is captured in the UI but
-doesn't yet rewrite `getLocalUserId()` or prompt to merge pre-existing
-data — frame 4's D126 merge sheet isn't wired up) and docs/24's actual
-data merge (categories/accounts/transactions/budgets) — "Synced" today
-means the connection and handshake are real, not that any transaction
-data moved. Also still open: remembering peers beyond one localStorage
-list with no manage/forget UI, and relay-assisted remote signaling
-(unchanged from before, still explicitly out of scope).
+**The data merge and identity unification are now real too, 2026-08-14.**
+`store.applyPeerDataset(peer, adoptPeerIdentity)` implements docs/24's
+rules directly against local SQLite (no `household_id` needed for this —
+see docs/24's own updated note): categories merge by id, accounts and
+transactions are always inserted as new distinct rows, budgets resolve a
+`(category, month, currency)` collision to the greater amount. The full
+protocol: after `exchangeHello`, each side calls the new `exchangeJson`
+(same both-sides-acked shape as `exchangeHello`, generic over the payload)
+to trade full local datasets, then applies the peer's with
+`applyPeerDataset`. D125-D127's identity unification is wired in too —
+`exchangeHello` now also carries each side's `getLocalUserId()`, the
+joining device (whoever scanned rather than showed first, in "my own
+device" mode) gets D126's merge-prompt if it has any pre-existing local
+data, and confirming rewrites that device's existing accounts/
+transactions to the peer's id before merging, exactly mirroring docs/05
+D14's "ask before merging, never silently rekey or discard" (D134).
+"Synced" now shows a real count — categories/accounts/transactions/
+budgets actually added or updated, not placeholder copy.
+
+Verified against the real app with ground-truth SQL queries, not just
+`applyPeerDataset`'s return value: a "someone else" merge correctly
+skipped re-adding an already-present category by id, added a genuinely
+new one, added a new account/transaction carrying the peer's own identity
+unchanged, and updated an existing budget to a peer's higher amount while
+leaving a lower one alone; an "own device" merge correctly rewrote every
+one of this device's pre-existing accounts and transactions to the peer's
+id and adopted it going forward, while the peer's own inserted rows
+already carried the right id by construction.
+
+Still open: remembering peers beyond one localStorage list with no
+manage/forget UI, relay-assisted remote signaling (unchanged from before,
+still explicitly out of scope), and `category_keywords` are deliberately
+excluded from the exchanged dataset (the docs/04 learning loop that would
+ever change them post-seed isn't built, docs/16 D91 — nothing there yet
+worth the extra merge-rule surface). Also not yet handled: what happens
+if a connection drops between the merge-prompt and the merge actually
+running (the offering side would be left waiting indefinitely with no
+cancellation signal sent) — a real gap, not yet designed around.
 
 **The physical scan-reliability question is answered — the flagged risk
 was real.** The user tested on actual hardware (not a fake-video-device
@@ -280,3 +309,4 @@ reverified again after the change.
 |---|---|---|
 | D132 | QR generation uses error-correction level L (not M) at a larger render size, confirmed by a real-device test that level M was slow to scan on weaker hardware | Closes D117a's flagged-but-unverified risk with a real answer instead of a computed one; L was already the named mitigation, just not yet known to be necessary until tested |
 | D133 | The offer/answer payload is the raw SDP with CRLF collapsed to LF, not JSON-wrapped with an explicit `type` field | Removes pure encoding overhead (JSON structure + escaping) with no loss of information — `type` is always known from which step of the flow is decoding, and browsers accept LF-only SDP in `set{Local,Remote}Description` despite the spec calling for CRLF, confirmed with a real connection test, not assumed |
+| D134 | docs/24's merge runs directly against local SQLite via `store.applyPeerDataset`, no `household_id` column involved; identity unification (D125-D127) piggybacks the peer's `getLocalUserId()` onto the existing `exchangeHello` handshake rather than a separate round trip | The local schema was never going to get a partition column it has nothing to partition (schema.ts's own stated principle) — the merge rules apply just as well against one device's plain table set. Reusing the hello round trip for identity avoids a third message exchange for a single string |

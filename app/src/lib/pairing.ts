@@ -114,6 +114,11 @@ export async function completeOffer(session: OfferSession, answerPayload: string
   await session.pc.setRemoteDescription(decodeDescription(answerPayload, 'answer'));
 }
 
+export interface HelloResult {
+  peerLabel: string;
+  peerLocalUserId: string;
+}
+
 // docs/25 D118's "both sides confirm" made concrete at the smallest
 // possible scale: each side sends a hello carrying who they are, replies
 // with an ack the moment it sees the peer's hello, and only resolves once
@@ -121,15 +126,20 @@ export async function completeOffer(session: OfferSession, answerPayload: string
 // AND received an ack for its own hello (so it knows the peer received
 // it) — the two one-directional confirmations D118 describes, made real
 // over an actual data channel instead of just described in prose.
-export function exchangeHello(channel: RTCDataChannel, myLabel: string): Promise<{ peerLabel: string }> {
+//
+// Carries localUserId alongside the display label — docs/25 D125's
+// own-device identity unification needs to know the peer's actual
+// getLocalUserId() value, not just a friendly name, and piggybacking it
+// on the handshake that already has to happen avoids a third round trip.
+export function exchangeHello(channel: RTCDataChannel, myLabel: string, myLocalUserId: string): Promise<HelloResult> {
   return new Promise((resolve, reject) => {
-    let receivedPeerHello: string | null = null;
+    let receivedPeerHello: { label: string; localUserId: string } | null = null;
     let receivedAck = false;
 
     function maybeResolve() {
       if (receivedPeerHello !== null && receivedAck) {
         channel.removeEventListener('message', onMessage);
-        resolve({ peerLabel: receivedPeerHello });
+        resolve({ peerLabel: receivedPeerHello.label, peerLocalUserId: receivedPeerHello.localUserId });
       }
     }
 
@@ -142,8 +152,14 @@ export function exchangeHello(channel: RTCDataChannel, myLabel: string): Promise
       }
       if (typeof msg !== 'object' || msg === null || !('type' in msg)) return;
 
-      if (msg.type === 'hello' && 'label' in msg && typeof msg.label === 'string') {
-        receivedPeerHello = msg.label;
+      if (
+        msg.type === 'hello' &&
+        'label' in msg &&
+        typeof msg.label === 'string' &&
+        'localUserId' in msg &&
+        typeof msg.localUserId === 'string'
+      ) {
+        receivedPeerHello = { label: msg.label, localUserId: msg.localUserId };
         channel.send(JSON.stringify({ type: 'ack' }));
         maybeResolve();
       } else if (msg.type === 'ack') {
@@ -162,6 +178,58 @@ export function exchangeHello(channel: RTCDataChannel, myLabel: string): Promise
       { once: true },
     );
 
-    channel.send(JSON.stringify({ type: 'hello', label: myLabel }));
+    channel.send(JSON.stringify({ type: 'hello', label: myLabel, localUserId: myLocalUserId }));
+  });
+}
+
+// docs/25 D119: first sync with a new peer runs docs/24's merge algorithm
+// — this is the transport half of that, generic over whatever payload
+// shape the caller wants merged (kept domain-agnostic deliberately, same
+// reasoning as the rest of this file: no category/account/transaction
+// knowledge belongs here, that's store.tsx's applyPeerDataset). Same
+// both-sides-acked shape as exchangeHello: only resolves once the peer's
+// data has arrived AND the peer has acked receiving mine.
+export function exchangeJson<T>(channel: RTCDataChannel, localPayload: T): Promise<T> {
+  return new Promise((resolve, reject) => {
+    let receivedPeerPayload: T | null = null;
+    let receivedAck = false;
+
+    function maybeResolve() {
+      if (receivedPeerPayload !== null && receivedAck) {
+        channel.removeEventListener('message', onMessage);
+        resolve(receivedPeerPayload);
+      }
+    }
+
+    function onMessage(event: MessageEvent) {
+      let msg: unknown;
+      try {
+        msg = JSON.parse(event.data as string);
+      } catch {
+        return;
+      }
+      if (typeof msg !== 'object' || msg === null || !('type' in msg)) return;
+
+      if (msg.type === 'payload' && 'data' in msg) {
+        receivedPeerPayload = msg.data as T;
+        channel.send(JSON.stringify({ type: 'payload-ack' }));
+        maybeResolve();
+      } else if (msg.type === 'payload-ack') {
+        receivedAck = true;
+        maybeResolve();
+      }
+    }
+
+    channel.addEventListener('message', onMessage);
+    channel.addEventListener(
+      'error',
+      (e) => {
+        channel.removeEventListener('message', onMessage);
+        reject(e);
+      },
+      { once: true },
+    );
+
+    channel.send(JSON.stringify({ type: 'payload', data: localPayload }));
   });
 }

@@ -162,6 +162,37 @@ it needs doing.
       each module now ~34% larger than the original level-M/JSON encoding
       this feature shipped with, stacking on top of D132's fix. Decode
       correctness reverified again.
+      2026-08-14, later still: the actual data merge is real, closing the
+      biggest remaining gap — the user asked directly "is it already
+      syncing data?" and the honest answer at the time was no, just the
+      connection. `store.applyPeerDataset(peer, adoptPeerIdentity)` now
+      implements docs/24's merge rules for real, directly against local
+      SQLite (categories by id, accounts/transactions always inserted as
+      new rows, budgets resolve a category/month/currency collision to
+      the greater amount — D134). `pairing.ts` gained `exchangeJson`, a
+      generic both-sides-acked payload exchange (same shape as
+      `exchangeHello`, reused for hello too so identity now travels
+      alongside the handshake instead of a third round trip).
+      D125-D127's identity unification is wired in too: the joining
+      device in "my own device" mode gets D126's merge prompt if it has
+      pre-existing data, confirming rewrites its accounts/transactions to
+      the peer's id and adopts it going forward; declining cancels
+      cleanly with nothing changed. "Synced" now shows a real count
+      instead of placeholder copy.
+      Verified against the real app with ground-truth SQL queries (not
+      just trusting the returned summary): a someone-else merge correctly
+      skipped an already-present category, added a new one, added a new
+      account/transaction under the peer's own identity unchanged, and
+      updated an existing budget to a higher peer amount while leaving a
+      lower one alone; an own-device merge correctly rewrote every one of
+      5 pre-existing local accounts and 5 transactions to the adopted
+      identity. `tsc -b`/`oxlint` clean throughout.
+      Still open: `category_keywords` deliberately excluded from the sync
+      (the learning loop that would ever change them isn't built), no
+      cancellation signal if a connection drops between the merge prompt
+      and the merge running, and everything already flagged as
+      out-of-scope in docs/25 (relay signaling, peer management beyond a
+      bare list).
 - [ ] "Merge account" as its own explicit action, not only something that
       happens automatically at pairing time — flagged 2026-08-14, future
       work, not designed. Idea: a standalone Settings entry point (paid

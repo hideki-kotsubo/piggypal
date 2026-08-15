@@ -20,3 +20,12 @@ export function getLocalUserId(): string {
   }
   return id;
 }
+
+// docs/25 D126: "own device" pairing unifies identity by having the
+// joining device adopt the other device's id, rather than keeping the one
+// it generated on first launch. This is the only place that value is
+// meant to change after the fact — every other read goes through
+// getLocalUserId() above.
+export function setLocalUserId(id: string): void {
+  localStorage.setItem(LOCAL_USER_ID_KEY, id);
+}

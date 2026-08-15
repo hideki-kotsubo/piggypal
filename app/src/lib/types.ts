@@ -71,3 +71,25 @@ export interface CategoryKeyword {
   keyword: string;
   hits: number;
 }
+
+// docs/25 D119 / docs/24: what one side of a P2P sync sends the other —
+// its whole local dataset, applying docs/24's merge rules on receipt
+// (store.applyPeerDataset). category_keywords deliberately excluded: the
+// docs/04 learning loop that would ever change them post-seed isn't built
+// (docs/16 D91), so there's nothing there worth the extra merge-rule
+// surface yet.
+export interface PeerDataset {
+  localUserId: string;
+  categories: Category[];
+  accounts: Account[];
+  transactions: Transaction[];
+  budgets: Budget[];
+}
+
+export interface MergeSummary {
+  categoriesAdded: number;
+  accountsAdded: number;
+  transactionsAdded: number;
+  budgetsAdded: number;
+  budgetsUpdated: number;
+}
