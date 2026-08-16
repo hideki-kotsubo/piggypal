@@ -114,6 +114,63 @@ export async function completeOffer(session: OfferSession, answerPayload: string
   await session.pc.setRemoteDescription(decodeDescription(answerPayload, 'answer'));
 }
 
+// A real bug, found on real hardware (2026-08-14): docs/25 D126's
+// merge-prompt pauses the *joining* device for user confirmation before
+// it continues the protocol, but the *other* device doesn't know to
+// wait — it proceeds immediately. RTCDataChannel does not buffer/replay
+// 'message' events for listeners attached after the fact, so a raw
+// `channel.addEventListener('message', ...)` created fresh inside each
+// exchange function (the original design) could miss a message that
+// arrived during the gap while the joining device was sitting at the
+// prompt — a real, reproducible deadlock, not flakiness.
+//
+// Fix: wrap the channel exactly once, the moment it's available (before
+// anything could possibly have been sent), with a persistent listener
+// that buffers every message. Whatever calls next() later — regardless
+// of how long "later" is — still sees everything that arrived in the
+// meantime, in order.
+export interface PairedChannel {
+  send(msg: unknown): void;
+  next(): Promise<unknown>;
+}
+
+export function wrapChannel(channel: RTCDataChannel): PairedChannel {
+  const buffered: unknown[] = [];
+  const waiting: { resolve: (msg: unknown) => void; reject: (err: unknown) => void }[] = [];
+  let closedError: unknown = null;
+
+  function fail(err: unknown) {
+    if (closedError) return;
+    closedError = err;
+    while (waiting.length > 0) waiting.shift()!.reject(err);
+  }
+
+  channel.addEventListener('message', (event) => {
+    let msg: unknown;
+    try {
+      msg = JSON.parse(event.data as string);
+    } catch {
+      return;
+    }
+    const w = waiting.shift();
+    if (w) w.resolve(msg);
+    else buffered.push(msg);
+  });
+  channel.addEventListener('error', (e) => fail(e));
+  channel.addEventListener('close', () => fail(new Error('Data channel closed before syncing finished')));
+
+  return {
+    send(msg) {
+      channel.send(JSON.stringify(msg));
+    },
+    next() {
+      if (buffered.length > 0) return Promise.resolve(buffered.shift());
+      if (closedError) return Promise.reject(closedError);
+      return new Promise((resolve, reject) => waiting.push({ resolve, reject }));
+    },
+  };
+}
+
 export interface HelloResult {
   peerLabel: string;
   peerLocalUserId: string;
@@ -131,55 +188,31 @@ export interface HelloResult {
 // own-device identity unification needs to know the peer's actual
 // getLocalUserId() value, not just a friendly name, and piggybacking it
 // on the handshake that already has to happen avoids a third round trip.
-export function exchangeHello(channel: RTCDataChannel, myLabel: string, myLocalUserId: string): Promise<HelloResult> {
-  return new Promise((resolve, reject) => {
-    let receivedPeerHello: { label: string; localUserId: string } | null = null;
-    let receivedAck = false;
+export async function exchangeHello(pc: PairedChannel, myLabel: string, myLocalUserId: string): Promise<HelloResult> {
+  pc.send({ type: 'hello', label: myLabel, localUserId: myLocalUserId });
 
-    function maybeResolve() {
-      if (receivedPeerHello !== null && receivedAck) {
-        channel.removeEventListener('message', onMessage);
-        resolve({ peerLabel: receivedPeerHello.label, peerLocalUserId: receivedPeerHello.localUserId });
-      }
+  let peerHello: { label: string; localUserId: string } | null = null;
+  let ackReceived = false;
+
+  while (peerHello === null || !ackReceived) {
+    const msg = await pc.next();
+    if (typeof msg !== 'object' || msg === null || !('type' in msg)) continue;
+
+    if (
+      msg.type === 'hello' &&
+      'label' in msg &&
+      typeof msg.label === 'string' &&
+      'localUserId' in msg &&
+      typeof msg.localUserId === 'string'
+    ) {
+      peerHello = { label: msg.label, localUserId: msg.localUserId };
+      pc.send({ type: 'ack' });
+    } else if (msg.type === 'ack') {
+      ackReceived = true;
     }
+  }
 
-    function onMessage(event: MessageEvent) {
-      let msg: unknown;
-      try {
-        msg = JSON.parse(event.data as string);
-      } catch {
-        return;
-      }
-      if (typeof msg !== 'object' || msg === null || !('type' in msg)) return;
-
-      if (
-        msg.type === 'hello' &&
-        'label' in msg &&
-        typeof msg.label === 'string' &&
-        'localUserId' in msg &&
-        typeof msg.localUserId === 'string'
-      ) {
-        receivedPeerHello = { label: msg.label, localUserId: msg.localUserId };
-        channel.send(JSON.stringify({ type: 'ack' }));
-        maybeResolve();
-      } else if (msg.type === 'ack') {
-        receivedAck = true;
-        maybeResolve();
-      }
-    }
-
-    channel.addEventListener('message', onMessage);
-    channel.addEventListener(
-      'error',
-      (e) => {
-        channel.removeEventListener('message', onMessage);
-        reject(e);
-      },
-      { once: true },
-    );
-
-    channel.send(JSON.stringify({ type: 'hello', label: myLabel, localUserId: myLocalUserId }));
-  });
+  return { peerLabel: peerHello.label, peerLocalUserId: peerHello.localUserId };
 }
 
 // docs/25 D119: first sync with a new peer runs docs/24's merge algorithm
@@ -187,49 +220,28 @@ export function exchangeHello(channel: RTCDataChannel, myLabel: string, myLocalU
 // shape the caller wants merged (kept domain-agnostic deliberately, same
 // reasoning as the rest of this file: no category/account/transaction
 // knowledge belongs here, that's store.tsx's applyPeerDataset). Same
-// both-sides-acked shape as exchangeHello: only resolves once the peer's
-// data has arrived AND the peer has acked receiving mine.
-export function exchangeJson<T>(channel: RTCDataChannel, localPayload: T): Promise<T> {
-  return new Promise((resolve, reject) => {
-    let receivedPeerPayload: T | null = null;
-    let receivedAck = false;
+// both-sides-acked shape as exchangeHello, and the same fix: consumes
+// from the channel's persistent queue rather than attaching its own
+// listener, so it can safely be called well after the channel opened —
+// exactly the "answerer paused at the merge-prompt" case that surfaced
+// the original bug.
+export async function exchangeJson<T>(pc: PairedChannel, localPayload: T): Promise<T> {
+  pc.send({ type: 'payload', data: localPayload });
 
-    function maybeResolve() {
-      if (receivedPeerPayload !== null && receivedAck) {
-        channel.removeEventListener('message', onMessage);
-        resolve(receivedPeerPayload);
-      }
+  let peerPayload: T | null = null;
+  let ackReceived = false;
+
+  while (peerPayload === null || !ackReceived) {
+    const msg = await pc.next();
+    if (typeof msg !== 'object' || msg === null || !('type' in msg)) continue;
+
+    if (msg.type === 'payload' && 'data' in msg) {
+      peerPayload = msg.data as T;
+      pc.send({ type: 'payload-ack' });
+    } else if (msg.type === 'payload-ack') {
+      ackReceived = true;
     }
+  }
 
-    function onMessage(event: MessageEvent) {
-      let msg: unknown;
-      try {
-        msg = JSON.parse(event.data as string);
-      } catch {
-        return;
-      }
-      if (typeof msg !== 'object' || msg === null || !('type' in msg)) return;
-
-      if (msg.type === 'payload' && 'data' in msg) {
-        receivedPeerPayload = msg.data as T;
-        channel.send(JSON.stringify({ type: 'payload-ack' }));
-        maybeResolve();
-      } else if (msg.type === 'payload-ack') {
-        receivedAck = true;
-        maybeResolve();
-      }
-    }
-
-    channel.addEventListener('message', onMessage);
-    channel.addEventListener(
-      'error',
-      (e) => {
-        channel.removeEventListener('message', onMessage);
-        reject(e);
-      },
-      { once: true },
-    );
-
-    channel.send(JSON.stringify({ type: 'payload', data: localPayload }));
-  });
+  return peerPayload;
 }

@@ -268,10 +268,54 @@ manage/forget UI, relay-assisted remote signaling (unchanged from before,
 still explicitly out of scope), and `category_keywords` are deliberately
 excluded from the exchanged dataset (the docs/04 learning loop that would
 ever change them post-seed isn't built, docs/16 D91 — nothing there yet
-worth the extra merge-rule surface). Also not yet handled: what happens
-if a connection drops between the merge-prompt and the merge actually
-running (the offering side would be left waiting indefinitely with no
-cancellation signal sent) — a real gap, not yet designed around.
+worth the extra merge-rule surface). Also reported, not yet
+investigated/fixed: pairing an iPhone and a desktop showed "Synced with
+iPhone" on **both** screens — `guessDeviceLabel()` is pure
+`navigator.userAgent` sniffing, and the label-exchange protocol itself
+(traced through `exchangeHello`) looks correct, so the likely explanation
+is the desktop side's UA matching the iPhone pattern somehow (browser
+device-emulation mode is the leading guess), not a protocol bug — but
+unconfirmed pending the user's answer. Proposed fix regardless of root
+cause: an editable, remembered device name instead of relying solely on
+UA sniffing.
+
+**A real bug, found on real hardware, 2026-08-14: the exact
+"connection drops between the merge-prompt and the merge" gap named just
+above turned out to be worse than a missing cancellation signal — it was
+a genuine, reproducible deadlock, not a flaky edge case.** The joining
+device pauses at D126's merge-prompt for a user tap; the other device
+doesn't know to wait and proceeds straight into `exchangeJson`
+immediately. The original `exchangeHello`/`exchangeJson` each attached a
+fresh `channel.addEventListener('message', ...)` per call — and
+`RTCDataChannel` does not buffer or replay `message` events for listeners
+attached after the fact. So the impatient side's message could arrive
+while the paused side had no listener at all, and was silently dropped
+forever. Once the user finally tapped "Merge," it was too late: the
+paused side's exchange could never see that first message, the impatient
+side could never get an ack for it either, and both sides deadlocked
+until the browser's own connection-level timeout eventually surfaced as
+"Connection dropped before syncing finished" — which is what the user
+saw and reported.
+
+Fixed by `wrapChannel()` (D135): every channel is wrapped exactly once,
+the moment it becomes available (`afterHandshake` in `PairingScreen.tsx`)
+— before anything could possibly have been sent — with a persistent
+message queue that buffers everything from that point on. `exchangeHello`
+and `exchangeJson` now consume from this queue instead of attaching their
+own listeners, so a message that arrives during an arbitrarily long pause
+is still there, in order, whenever the paused side actually asks for it.
+Also centralizes error/close handling (the original per-call handlers
+only reacted to `'error'`, not `'close'`, and only while that specific
+exchange was in flight).
+
+Verified by directly reproducing the bug scenario, not just re-running
+the happy path: two real `RTCPeerConnection`s, one side calling
+`exchangeJson` immediately while the other deliberately waited 2 real
+seconds (simulating sitting at the merge-prompt) before calling it —
+confirmed both sides still received the correct, cross-matched payload,
+and that the 2-second delay was genuinely honored (measured elapsed time
+~2001ms, not a short-circuited skip). The full UI click-through was
+re-verified afterward too, no regressions.
 
 **The physical scan-reliability question is answered — the flagged risk
 was real.** The user tested on actual hardware (not a fake-video-device
@@ -310,3 +354,161 @@ reverified again after the change.
 | D132 | QR generation uses error-correction level L (not M) at a larger render size, confirmed by a real-device test that level M was slow to scan on weaker hardware | Closes D117a's flagged-but-unverified risk with a real answer instead of a computed one; L was already the named mitigation, just not yet known to be necessary until tested |
 | D133 | The offer/answer payload is the raw SDP with CRLF collapsed to LF, not JSON-wrapped with an explicit `type` field | Removes pure encoding overhead (JSON structure + escaping) with no loss of information — `type` is always known from which step of the flow is decoding, and browsers accept LF-only SDP in `set{Local,Remote}Description` despite the spec calling for CRLF, confirmed with a real connection test, not assumed |
 | D134 | docs/24's merge runs directly against local SQLite via `store.applyPeerDataset`, no `household_id` column involved; identity unification (D125-D127) piggybacks the peer's `getLocalUserId()` onto the existing `exchangeHello` handshake rather than a separate round trip | The local schema was never going to get a partition column it has nothing to partition (schema.ts's own stated principle) — the merge rules apply just as well against one device's plain table set. Reusing the hello round trip for identity avoids a third message exchange for a single string |
+| D135 | Every data channel is wrapped exactly once, immediately on availability, with a persistent buffering message queue (`wrapChannel`); `exchangeHello`/`exchangeJson` consume from it instead of attaching their own per-call listeners | `RTCDataChannel` doesn't buffer/replay `message` events for late-attached listeners — a real, reproducible deadlock (not flakiness) when one side of the protocol pauses for user input (D126's merge-prompt) while the other proceeds immediately. Found on real hardware, confirmed by directly reproducing the exact timing, not just inferred from re-reading the code |
+
+## Camera lifecycle: two more real bugs, found on real hardware
+
+Reported 2026-08-14, same day, after D132/D133/D135: scanning was still
+slow, and — more seriously — if a scan attempt failed to finish and the
+user retried right away, the camera wouldn't come back at all, with the
+browser's own recording indicator still showing the camera as in use.
+Both turned out to be real, and different from anything fixed above.
+
+**Bug 1 — `qr-scanner`'s `stop()`/`destroy()` defer the actual camera
+release by 300ms.** Read directly from the library's source: `pause()`
+(which `stop()` calls internally) schedules the real `MediaStreamTrack`
+release via `setTimeout(..., 300)` unless called with an explicit
+`immediate` flag — presumably to avoid visible flicker on a quick
+pause/resume. `QrScanStep`'s cleanup called plain `scanner.stop()`,
+un-awaited, so a fast remount (a failed scan's retry, or React
+StrictMode's dev-mode double-invoke on *every* mount) could start a
+brand-new `getUserMedia()` request while the old stream was still
+technically held — camera contention, the still-lit recording indicator.
+Confirmed directly, not inferred: a track's `readyState` measured
+immediately after calling `pause(true)` reads `"ended"`, versus still
+`"live"` at the same point with plain `stop()`.
+
+**Bug 2 — two `QrScanner` instances sharing one `<video>` element can
+leave *neither* attached, if constructed close enough together.**
+Investigating bug 1 surfaced this separately: `QrScanStep` bound a single
+persistent `<video>` via a ref, so React StrictMode's mount → cleanup →
+mount (on every mount, in dev — not just the first) created two
+`QrScanner` instances pointed at the exact same DOM node in immediate
+succession. Reproduced directly, isolated from this app entirely: two
+instances sharing one `<video>`, torn down and recreated back-to-back,
+left `video.srcObject` `null` even though *neither* instance's `start()`
+call threw. Two separate `<video>` elements, same timing, worked cleanly
+every time — the shared node itself was the trigger, not raw timing.
+
+Fixed together: `QrScanStep` now creates a fresh `<video>` element
+imperatively per effect run (appended into a container ref, removed on
+cleanup) instead of a single JSX-bound one, so no two instances can ever
+contend over the same node regardless of mount timing; cleanup calls
+`scanner.pause(true)` before `destroy()` for the immediate release bug 1
+found. Verified by reproducing the user's literal reported sequence, not
+just the happy path: enter the scan step, confirm a live camera, back out
+immediately, retry within 50ms — both the first attempt and the
+immediate retry get a genuine live `MediaStreamTrack`, in the real
+component under real StrictMode, not a simplified reproduction. Full UI
+click-through re-verified, `tsc -b`/`oxlint` clean.
+
+| # | Decision | Why |
+|---|---|---|
+| D136 | `QrScanStep` creates a fresh `<video>` element per effect run instead of binding one persistent JSX ref; cleanup calls `scanner.pause(true)` before `destroy()` | Two real bugs found on real hardware: `qr-scanner`'s default stop path defers the actual camera release by 300ms (fixed by forcing the immediate variant), and two scanner instances sharing one `<video>` node — which React StrictMode's dev-mode double-invoke creates on every mount, not just the first — could leave neither attached. Both confirmed by direct reproduction, not inferred from reading the code alone |
+
+## A third real bug: the decode callback fires more than once
+
+Reported 2026-08-14, same day, after D136: "connection dropped before
+syncing finished" right after scanning the second (answer) QR code —
+despite D135's channel-queue fix and D136's camera fixes both already
+landed. Different bug again, same "found by actually using it" pattern.
+
+`qr-scanner`'s decode callback fires on **every video frame** that
+successfully reads the code, not once per code — holding the phone
+steady for even a fraction of a second after a good scan triggers it
+several times in a row. `QrScanStep` passed that callback straight
+through to `onResult` with no debouncing, so `handleScannedAnswer` (or
+`handleScannedOffer`) ran multiple times concurrently for what the user
+experienced as one scan. The first call's `completeOffer` succeeds,
+advancing the `RTCPeerConnection`'s signaling state past the point where
+a second `setRemoteDescription` is valid — so every call after the first
+throws, caught by the generic error handler and shown as "Connection
+dropped," even though the first call may already have succeeded. Worse
+case, not just a false alarm: if two calls both got far enough,
+`wrapChannel` would be invoked twice on the same channel, each attaching
+its own listener — every subsequent message delivered to both,
+corrupting the handshake for real.
+
+Fixed with a `handled` guard in the decode callback (D137): the first
+successful decode pauses the scanner and is the only one that reaches
+`onResult`; every decode after that is a no-op. Verified two ways: the
+exact guard logic, fed 5 simulated repeat-frame decodes of the same
+real QR-encoded payload (via `QrScanner.scanImage`, the actual library
+call `qr-scanner` uses internally per frame) — confirmed exactly one
+`onResult` call and one `pause()` call, not five; and a full UI
+regression pass with no change in behavior for the normal single-scan
+path. `tsc -b`/`oxlint` clean.
+
+| # | Decision | Why |
+|---|---|---|
+| D137 | `QrScanStep`'s decode callback guards against firing more than once per mount (`handled` flag, pauses the scanner on first hit) | `qr-scanner` calls back on every frame that reads the code, not once — without a guard, a steady hold triggers the whole completeOffer/answerOffer flow multiple times, and the underlying RTCPeerConnection can only accept one setRemoteDescription per signaling-state transition, so every call after the first throws |
+
+## Feasibility question: WhatsApp-style linked devices instead of a merge
+
+Asked 2026-08-14, alongside the bug above — not yet designed, answered in
+chat rather than built. Short version: what WhatsApp's linked-devices
+model actually is (each device syncing continuously and independently
+against WhatsApp's own servers, not peer-to-peer between devices) is
+already what docs/05's paid PowerSync path provides once signed in on
+multiple devices — no new engineering. A genuinely *live*, always-on
+link over pure P2P isn't feasible without a server: mobile browsers
+suspend backgrounded tabs (no persistent WebRTC connection while the app
+isn't open), and two devices on different networks need signaling
+infrastructure to find each other at all — exactly the relay this doc
+already deferred (D117). What's realistic within the free/P2P
+constraints is treating a pairing as a remembered, ongoing relationship
+rather than a one-off event — which the peer list already half-does —
+with lighter re-sync UX and maybe opportunistic same-network auto-sync,
+short of true always-live. Not designed further than this yet; see chat
+for the fuller reasoning.
+
+## Lighter repeat sync: remembered peers skip the choice screen
+
+Built 2026-08-14, right after the feasibility question above — "once
+they pair, they'll probably do it again," so the first concrete piece of
+that "remembered relationship" idea, scoped down from the fuller
+WhatsApp-style question to what's actually achievable over P2P: a repeat
+sync with an already-known peer no longer re-asks "your own device, or
+someone else's?" — it's remembered from the first sync instead.
+
+`peers.ts`'s `PairedPeer.id` changed from a throwaway per-sync random id
+to the peer's actual `getLocalUserId()` (already exchanged via
+`exchangeHello`) — a stable key that lets `recordSync` **upsert** instead
+of append, so a second sync with the same peer updates their row in
+place (new `lastSyncedAt`, refreshed label) rather than adding a
+duplicate. `identityMode` is stored alongside it. Settings' peer rows are
+now real links (`/settings/pair?peer=<id>`, previously static
+`<div>`s); `PairingScreen` reads that `peer` query param, looks it up
+against the remembered list, and if found, initializes `identity` from
+the stored `identityMode` and starts at the `role` step directly instead
+of `choice` — skipping straight to "who's showing their code first,"
+since that's the only thing left that's genuinely a fresh, per-session
+decision. Cancel from a known-peer session exits straight to Settings
+rather than falling back to a `choice` screen that was never shown.
+
+Nothing about the merge-prompt (D126) needed to change — it already
+skips itself correctly on a repeat sync, for free: the check that decides
+whether to show it compares the peer's id against this device's *current*
+`getLocalUserId()`, which already equals the peer's id after the first
+sync unified them, so the condition that triggers the prompt is simply
+false the second time.
+
+Verified: seeding a known peer and tapping its Settings row lands
+directly on `role` with the choice screen never rendered at all (checked
+for absence, not just presence of the next step), with the peer's label
+shown in context ("sync with Bob's Phone"); Cancel from there goes
+straight to `/settings`. Upsert behavior verified directly against the
+real hook: two `recordSync` calls with the same peer id leave exactly one
+row, with the second call's label winning — not two rows. Full UI
+regression re-checked for the ordinary first-time (no known peer) path,
+unchanged. `tsc -b`/`oxlint` clean.
+
+Still short of true "linked devices": each repeat sync is still a
+manual, user-initiated QR ceremony (no way around that without a
+server/relay, per the feasibility discussion above) — this only removes
+the now-redundant *question*, not the pairing action itself.
+
+| # | Decision | Why |
+|---|---|---|
+| D138 | `PairedPeer.id` is the peer's real `getLocalUserId()`, not a throwaway random id; `recordSync` upserts by it instead of always appending | Makes "the same peer" a real, checkable fact instead of an assumption — required for both not-duplicating peer rows and for the known-peer flow to look anything up at all |
+| D139 | A known peer's Settings row jumps straight to the `role` step (`/settings/pair?peer=<id>`), skipping `choice`; `identity` is initialized from the stored `identityMode` | The own-device/someone-else question has exactly one correct answer once you've synced with a peer before — re-asking it is friction with no decision left to make, not a safety check worth repeating |

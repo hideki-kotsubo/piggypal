@@ -161,6 +161,10 @@
     animation: none;
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent);
   }
+  .pulse-dot {
+    animation: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent);
+  }
 }
 
 .sr-only {
@@ -988,4 +992,44 @@
   text-align: center;
   font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.9);
+}
+
+/* docs/28 — relay-assisted pairing (remote, no QR). */
+.relay-code {
+  font-family: var(--mono);
+  font-size: 1.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+.relay-code-input {
+  font-family: var(--mono);
+  font-size: 1.3rem;
+  text-align: center;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+/* Reuses the mic button's own breathing-halo timing (docs/16) rather than
+   a new animation — same "this is live, not idle" signal. */
+.pulse-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-right: 0.4rem;
+  animation: mic-pulse 1.5s ease-in-out infinite;
+}
+.sas-emoji {
+  font-size: 2.6rem;
+  letter-spacing: 0.3em;
+}
+/* RelayCodeEntry's type<->scan toggle sits outside .qr-stage while in
+   scan mode (a sibling of .camera-view, not a child of the centering
+   flex column QrScanStep doesn't wrap itself in) — .text-link's default
+   align-self: flex-start would otherwise sit flush left with no margin,
+   inconsistent with .camera-view's own 1.1rem side margin above it. */
+.relay-mode-toggle {
+  align-self: center;
+  margin: 0.8rem 1.1rem 0;
 }

@@ -193,6 +193,176 @@ it needs doing.
       and the merge running, and everything already flagged as
       out-of-scope in docs/25 (relay signaling, peer management beyond a
       bare list).
+      2026-08-14, real hardware, real bug: the "connection drops between
+      the merge-prompt and the merge" gap named right above turned out to
+      already be happening, every time — the user reported clicking
+      "Merge," both devices showing a bare "Syncing…" with no progress,
+      then eventually "Connection dropped before syncing finished." Root
+      cause was a genuine deadlock: the joining device pauses at the
+      merge-prompt for a user tap, the other device doesn't know to wait
+      and sends its data immediately, and `RTCDataChannel` doesn't
+      buffer/replay `message` events for listeners attached after the
+      fact (the original `exchangeHello`/`exchangeJson` each attached a
+      fresh listener per call) — so the impatient side's message could
+      arrive while nothing was listening and be lost forever. Fixed by
+      `wrapChannel()` (docs/25 D135): every channel gets exactly one
+      persistent buffering queue, attached the instant it's available,
+      before anything could possibly have been sent. Verified by directly
+      reproducing the bug's timing (one side calling `exchangeJson`
+      immediately, the other deliberately delayed 2 real seconds) rather
+      than just re-running the happy path — confirmed both sides still
+      resolved correctly with the right cross-matched data, and that the
+      delay was genuinely honored (~2001ms measured, not skipped).
+      `tsc -b`/`oxlint` clean; full UI click-through re-verified with no
+      regressions.
+      2026-08-14, real hardware, two more real bugs: scanning was still
+      slow, and a failed scan's retry left the camera dead with the
+      browser's own recording indicator still lit. Root cause 1:
+      `qr-scanner`'s `stop()`/`destroy()` defer the actual camera-track
+      release by 300ms internally (read straight from the library
+      source); a fast remount could start a new `getUserMedia()` request
+      before the old one actually let go. Fixed with the library's own
+      `pause(true)` immediate-release flag — confirmed directly:
+      `track.readyState` reads `"ended"` right after calling it, versus
+      still `"live"` at the same point with plain `stop()`. Root cause 2,
+      surfaced while investigating root cause 1: `QrScanStep` bound one
+      persistent `<video>` element via a ref, and React StrictMode's
+      dev-mode double-invoke (mount → cleanup → mount, on *every* mount,
+      not just the first) created two `QrScanner` instances pointed at
+      that same node in immediate succession — reproduced in isolation,
+      outside the app entirely, that this can leave *neither* instance's
+      stream attached, even though neither `start()` call throws. Fixed
+      by creating a fresh `<video>` element per effect run instead of a
+      shared ref. Verified by reproducing the user's literal sequence in
+      the real component under real StrictMode: enter the scan step,
+      confirm a live camera, back out, retry within 50ms — both the first
+      attempt and the immediate retry get a genuine live camera. `tsc -b`/
+      `oxlint` clean, full UI regression re-checked.
+      Also reported same day, not yet investigated: pairing an iPhone and
+      a desktop showed "Synced with iPhone" on both screens. Traced the
+      label-exchange protocol and it looks correct; `guessDeviceLabel()`
+      is pure `navigator.userAgent` sniffing, so the leading suspect is
+      the desktop side's UA matching the iPhone pattern (browser
+      device-emulation mode) rather than a real protocol bug — asked the
+      user to confirm, unconfirmed as of this entry. Proposed fix either
+      way: an editable, remembered device name instead of relying solely
+      on UA sniffing.
+      2026-08-14, real hardware, a third bug: "connection dropped before
+      syncing finished" again, right after scanning the second (answer)
+      QR code — despite the D135 channel-queue fix and both camera fixes
+      already landed. `qr-scanner`'s decode callback fires on every video
+      frame that reads the code, not once — holding the phone steady for
+      even a moment after a good scan triggers it multiple times, running
+      `handleScannedAnswer` concurrently for what felt like one scan. The
+      first call's `completeOffer` succeeds; every call after it throws,
+      since a `RTCPeerConnection` can only accept one `setRemoteDescription`
+      per signaling-state transition — caught by the generic error
+      handler, so it looked like total failure even though the first call
+      may have already succeeded (and if two calls got far enough, would
+      have corrupted the handshake for real via two competing channel
+      listeners). Fixed with a `handled` guard (docs/25 D137): the first
+      decode pauses the scanner and is the only one that reaches
+      `onResult`. Verified by feeding the guard 5 simulated repeat-frame
+      decodes of a real QR-encoded payload — confirmed exactly one
+      `onResult` call, not five — plus a full UI regression pass. `tsc -b`/
+      `oxlint` clean.
+      Same message, also asked: how feasible is a WhatsApp-style "linked
+      device" model instead of a one-time merge? Answered in chat, not
+      designed: what that actually is (each device syncing continuously
+      and independently against WhatsApp's servers) is already the paid
+      PowerSync path once signed in on multiple devices — no new work
+      needed there. A genuinely always-live link over pure P2P isn't
+      feasible without a server (mobile browsers suspend backgrounded
+      tabs; cross-network devices need signaling infrastructure — the
+      relay docs/25 already deferred, D117). Realistic middle ground:
+      treat pairing as an ongoing remembered relationship with lighter
+      re-sync UX, not true always-live. Not designed further than this.
+      2026-08-14, built right after: the first concrete piece of that —
+      "once they pair, they'll probably do it again," so a repeat sync
+      with a known peer now skips the own-device/someone-else question
+      entirely (docs/25 D138-D139). `PairedPeer.id` changed from a
+      throwaway random id to the peer's real `getLocalUserId()`, so
+      `recordSync` can upsert (update the existing row) instead of always
+      appending a duplicate on every sync with the same person. Settings'
+      peer rows are now real links straight into `/settings/pair?peer=<id>`,
+      which skips the choice screen and starts at "who's showing their
+      code first" with the identity already known from last time. The
+      merge-prompt needed no changes at all — it already skips itself
+      correctly on a repeat sync, since the condition that shows it
+      naturally becomes false once identity's already unified. Verified:
+      a seeded known peer's row lands directly on the role step with the
+      choice screen never rendered (checked for its absence, not just
+      the next step's presence); two recordSync calls for the same peer
+      leave exactly one row, not two; ordinary first-time pairing
+      unchanged. `tsc -b`/`oxlint` clean. Still short of true "linked
+      devices" — each repeat sync is still a manual QR ceremony, just
+      without the now-redundant question.
+      2026-08-14, later still: asked directly why pairing needs two QR
+      scans instead of one — answered (WebRTC's offer/answer handshake is
+      inherently bidirectional, same shape as any P2P pairing; QR is
+      standing in by hand for what a signaling server normally relays
+      invisibly), which led to "can we offer both, and let the user
+      choose?" Designed and built the same day: docs/28-relay-assisted-
+      pairing.md (D140-D145) — a lightweight, anonymous WebSocket relay
+      (`api/src/relay.ts`, the first real feature on `api/`, which was
+      previously just `/health`) that brokers the same offer/answer
+      exchange automatically for two devices that aren't in the same
+      room, keyed by a short human-typable code instead of a QR scan.
+      Open to every tier, no auth (the user's explicit call — the relay
+      never touches financial data). Because an anonymous relay means
+      anyone could try to occupy the wrong room slot, added Short
+      Authentication String verification (a few emoji derived from both
+      sides' real connection fingerprints, shown and confirmed on both
+      screens before anything else crosses the channel) — the user chose
+      to include this rather than ship without it, given the stakes.
+      A new "are you together right now?" question now sits between
+      identity and role; picking "no" swaps the QR show/scan screens for
+      code-generate/code-enter/SAS-confirm ones. Everything downstream
+      (merge, identity unification, the synced summary) is completely
+      unchanged and shared with the QR path — `pairing.ts` was already
+      transport-agnostic.
+      A real bug surfaced while first testing this, not before: the SAS
+      confirmation step inserts a human-paced gap between "the data
+      channel opens" and "afterHandshake runs" that the QR path never
+      had (QR calls afterHandshake immediately on channel-open) — if the
+      peer's hello arrived during that gap, it had zero listeners to
+      catch it, the same deadlock class as D135, just a different kind of
+      pause triggering it. Fixed by wrapping every channel the instant it
+      opens, in whichever flow produced it, rather than whenever
+      afterHandshake happens to run (docs/28 D145).
+      Verified in layers: the raw server relay via direct WebSocket
+      clients (full room lifecycle, rejection cases, rate limiting all
+      confirmed); the client transport directly (a real relay-mediated
+      RTCPeerConnection reaching `connected`, SAS matching exactly on
+      both sides of one connection and differing between two independent
+      connections); and the full UI across two separate browser contexts
+      for both the someone-else and own-device paths, reaching a real
+      "Synced" screen with accurate counts on both sides. QR and
+      known-peer flows re-verified afterward for regressions from the
+      shared code this touched — none found. `tsc -b`/`oxlint` clean on
+      both `app/` and `api/`.
+      2026-08-14, real deployment + real-device follow-up: `app/.env` now
+      points `VITE_RELAY_WS_URL` at a real reverse-proxied `wss://`
+      hostname instead of the localhost dev default — no code changes
+      needed, confirming the override point (D140's "will change in the
+      future" concern) was designed right the first time. Separately,
+      using it for real surfaced two code-entry frictions: no auto-dash
+      while typing, and no way to avoid transcribing 0/O or 1/I/l by
+      hand. Fixed (docs/28 D146): the code field auto-inserts the dash as
+      you type, and a "scan a code instead" option reuses the exact same
+      QR-scanning component the main pairing flow already has (every
+      camera fix that component earned applies here for free); the
+      "show code" screen now also renders the code as a QR alongside the
+      text, for whichever the two people find easier. Verified: the
+      dash-formatting function against 8 edge cases including an
+      already-dashed input and a real generated code round-tripping
+      unchanged; the type/scan toggle and QR rendering on a freshly
+      booted instance (an earlier run's worker-load errors turned out to
+      be stale Vite cache on a long-running dev server, not a real bug —
+      confirmed by the same test passing clean on a fresh one); a full
+      relay pairing re-run end to end confirming the QrShowStep refactor
+      didn't regress anything; and a dedicated encode/decode round-trip
+      for a real generated code specifically. `tsc -b`/`oxlint` clean.
 - [ ] "Merge account" as its own explicit action, not only something that
       happens automatically at pairing time — flagged 2026-08-14, future
       work, not designed. Idea: a standalone Settings entry point (paid

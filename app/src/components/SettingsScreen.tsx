@@ -67,11 +67,16 @@ export function SettingsScreen() {
         <>
           <div className="section-label">Paired devices</div>
           <div className="accounts-list">
+            {/* Tappable, unlike the earlier static version — the whole
+                point of remembering a peer (docs/25 D138) is a lighter
+                repeat sync: this jumps straight into pairing with the
+                own-device/someone-else question already answered from
+                last time, instead of the full choice flow again. */}
             {peers.map((p) => (
-              <div key={p.id} className="settings-row settings-row-static">
+              <Link key={p.id} to={`/settings/pair?peer=${encodeURIComponent(p.id)}`} className="settings-row">
                 <span>{p.label}</span>
                 <span style={{ color: 'var(--ink-faint)', fontSize: '0.8rem' }}>synced {formatSyncedAgo(p.lastSyncedAt)}</span>
-              </div>
+              </Link>
             ))}
           </div>
         </>

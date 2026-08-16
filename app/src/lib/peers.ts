@@ -1,13 +1,18 @@
 import { useState } from 'react';
 
 // docs/25: "remembering/managing paired peers... needed for a real UI but
-// not designed here" — this is the minimum needed to render docs/27's
-// frame 1/5 peer list, not the fully-designed feature that note flags.
-// No rename/forget/manual-resync affordances yet.
+// not designed here" — extended (still not the fully-designed feature
+// that note flags — no rename/forget UI yet) to make a repeat sync with
+// an already-known peer lighter: skipping the own-device/someone-else
+// question the second time, since it's now remembered rather than
+// re-asked.
 export interface PairedPeer {
-  id: string; // this device's own random id for the peer row, not a real identity
+  id: string; // the peer's own getLocalUserId() — a stable identity, not
+  // a throwaway per-sync id, so re-syncing with the same peer updates
+  // this row instead of duplicating it.
   label: string;
   lastSyncedAt: string; // ISO timestamp
+  identityMode: 'own-device' | 'someone-else';
 }
 
 const PEERS_KEY = 'piggypal:paired-peers';
@@ -24,11 +29,15 @@ function readPeers(): PairedPeer[] {
   }
 }
 
-export function usePairedPeers(): [PairedPeer[], (label: string) => void] {
+export function usePairedPeers(): [PairedPeer[], (peerLocalUserId: string, label: string, identityMode: PairedPeer['identityMode']) => void] {
   const [peers, setPeers] = useState<PairedPeer[]>(readPeers);
 
-  function recordSync(label: string) {
-    const next = [...peers, { id: crypto.randomUUID(), label, lastSyncedAt: new Date().toISOString() }];
+  // Upserts by the peer's real identity — a second sync with the same
+  // peer updates their lastSyncedAt (and label, in case a device's
+  // guessed name changed) in place rather than adding a duplicate row.
+  function recordSync(peerLocalUserId: string, label: string, identityMode: PairedPeer['identityMode']) {
+    const withoutThisPeer = peers.filter((p) => p.id !== peerLocalUserId);
+    const next = [...withoutThisPeer, { id: peerLocalUserId, label, lastSyncedAt: new Date().toISOString(), identityMode }];
     localStorage.setItem(PEERS_KEY, JSON.stringify(next));
     setPeers(next);
   }
