@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useStore } from '../lib/store';
-import { accountLabel, formatAmount, formatRelativeDate } from '../lib/format';
+import { accountLabel, formatAmount, formatRelativeDate, transactionTitle } from '../lib/format';
 
 const PREVIEW_COUNT = 5;
 
@@ -26,10 +26,11 @@ export function RecentList() {
       <div className="recent">
         {recent.map((t) => {
           const account = store.accounts.find((a) => a.id === t.accountId);
+          const category = store.categories.find((c) => c.id === t.categoryId);
           return (
             <Link key={t.id} to={`/transactions/${t.id}`} className="tx-row tx-row-tappable">
               <div className="tx-main">
-                <span className="tx-note">{t.note ?? 'No note'}</span>
+                <span className="tx-note">{transactionTitle(t, category)}</span>
                 <span className="tx-meta">
                   {formatRelativeDate(t.occurredAt)} · {account ? accountLabel(account) : '—'}
                 </span>

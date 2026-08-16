@@ -49,3 +49,13 @@ export function nowLocal(): string {
 export function accountLabel(account: { institution: string | null; name: string }): string {
   return account.institution ? `${account.institution} — ${account.name}` : account.name;
 }
+
+// A note-less transaction's category is more useful as the list-row title
+// than a generic "No note" — falls back further to "Uncategorized" for
+// entries that are neither (e.g. Inbox items, always category-less there).
+export function transactionTitle(
+  transaction: { note: string | null },
+  category: { name: string } | null | undefined,
+): string {
+  return transaction.note ?? category?.name ?? 'Uncategorized';
+}

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useStore } from '../lib/store';
-import { accountLabel, formatAmount, formatRelativeDate, formatTime } from '../lib/format';
+import { accountLabel, formatAmount, formatRelativeDate, formatTime, transactionTitle } from '../lib/format';
 import {
   filterTransactions,
   hasActiveFilters,
@@ -250,7 +250,7 @@ export function TransactionList() {
             return (
               <Link key={t.id} to={`/transactions/${t.id}`} className="tx-row tx-row-tappable">
                 <div className="tx-main">
-                  <span className="tx-note">{t.note ?? 'No note'}</span>
+                  <span className="tx-note">{transactionTitle(t, category)}</span>
                   <span className="tx-meta">
                     {category?.name ?? 'Uncategorized'} · {formatRelativeDate(t.occurredAt)}, {formatTime(t.occurredAt)} · {account ? accountLabel(account) : '—'}
                   </span>

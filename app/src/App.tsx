@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { EntryZone } from './components/EntryZone';
 import { InboxBanner } from './components/InboxBanner';
-import { BudgetBars } from './components/BudgetBars';
-import { TrendSparkline } from './components/TrendSparkline';
 import { RecentList } from './components/RecentList';
 
 interface ToastState {
@@ -28,15 +26,16 @@ export default function App() {
     <main className="home">
       <div className="app-bar">
         <span className="wordmark">piggypal</span>
-        <Link to="/settings" className="kebab" aria-label="Settings">
-          <span /><span /><span />
-        </Link>
+        <div className="app-bar-actions">
+          <Link to="/insights" className="icon-btn" aria-label="Insights">▤</Link>
+          <Link to="/settings" className="kebab" aria-label="Settings">
+            <span /><span /><span />
+          </Link>
+        </div>
       </div>
 
       <EntryZone onSubmitted={showToast} />
       <InboxBanner />
-      <BudgetBars />
-      <TrendSparkline />
       <RecentList />
 
       {toast && (

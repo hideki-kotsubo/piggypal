@@ -443,6 +443,26 @@ it needs doing.
 
 ## ✅ Done
 
+- [x] Home should be entry + recent only, no budgets/graph — requested
+      2026-08-15 as a test ("Could we have a Home screen with just the text
+      input and the latests entries? With no budget neither graph?").
+      Budgets and the trend chart moved to a new `InsightsScreen.tsx` at
+      `/insights` (docs/07 D147), reached from a small ▤ icon next to
+      Settings' kebab on Home; both components (`BudgetBars`,
+      `TrendSparkline`) moved unchanged, no logic touched. Verified on an
+      isolated dev instance (Playwright): Home renders entry box + inbox
+      banner + recent only, `/insights` renders trend + budgets, the icon
+      link navigates correctly both ways, no console errors.
+- [x] List rows should show Category instead of a bare "No note" when a
+      transaction has no note — requested 2026-08-15. Added
+      `transactionTitle()` (docs/07 D148) — note → category name →
+      "Uncategorized" — used by RecentList and TransactionList; InboxScreen
+      left untouched since its rows are category-less by definition (that's
+      the filter that puts them there). Verified: `tsc`/`oxlint` clean: the
+      existing seeded "no note, no category" row still correctly shows
+      "Uncategorized" (unchanged behavior), and a direct call to
+      `transactionTitle()` with a note-less-but-categorized transaction
+      confirmed the new branch returns the category name.
 - [x] Quick-add's blank $0.00/uncategorized transaction survived cancel —
       reported 2026-08-13. Home's "+" (docs/19) inserts a live row before
       navigating to its edit screen; backing out with no edits left it

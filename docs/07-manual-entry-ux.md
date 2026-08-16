@@ -9,9 +9,11 @@ live in the same on-screen entry zone rather than as separate flows/screens —
 ## App shell: single continuous scroll, no tab bar
 
 Home is one scrollable screen: entry zone → inbox banner (only when count >
-0) → current-month budgets → one trend chart → recent transactions → "see
-all" drill-in. Settings reachable via a small icon in the app bar. No bottom
-tab bar in v1.
+0) → recent transactions → "see all" drill-in. Settings reachable via a
+small icon in the app bar. No bottom tab bar in v1.
+
+Current-month budgets and the trend chart moved off this scroll to a
+dedicated `/insights` page (D147) — Home's own icon points there.
 
 Chosen over a conventional tab bar because entry speed is the product's
 stated differentiator — a single screen keeps the entry zone one thumb-reach
@@ -107,25 +109,33 @@ flowchart TD
 
 ```
 ┌─────────────────────────────────┐
-│ piggypal                    ⋯   │
+│ piggypal                   ▤ ⋯  │  ← ▤ opens /insights (D147)
 ├─────────────────────────────────┤
 │ type or tap what you spent…     │  ← collapsed entry zone
 ├─────────────────────────────────┤
 │ ● 3 entries need a category  ›  │  ← inbox banner, only if N>0
-├─────────────────────────────────┤
-│ August · Mercado (CAD) $420/$600│  ← one bar per (category, currency)
-│ ████████████░░░░░                │     with budget or spend — see docs/10
-│ August · Transporte   $204/$180 │
-│ ██████████████████░ (over)      │
-├─────────────────────────────────┤
-│ Last 30 days              $1,840│
-│ [ sparkline ]                    │
 ├─────────────────────────────────┤
 │ Recent                          │
 │ Mercado          −$45.00  ontem │
 │ Salário        +$3,200.00  2d   │
 │ Uber             −$18.40  2d    │
 │              see all ›          │
+└─────────────────────────────────┘
+```
+
+`/insights` (D147), reached via the ▤ icon:
+
+```
+┌─────────────────────────────────┐
+│ ← Back           Insights       │
+├─────────────────────────────────┤
+│ Last 30 days              $1,840│
+│ [ sparkline ]                    │
+├─────────────────────────────────┤
+│ August · Mercado (CAD) $420/$600│  ← one bar per (category, currency)
+│ ████████████░░░░░                │     with budget or spend — see docs/10
+│ August · Transporte   $204/$180 │
+│ ██████████████████░ (over)      │
 └─────────────────────────────────┘
 ```
 
@@ -142,3 +152,5 @@ flowchart TD
 | D45 | Currency default = the selected account's *last-used* currency (from its most recent transaction), not its native currency; resets on account switch | Avoids re-picking currency on every entry during a trip, while still resetting sensibly when the account itself changes |
 | D46 | Tap-entry gets an account picker too (same pattern), collapsed to a pill by default; default value = account of the single most recent transaction, no stored preference | Consistent with how currency and category chips already work; picking an account here is what resets the currency default |
 | D47 | Typed/AI entry can specify account: Tier 2 matches an injected account list only on explicit mention (never guesses); Tier 1 does a cheap exact-name match only, no fuzzy/NLU | Mirrors doc 04's "never guess" rule for category_id; keeps Tier 1's capability boundary honest — deterministic matching only, no inference reserved for the LLM |
+| D147 | Budgets and the trend chart move off Home to a dedicated `/insights` page, reached via a small icon next to Settings' kebab; Home keeps only entry zone, inbox banner, and recent transactions | User's explicit request, tested 2026-08-15: Home is for logging fast, not reviewing — narrows D22's "single continuous scroll" to what's actually entry-adjacent, moving the review surface one tap away instead of off the app |
+| D148 | A list row's title falls back from note → category name → "Uncategorized" (was note → "No note") | A note-less transaction almost always still has a category; showing it as the title is more useful than a placeholder that says nothing. Doesn't touch Inbox rows — those are category-less by definition (the queue that feeds this filter), so the fallback chain never reaches past `aiRaw`/note there |

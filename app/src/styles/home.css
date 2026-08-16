@@ -19,6 +19,11 @@
   font-size: 1.1rem;
   color: var(--ink);
 }
+.app-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
 .kebab {
   display: flex;
   gap: 3px;
@@ -524,10 +529,15 @@
   color: var(--accent);
 }
 
-/* Accounts screen (docs/12) */
+/* Accounts screen (docs/12); also used on <Link>s (e.g. the home app-bar's
+   Insights icon) — text-decoration/display reset covers the anchor case,
+   a no-op on <button> usages. */
 .icon-btn {
+  display: inline-flex;
+  align-items: center;
   background: none;
   border: none;
+  text-decoration: none;
   font-size: 1.3rem;
   line-height: 1;
   color: var(--ink-muted);

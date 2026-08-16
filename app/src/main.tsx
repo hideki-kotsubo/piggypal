@@ -12,6 +12,7 @@ import { TransactionScreen } from './components/TransactionScreen'
 import { InboxScreen } from './components/InboxScreen'
 import { AccountsScreen } from './components/AccountsScreen'
 import { CategoriesScreen } from './components/CategoriesScreen'
+import { InsightsScreen } from './components/InsightsScreen'
 import { SettingsScreen } from './components/SettingsScreen'
 import { PairingScreen } from './components/PairingScreen'
 
@@ -24,6 +25,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/transactions" element={<TransactionList />} />
           <Route path="/transactions/:id" element={<TransactionScreen />} />
           <Route path="/inbox" element={<InboxScreen />} />
+          <Route path="/insights" element={<InsightsScreen />} />
           <Route path="/settings" element={<SettingsScreen />} />
           <Route path="/settings/pair" element={<PairingScreen />} />
           <Route path="/accounts" element={<AccountsScreen />} />

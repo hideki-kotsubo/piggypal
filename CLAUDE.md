@@ -129,7 +129,7 @@ docker compose up    # local Postgres, schema auto-loaded from db/schema.sql
 - `docs/04-ai-entry-pipeline.md` — tool schema, prompt, learning loop, failure modes
 - `docs/05-auth-and-devices.md` — magic link + JWT flows, why auth is opt-in (free tier never signs in), device/rekey handling
 - `docs/06-subscription-and-billing.md` — Stripe checkout/webhook flow, subscription-gate enforcement, cancellation data policy
-- `docs/07-manual-entry-ux.md` — single-screen "type or tap" home, entry zone states, inbox interaction. Its D26 inline-categorize-in-place inbox mechanic is superseded by docs/20.
+- `docs/07-manual-entry-ux.md` — single-screen "type or tap" home, entry zone states, inbox interaction. Its D26 inline-categorize-in-place inbox mechanic is superseded by docs/20. **Home narrowed 2026-08-15** (D147): budgets/trend chart moved off Home to a new `/insights` page (icon next to Settings' kebab) — Home now keeps only entry zone, inbox banner, and recent transactions. Also D148: list rows fall back from note → category name → "Uncategorized" instead of a bare "No note" placeholder (`transactionTitle()` in `format.ts`, used by RecentList/TransactionList; Inbox rows untouched — category-less by definition).
 - `docs/08-csv-export.md` — local-only CSV export format and scope; server-backed full-history export is backlogged
 - `docs/09-language-and-i18n.md` — full bilingual UI, language detection, formatting
 - `docs/10-currency-and-payment-methods.md` — payment methods = accounts (no currency of their own, D62), per-transaction currency, per-currency budgets
