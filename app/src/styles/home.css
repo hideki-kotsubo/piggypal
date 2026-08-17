@@ -521,6 +521,14 @@
 .tx-amt {
   font-variant-numeric: tabular-nums;
   font-weight: 600;
+  /* iOS Safari's line-breaking treats the minus sign as a break
+     opportunity, so on a squeezed row it could wrap "-" onto its own
+     line above the digits. white-space keeps the whole amount on one
+     line; flex-shrink keeps it from being squeezed in the first place
+     (the note/meta column next to it shrinks instead — it's the more
+     variable-length content of the two). */
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .tx-amt.out {
   color: var(--ink);
