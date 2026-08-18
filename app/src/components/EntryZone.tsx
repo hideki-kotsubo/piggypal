@@ -26,6 +26,8 @@ interface Preview {
   categoryId: string | null;
   occurredAt: string;
   dateParsed: boolean;
+  merchant: string | null; // docs/16 D150 — no *Parsed flag, same as category: null just means none recognized, not a fallback standing in for it
+  unrecognized: string | null; // docs/16 D150 — becomes the transaction's note; null falls through to the category-name display (docs/07 D148)
 }
 
 export function EntryZone({ onSubmitted }: Props) {
@@ -88,6 +90,7 @@ export function EntryZone({ onSubmitted }: Props) {
       categories: store.categories,
       keywords: store.categoryKeywords,
       accounts: store.accounts,
+      merchants: store.rankedMerchants(),
       now: new Date(),
     });
 
@@ -107,6 +110,8 @@ export function EntryZone({ onSubmitted }: Props) {
       categoryId: result.categoryId,
       occurredAt: result.occurredAt ?? nowLocal(),
       dateParsed: result.occurredAt !== null,
+      merchant: result.merchant,
+      unrecognized: result.unrecognized,
     });
   }
 
@@ -117,7 +122,6 @@ export function EntryZone({ onSubmitted }: Props) {
 
   function confirmPreview() {
     if (!preview) return;
-    const category = preview.categoryId ? store.categories.find((c) => c.id === preview.categoryId) : undefined;
 
     const tx: Transaction = {
       id: crypto.randomUUID(),
@@ -126,8 +130,11 @@ export function EntryZone({ onSubmitted }: Props) {
       amountCents: preview.amountCents,
       currency: preview.currency,
       occurredAt: preview.occurredAt,
-      note: category?.name ?? null,
-      merchant: null, // Tier 1 never attempts merchant extraction, see docs/15 D77
+      // docs/16 D150: whatever the parser couldn't claim for a structured
+      // field: null falls through to the category-name display (docs/07
+      // D148) instead of duplicating it here.
+      note: preview.unrecognized,
+      merchant: preview.merchant,
       source: 'ai',
       aiRaw: preview.text,
       deletedAt: null,
@@ -246,6 +253,12 @@ export function EntryZone({ onSubmitted }: Props) {
                 </span>
                 {!preview.accountParsed && <span className="defaulted">default</span>}
               </div>
+              {preview.merchant && (
+                <div className="parse-field">
+                  <span className="k">Merchant</span>
+                  <span className="v">{preview.merchant}</span>
+                </div>
+              )}
             </div>
             <div className="parse-actions">
               <button type="button" className="chip ghost" onClick={() => setPreview(null)}>

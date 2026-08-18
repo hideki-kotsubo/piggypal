@@ -130,15 +130,52 @@ for that one tap rather than leaving the mic button dead. Flagged
 honestly: this mitigates a platform limitation, it isn't a guaranteed fix
 across every iOS/Safari version.
 
+## Merchant matching, and saving what wasn't recognized (D150)
+
+Two related gaps closed together, 2026-08-17, backlogged the day before:
+Tier 1 never attempted merchant identification (D92), and everything the
+parser couldn't map to a structured field was silently discarded —
+`confirmPreview` wrote `note: category?.name ?? null`, never the leftover
+words.
+
+**Merchant**: closed-vocabulary, same never-guess principle as
+category/account matching above — `matchMerchant` only recognizes a
+merchant the user has already used at least once (`store.rankedMerchants()`
+passed in as `ctx.merchants`), never invents a name it's never seen. This
+narrows D92/docs/15 D77 rather than overturning them: *open*-vocabulary
+merchant extraction (spotting a brand-new merchant on first mention) is
+still Tier 2/AI territory, unbuilt; recognizing an *already-known* one is
+squarely Tier 1's kind of problem, the same closed-vocabulary shape as
+everything else in this file. Shown in the parse-preview panel as a
+"Merchant" row, only when one was actually recognized — no "defaulted"
+state exists for it the way currency/account/date have one, since there's
+nothing to default an optional field to.
+
+**Unrecognized leftover**: every extraction function now also records the
+text span (`[start, end)` offsets) it matched, threaded through
+`parseUtterance` as it runs. Once every field's been extracted, the
+original text minus every recognized span — sorted, cursor-merged so
+overlapping spans (a category keyword and a merchant name sharing a word,
+say) don't get double-counted — is what's left: `"costco 45 groceries with
+mom"` recognizes the merchant, amount, and category, leaving `"with mom"`.
+That leftover becomes the transaction's `note` (`null` if nothing's left,
+i.e. the whole utterance was recognized), replacing the old category-name
+copy — which is safe because docs/07 D148's list-row fallback (note →
+category name → "Uncategorized") already exists and picks up exactly that
+slack when `note` is null. The full original utterance is untouched in
+`aiRaw` regardless, so nothing is ever actually lost even if a span gets
+mis-computed — `note` is a nicety on top, not the only copy.
+
 ## Decisions locked in this doc
 
 | # | Decision | Why |
 |---|---|---|
 | D90 | Tier 1 is a pure `parser.ts` module, closed-vocabulary throughout, never-guess-degrades to `categoryId: null` | Matches docs/04's own "ambiguity degrades to friction, never data loss" principle; a pure module with no store/React imports is easy to reason about independent of the UI that drives it |
 | D91 | `category_keywords` is seeded with a small starter bilingual vocabulary and read in this pass; the docs/04 learning loop (writing corrections back) is explicitly deferred | The parser needs something to match against on a fresh account; writing back corrections is a distinct, separable piece of work not required to make Tier 1 useful |
-| D92 | Merchant/location extraction stays out of scope for Tier 1, flagged as a real possible future extension | Same reasoning as docs/15 D77 — open-vocabulary proper nouns are a fuzzier problem than the closed category/account/date vocab above |
+| D92 | Merchant/location extraction stays out of scope for Tier 1, flagged as a real possible future extension | Same reasoning as docs/15 D77 — open-vocabulary proper nouns are a fuzzier problem than the closed category/account/date vocab above. **Narrowed by D150**: *closed*-vocabulary merchant matching (already-known merchants only) is in Tier 1 now; genuinely open-vocabulary extraction is still out of scope |
 | D93 | Voice input is a thin Web Speech layer that only populates the existing text field — no separate parse path; genuinely-offline STT is out of scope | Reuses the exact same Tier 1 parser typed input already goes through; a fully offline model is a much bigger undertaking than this pass |
 | D94 | Unparseable-amount input soft-blocks with a toast (text stays editable) rather than docs/04's undefined "draft" concept | `amount_cents` is `NOT NULL` in the schema — there's no draft row shape to save into |
 | D149 | `speechInput.ts` reuses one `SpeechRecognition` instance across taps (module-level, reconfigured per call) instead of constructing fresh each time | Fixes iOS Safari re-prompting for mic permission on every tap — its grant behaves as scoped to the instance rather than the origin, unlike Chrome and unlike Safari's own `getUserMedia` behavior |
+| D150 | `parser.ts` gains closed-vocabulary merchant matching (against `store.rankedMerchants()`, never an unseen name) and every extraction function now records the text span it matched, so `parseUtterance` can compute whatever's left over; that leftover becomes `note` instead of a copy of the category name | Merchant: narrows D92/docs/15 D77's Tier-1-never-guesses-merchant call to "never guesses an *unseen* one" — recognizing an already-known merchant is closed-vocabulary, the same shape as category/account matching. Note: nothing the user said should be silently thrown away when it doesn't map to a structured field; docs/07 D148's fallback already covers the case where there's no leftover to show |
 
 **Implemented 2026-08-12.**
