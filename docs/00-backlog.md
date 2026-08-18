@@ -30,6 +30,33 @@ it needs doing.
       this form, filtered live against `institutionStr`. Selecting a chip
       still just sets the text field (free text stays editable, this is
       suggestions not a closed enum).
+- [ ] Merchant identification for voice parsing — requested 2026-08-17.
+      Right now `EntryZone.confirmTypedText` hardcodes `merchant: null` for
+      every typed/voice entry, citing docs/15 D77 ("merchant extraction is
+      Tier 2/AI only; Tier 1 never guesses"). Since voice shares Tier 1's
+      parser wholesale rather than getting its own path (docs/16 D93),
+      this is really "give Tier 1 a merchant guess" — which means either
+      reopening D77's open-vocabulary concern with a closed-vocabulary
+      compromise (match against the user's existing `merchant` values the
+      same way category/account keyword-matching already works, never
+      inventing an unseen name), or waiting on the still-unbuilt Tier 2/AI
+      pipeline (docs/04) that D77 was actually reserving this for. Worth
+      deciding which before building, not assuming Tier 1 can just do it.
+- [ ] Save unrecognized input into the Note field — requested 2026-08-17.
+      Today `confirmPreview` sets `note: category?.name ?? null` on every
+      AI/voice-sourced transaction (`EntryZone.tsx`) — the parsed-out
+      category name, not the leftover words the parser didn't map to any
+      structured field. The full raw utterance is already kept in
+      `aiRaw`, but that only ever surfaces in `InboxScreen`, and only
+      for the (rare) categoryId-still-null case — once a transaction
+      leaves the inbox, whatever wasn't captured into amount/category/
+      account/date is gone from view. Interacts with the merchant item
+      above: once merchant extraction exists, "unrecognized" shrinks to
+      whatever's left after that too. Also interacts with docs/07 D148
+      (list rows fall back note → category name → "Uncategorized") —
+      switching `note` away from a category-name copy makes that fallback
+      the thing that keeps category visible on rows with no real leftover
+      text, so the two need to be designed together, not landed blind.
 - [ ] Set up a test runner (Vitest, matches Vite) — no tests exist yet.
 - [ ] Decide on GitHub/Gitea setup for backlog + PR workflow (this doc is
       the interim, file-based version).
