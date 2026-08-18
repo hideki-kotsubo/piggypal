@@ -443,6 +443,24 @@ it needs doing.
 
 ## ✅ Done
 
+- [x] App kept asking to allow the microphone every time the mic icon was
+      tapped — reported 2026-08-17 on iOS. Root cause: `speechInput.ts`
+      built a brand-new `webkitSpeechRecognition` instance on every tap;
+      Chrome ties the mic grant to the origin so this never showed there,
+      but Safari's grant behaves as scoped to the recognition *instance*
+      instead, so each fresh instance looked like a never-before-seen
+      request. Fixed (docs/16 D149) by reusing one module-level instance
+      across taps, reconfiguring its handlers before each `start()`
+      instead of constructing new; a fast abort-then-retap racing ahead of
+      the previous session's `end` event (`InvalidStateError` on a reused
+      instance) falls back to a fresh instance for that tap rather than
+      leaving the mic dead. Verified: `tsc`/`oxlint` clean, and a stubbed
+      `SpeechRecognition` constructor confirmed sequential taps reuse the
+      same instance (1 construct for 2 taps) while the race case correctly
+      recovers via one fallback reconstruct. Flagged honestly in the doc:
+      this mitigates a WebKit platform limitation, not guaranteed airtight
+      on every iOS/Safari version — worth confirming on the user's actual
+      phone.
 - [x] Home should be entry + recent only, no budgets/graph — requested
       2026-08-15 as a test ("Could we have a Home screen with just the text
       input and the latests entries? With no budget neither graph?").

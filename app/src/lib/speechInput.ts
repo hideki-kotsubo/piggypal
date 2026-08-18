@@ -48,14 +48,23 @@ export interface SpeechInputHandlers {
   onEnd?: () => void;
 }
 
-// No language toggle exists yet (docs/09 is spec-only) — navigator.language
-// is a best-effort default, genuinely imperfect if the OS locale doesn't
-// match what the user actually speaks. Revisit once docs/09 ships.
-export function startSpeechInput(handlers: SpeechInputHandlers): { stop: () => void; abort: () => void } | null {
+// One recognition object, reused for the life of the page rather than
+// constructed fresh per tap. Chrome ties the mic grant to the origin, so
+// this wouldn't matter there — but Safari (notably iOS) doesn't reliably
+// do that for SpeechRecognition specifically (unlike its getUserMedia
+// grant, which *is* remembered per-origin): in practice the permission
+// behaves as if it's scoped to the recognition instance, so a fresh
+// instance each tap looks like a never-before-seen consumer and gets
+// re-prompted every time. Reusing one instance is the standard mitigation.
+let sharedRecognition: SpeechRecognitionLike | null = null;
+
+function configuredRecognition(handlers: SpeechInputHandlers): SpeechRecognitionLike | null {
   const Ctor = getSpeechRecognitionCtor();
   if (!Ctor) return null;
-
-  const recognition = new Ctor();
+  const recognition = sharedRecognition ?? new Ctor();
+  // No language toggle exists yet (docs/09 is spec-only) — navigator.language
+  // is a best-effort default, genuinely imperfect if the OS locale doesn't
+  // match what the user actually speaks. Revisit once docs/09 ships.
   recognition.lang = navigator.language;
   recognition.interimResults = false;
   recognition.maxAlternatives = 1;
@@ -72,14 +81,33 @@ export function startSpeechInput(handlers: SpeechInputHandlers): { stop: () => v
   };
   recognition.onerror = (event) => handlers.onError?.(event.error);
   recognition.onend = () => handlers.onEnd?.();
-  recognition.start();
+  return recognition;
+}
+
+export function startSpeechInput(handlers: SpeechInputHandlers): { stop: () => void; abort: () => void } | null {
+  let recognition = configuredRecognition(handlers);
+  if (!recognition) return null;
+  try {
+    recognition.start();
+  } catch {
+    // Reusing one instance (above) is what stops the repeat mic prompt,
+    // but it means a fast abort-then-restart can race ahead of the
+    // previous session's `end` event, which throws InvalidStateError on
+    // an instance that thinks it's still active. Discard and retry on a
+    // fresh instance rather than leaving the tap dead.
+    sharedRecognition = null;
+    recognition = configuredRecognition(handlers);
+    if (!recognition) return null;
+    recognition.start();
+  }
+  sharedRecognition = recognition;
 
   return {
-    stop: () => recognition.stop(),
+    stop: () => recognition!.stop(),
     // For the user bailing out mid-recording: abort() cuts the mic
     // immediately and discards whatever's been captured so far, unlike
     // stop() which still tries to deliver a final (possibly garbled,
     // half-spoken) result via onresult.
-    abort: () => recognition.abort(),
+    abort: () => recognition!.abort(),
   };
 }

@@ -114,6 +114,22 @@ language defaults to `navigator.language` (best-effort — no language
 toggle exists yet, docs/09 is spec-only) rather than the UI's own
 hardcoded `en-CA` display locale.
 
+**iOS re-prompting the mic every tap, fixed 2026-08-17 (D149)**: reported
+on real hardware. Root cause — `startSpeechInput` constructed a fresh
+`webkitSpeechRecognition` instance on every tap. Chrome ties the mic grant
+to the origin (matters not at all there), but Safari doesn't reliably do
+that for `SpeechRecognition` specifically — the grant behaves as if it's
+scoped to the instance, not the origin, so a new instance each tap looked
+like a never-before-seen consumer. Fixed by reusing one module-level
+instance across taps (the standard mitigation for this WebKit quirk),
+reconfiguring its handlers before each `start()` rather than constructing
+new. A fast abort-then-immediately-retap can race ahead of the previous
+session's `end` event and throw `InvalidStateError` on a reused instance
+that still thinks it's active — caught, and falls back to a fresh instance
+for that one tap rather than leaving the mic button dead. Flagged
+honestly: this mitigates a platform limitation, it isn't a guaranteed fix
+across every iOS/Safari version.
+
 ## Decisions locked in this doc
 
 | # | Decision | Why |
@@ -123,5 +139,6 @@ hardcoded `en-CA` display locale.
 | D92 | Merchant/location extraction stays out of scope for Tier 1, flagged as a real possible future extension | Same reasoning as docs/15 D77 — open-vocabulary proper nouns are a fuzzier problem than the closed category/account/date vocab above |
 | D93 | Voice input is a thin Web Speech layer that only populates the existing text field — no separate parse path; genuinely-offline STT is out of scope | Reuses the exact same Tier 1 parser typed input already goes through; a fully offline model is a much bigger undertaking than this pass |
 | D94 | Unparseable-amount input soft-blocks with a toast (text stays editable) rather than docs/04's undefined "draft" concept | `amount_cents` is `NOT NULL` in the schema — there's no draft row shape to save into |
+| D149 | `speechInput.ts` reuses one `SpeechRecognition` instance across taps (module-level, reconfigured per call) instead of constructing fresh each time | Fixes iOS Safari re-prompting for mic permission on every tap — its grant behaves as scoped to the instance rather than the origin, unlike Chrome and unlike Safari's own `getUserMedia` behavior |
 
 **Implemented 2026-08-12.**
