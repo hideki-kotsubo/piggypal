@@ -443,6 +443,33 @@ it needs doing.
 
 ## ✅ Done
 
+- [x] Parser missed absolute dates/times and gave up on merchant entirely
+      for real-world inputs — reported 2026-08-17 against
+      `"Purchase of $10.61 at amazon.CA Toronto Can on August 16th, 2026
+      at 5:25PM (PDT)."`, which parsed as amount-only. Fixed same day
+      (docs/16 D151): month-name absolute dates and clock times now parse
+      (bilingual, closed vocabulary — "August 16th, 2026", "16 de agosto
+      de 2026", "5:25pm", "17:25"), a parenthesized timezone abbreviation
+      is recognized and stripped but never used for conversion (this app
+      always means the literal wall-clock value, never UTC-converts), and
+      a single proper-noun-ish token after "at"/"no"/"na" is guessed as a
+      new merchant when no known one matches — flagged `merchantGuessed:
+      true` and gated behind the same preview-then-Save confirmation every
+      other field already uses, never written silently. Fixing this
+      surfaced a real bug: amount extraction ran before date/time
+      resolution and could grab a date's day-number or a time's digits
+      instead of the real amount (a day-first date especially, since the
+      day number appears before the amount in that phrasing) — fixed by
+      resolving date/time first and skipping digits already claimed by a
+      span. Verified: `tsc`/`oxlint` clean; the exact reported input run
+      through the real seeded app end to end (Amount -$10.61, When
+      correct to the exact date and time, Merchant "amazon.CA" marked
+      guessed, saved note "Purchase of $ at Toronto Can" with no merchant-
+      name duplication); a battery of pure-function cases confirmed the
+      day-first-date amount bug is fixed, a bare time with no date
+      defaults to today, a lowercase word after "at" is correctly never
+      guessed as a merchant, and docs/16 D150's known-merchant path is
+      unaffected.
 - [x] Merchant identification for voice/typed parsing, and saving
       unrecognized input into the Note field — requested 2026-08-17,
       built same day (docs/16 D150). Both landed together since they

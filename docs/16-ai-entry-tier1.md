@@ -166,6 +166,69 @@ slack when `note` is null. The full original utterance is untouched in
 `aiRaw` regardless, so nothing is ever actually lost even if a span gets
 mis-computed — `note` is a nicety on top, not the only copy.
 
+## Absolute date/time, and a guessed-merchant exception (D151)
+
+Reported the day after D150 shipped, against a real bank-notification-
+style input: `"Purchase of $10.61 at amazon.CA Toronto Can on August
+16th, 2026 at 5:25PM (PDT)."` parsed as amount-only — no date (only
+relative keywords existed: hoje/ontem/anteontem/last-weekday), no
+merchant (amazon.CA had never been used before, so D150's closed
+vocabulary correctly had nothing to match), and the whole tail became an
+undifferentiated leftover note.
+
+**Absolute date + time**: `resolveAbsoluteDate` adds a closed, bilingual
+month-name vocabulary ("August 16th, 2026" / "16 de agosto de 2026") —
+still a fixed vocabulary lookup, not open-ended date parsing, the same
+shape as the relative-keyword matching it sits beside. A separate
+`resolveTimeOfDay` pass recognizes a clock time ("5:25pm", "17:25")
+independently and overrides whatever date was resolved (or today's, if
+only a time was given) — so a date alone, a time alone, and both together
+all resolve sensibly from one shared base. A parenthesized timezone
+abbreviation ("(PDT)") is recognized and stripped from the leftover text
+but never used for conversion — this app already treats every date/time
+as the literal wall-clock value the user means (`nowLocal()`, `format.ts`
+D-numbers on UTC-vs-local elsewhere), so "5:25PM (PDT)" is taken as
+literally 5:25pm, not converted to the device's own zone.
+
+Fixing this exposed a real ordering bug: `extractDigitAmount` ran before
+date/time resolution and just grabbed the first digit sequence in the
+whole text — for a day-first date ("16 de agosto..., 45 no mercado") or a
+time before the amount ("at 5:25pm I spent 45"), that's the date's day
+number or the time's digits, not the real amount. Fixed by resolving
+date/time first and having amount extraction skip any digits already
+claimed by a span (`spans.some(...)` overlap check, same technique
+`guessNewMerchant` below already used).
+
+**A guessed merchant, the one deliberate exception to "never guess"**:
+`guessNewMerchant` grabs a single token right after "at"/"no"/"na"
+(en/pt), only when it has a proper-noun-ish signal (starts uppercase, or
+contains a "." like a domain — "amazon.CA" doesn't start uppercase but
+does have the dot) — a narrow heuristic, not the closed-vocabulary
+guarantee the rest of this file gives. Deliberately a *single* token, not
+a greedy multi-word capture: "amazon.CA Toronto Can" has no reliable way
+to separate merchant from city from country abbreviation without real
+NLU, and under-capturing (missing a multi-word merchant name) is a much
+safer failure mode than over-capturing filler into the guess. What makes
+attempting a guess safe at all despite the never-guess rule everywhere
+else: the docs/22 parse-preview panel already gates every field behind an
+explicit Save, including "defaulted" currency/account/date — a guessed
+merchant reuses that exact gate (`merchantGuessed: true`, shown with the
+same badge styling as a defaulted field, editable by hitting Edit) rather
+than writing anything silently. Its span is claimed like every other
+recognized field, so it disappears from the leftover note too instead of
+showing up twice.
+
+Verified: `tsc`/`oxlint` clean. The exact reported input, run through the
+real seeded app end to end — Amount -$10.61, When "2 days ago, 5:25 p.m."
+(matching August 16 5:25pm against the real test date), Merchant
+"amazon.CA" marked guessed, saved note "Purchase of $ at Toronto Can" (no
+merchant-name duplication). A battery of pure-function cases confirmed:
+the day-first pt-BR date no longer corrupts the amount (was reading "16"
+as $16.00, now correctly $45.00), a bare time with no date defaults to
+today, a lowercase non-name word after "at" ("arrived at work") is
+correctly never guessed, and a known merchant (docs/16 D150's closed-
+vocabulary path) is unaffected — still a confirmed match, not a guess.
+
 ## Decisions locked in this doc
 
 | # | Decision | Why |
@@ -177,5 +240,6 @@ mis-computed — `note` is a nicety on top, not the only copy.
 | D94 | Unparseable-amount input soft-blocks with a toast (text stays editable) rather than docs/04's undefined "draft" concept | `amount_cents` is `NOT NULL` in the schema — there's no draft row shape to save into |
 | D149 | `speechInput.ts` reuses one `SpeechRecognition` instance across taps (module-level, reconfigured per call) instead of constructing fresh each time | Fixes iOS Safari re-prompting for mic permission on every tap — its grant behaves as scoped to the instance rather than the origin, unlike Chrome and unlike Safari's own `getUserMedia` behavior |
 | D150 | `parser.ts` gains closed-vocabulary merchant matching (against `store.rankedMerchants()`, never an unseen name) and every extraction function now records the text span it matched, so `parseUtterance` can compute whatever's left over; that leftover becomes `note` instead of a copy of the category name | Merchant: narrows D92/docs/15 D77's Tier-1-never-guesses-merchant call to "never guesses an *unseen* one" — recognizing an already-known merchant is closed-vocabulary, the same shape as category/account matching. Note: nothing the user said should be silently thrown away when it doesn't map to a structured field; docs/07 D148's fallback already covers the case where there's no leftover to show |
+| D151 | Absolute month-name dates and a clock time are now parsed (bilingual, closed vocabulary); a single proper-noun-ish token after "at"/"no"/"na" is guessed as a new merchant when no known one matches, flagged `merchantGuessed: true` rather than written silently; amount extraction now skips digits already claimed by a date/time span | Date/time: same closed-vocabulary shape as the rest of the file, just a bigger fixed vocabulary (month names) than before. Merchant guess: the one deliberate exception to never-guess, made safe by reusing docs/22's existing preview-then-Save confirmation gate rather than inventing a new one — under-capturing (a single token) is a safer failure mode than over-capturing location/date words into the guess. Amount-skip: a day-first date or a pre-amount time would otherwise have its own digits mistaken for the amount |
 
 **Implemented 2026-08-12.**

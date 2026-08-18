@@ -8,9 +8,15 @@ import type { Account, Category } from './types';
 // Merchant matching (docs/16 D150) is closed-vocabulary too: it only
 // recognizes merchants the user has already used at least once (`ctx.
 // merchants`), the same never-invent-an-unseen-value principle as
-// category/account matching below — genuinely open-vocabulary merchant
-// extraction (spotting a brand-new merchant name never seen before) is
-// still Tier 2/AI territory, per docs/15 D77.
+// category/account matching below. `guessNewMerchant` (docs/16 D151) is
+// the one deliberate exception to "never guess": a narrow, pattern-based
+// heuristic for a brand-new merchant never seen before ("at <Capitalized
+// or domain-like token>"), surfaced with `merchantGuessed: true` so the
+// caller can mark it as a guess rather than silently writing it — the
+// same preview-then-confirm gate every other field already goes through
+// (docs/22) is what makes this safe to attempt at all. True open-
+// vocabulary extraction beyond this narrow shape is still Tier 2/AI
+// territory, per docs/15 D77.
 //
 // Deliberately out of scope: the docs/04 learning loop (this module only
 // reads category_keywords, never writes corrections back to it).
@@ -37,7 +43,8 @@ export interface ParseResult {
   occurredAt: string | null; // null = caller uses now
   categoryId: string | null; // null = ambiguous/no match -> inbox
   accountId: string | null; // null = caller falls back to last-used
-  merchant: string | null; // null = no known merchant recognized
+  merchant: string | null; // a confirmed match, or a guess — see merchantGuessed
+  merchantGuessed: boolean; // true = guessNewMerchant's heuristic, not a confirmed ctx.merchants match
   unrecognized: string | null; // null = the whole utterance was recognized
 }
 
@@ -53,16 +60,29 @@ const WORD = '[a-zà-ÿ]+';
 
 // Bare integer "45" -> 4500 cents, matching docs/04's tool-schema
 // description verbatim ("'45' means 4500. '12,50' means 1250.").
+//
+// Runs after date/time resolution (docs/16 D151) and skips any digit
+// sequence already claimed by one of their spans — otherwise a day-first
+// absolute date ("16 de agosto de 2026, 45 no mercado") or a clock time
+// ("at 5:25pm I spent 45") would have its own digits mistaken for the
+// amount, since both are digit sequences too and, in these phrasings,
+// come before the real amount in the text.
 function extractDigitAmount(text: string, spans: Span[]): number | null {
-  const match = text.match(/\d+(?:[.,]\d{1,2})?/);
-  if (!match || match.index === undefined) return null;
-  spans.push([match.index, match.index + match[0].length]);
-  const raw = match[0];
-  const sepIndex = Math.max(raw.lastIndexOf('.'), raw.lastIndexOf(','));
-  if (sepIndex === -1) return Number(raw) * 100;
-  const intPart = raw.slice(0, sepIndex) || '0';
-  const decPart = raw.slice(sepIndex + 1).padEnd(2, '0');
-  return Number(intPart) * 100 + Number(decPart);
+  const regex = /\d+(?:[.,]\d{1,2})?/g;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(text)) !== null) {
+    const start = match.index;
+    const end = start + match[0].length;
+    if (spans.some(([s, e]) => start < e && end > s)) continue;
+    spans.push([start, end]);
+    const raw = match[0];
+    const sepIndex = Math.max(raw.lastIndexOf('.'), raw.lastIndexOf(','));
+    if (sepIndex === -1) return Number(raw) * 100;
+    const intPart = raw.slice(0, sepIndex) || '0';
+    const decPart = raw.slice(sepIndex + 1).padEnd(2, '0');
+    return Number(intPart) * 100 + Number(decPart);
+  }
+  return null;
 }
 
 // Small bilingual fallback for when speech-to-text or typed input spells
@@ -174,37 +194,120 @@ function lastWeekday(now: Date, targetDow: number): Date {
   return shiftDays(now, daysBack);
 }
 
-function resolveRelativeDate(textLower: string, now: Date, spans: Span[]): string | null {
+// Relative-keyword and absolute (month-name) dates both resolve to a Date
+// still carrying `now`'s time-of-day (matching the pre-existing "yesterday
+// means yesterday, whatever time you're entering it" behavior) — a
+// separate `resolveTimeOfDay` pass then overrides hours/minutes if the
+// utterance also named a clock time, so "August 16th at 5:25pm" and
+// "August 16th" (no time given) both resolve sensibly from the same base.
+function resolveRelativeOrAbsoluteDate(textLower: string, now: Date, spans: Span[]): Date | null {
   const today = new RegExp(`\\b(hoje|today)\\b`).exec(textLower);
   if (today) {
     spans.push([today.index, today.index + today[0].length]);
-    return toOccurredAt(now);
+    return new Date(now);
   }
   const anteontem = new RegExp(`\\banteontem\\b`).exec(textLower);
   if (anteontem) {
     spans.push([anteontem.index, anteontem.index + anteontem[0].length]);
-    return toOccurredAt(shiftDays(now, 2));
+    return shiftDays(now, 2);
   }
   const ontem = new RegExp(`\\b(ontem|yesterday)\\b`).exec(textLower);
   if (ontem) {
     spans.push([ontem.index, ontem.index + ontem[0].length]);
-    return toOccurredAt(shiftDays(now, 1));
+    return shiftDays(now, 1);
   }
 
   const lastEn = textLower.match(new RegExp(`\\blast\\s+(${WORD})\\b`));
   if (lastEn && lastEn[1] in WEEKDAY_INDEX) {
     spans.push([lastEn.index!, lastEn.index! + lastEn[0].length]);
-    return toOccurredAt(lastWeekday(now, WEEKDAY_INDEX[lastEn[1]]));
+    return lastWeekday(now, WEEKDAY_INDEX[lastEn[1]]);
   }
 
   const passadaPt =
     textLower.match(new RegExp(`\\b(${WORD})\\s+passad[ao]\\b`)) ?? textLower.match(new RegExp(`\\búltim[ao]\\s+(${WORD})\\b`));
   if (passadaPt && passadaPt[1] in WEEKDAY_INDEX) {
     spans.push([passadaPt.index!, passadaPt.index! + passadaPt[0].length]);
-    return toOccurredAt(lastWeekday(now, WEEKDAY_INDEX[passadaPt[1]]));
+    return lastWeekday(now, WEEKDAY_INDEX[passadaPt[1]]);
+  }
+
+  return resolveAbsoluteDate(textLower, now, spans);
+}
+
+// ---- absolute date (docs/16 D151): "<Month> <day>[, <year>]" (English)
+// or "<day> de <Month>[ de <year>]" (Portuguese). Year defaults to `now`'s
+// — closed set of month names, bilingual, same shape as the rest of this
+// file's vocab lists, not open-ended date parsing.
+const MONTH_INDEX: Record<string, number> = {
+  january: 0, jan: 0, janeiro: 0,
+  february: 1, feb: 1, fevereiro: 1,
+  march: 2, mar: 2, março: 2, marco: 2,
+  april: 3, apr: 3, abril: 3,
+  may: 4, maio: 4,
+  june: 5, jun: 5, junho: 5,
+  july: 6, jul: 6, julho: 6,
+  august: 7, aug: 7, agosto: 7,
+  september: 8, sep: 8, sept: 8, setembro: 8,
+  october: 9, oct: 9, outubro: 9,
+  november: 10, nov: 10, novembro: 10,
+  december: 11, dec: 11, dezembro: 11,
+};
+const MONTH_NAMES = Object.keys(MONTH_INDEX).join('|');
+
+function resolveAbsoluteDate(textLower: string, now: Date, spans: Span[]): Date | null {
+  const en = new RegExp(`\\b(${MONTH_NAMES})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?,?(?:\\s+(\\d{4}))?\\b`).exec(textLower);
+  if (en) {
+    const day = Number(en[2]);
+    if (day >= 1 && day <= 31) {
+      spans.push([en.index, en.index + en[0].length]);
+      const year = en[3] ? Number(en[3]) : now.getFullYear();
+      return new Date(year, MONTH_INDEX[en[1]], day, now.getHours(), now.getMinutes(), now.getSeconds());
+    }
+  }
+
+  const pt = new RegExp(`\\b(\\d{1,2})\\s+de\\s+(${MONTH_NAMES})(?:\\s+de\\s+(\\d{4}))?\\b`).exec(textLower);
+  if (pt) {
+    const day = Number(pt[1]);
+    if (day >= 1 && day <= 31) {
+      spans.push([pt.index, pt.index + pt[0].length]);
+      const year = pt[3] ? Number(pt[3]) : now.getFullYear();
+      return new Date(year, MONTH_INDEX[pt[2]], day, now.getHours(), now.getMinutes(), now.getSeconds());
+    }
   }
 
   return null;
+}
+
+// ---- time of day (docs/16 D151): "5:25pm", "5:25 PM", "17:25". A
+// trailing parenthesized timezone abbreviation ("(PDT)") is recognized
+// and removed from the leftover text but never applied — this app treats
+// every date/time as the wall-clock value the user means, deliberately
+// never doing UTC/timezone conversion (see `nowLocal()` in format.ts).
+const TZ_ABBREVIATIONS = ['pst', 'pdt', 'mst', 'mdt', 'cst', 'cdt', 'est', 'edt', 'utc', 'gmt'];
+
+function resolveTimeOfDay(textLower: string, spans: Span[]): { hours: number; minutes: number } | null {
+  const match = /\b(\d{1,2}):(\d{2})\s*(am|pm)?\b/.exec(textLower);
+  if (!match) return null;
+  let hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours > 23 || minutes > 59) return null;
+  if (match[3] === 'pm' && hours < 12) hours += 12;
+  if (match[3] === 'am' && hours === 12) hours = 0;
+  spans.push([match.index, match.index + match[0].length]);
+
+  const tz = new RegExp(`\\(?\\b(${TZ_ABBREVIATIONS.join('|')})\\b\\)?`).exec(textLower);
+  if (tz) spans.push([tz.index, tz.index + tz[0].length]);
+
+  return { hours, minutes };
+}
+
+function resolveDate(textLower: string, now: Date, spans: Span[]): string | null {
+  const base = resolveRelativeOrAbsoluteDate(textLower, now, spans);
+  const time = resolveTimeOfDay(textLower, spans);
+  if (!base && !time) return null;
+
+  const result = base ? new Date(base) : new Date(now);
+  if (time) result.setHours(time.hours, time.minutes, 0, 0);
+  return toOccurredAt(result);
 }
 
 // ---- category (never-guess: exactly one distinct match, else null) ----
@@ -264,9 +367,10 @@ function matchAccount(textLower: string, ctx: ParserContext, spans: Span[]): str
 
 // ---- merchant (docs/16 D150): closed-vocabulary against merchants the
 // user has already used at least once — never invents an unseen name,
-// same never-guess principle as category/account above. Genuinely new
-// merchants stay unrecognized (surfaced via the Note field instead, see
-// `computeUnrecognized`) until Tier 2/AI extraction exists (docs/15 D77).
+// same never-guess principle as category/account above. A brand-new
+// merchant this function can't recognize gets one more chance, from
+// `guessNewMerchant` below (docs/16 D151) — a narrow heuristic guess, not
+// a confirmed match, kept clearly distinct via `merchantGuessed`.
 
 function matchMerchant(textLower: string, ctx: ParserContext, spans: Span[]): string | null {
   const matched = new Set<string>();
@@ -278,6 +382,38 @@ function matchMerchant(textLower: string, ctx: ParserContext, spans: Span[]): st
   const idx = textLower.indexOf(merchant.toLowerCase());
   if (idx !== -1) spans.push([idx, idx + merchant.length]);
   return merchant;
+}
+
+// ---- new-merchant guess (docs/16 D151) — the one deliberate exception to
+// this file's never-guess rule, and only because the caller (docs/22's
+// parse-preview) always shows it for confirmation before Save writes
+// anything, the same gate every defaulted currency/account/date already
+// goes through. Grabs a single token right after "at"/"no"/"na" (en/pt for
+// "at") — only one token, not a greedy multi-word capture, since there's
+// no reliable way to tell "amazon.CA Toronto Can" apart into merchant vs.
+// location without real NLU; under-capturing is a safer failure mode than
+// over-capturing filler into what gets suggested as a merchant name.
+// Requires a proper-noun-ish signal (starts uppercase, or contains a "."
+// like a domain) so it doesn't fire on ordinary lowercase words ("arrived
+// at work" shouldn't suggest "work" as a merchant) — and skips a token
+// that overlaps a span some other field already claimed.
+
+function guessNewMerchant(text: string, spans: Span[]): string | null {
+  const match = /\b(?:at|no|na)\s+([^\s,]+)/i.exec(text);
+  if (!match || match.index === undefined) return null;
+  const raw = match[1];
+  const candidate = raw.replace(/[.,]+$/, '');
+  if (!candidate || /^\d/.test(candidate)) return null;
+  if (!/[A-Z]/.test(candidate[0]) && !candidate.includes('.')) return null;
+
+  const start = match.index + match[0].length - raw.length;
+  const end = start + candidate.length;
+  if (spans.some(([s, e]) => start < e && end > s)) return null;
+  // Claim the span too — the merchant preview row would otherwise show
+  // "Target" while the Note also showed "...at Target", a needless
+  // duplicate of the same guess.
+  spans.push([start, end]);
+  return candidate;
 }
 
 // ---- direction ----
@@ -304,6 +440,22 @@ function matchDirection(textLower: string, spans: Span[]): 'expense' | 'income' 
 // word) — sorting and tracking a cursor handles both without double-
 // counting or going out of order. Empty/whitespace-only leftover is null,
 // same "nothing to say" convention as every other optional field here.
+//
+// Cutting a span out of the middle of a sentence often strands a
+// connector word or stray punctuation right at the new edge — "...Can on
+// August 16th, 2026 at 5:25pm." with the date/time removed leaves
+// "...Can on at ." Trimmed from the outside in only (never mid-string,
+// where a leftover "at"/"on" might be genuinely meaningful, e.g. as part
+// of the merchant guess's own lead-in).
+const EDGE_FILLER_WORDS = new Set(['at', 'on', 'in', 'de', 'em', 'no', 'na']);
+
+function trimLeftoverEdges(s: string): string {
+  const words = s.split(' ');
+  const isEdgeNoise = (w: string) => EDGE_FILLER_WORDS.has(w.toLowerCase()) || /^[.,;:!?]+$/.test(w);
+  while (words.length && isEdgeNoise(words[0])) words.shift();
+  while (words.length && isEdgeNoise(words[words.length - 1])) words.pop();
+  return words.join(' ');
+}
 
 function computeUnrecognized(text: string, spans: Span[]): string | null {
   const sorted = [...spans].sort((a, b) => a[0] - b[0]);
@@ -314,7 +466,7 @@ function computeUnrecognized(text: string, spans: Span[]): string | null {
     cursor = Math.max(cursor, end);
   }
   leftover += text.slice(cursor);
-  const cleaned = leftover.replace(/\s+/g, ' ').trim();
+  const cleaned = trimLeftoverEdges(leftover.replace(/\s+/g, ' ').trim());
   return cleaned || null;
 }
 
@@ -325,16 +477,23 @@ export function parseUtterance(text: string, ctx: ParserContext): ParseResult {
   const tokens = Array.from(textLower.matchAll(new RegExp(WORD, 'g')));
   const spans: Span[] = [];
 
+  // Date/time first (see extractDigitAmount's comment): both can contain
+  // digit sequences that would otherwise be mistaken for the amount.
+  const occurredAt = resolveDate(textLower, ctx.now, spans);
+
   const digitAmount = extractDigitAmount(text, spans);
   const wordAmount = digitAmount === null ? extractWordAmount(tokens, spans) : null;
   const amountCents = digitAmount !== null ? digitAmount : wordAmount !== null ? wordAmount * 100 : null;
 
   const direction = matchDirection(textLower, spans);
   const currency = extractCurrency(text, spans);
-  const occurredAt = resolveRelativeDate(textLower, ctx.now, spans);
   const categoryId = matchCategory(textLower, ctx, spans);
   const accountId = matchAccount(textLower, ctx, spans);
-  const merchant = matchMerchant(textLower, ctx, spans);
+  const confirmedMerchant = matchMerchant(textLower, ctx, spans);
+  // Only try a guess once every other field (including the date/time/tz
+  // spans above) has had its say — guessNewMerchant skips any token that
+  // overlaps text something else already claimed.
+  const guessedMerchant = confirmedMerchant === null ? guessNewMerchant(text, spans) : null;
 
   return {
     amountCents,
@@ -343,7 +502,8 @@ export function parseUtterance(text: string, ctx: ParserContext): ParseResult {
     occurredAt,
     categoryId,
     accountId,
-    merchant,
+    merchant: confirmedMerchant ?? guessedMerchant,
+    merchantGuessed: confirmedMerchant === null && guessedMerchant !== null,
     unrecognized: computeUnrecognized(text, spans),
   };
 }

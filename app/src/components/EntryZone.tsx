@@ -26,7 +26,8 @@ interface Preview {
   categoryId: string | null;
   occurredAt: string;
   dateParsed: boolean;
-  merchant: string | null; // docs/16 D150 — no *Parsed flag, same as category: null just means none recognized, not a fallback standing in for it
+  merchant: string | null; // docs/16 D150/D151 — a confirmed match or a guess, see merchantGuessed
+  merchantGuessed: boolean; // docs/16 D151 — true = guessNewMerchant's heuristic, shown with a "guessed" badge like the other *Parsed-false fields
   unrecognized: string | null; // docs/16 D150 — becomes the transaction's note; null falls through to the category-name display (docs/07 D148)
 }
 
@@ -111,6 +112,7 @@ export function EntryZone({ onSubmitted }: Props) {
       occurredAt: result.occurredAt ?? nowLocal(),
       dateParsed: result.occurredAt !== null,
       merchant: result.merchant,
+      merchantGuessed: result.merchantGuessed,
       unrecognized: result.unrecognized,
     });
   }
@@ -257,6 +259,7 @@ export function EntryZone({ onSubmitted }: Props) {
                 <div className="parse-field">
                   <span className="k">Merchant</span>
                   <span className="v">{preview.merchant}</span>
+                  {preview.merchantGuessed && <span className="defaulted">guessed — edit if wrong</span>}
                 </div>
               )}
             </div>
