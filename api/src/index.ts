@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import express from 'express';
 import { createServer } from 'node:http';
 import { attachRelay } from './relay.js';
+import { API_VERSION } from './version.js';
 
 // Node's own .env support (stable since 20.6, no dotenv dependency
 // needed) — resolves relative to process.cwd(), which is api/ when this
@@ -17,7 +18,7 @@ const app = express();
 const port = process.env.PORT ?? 3000;
 
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok' });
+  res.json({ status: 'ok', version: API_VERSION });
 });
 
 // Future routes land here as they're built out:

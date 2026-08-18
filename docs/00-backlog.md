@@ -443,6 +443,14 @@ it needs doing.
 
 ## ✅ Done
 
+- [x] App version display + tracking, and an About screen — requested
+      2026-08-18. `docs/29-versioning-and-about.md` (D153-D156): root/app/
+      api `package.json` synced to one real starting version (`0.1.0`,
+      were mismatched placeholders before); Settings gained an "About
+      piggypal" row showing it, and a new `/about` screen with a
+      first-person "built by one person" blurb, a `mailto:` contact row,
+      and the version again. `api`'s `/health` now also reports its
+      version. Implemented same day.
 - [x] Parser missed absolute dates/times and gave up on merchant entirely
       for real-world inputs — reported 2026-08-17 against
       `"Purchase of $10.61 at amazon.CA Toronto Can on August 16th, 2026

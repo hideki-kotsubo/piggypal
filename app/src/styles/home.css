@@ -964,6 +964,12 @@
   border-radius: var(--radius-md);
   border: 1px solid var(--line);
 }
+.about-text {
+  margin: 0 1.1rem 1.1rem;
+  font-size: 0.87rem;
+  color: var(--ink-muted);
+  line-height: 1.5;
+}
 .qr-caption {
   font-size: 0.87rem;
   color: var(--ink-muted);

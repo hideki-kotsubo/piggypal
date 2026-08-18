@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { ACCOUNT_PICKER_SCALE_THRESHOLD, useAccountPickerMode, useThemeMode } from '../lib/settings';
 import { usePairedPeers } from '../lib/peers';
+import { APP_VERSION } from '../lib/version';
 
 // "synced just now" / "N minutes/hours ago" — finer-grained than
 // format.ts's formatRelativeDate (which only resolves to whole calendar
@@ -135,6 +136,13 @@ export function SettingsScreen() {
         <button className="settings-row settings-row-danger" onClick={resetData}>
           <span>Reset local data</span>
         </button>
+      </div>
+
+      <div className="accounts-list">
+        <Link to="/about" className="settings-row">
+          <span>About piggypal</span>
+          <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>v{APP_VERSION}</span>
+        </Link>
       </div>
     </main>
   );
