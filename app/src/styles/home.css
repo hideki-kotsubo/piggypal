@@ -752,6 +752,9 @@
 .settings-chip-row {
   margin: 0 1.1rem 1.1rem;
 }
+.settings-field {
+  margin: 0 1.1rem 1.1rem;
+}
 .text-link {
   align-self: flex-start;
   background: none;

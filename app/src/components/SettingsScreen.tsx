@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useStore } from '../lib/store';
-import { ACCOUNT_PICKER_SCALE_THRESHOLD, useAccountPickerMode, useThemeMode } from '../lib/settings';
+import { ACCOUNT_PICKER_SCALE_THRESHOLD, guessDeviceLabel, useAccountPickerMode, useDeviceLabel, useThemeMode } from '../lib/settings';
 import { usePairedPeers } from '../lib/peers';
 import { APP_VERSION } from '../lib/version';
 
@@ -22,6 +22,7 @@ export function SettingsScreen() {
   const store = useStore();
   const [pickerMode, setPickerMode] = useAccountPickerMode();
   const [themeMode, setThemeMode] = useThemeMode();
+  const [deviceLabel, setDeviceLabel] = useDeviceLabel();
   const [peers] = usePairedPeers();
   // docs/13 D69 — only surface this once it'd actually do something,
   // rather than a control that's a no-op below the threshold.
@@ -58,6 +59,17 @@ export function SettingsScreen() {
       </div>
 
       <div className="section-label">Sync</div>
+      <div className="settings-field">
+        <label className="field-label">
+          This device's name
+          <input
+            className="text-input"
+            placeholder={guessDeviceLabel()}
+            value={deviceLabel}
+            onChange={(e) => setDeviceLabel(e.target.value)}
+          />
+        </label>
+      </div>
       <div className="accounts-list">
         <Link to="/settings/pair" className="settings-row">
           <span>+ Connect a device</span>

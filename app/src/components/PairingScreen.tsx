@@ -7,6 +7,7 @@ import type { AnswerSession, OfferSession, PairedChannel } from '../lib/pairing'
 import { computeSas, joinRelayAsAnswerer, startRelayOffer } from '../lib/relayClient';
 import { getLocalUserId } from '../lib/identity';
 import { usePairedPeers } from '../lib/peers';
+import { effectiveDeviceLabel } from '../lib/settings';
 import { useStore } from '../lib/store';
 import type { MergeSummary, PeerDataset } from '../lib/types';
 
@@ -57,16 +58,6 @@ type Step =
   | { kind: 'synced'; peerLabel: string; summary: MergeSummary }
   | { kind: 'cancelled' }
   | { kind: 'error'; message: string };
-
-function guessDeviceLabel(): string {
-  const ua = navigator.userAgent;
-  if (/iPhone/.test(ua)) return 'iPhone';
-  if (/iPad/.test(ua)) return 'iPad';
-  if (/Android/.test(ua)) return 'Android device';
-  if (/Macintosh/.test(ua)) return 'Mac';
-  if (/Windows/.test(ua)) return 'Windows PC';
-  return 'This device';
-}
 
 export function PairingScreen() {
   const navigate = useNavigate();
@@ -215,7 +206,7 @@ export function PairingScreen() {
   // happens to run.
   async function afterHandshake(pc: PairedChannel, role: 'offerer' | 'answerer') {
     try {
-      const { peerLabel, peerLocalUserId } = await exchangeHello(pc, guessDeviceLabel(), getLocalUserId());
+      const { peerLabel, peerLocalUserId } = await exchangeHello(pc, effectiveDeviceLabel(), getLocalUserId());
 
       // Already the same identity (e.g. re-pairing after an earlier
       // own-device merge already unified them) — nothing to ask about or

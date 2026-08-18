@@ -62,3 +62,54 @@ export function useThemeMode(): [ThemeMode, (mode: ThemeMode) => void] {
   }
   return [mode, setMode];
 }
+
+// docs/30 — the fallback every device starts with before anyone renames
+// it: just its UA-guessed type ("iPhone", "Android device", ...). Fine as
+// a default, useless once someone owns more than one of the same type
+// (two iPhones, or pairing with a spouse's identically-guessed phone) —
+// that's what DEVICE_LABEL_KEY below is for.
+export function guessDeviceLabel(): string {
+  const ua = navigator.userAgent;
+  if (/iPhone/.test(ua)) return 'iPhone';
+  if (/iPad/.test(ua)) return 'iPad';
+  if (/Android/.test(ua)) return 'Android device';
+  if (/Macintosh/.test(ua)) return 'Mac';
+  if (/Windows/.test(ua)) return 'Windows PC';
+  return 'This device';
+}
+
+const DEVICE_LABEL_KEY = 'piggypal:device-label';
+
+// The stored custom label, if any — deliberately *not* falling back to
+// the UA guess here (unlike effectiveDeviceLabel below). useDeviceLabel
+// mirrors this raw value so Settings' input can be cleared back to empty
+// (falling back to the placeholder) while typing, the same local-mirror
+// pattern AccountsScreen's Institution/Name fields already use — binding
+// straight to a guess-substituted value would snap the field back to the
+// guess on every keystroke of clearing it.
+function readDeviceLabel(): string {
+  return localStorage.getItem(DEVICE_LABEL_KEY) ?? '';
+}
+
+// What actually gets sent to a peer during pairing (docs/25's
+// `exchangeHello`) — the custom label if set, else the same UA guess as
+// before this setting existed, so an unrenamed device behaves exactly as
+// it always did.
+export function effectiveDeviceLabel(): string {
+  return readDeviceLabel().trim() || guessDeviceLabel();
+}
+
+// Local-only, same reasoning as the settings above — this is what *this*
+// device calls itself, never synced.
+export function useDeviceLabel(): [string, (label: string) => void] {
+  const [label, setLabelState] = useState<string>(readDeviceLabel);
+  function setLabel(next: string) {
+    if (next.trim()) {
+      localStorage.setItem(DEVICE_LABEL_KEY, next);
+    } else {
+      localStorage.removeItem(DEVICE_LABEL_KEY);
+    }
+    setLabelState(next);
+  }
+  return [label, setLabel];
+}

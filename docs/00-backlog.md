@@ -443,6 +443,17 @@ it needs doing.
 
 ## ✅ Done
 
+- [x] P2P-paired devices all showed as their bare guessed type ("iPhone",
+      "Android device") with no way to tell two of the same type apart —
+      requested 2026-08-18, e.g. two iPhones, a Samsung and a Pixel, or
+      pairing with a spouse whose phone guesses identically. Fixed same
+      day (`docs/30-device-naming.md`, D157-D158): a new "This device's
+      name" field in Settings' Sync section lets a device name itself;
+      that name (falling back to the old UA guess when unset) is what
+      gets sent during pairing instead of always re-guessing. Renaming an
+      already-paired peer's name locally (independent of their own
+      choice) stays out of scope, same as docs/25's existing bare-list
+      peer-management gap.
 - [x] App version display + tracking, and an About screen — requested
       2026-08-18. `docs/29-versioning-and-about.md` (D153-D156): root/app/
       api `package.json` synced to one real starting version (`0.1.0`,
