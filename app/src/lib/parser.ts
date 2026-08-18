@@ -58,6 +58,13 @@ const WORD = '[a-zà-ÿ]+';
 
 // ---- amount ----
 
+// A bare currency symbol right before the digits ("$10.61") is cosmetic
+// noise once the amount's extracted — stripped from the leftover too, but
+// never used to set `currency`: a bare "$" stays genuinely ambiguous
+// between USD/CAD (docs/10) — only an explicit marker like "R$"/"US$"
+// does that, via extractCurrency.
+const BARE_CURRENCY_SYMBOLS = ['$', '¥', '€', '£'];
+
 // Bare integer "45" -> 4500 cents, matching docs/04's tool-schema
 // description verbatim ("'45' means 4500. '12,50' means 1250.").
 //
@@ -74,7 +81,8 @@ function extractDigitAmount(text: string, spans: Span[]): number | null {
     const start = match.index;
     const end = start + match[0].length;
     if (spans.some(([s, e]) => start < e && end > s)) continue;
-    spans.push([start, end]);
+    const symbolStart = start > 0 && BARE_CURRENCY_SYMBOLS.includes(text[start - 1]) ? start - 1 : start;
+    spans.push([symbolStart, end]);
     const raw = match[0];
     const sepIndex = Math.max(raw.lastIndexOf('.'), raw.lastIndexOf(','));
     if (sepIndex === -1) return Number(raw) * 100;
@@ -398,7 +406,16 @@ function matchMerchant(textLower: string, ctx: ParserContext, spans: Span[]): st
 // at work" shouldn't suggest "work" as a merchant) — and skips a token
 // that overlaps a span some other field already claimed.
 
-function guessNewMerchant(text: string, spans: Span[]): string | null {
+interface MerchantGuess {
+  merchant: string;
+  // The exact "at amazon.CA"-style substring, trigger word included —
+  // protected from computeUnrecognized's edge trim (below) so it reads in
+  // the Note the same way it was said, alongside the structured Merchant
+  // field rather than instead of it.
+  leadIn: string;
+}
+
+function guessNewMerchant(text: string, spans: Span[]): MerchantGuess | null {
   const match = /\b(?:at|no|na)\s+([^\s,]+)/i.exec(text);
   if (!match || match.index === undefined) return null;
   const raw = match[1];
@@ -408,12 +425,13 @@ function guessNewMerchant(text: string, spans: Span[]): string | null {
 
   const start = match.index + match[0].length - raw.length;
   const end = start + candidate.length;
+  // Deliberately not claiming this span (unlike every other match in this
+  // file): the user wants "at <merchant>" to stay readable in the Note
+  // alongside the structured Merchant field, not disappear from it —
+  // still skips a token some other field already claimed, so it never
+  // guesses out of already-recognized text.
   if (spans.some(([s, e]) => start < e && end > s)) return null;
-  // Claim the span too — the merchant preview row would otherwise show
-  // "Target" while the Note also showed "...at Target", a needless
-  // duplicate of the same guess.
-  spans.push([start, end]);
-  return candidate;
+  return { merchant: candidate, leadIn: text.slice(match.index, end) };
 }
 
 // ---- direction ----
@@ -449,15 +467,34 @@ function matchDirection(textLower: string, spans: Span[]): 'expense' | 'income' 
 // of the merchant guess's own lead-in).
 const EDGE_FILLER_WORDS = new Set(['at', 'on', 'in', 'de', 'em', 'no', 'na']);
 
-function trimLeftoverEdges(s: string): string {
-  const words = s.split(' ');
+// `protect`, when given, is a phrase ("at amazon.CA") that must never be
+// eaten by the trim even where one of its own words (typically the
+// leading "at"/"no"/"na") would otherwise look like edge noise — found by
+// exact word-run position, not by exempting the word everywhere, so an
+// unrelated "at" elsewhere in the leftover is still trimmed normally.
+function trimLeftoverEdges(s: string, protect: string | null): string {
   const isEdgeNoise = (w: string) => EDGE_FILLER_WORDS.has(w.toLowerCase()) || /^[.,;:!?]+$/.test(w);
-  while (words.length && isEdgeNoise(words[0])) words.shift();
-  while (words.length && isEdgeNoise(words[words.length - 1])) words.pop();
-  return words.join(' ');
+  const words = s.split(' ');
+  const protectWords = protect ? protect.split(' ') : [];
+
+  let protectStart = -1;
+  for (let i = 0; protectWords.length && i + protectWords.length <= words.length; i++) {
+    if (protectWords.every((w, k) => words[i + k] === w)) {
+      protectStart = i;
+      break;
+    }
+  }
+  const protectEnd = protectStart === -1 ? -1 : protectStart + protectWords.length; // exclusive
+  const isProtected = (i: number) => protectStart !== -1 && i >= protectStart && i < protectEnd;
+
+  let lo = 0;
+  let hi = words.length;
+  while (lo < hi && isEdgeNoise(words[lo]) && !isProtected(lo)) lo++;
+  while (hi > lo && isEdgeNoise(words[hi - 1]) && !isProtected(hi - 1)) hi--;
+  return words.slice(lo, hi).join(' ');
 }
 
-function computeUnrecognized(text: string, spans: Span[]): string | null {
+function computeUnrecognized(text: string, spans: Span[], protect: string | null): string | null {
   const sorted = [...spans].sort((a, b) => a[0] - b[0]);
   let leftover = '';
   let cursor = 0;
@@ -466,7 +503,7 @@ function computeUnrecognized(text: string, spans: Span[]): string | null {
     cursor = Math.max(cursor, end);
   }
   leftover += text.slice(cursor);
-  const cleaned = trimLeftoverEdges(leftover.replace(/\s+/g, ' ').trim());
+  const cleaned = trimLeftoverEdges(leftover.replace(/\s+/g, ' ').trim(), protect);
   return cleaned || null;
 }
 
@@ -493,7 +530,7 @@ export function parseUtterance(text: string, ctx: ParserContext): ParseResult {
   // Only try a guess once every other field (including the date/time/tz
   // spans above) has had its say — guessNewMerchant skips any token that
   // overlaps text something else already claimed.
-  const guessedMerchant = confirmedMerchant === null ? guessNewMerchant(text, spans) : null;
+  const guess = confirmedMerchant === null ? guessNewMerchant(text, spans) : null;
 
   return {
     amountCents,
@@ -502,8 +539,8 @@ export function parseUtterance(text: string, ctx: ParserContext): ParseResult {
     occurredAt,
     categoryId,
     accountId,
-    merchant: confirmedMerchant ?? guessedMerchant,
-    merchantGuessed: confirmedMerchant === null && guessedMerchant !== null,
-    unrecognized: computeUnrecognized(text, spans),
+    merchant: confirmedMerchant ?? guess?.merchant ?? null,
+    merchantGuessed: confirmedMerchant === null && guess !== null,
+    unrecognized: computeUnrecognized(text, spans, guess?.leadIn ?? null),
   };
 }

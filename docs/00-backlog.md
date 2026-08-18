@@ -464,12 +464,29 @@ it needs doing.
       span. Verified: `tsc`/`oxlint` clean; the exact reported input run
       through the real seeded app end to end (Amount -$10.61, When
       correct to the exact date and time, Merchant "amazon.CA" marked
-      guessed, saved note "Purchase of $ at Toronto Can" with no merchant-
-      name duplication); a battery of pure-function cases confirmed the
+      guessed); a battery of pure-function cases confirmed the
       day-first-date amount bug is fixed, a bare time with no date
       defaults to today, a lowercase word after "at" is correctly never
       guessed as a merchant, and docs/16 D150's known-merchant path is
       unaffected.
+- [x] Note wording follow-up — user's read on the saved note from the
+      item above ("Purchase of $ at Toronto Can"): keep "at `<merchant>`"
+      readable, but the bare "$" doesn't need to stay. Fixed same day
+      (docs/16 D152): `extractDigitAmount` now also claims a bare
+      currency symbol next to the amount (cosmetic only, never used to
+      set `currency` — a bare "$" is still genuinely ambiguous between
+      USD/CAD, docs/10); the merchant guess's span is deliberately left
+      unclaimed so "at `<merchant>`" survives into the Note. That reopened
+      the exact edge-trim problem D151 solved in the first place (a bare
+      "20 at Target" would lose its "at" to the edge trim with nothing
+      preceding it) — fixed by giving the trim an exact protected phrase
+      to never cut through, found by word-run position, while any other
+      unrelated "at" elsewhere still gets cleaned up normally. Verified:
+      `tsc`/`oxlint` clean; the exact reported input now saves "Purchase
+      of at amazon.CA Toronto Can"; "20 at Target" keeps "at Target"
+      together; full regression re-run (known-merchant path, word-amount
+      compounds, income triggers, fully-recognized/no-leftover case) all
+      confirmed unaffected.
 - [x] Merchant identification for voice/typed parsing, and saving
       unrecognized input into the Note field — requested 2026-08-17,
       built same day (docs/16 D150). Both landed together since they

@@ -214,20 +214,41 @@ else: the docs/22 parse-preview panel already gates every field behind an
 explicit Save, including "defaulted" currency/account/date — a guessed
 merchant reuses that exact gate (`merchantGuessed: true`, shown with the
 same badge styling as a defaulted field, editable by hitting Edit) rather
-than writing anything silently. Its span is claimed like every other
-recognized field, so it disappears from the leftover note too instead of
-showing up twice.
+than writing anything silently.
 
 Verified: `tsc`/`oxlint` clean. The exact reported input, run through the
 real seeded app end to end — Amount -$10.61, When "2 days ago, 5:25 p.m."
 (matching August 16 5:25pm against the real test date), Merchant
-"amazon.CA" marked guessed, saved note "Purchase of $ at Toronto Can" (no
-merchant-name duplication). A battery of pure-function cases confirmed:
+"amazon.CA" marked guessed. A battery of pure-function cases confirmed:
 the day-first pt-BR date no longer corrupts the amount (was reading "16"
 as $16.00, now correctly $45.00), a bare time with no date defaults to
 today, a lowercase non-name word after "at" ("arrived at work") is
 correctly never guessed, and a known merchant (docs/16 D150's closed-
 vocabulary path) is unaffected — still a confirmed match, not a guess.
+
+**Note wording, revised same day** — the user's own read on the saved
+note ("Purchase of $ at Toronto Can"): keep "at `<merchant>`" readable
+alongside the structured Merchant field rather than removing it, but the
+bare "$" left dangling once the amount's digits are gone doesn't need to
+stay. Two changes: `extractDigitAmount` now also claims a bare currency
+symbol ($/¥/€/£) immediately before the digits — cosmetic only, never
+used to set `currency`, since a bare "$" is still genuinely ambiguous
+between USD/CAD (docs/10) the same as always — and `guessNewMerchant`'s
+span is deliberately *not* claimed anymore, so "at amazon.CA" stays in
+the leftover. That reopened the edge-trim problem D151 was written to
+solve in the first place: a bare "20 at Target" would have its "at"
+stripped as edge noise since nothing precedes it. Fixed by giving
+`computeUnrecognized`/`trimLeftoverEdges` a `protect` phrase — the exact
+"at amazon.CA"-style substring `guessNewMerchant` matched — found by
+exact word-run position within the leftover and never trimmed through,
+while any *other*, unrelated "at" elsewhere (e.g. one stranded by the
+now-removed time phrase) still gets cleaned up normally. Full regression
+re-run after both changes: the exact reported input now saves
+"Purchase of at amazon.CA Toronto Can" (no `$`, merchant lead-in intact);
+"20 at Target" now correctly keeps "at Target" instead of losing "at" to
+the edge trim; the known-merchant path, word-amount compounds, income
+triggers, and the fully-recognized/no-leftover case all re-verified
+unaffected.
 
 ## Decisions locked in this doc
 
@@ -241,5 +262,6 @@ vocabulary path) is unaffected — still a confirmed match, not a guess.
 | D149 | `speechInput.ts` reuses one `SpeechRecognition` instance across taps (module-level, reconfigured per call) instead of constructing fresh each time | Fixes iOS Safari re-prompting for mic permission on every tap — its grant behaves as scoped to the instance rather than the origin, unlike Chrome and unlike Safari's own `getUserMedia` behavior |
 | D150 | `parser.ts` gains closed-vocabulary merchant matching (against `store.rankedMerchants()`, never an unseen name) and every extraction function now records the text span it matched, so `parseUtterance` can compute whatever's left over; that leftover becomes `note` instead of a copy of the category name | Merchant: narrows D92/docs/15 D77's Tier-1-never-guesses-merchant call to "never guesses an *unseen* one" — recognizing an already-known merchant is closed-vocabulary, the same shape as category/account matching. Note: nothing the user said should be silently thrown away when it doesn't map to a structured field; docs/07 D148's fallback already covers the case where there's no leftover to show |
 | D151 | Absolute month-name dates and a clock time are now parsed (bilingual, closed vocabulary); a single proper-noun-ish token after "at"/"no"/"na" is guessed as a new merchant when no known one matches, flagged `merchantGuessed: true` rather than written silently; amount extraction now skips digits already claimed by a date/time span | Date/time: same closed-vocabulary shape as the rest of the file, just a bigger fixed vocabulary (month names) than before. Merchant guess: the one deliberate exception to never-guess, made safe by reusing docs/22's existing preview-then-Save confirmation gate rather than inventing a new one — under-capturing (a single token) is a safer failure mode than over-capturing location/date words into the guess. Amount-skip: a day-first date or a pre-amount time would otherwise have its own digits mistaken for the amount |
+| D152 | The merchant guess's "at `<merchant>`" span is left unclaimed (was claimed in D151's first pass) so it stays readable in the Note; a bare currency symbol next to the amount is claimed and dropped from the Note instead; `computeUnrecognized`'s edge trim takes an exact `protect` phrase so it never strips the merchant's own "at" while still trimming any other stray connector word | User's direct read on the saved note wording — keep the merchant's lead-in visible, drop the now-meaningless bare "$". Un-claiming the span reopened the exact edge-trim problem D151 existed to solve ("20 at Target" would lose "at" as edge noise with nothing before it), so the trim needed to become phrase-aware rather than exempting "at" everywhere |
 
 **Implemented 2026-08-12.**
