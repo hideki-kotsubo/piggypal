@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useStore } from '../lib/store';
-import { accountLabel, formatAmount, formatRelativeDate, formatTime, transactionTitle } from '../lib/format';
+import { accountLabel, formatAmount, formatTime, groupByDay, transactionTitle } from '../lib/format';
 import {
   filterTransactions,
   hasActiveFilters,
@@ -244,23 +244,29 @@ export function TransactionList() {
         <p className="empty-note">{filtersActive ? 'No transactions match these filters.' : 'Nothing logged yet.'}</p>
       ) : (
         <div className="recent" style={{ marginTop: '0.5rem' }}>
-          {filtered.map((t) => {
-            const category = store.categories.find((c) => c.id === t.categoryId);
-            const account = store.accounts.find((a) => a.id === t.accountId);
-            return (
-              <Link key={t.id} to={`/transactions/${t.id}`} className="tx-row tx-row-tappable">
-                <div className="tx-main">
-                  <span className="tx-note">{transactionTitle(t, category)}</span>
-                  <span className="tx-meta">
-                    {category?.name ?? 'Uncategorized'} · {formatRelativeDate(t.occurredAt)}, {formatTime(t.occurredAt)} · {account ? accountLabel(account) : '—'}
-                  </span>
-                </div>
-                <span className={`tx-amt ${t.amountCents < 0 ? 'out' : 'in'}`}>
-                  {formatAmount(t.amountCents, t.currency)}
-                </span>
-              </Link>
-            );
-          })}
+          {groupByDay(filtered).map((group) => (
+            <Fragment key={group.label}>
+              <div className="day-label">{group.label}</div>
+              {group.items.map((t) => {
+                const category = store.categories.find((c) => c.id === t.categoryId);
+                const account = store.accounts.find((a) => a.id === t.accountId);
+                return (
+                  <Link key={t.id} to={`/transactions/${t.id}`} className="tx-row tx-row-tappable">
+                    <div className="tx-main">
+                      <span className="tx-note">{transactionTitle(t, category)}</span>
+                      {/* day-label above already carries the date — just time here, still genuinely new info */}
+                      <span className="tx-meta">
+                        {category?.name ?? 'Uncategorized'} · {formatTime(t.occurredAt)} · {account ? accountLabel(account) : '—'}
+                      </span>
+                    </div>
+                    <span className={`tx-amt ${t.amountCents < 0 ? 'out' : 'in'}`}>
+                      {formatAmount(t.amountCents, t.currency)}
+                    </span>
+                  </Link>
+                );
+              })}
+            </Fragment>
+          ))}
         </div>
       )}
     </main>

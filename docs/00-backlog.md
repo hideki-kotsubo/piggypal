@@ -49,6 +49,15 @@ it needs doing.
       single number by default). Same docs/07 D147 flag as direction D
       itself applies: this is Home-narrowing territory, reopen deliberately
       if pursued, not by default.
+- [ ] Day-grouped timeline (docs/33) — make section boundaries clearer,
+      beyond the sticky-header pass (docs/34). Two ideas surfaced
+      2026-08-19, not built: a hairline rule above each `.day-label`
+      divider (cheap, purely visual, extends the app's existing hairline
+      vocabulary); a per-day subtotal next to the label (e.g. "Today —
+      -$46.60") — reinforces the boundary with real information rather
+      than styling alone, but it's a data addition (a running per-day
+      sum), not just a style tweak, so it needs its own pass rather than
+      folding into a spacing/visual change.
 
 ## ⚫ Later / someday
 
@@ -459,6 +468,17 @@ it needs doing.
 
 ## ✅ Done
 
+- [x] Sticky day headers (`docs/34-sticky-day-headers.md`) — requested
+      2026-08-19 as a follow-up to docs/33's day-grouped timeline ("how
+      can we make it clearer when a new section begins?"). Both Home's
+      Recent and `/transactions` now pin the current day's label to the
+      top while scrolling, standard `position: sticky`, no JS needed.
+- [x] Two more pieces of the Home-directions design exploration, requested
+      2026-08-19: entry-zone parse-preview spacing (`docs/32`, scoped by
+      the user to spacing only — no shadow, no typography change, unlike
+      direction A's full polish pass) and a day-grouped timeline
+      (`docs/33`, direction B) in both Home's Recent list and the
+      `/transactions` search screen (docs/18), not just Home.
 - [x] Home entry zone docked to the bottom of the screen, overlay-style
       (`docs/31-home-bottom-entry.md`, D159-D160) — built as a trial
       2026-08-19 after the Home-directions design exploration

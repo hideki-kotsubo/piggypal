@@ -28,6 +28,30 @@ export function formatRelativeDate(occurredAt: string): string {
   return new Intl.DateTimeFormat(UI_LOCALE, { month: 'short', day: 'numeric' }).format(date);
 }
 
+export interface DayGroup<T> {
+  label: string;
+  items: T[];
+}
+
+// Groups an already-occurredAt-descending-sorted list into day buckets for
+// a day-divider list UI. Buckets by the actual calendar date (not
+// formatRelativeDate's display string) so two same-month-day dates a year
+// apart never collide into one group — formatRelativeDate is still what
+// supplies each bucket's display label, just not its grouping key.
+export function groupByDay<T extends { occurredAt: string }>(items: T[]): DayGroup<T>[] {
+  const groups: DayGroup<T>[] = [];
+  let currentKey = '';
+  for (const item of items) {
+    const key = item.occurredAt.slice(0, 10); // local YYYY-MM-DD, see nowLocal
+    if (key !== currentKey) {
+      groups.push({ label: formatRelativeDate(item.occurredAt), items: [] });
+      currentKey = key;
+    }
+    groups[groups.length - 1].items.push(item);
+  }
+  return groups;
+}
+
 export function formatTime(occurredAt: string): string {
   return new Intl.DateTimeFormat(UI_LOCALE, { hour: 'numeric', minute: '2-digit' }).format(new Date(occurredAt));
 }

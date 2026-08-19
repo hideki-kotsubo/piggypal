@@ -251,7 +251,7 @@
    from the input row above. */
 .parse-preview {
   border-top: 1px solid var(--line);
-  padding: 0.7rem 0.75rem 0.75rem;
+  padding: 0.85rem 0.9rem 0.9rem;
 }
 .parse-label {
   font-family: var(--mono);
@@ -259,12 +259,12 @@
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--ink-faint);
-  margin: 0 0 0.55rem;
+  margin: 0 0 0.65rem;
 }
 .parse-fields {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.5rem;
 }
 .parse-field {
   display: flex;
@@ -302,7 +302,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-top: 0.75rem;
+  margin-top: 0.9rem;
 }
 .parse-confirm {
   flex: 1;
@@ -471,6 +471,36 @@
   text-transform: uppercase;
   color: var(--ink-faint);
   margin: 1.1rem 1.1rem 0.5rem;
+}
+/* Day-grouped timeline dividers (Home's Recent, docs/18's Transactions
+   list) — sits inside .recent, which already carries the horizontal
+   margin, so unlike .section-label this only needs vertical spacing.
+   First divider in a list sits right under .section-label/the totals
+   row, hence the smaller top margin than a mid-list one would want in
+   isolation — matches the design exploration's spacing exactly. */
+/* docs/34 — sticky while scrolling: the currently-open day pins to the
+   top until the next one's rows push it off, same stacking pattern as
+   iOS Contacts/Messages date headers. Spacing is padding, not margin,
+   deliberately — margin sits outside the element's own box (transparent,
+   no background), which would let rows scrolling underneath show through
+   the gap above the stuck label. Padding keeps that space inside the
+   label's own opaque box instead. `.recent`'s own background is
+   inherited page background (var(--surface)), so this matches exactly —
+   no visible seam between a row and the label stuck above it. */
+.day-label {
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding: 0.75rem 0 0.35rem;
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 1;
+}
+.day-label:first-child {
+  padding-top: 0.2rem;
 }
 .empty-note {
   margin: 0 1.1rem;

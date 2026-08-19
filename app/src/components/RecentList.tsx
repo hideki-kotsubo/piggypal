@@ -1,6 +1,7 @@
+import { Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../lib/store';
-import { accountLabel, formatAmount, formatRelativeDate, transactionTitle } from '../lib/format';
+import { accountLabel, formatAmount, groupByDay, transactionTitle } from '../lib/format';
 
 const PREVIEW_COUNT = 5;
 
@@ -24,23 +25,27 @@ export function RecentList() {
     <section>
       <div className="section-label">Recent</div>
       <div className="recent">
-        {recent.map((t) => {
-          const account = store.accounts.find((a) => a.id === t.accountId);
-          const category = store.categories.find((c) => c.id === t.categoryId);
-          return (
-            <Link key={t.id} to={`/transactions/${t.id}`} className="tx-row tx-row-tappable">
-              <div className="tx-main">
-                <span className="tx-note">{transactionTitle(t, category)}</span>
-                <span className="tx-meta">
-                  {formatRelativeDate(t.occurredAt)} · {account ? accountLabel(account) : '—'}
-                </span>
-              </div>
-              <span className={`tx-amt ${t.amountCents < 0 ? 'out' : 'in'}`}>
-                {formatAmount(t.amountCents, t.currency)}
-              </span>
-            </Link>
-          );
-        })}
+        {groupByDay(recent).map((group) => (
+          <Fragment key={group.label}>
+            <div className="day-label">{group.label}</div>
+            {group.items.map((t) => {
+              const account = store.accounts.find((a) => a.id === t.accountId);
+              const category = store.categories.find((c) => c.id === t.categoryId);
+              return (
+                <Link key={t.id} to={`/transactions/${t.id}`} className="tx-row tx-row-tappable">
+                  <div className="tx-main">
+                    <span className="tx-note">{transactionTitle(t, category)}</span>
+                    {/* day-label above already carries the date — just the account here */}
+                    <span className="tx-meta">{account ? accountLabel(account) : '—'}</span>
+                  </div>
+                  <span className={`tx-amt ${t.amountCents < 0 ? 'out' : 'in'}`}>
+                    {formatAmount(t.amountCents, t.currency)}
+                  </span>
+                </Link>
+              );
+            })}
+          </Fragment>
+        ))}
       </div>
       {active.length > PREVIEW_COUNT && (
         <Link to="/transactions" className="see-all">see all →</Link>
