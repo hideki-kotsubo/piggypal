@@ -10,13 +10,7 @@ it needs doing.
 
 ## 🔵 Now
 
-- [ ] Home bottom-entry trial (`docs/31-home-bottom-entry-trial.md`,
-      branch `home-bottom-entry-overlay`) — the entry zone docked to the
-      bottom of the screen, overlay-style, built 2026-08-19 for hands-on
-      evaluation after the Home-directions design exploration. Not
-      decided: waiting on trying it on a real device before deciding
-      whether to keep it, revise it (the push/shrink variant instead, or
-      add a scrim), or discard the branch.
+*(nothing blocking right now)*
 
 ## ⚪ Next
 
@@ -465,6 +459,14 @@ it needs doing.
 
 ## ✅ Done
 
+- [x] Home entry zone docked to the bottom of the screen, overlay-style
+      (`docs/31-home-bottom-entry.md`, D159-D160) — built as a trial
+      2026-08-19 after the Home-directions design exploration
+      (`docs/artifacts/piggypal-home-directions.html`), sized up same day
+      after the first pass read as squeezed, evaluated hands-on and kept:
+      "Like it. keep it and merge." Supersedes docs/07 D22-26's top-of-
+      page entry-zone placement. Merged into `main` from
+      `home-bottom-entry-overlay`.
 - [x] P2P-paired devices all showed as their bare guessed type ("iPhone",
       "Android device") with no way to tell two of the same type apart —
       requested 2026-08-18, e.g. two iPhones, a Samsung and a Pixel, or
