@@ -49,15 +49,13 @@ it needs doing.
       single number by default). Same docs/07 D147 flag as direction D
       itself applies: this is Home-narrowing territory, reopen deliberately
       if pursued, not by default.
-- [ ] Day-grouped timeline (docs/33) — make section boundaries clearer,
-      beyond the sticky-header pass (docs/34). Two ideas surfaced
-      2026-08-19, not built: a hairline rule above each `.day-label`
-      divider (cheap, purely visual, extends the app's existing hairline
-      vocabulary); a per-day subtotal next to the label (e.g. "Today —
-      -$46.60") — reinforces the boundary with real information rather
-      than styling alone, but it's a data addition (a running per-day
-      sum), not just a style tweak, so it needs its own pass rather than
-      folding into a spacing/visual change.
+- [ ] Day-grouped timeline (docs/33) — a hairline rule above each
+      `.day-label` divider, surfaced 2026-08-19 alongside sticky headers
+      (docs/34, built) and per-day subtotals (docs/35, built) as a third
+      "make section boundaries clearer" idea. Not built: cheap, purely
+      visual, extends the app's existing hairline vocabulary — lowest
+      priority of the three since the other two already address the
+      original ask.
 
 ## ⚫ Later / someday
 
@@ -468,6 +466,12 @@ it needs doing.
 
 ## ✅ Done
 
+- [x] Per-day subtotals (`docs/35-day-subtotals.md`) — requested
+      2026-08-19, the third "make section boundaries clearer" idea after
+      sticky headers. Each `.day-label` now shows that day's total(s),
+      never blended across currencies. Home's `RecentList` computes it
+      from the full transaction list, not just its capped 5-row preview,
+      so a day split across that cutoff still shows its true total.
 - [x] Sticky day headers (`docs/34-sticky-day-headers.md`) — requested
       2026-08-19 as a follow-up to docs/33's day-grouped timeline ("how
       can we make it clearer when a new section begins?"). Both Home's

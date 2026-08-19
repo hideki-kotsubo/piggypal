@@ -246,7 +246,14 @@ export function TransactionList() {
         <div className="recent" style={{ marginTop: '0.5rem' }}>
           {groupByDay(filtered).map((group) => (
             <Fragment key={group.label}>
-              <div className="day-label">{group.label}</div>
+              <div className="day-label">
+                <span>{group.label}</span>
+                <span className="day-subtotal">
+                  {totalsByCurrency(group.items).map((t, i) => (
+                    <span key={t.currency}>{i > 0 && ' · '}{formatAmount(t.cents, t.currency)}</span>
+                  ))}
+                </span>
+              </div>
               {group.items.map((t) => {
                 const category = store.categories.find((c) => c.id === t.categoryId);
                 const account = store.accounts.find((a) => a.id === t.accountId);

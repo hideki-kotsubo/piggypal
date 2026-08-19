@@ -488,6 +488,10 @@
    inherited page background (var(--surface)), so this matches exactly —
    no visible seam between a row and the label stuck above it. */
 .day-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
   font-family: var(--mono);
   font-size: 0.64rem;
   letter-spacing: 0.07em;
@@ -501,6 +505,17 @@
 }
 .day-label:first-child {
   padding-top: 0.2rem;
+}
+/* docs/35 — per-day subtotal, never blended across currencies (docs/10),
+   same as the totals-row elsewhere. Not uppercased/letter-spaced like the
+   label text next to it — amounts read better at their normal tracking,
+   text-transform would only touch the letters in the currency code/word
+   anyway (narrowSymbol formatting means there mostly aren't any). */
+.day-subtotal {
+  font-variant-numeric: tabular-nums;
+  text-transform: none;
+  color: var(--ink-muted);
+  white-space: nowrap;
 }
 .empty-note {
   margin: 0 1.1rem;
