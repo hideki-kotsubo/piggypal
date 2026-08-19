@@ -1,0 +1,502 @@
+<title>Home Screen Directions</title>
+<style>
+  :root {
+    --bg: #eef0ea;
+    --surface: #ffffff;
+    --surface-sunken: #f4f5f0;
+    --ink: #1e211c;
+    --ink-muted: #5c6259;
+    --ink-faint: #8b9186;
+    --line: #dadedb;
+    --accent: #3f7d69;
+    --accent-ink: #ffffff;
+    --accent-soft: #dceae3;
+    --warn: #b8752e;
+    --warn-soft: #f3e3d0;
+    --shadow: 0 30px 60px -25px rgba(30, 33, 28, 0.35);
+
+    --serif: Charter, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141713; --surface: #1d211b; --surface-sunken: #171a15;
+      --ink: #edeee7; --ink-muted: #9ba398; --ink-faint: #6b7267;
+      --line: #2c322a; --accent: #6fbfa0; --accent-ink: #0f1512;
+      --accent-soft: #24352c; --warn: #d99a52; --warn-soft: #3a2c1c;
+      --shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141713; --surface: #1d211b; --surface-sunken: #171a15;
+    --ink: #edeee7; --ink-muted: #9ba398; --ink-faint: #6b7267;
+    --line: #2c322a; --accent: #6fbfa0; --accent-ink: #0f1512;
+    --accent-soft: #24352c; --warn: #d99a52; --warn-soft: #3a2c1c;
+    --shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.6);
+  }
+  :root[data-theme="light"] {
+    --bg: #eef0ea; --surface: #ffffff; --surface-sunken: #f4f5f0;
+    --ink: #1e211c; --ink-muted: #5c6259; --ink-faint: #8b9186;
+    --line: #dadedb; --accent: #3f7d69; --accent-ink: #ffffff;
+    --accent-soft: #dceae3; --warn: #b8752e; --warn-soft: #f3e3d0;
+    --shadow: 0 30px 60px -25px rgba(30, 33, 28, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+  body { overflow-x: hidden; }
+  a { color: var(--accent); }
+
+  .page { max-width: 1180px; margin: 0 auto; padding: 4rem 1.5rem 6rem; }
+
+  .intro { max-width: 42rem; margin-bottom: 2.4rem; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.09em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 0.9rem;
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 500; font-size: clamp(1.9rem, 4vw, 2.6rem);
+    line-height: 1.15; letter-spacing: -0.01em; text-wrap: balance; margin: 0 0 0.9rem;
+  }
+  .lede { font-size: 1.02rem; line-height: 1.6; color: var(--ink-muted); margin: 0 0 0.9rem; max-width: 40rem; }
+  .lede b { color: var(--ink); font-weight: 600; }
+  .lede code { font-family: var(--mono); font-size: 0.88em; background: var(--surface-sunken); border: 1px solid var(--line); border-radius: 4px; padding: 0.05em 0.35em; }
+
+  .scope-note {
+    display: flex; gap: 0.6rem; align-items: flex-start; max-width: 40rem;
+    background: var(--warn-soft); border-radius: 12px; padding: 0.7rem 0.9rem;
+    font-size: 0.85rem; line-height: 1.55; color: var(--ink);
+  }
+  .scope-note b { color: var(--ink); }
+
+  .stage {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2.8rem 2rem;
+    align-items: start;
+    max-width: 1180px;
+    margin-top: 3rem;
+  }
+  @media (max-width: 980px) {
+    .stage { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 640px; margin: 3rem auto 0; }
+  }
+  @media (max-width: 620px) {
+    .stage { grid-template-columns: 1fr; max-width: 24rem; }
+  }
+
+  .frame-block { margin: 0; }
+  .frame-step {
+    font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink-faint); display: block; margin-bottom: 0.3rem;
+  }
+  .frame-title { font-weight: 600; font-size: 1rem; margin: 0 0 0.25rem; }
+  .frame-sub { font-size: 0.87rem; color: var(--ink-muted); margin: 0; line-height: 1.5; }
+  .frame-flag {
+    display: inline-flex; align-items: center; gap: 0.3rem; margin-top: 0.5rem;
+    font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.02em;
+    color: var(--warn); background: var(--warn-soft); border-radius: 999px; padding: 0.2rem 0.55rem;
+  }
+
+  .phone {
+    position: relative; width: 100%; max-width: 280px; margin: 1.4rem auto 0;
+    border-radius: 34px; background-color: var(--ink); padding: 10px; box-shadow: var(--shadow);
+  }
+  .phone .notch {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 84px; height: 18px; background: var(--ink); border-radius: 0 0 12px 12px; z-index: 2;
+  }
+  .screen {
+    position: relative; background: var(--surface); border-radius: 26px;
+    overflow: hidden; min-height: 640px; display: flex; flex-direction: column;
+    font-family: var(--sans); color: var(--ink);
+  }
+
+  .app-bar { display: flex; align-items: center; justify-content: space-between; padding: 1.5rem 1rem 0.6rem; flex-shrink: 0; }
+  .wordmark { font-family: var(--serif); font-weight: 600; font-size: 1.02rem; color: var(--ink); }
+  .bar-icons { display: flex; align-items: center; gap: 0.2rem; }
+  .kebab { display: flex; gap: 3px; padding: 6px; }
+  .kebab span { width: 3.5px; height: 3.5px; border-radius: 50%; background: var(--ink-faint); display: block; }
+
+  .entry-zone { margin: 0.5rem 0.9rem 0; border: 1px solid var(--line); border-radius: 16px; background: var(--surface-sunken); overflow: hidden; }
+  .entry-row { display: flex; align-items: center; gap: 0.35rem; padding: 0 0.35rem; }
+  .add-btn { flex-shrink: 0; width: 2rem; height: 2rem; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: flex; align-items: center; justify-content: center; }
+  .mic-btn { flex-shrink: 0; width: 2rem; height: 2rem; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--ink-muted); display: flex; align-items: center; justify-content: center; }
+  .entry-text { flex: 1; min-width: 0; padding: 0.7rem 0.25rem; font-size: 0.85rem; color: var(--ink); }
+  .entry-text.idle { color: var(--ink-faint); }
+
+  .parse-preview { border-top: 1px solid var(--line); padding: 0.65rem 0.7rem 0.7rem; }
+  .parse-label { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-faint); margin: 0 0 0.5rem; }
+  .parse-fields { display: flex; flex-direction: column; gap: 0.35rem; }
+  .parse-field { display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem; font-size: 0.78rem; }
+  .parse-field .k { color: var(--ink-faint); width: 4rem; flex-shrink: 0; }
+  .parse-field .v { padding: 0.18rem 0.5rem; border-radius: 999px; background: var(--accent-soft); color: var(--ink); font-weight: 600; }
+  .parse-field .defaulted { font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.02em; text-transform: uppercase; color: var(--ink-faint); }
+  .parse-actions { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.65rem; }
+  .ghost-chip { font-size: 0.74rem; padding: 0.35rem 0.65rem; border-radius: 999px; border: 1px dashed var(--line); color: var(--ink-faint); }
+  .save-btn { flex: 1; text-align: center; padding: 0.5rem; border-radius: 12px; background: var(--accent); color: var(--accent-ink); font-size: 0.78rem; font-weight: 600; }
+
+  .inbox-banner { margin: 0.6rem 0.9rem 0; background: var(--warn-soft); border-radius: 14px; padding: 0.55rem 0.7rem; display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+  .inbox-badge { width: 19px; height: 19px; border-radius: 50%; background: var(--warn); color: #fff; font-size: 0.64rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .inbox-banner p { margin: 0; font-size: 0.76rem; color: var(--ink); flex: 1; }
+  .inbox-chevron { color: var(--ink-faint); font-size: 0.85rem; }
+
+  .section-label { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-faint); margin: 0.95rem 0.9rem 0.4rem; }
+  .day-label { font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-faint); margin: 0.75rem 0 0.3rem; }
+  .recent { margin: 0 0.9rem 0.9rem; }
+  .tx-row { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--line); font-size: 0.78rem; }
+  .tx-row:last-child { border-bottom: none; }
+  .tx-note { color: var(--ink); display: block; }
+  .tx-meta { font-family: var(--mono); font-size: 0.6rem; color: var(--ink-faint); margin-top: 0.1rem; display: block; }
+  .tx-amt { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; color: var(--ink); }
+  .tx-amt.in { color: var(--accent); }
+  .see-all { display: block; text-align: center; font-size: 0.72rem; color: var(--ink-muted); padding-bottom: 1rem; }
+
+  .status-pull { margin: 0 0.9rem 0; padding: 0.45rem 0.05rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-shrink: 0; }
+  .status-pull .txt { font-size: 0.74rem; color: var(--ink-muted); }
+  .status-pull .txt b { color: var(--ink); }
+  .status-track { width: 56px; height: 6px; border-radius: 4px; background: var(--accent-soft); overflow: hidden; flex-shrink: 0; }
+  .status-fill { width: 62%; height: 100%; background: var(--accent); }
+  .review-note { margin: 0.7rem 0.9rem 0; border: 1px dashed var(--warn); border-radius: 12px; padding: 0.45rem 0.6rem; font-family: var(--mono); font-size: 0.6rem; line-height: 1.5; color: var(--warn); flex-shrink: 0; }
+
+  .composer { flex-shrink: 0; padding: 0.5rem 0.9rem 0.8rem; background: var(--surface); box-shadow: 0 -6px 16px rgba(30,33,28,0.06); }
+  .fade { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; background: linear-gradient(to bottom, rgba(0,0,0,0), var(--surface)); pointer-events: none; }
+  .risk-callout { max-width: 280px; margin: 1rem auto 0; border: 1px dashed var(--warn); border-radius: 12px; padding: 0.6rem 0.75rem; font-family: var(--mono); font-size: 0.66rem; line-height: 1.55; color: var(--warn); background: var(--warn-soft); }
+</style>
+
+<div class="page">
+  <header class="intro">
+    <p class="eyebrow">piggypal &middot; Home screen, UI directions</p>
+    <h1>Five ways to shape the Home screen</h1>
+    <p class="lede">
+      A faithful recreation of what's shipped today, plus four alternative
+      directions built from the same design tokens and components
+      (<code>app/src/styles/tokens.css</code>, <code>home.css</code>) &mdash;
+      exploration only, nothing here is implemented or decided.
+    </p>
+    <div class="scope-note">
+      <span>&#9888;</span>
+      <span><b>Direction D</b> reopens docs/07's D147 call to move budgets/chart off Home onto <code>/insights</code> &mdash; flagged on that frame, not assumed.</span>
+    </div>
+  </header>
+
+  <section class="stage">
+
+    <!-- BASELINE -->
+    <figure class="frame-block">
+      <div class="frame-head">
+        <span class="frame-step">baseline</span>
+        <h2 class="frame-title">Current &mdash; shipped today</h2>
+        <p class="frame-sub">Entry zone with parse-preview, inbox banner, recent list. Reference point for everything else here.</p>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="app-bar">
+            <span class="wordmark">piggypal</span>
+            <div class="bar-icons"><span style="font-size:1.1rem;color:var(--ink-muted);">&#9636;</span><span class="kebab"><span></span><span></span><span></span></span></div>
+          </div>
+          <div class="entry-zone">
+            <div class="entry-row">
+              <span class="add-btn">+</span>
+              <span class="entry-text">12.50 coffee at Starbucks</span>
+              <span class="mic-btn"><svg width="11" height="11" viewBox="0 0 14 14" fill="none"><rect x="5" y="1" width="4" height="7" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 6.5C2.5 9 4.5 11 7 11C9.5 11 11.5 9 11.5 6.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M7 11V13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+            </div>
+            <div class="parse-preview">
+              <p class="parse-label">understood</p>
+              <div class="parse-fields">
+                <div class="parse-field"><span class="k">Amount</span><span class="v">-$12.50</span></div>
+                <div class="parse-field"><span class="k">Category</span><span class="v">Coffee</span></div>
+                <div class="parse-field"><span class="k">When</span><span class="v">today</span><span class="defaulted">default</span></div>
+                <div class="parse-field"><span class="k">Account</span><span class="v">Scotiabank &mdash; Visa</span><span class="defaulted">default</span></div>
+                <div class="parse-field"><span class="k">Merchant</span><span class="v">Starbucks</span><span class="defaulted">guessed</span></div>
+              </div>
+              <div class="parse-actions"><span class="ghost-chip">Edit</span><span class="save-btn">&#10003; Save</span></div>
+            </div>
+          </div>
+          <div class="inbox-banner"><span class="inbox-badge">3</span><p>3 entries need a category</p><span class="inbox-chevron">&rsaquo;</span></div>
+          <div class="section-label">Recent</div>
+          <div class="recent">
+            <div class="tx-row"><span><span class="tx-note">Whole Foods</span><span class="tx-meta">today &middot; Scotiabank &mdash; Visa</span></span><span class="tx-amt">-$62.40</span></div>
+            <div class="tx-row"><span><span class="tx-note">Uber</span><span class="tx-meta">today &middot; Tangerine &mdash; Debit</span></span><span class="tx-amt">-$14.20</span></div>
+            <div class="tx-row"><span><span class="tx-note">Salary</span><span class="tx-meta">yesterday &middot; Tangerine &mdash; Chequing</span></span><span class="tx-amt in">+$2,150.00</span></div>
+            <div class="tx-row"><span><span class="tx-note">Netflix</span><span class="tx-meta">yesterday &middot; Scotiabank &mdash; Visa</span></span><span class="tx-amt">-$16.99</span></div>
+            <div class="tx-row"><span><span class="tx-note">Padaria do Bairro</span><span class="tx-meta">2 days ago &middot; Nubank &mdash; Cart&atilde;o</span></span><span class="tx-amt">-R$18,50</span></div>
+          </div>
+          <span class="see-all">see all &rarr;</span>
+        </div>
+      </div>
+    </figure>
+
+    <!-- A: POLISH PASS -->
+    <figure class="frame-block">
+      <div class="frame-head">
+        <span class="frame-step">A &middot; polish pass</span>
+        <h2 class="frame-title">Same structure, tightened up</h2>
+        <p class="frame-sub">Same 3 blocks, same content &mdash; more air, serif tabular amounts (matching the app's own <code>amount-preview</code> convention), a soft-elevated entry zone. Lowest risk of the four.</p>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="app-bar" style="padding-top:1.6rem;">
+            <span class="wordmark" style="font-size:1.08rem;">piggypal</span>
+            <div class="bar-icons"><span style="color:var(--ink-muted);display:inline-flex;padding:4px;"><svg width="16" height="16" viewBox="0 0 18 18" fill="none"><rect x="2" y="9" width="3" height="7" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="7.5" y="5" width="3" height="11" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="13" y="2" width="3" height="14" rx="1" stroke="currentColor" stroke-width="1.4"/></svg></span><span class="kebab"><span></span><span></span><span></span></span></div>
+          </div>
+          <div class="entry-zone" style="box-shadow:0 1px 2px rgba(30,33,28,0.04), 0 6px 16px rgba(30,33,28,0.05);">
+            <div class="entry-row">
+              <span class="add-btn">+</span>
+              <span class="entry-text">12.50 coffee at Starbucks</span>
+              <span class="mic-btn"><svg width="11" height="11" viewBox="0 0 14 14" fill="none"><rect x="5" y="1" width="4" height="7" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 6.5C2.5 9 4.5 11 7 11C9.5 11 11.5 9 11.5 6.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M7 11V13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+            </div>
+            <div class="parse-preview">
+              <p class="parse-label">understood</p>
+              <div class="parse-fields">
+                <div class="parse-field"><span class="k">Amount</span><span class="v" style="font-family:var(--serif);">-$12.50</span></div>
+                <div class="parse-field"><span class="k">Category</span><span class="v">Coffee</span></div>
+                <div class="parse-field"><span class="k">When</span><span class="v">today</span><span class="defaulted">default</span></div>
+                <div class="parse-field"><span class="k">Account</span><span class="v">Scotiabank &mdash; Visa</span><span class="defaulted">default</span></div>
+                <div class="parse-field"><span class="k">Merchant</span><span class="v">Starbucks</span><span class="defaulted">guessed</span></div>
+              </div>
+              <div class="parse-actions"><span class="ghost-chip">Edit</span><span class="save-btn">&#10003; Save</span></div>
+            </div>
+          </div>
+          <div class="inbox-banner" style="margin-top:0.8rem;"><span class="inbox-badge">3</span><p>3 entries need a category</p><span class="inbox-chevron">&rsaquo;</span></div>
+          <div class="section-label" style="margin-top:1.3rem;">Recent</div>
+          <div class="recent">
+            <div class="tx-row" style="padding:0.6rem 0;"><span style="display:flex;align-items:center;gap:0.4rem;"><span style="width:5px;height:5px;border-radius:50%;background:var(--ink-faint);"></span><span><span class="tx-note">Whole Foods</span><span class="tx-meta">today &middot; Scotiabank &mdash; Visa</span></span></span><span class="tx-amt" style="font-family:var(--serif);">-$62.40</span></div>
+            <div class="tx-row" style="padding:0.6rem 0;"><span style="display:flex;align-items:center;gap:0.4rem;"><span style="width:5px;height:5px;border-radius:50%;background:var(--ink-faint);"></span><span><span class="tx-note">Uber</span><span class="tx-meta">today &middot; Tangerine &mdash; Debit</span></span></span><span class="tx-amt" style="font-family:var(--serif);">-$14.20</span></div>
+            <div class="tx-row" style="padding:0.6rem 0;"><span style="display:flex;align-items:center;gap:0.4rem;"><span style="width:5px;height:5px;border-radius:50%;background:var(--accent);"></span><span><span class="tx-note">Salary</span><span class="tx-meta">yesterday &middot; Tangerine &mdash; Chequing</span></span></span><span class="tx-amt in" style="font-family:var(--serif);">+$2,150.00</span></div>
+            <div class="tx-row" style="padding:0.6rem 0;"><span style="display:flex;align-items:center;gap:0.4rem;"><span style="width:5px;height:5px;border-radius:50%;background:var(--ink-faint);"></span><span><span class="tx-note">Netflix</span><span class="tx-meta">yesterday &middot; Scotiabank &mdash; Visa</span></span></span><span class="tx-amt" style="font-family:var(--serif);">-$16.99</span></div>
+            <div class="tx-row" style="padding:0.6rem 0;"><span style="display:flex;align-items:center;gap:0.4rem;"><span style="width:5px;height:5px;border-radius:50%;background:var(--ink-faint);"></span><span><span class="tx-note">Padaria do Bairro</span><span class="tx-meta">2 days ago &middot; Nubank &mdash; Cart&atilde;o</span></span></span><span class="tx-amt" style="font-family:var(--serif);">-R$18,50</span></div>
+          </div>
+          <span class="see-all">see all &rarr;</span>
+        </div>
+      </div>
+    </figure>
+
+    <!-- B: DAY-GROUPED TIMELINE -->
+    <figure class="frame-block">
+      <div class="frame-head">
+        <span class="frame-step">B &middot; day-grouped timeline</span>
+        <h2 class="frame-title">Recent, grouped by day</h2>
+        <p class="frame-sub">Today/Yesterday/date dividers. Better scannability once there's more than ~5 entries; costs a little vertical space per group. Entry zone unchanged.</p>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="app-bar">
+            <span class="wordmark">piggypal</span>
+            <div class="bar-icons"><span style="color:var(--ink-muted);display:inline-flex;padding:4px;"><svg width="16" height="16" viewBox="0 0 18 18" fill="none"><rect x="2" y="9" width="3" height="7" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="7.5" y="5" width="3" height="11" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="13" y="2" width="3" height="14" rx="1" stroke="currentColor" stroke-width="1.4"/></svg></span><span class="kebab"><span></span><span></span><span></span></span></div>
+          </div>
+          <div class="entry-zone">
+            <div class="entry-row">
+              <span class="add-btn">+</span>
+              <span class="entry-text idle">type or say what you spent&hellip;</span>
+              <span class="mic-btn"><svg width="11" height="11" viewBox="0 0 14 14" fill="none"><rect x="5" y="1" width="4" height="7" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 6.5C2.5 9 4.5 11 7 11C9.5 11 11.5 9 11.5 6.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M7 11V13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+            </div>
+          </div>
+          <div class="inbox-banner"><span class="inbox-badge">3</span><p>3 entries need a category</p><span class="inbox-chevron">&rsaquo;</span></div>
+          <div class="section-label" style="margin-bottom:0.1rem;">Recent</div>
+          <div class="recent">
+            <div class="day-label">Today</div>
+            <div class="tx-row"><span><span class="tx-note">Whole Foods</span><span class="tx-meta">Scotiabank &mdash; Visa</span></span><span class="tx-amt">-$62.40</span></div>
+            <div class="tx-row"><span><span class="tx-note">Uber</span><span class="tx-meta">Tangerine &mdash; Debit</span></span><span class="tx-amt">-$14.20</span></div>
+            <div class="tx-row"><span><span class="tx-note">Coffee Bar</span><span class="tx-meta">Scotiabank &mdash; Visa</span></span><span class="tx-amt">-$5.75</span></div>
+            <div class="day-label">Yesterday</div>
+            <div class="tx-row"><span><span class="tx-note">Salary</span><span class="tx-meta">Tangerine &mdash; Chequing</span></span><span class="tx-amt in">+$2,150.00</span></div>
+            <div class="tx-row"><span><span class="tx-note">Netflix</span><span class="tx-meta">Scotiabank &mdash; Visa</span></span><span class="tx-amt">-$16.99</span></div>
+            <div class="day-label">Aug 17</div>
+            <div class="tx-row"><span><span class="tx-note">Padaria do Bairro</span><span class="tx-meta">Nubank &mdash; Cart&atilde;o</span></span><span class="tx-amt">-R$18,50</span></div>
+            <div class="tx-row"><span><span class="tx-note">Gas</span><span class="tx-meta">Tangerine &mdash; Debit</span></span><span class="tx-amt">-$41.10</span></div>
+          </div>
+          <span class="see-all">see all &rarr;</span>
+        </div>
+      </div>
+    </figure>
+
+    <!-- C: BOTTOM ENTRY -->
+    <figure class="frame-block">
+      <div class="frame-head">
+        <span class="frame-step">C &middot; thumb-reachable entry</span>
+        <h2 class="frame-title">Composer pinned to the bottom</h2>
+        <p class="frame-sub">Chat-input style; Recent scrolls above it. Best one-handed reach on a phone &mdash; the biggest structural change of the four.</p>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen" style="height: 600px; min-height: 0;">
+          <div class="app-bar">
+            <span class="wordmark">piggypal</span>
+            <div class="bar-icons"><span style="color:var(--ink-muted);display:inline-flex;padding:4px;"><svg width="16" height="16" viewBox="0 0 18 18" fill="none"><rect x="2" y="9" width="3" height="7" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="7.5" y="5" width="3" height="11" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="13" y="2" width="3" height="14" rx="1" stroke="currentColor" stroke-width="1.4"/></svg></span><span class="kebab"><span></span><span></span><span></span></span></div>
+          </div>
+          <div class="inbox-banner"><span class="inbox-badge">3</span><p>3 entries need a category</p><span class="inbox-chevron">&rsaquo;</span></div>
+          <div class="section-label">Recent</div>
+          <div style="flex:1; min-height:0; overflow-y:auto; position:relative;">
+            <div class="recent" style="margin-bottom:0;">
+              <div class="tx-row"><span><span class="tx-note">Whole Foods</span><span class="tx-meta">today &middot; Scotiabank &mdash; Visa</span></span><span class="tx-amt">-$62.40</span></div>
+              <div class="tx-row"><span><span class="tx-note">Uber</span><span class="tx-meta">today &middot; Tangerine &mdash; Debit</span></span><span class="tx-amt">-$14.20</span></div>
+              <div class="tx-row"><span><span class="tx-note">Salary</span><span class="tx-meta">yesterday &middot; Tangerine &mdash; Chequing</span></span><span class="tx-amt in">+$2,150.00</span></div>
+              <div class="tx-row"><span><span class="tx-note">Netflix</span><span class="tx-meta">yesterday &middot; Scotiabank &mdash; Visa</span></span><span class="tx-amt">-$16.99</span></div>
+              <div class="tx-row"><span><span class="tx-note">Padaria do Bairro</span><span class="tx-meta">2 days ago &middot; Nubank &mdash; Cart&atilde;o</span></span><span class="tx-amt">-R$18,50</span></div>
+              <div class="tx-row"><span><span class="tx-note">Gas</span><span class="tx-meta">3 days ago &middot; Tangerine &mdash; Debit</span></span><span class="tx-amt">-$41.10</span></div>
+              <div class="tx-row"><span><span class="tx-note">Metro Market</span><span class="tx-meta">3 days ago &middot; Scotiabank &mdash; Visa</span></span><span class="tx-amt">-$28.15</span></div>
+            </div>
+            <div class="fade"></div>
+          </div>
+          <div class="composer">
+            <div class="entry-zone" style="margin:0;">
+              <div class="entry-row">
+                <span class="add-btn">+</span>
+                <span class="entry-text idle">type or say what you spent&hellip;</span>
+                <span class="mic-btn"><svg width="11" height="11" viewBox="0 0 14 14" fill="none"><rect x="5" y="1" width="4" height="7" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 6.5C2.5 9 4.5 11 7 11C9.5 11 11.5 9 11.5 6.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M7 11V13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </figure>
+
+    <!-- C, EXPANDED: the risk case -->
+    <figure class="frame-block">
+      <div class="frame-head">
+        <span class="frame-step">C &middot; expanded while composing</span>
+        <h2 class="frame-title">Same card, grows upward instead</h2>
+        <p class="frame-sub">Same expansion mechanic as the parse-preview today &mdash; just anchored to the bottom. The open question is below the frame: it competes with the keyboard for the same sliver of screen.</p>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen" style="height: 600px; min-height: 0;">
+          <div class="app-bar">
+            <span class="wordmark">piggypal</span>
+            <div class="bar-icons"><span style="color:var(--ink-muted);display:inline-flex;padding:4px;"><svg width="16" height="16" viewBox="0 0 18 18" fill="none"><rect x="2" y="9" width="3" height="7" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="7.5" y="5" width="3" height="11" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="13" y="2" width="3" height="14" rx="1" stroke="currentColor" stroke-width="1.4"/></svg></span><span class="kebab"><span></span><span></span><span></span></span></div>
+          </div>
+          <div class="inbox-banner"><span class="inbox-badge">3</span><p>3 entries need a category</p><span class="inbox-chevron">&rsaquo;</span></div>
+          <div class="section-label">Recent</div>
+          <div style="flex:1; min-height:0; overflow-y:auto; position:relative;">
+            <div class="recent" style="margin-bottom:0;">
+              <div class="tx-row"><span><span class="tx-note">Whole Foods</span><span class="tx-meta">today &middot; Scotiabank &mdash; Visa</span></span><span class="tx-amt">-$62.40</span></div>
+              <div class="tx-row"><span><span class="tx-note">Uber</span><span class="tx-meta">today &middot; Tangerine &mdash; Debit</span></span><span class="tx-amt">-$14.20</span></div>
+            </div>
+            <div class="fade"></div>
+          </div>
+          <div class="composer">
+            <div class="entry-zone" style="margin:0;">
+              <div class="entry-row">
+                <span class="add-btn">+</span>
+                <span class="entry-text">12.50 coffee at Starbucks</span>
+                <span class="mic-btn"><svg width="11" height="11" viewBox="0 0 14 14" fill="none"><rect x="5" y="1" width="4" height="7" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 6.5C2.5 9 4.5 11 7 11C9.5 11 11.5 9 11.5 6.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M7 11V13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+              </div>
+              <div class="parse-preview">
+                <p class="parse-label">understood</p>
+                <div class="parse-fields">
+                  <div class="parse-field"><span class="k">Amount</span><span class="v">-$12.50</span></div>
+                  <div class="parse-field"><span class="k">Category</span><span class="v">Coffee</span></div>
+                  <div class="parse-field"><span class="k">When</span><span class="v">today</span><span class="defaulted">default</span></div>
+                  <div class="parse-field"><span class="k">Account</span><span class="v">Scotiabank &mdash; Visa</span><span class="defaulted">default</span></div>
+                  <div class="parse-field"><span class="k">Merchant</span><span class="v">Starbucks</span><span class="defaulted">guessed</span></div>
+                </div>
+                <div class="parse-actions"><span class="ghost-chip">Edit</span><span class="save-btn">&#10003; Save</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="risk-callout">&#9888; not drawn here (mobile mockups shouldn't fake a keyboard) &mdash; but a real on-screen keyboard is ~260&ndash;330px tall. Stacked under this already-expanded card, the two together can exceed the screen's remaining height: the lower preview fields and Save button may need their own scroll, or the keyboard has to auto-dismiss once a preview appears.</div>
+    </figure>
+
+    <!-- C, OVERLAY: the alternative to push/shrink -->
+    <figure class="frame-block">
+      <div class="frame-head">
+        <span class="frame-step">C &middot; expanded, overlay (alternative)</span>
+        <h2 class="frame-title">Floats on top instead of pushing</h2>
+        <p class="frame-sub">The list never reflows &mdash; its bottom rows are genuinely covered while composing, not just dimmed. Correction from earlier: this is <b>not</b> reusing an existing app pattern &mdash; PairingScreen's merge-prompt is a full-screen step, not a bottom sheet, so this would be new UI.</p>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen" style="height: 600px; min-height: 0; position: relative;">
+          <div class="app-bar">
+            <span class="wordmark">piggypal</span>
+            <div class="bar-icons"><span style="color:var(--ink-muted);display:inline-flex;padding:4px;"><svg width="16" height="16" viewBox="0 0 18 18" fill="none"><rect x="2" y="9" width="3" height="7" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="7.5" y="5" width="3" height="11" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="13" y="2" width="3" height="14" rx="1" stroke="currentColor" stroke-width="1.4"/></svg></span><span class="kebab"><span></span><span></span><span></span></span></div>
+          </div>
+          <div class="inbox-banner"><span class="inbox-badge">3</span><p>3 entries need a category</p><span class="inbox-chevron">&rsaquo;</span></div>
+          <div class="section-label">Recent</div>
+          <!-- full, un-reflowed list extent -->
+          <div style="flex:1; min-height:0; overflow-y:auto;">
+            <div class="recent" style="margin-bottom:0;">
+              <div class="tx-row"><span><span class="tx-note">Whole Foods</span><span class="tx-meta">today &middot; Scotiabank &mdash; Visa</span></span><span class="tx-amt">-$62.40</span></div>
+              <div class="tx-row"><span><span class="tx-note">Uber</span><span class="tx-meta">today &middot; Tangerine &mdash; Debit</span></span><span class="tx-amt">-$14.20</span></div>
+              <div class="tx-row"><span><span class="tx-note">Salary</span><span class="tx-meta">yesterday &middot; Tangerine &mdash; Chequing</span></span><span class="tx-amt in">+$2,150.00</span></div>
+              <div class="tx-row"><span><span class="tx-note">Netflix</span><span class="tx-meta">yesterday &middot; Scotiabank &mdash; Visa</span></span><span class="tx-amt">-$16.99</span></div>
+              <div class="tx-row"><span><span class="tx-note">Padaria do Bairro</span><span class="tx-meta">2 days ago &middot; Nubank &mdash; Cart&atilde;o</span></span><span class="tx-amt">-R$18,50</span></div>
+              <div class="tx-row"><span><span class="tx-note">Gas</span><span class="tx-meta">3 days ago &middot; Tangerine &mdash; Debit</span></span><span class="tx-amt">-$41.10</span></div>
+              <div class="tx-row" style="border-bottom:none;"><span><span class="tx-note">Metro Market</span><span class="tx-meta">3 days ago &middot; Scotiabank &mdash; Visa</span></span><span class="tx-amt">-$28.15</span></div>
+            </div>
+          </div>
+          <!-- floating composer, position:absolute over the list -->
+          <div style="position:absolute; left:0; right:0; bottom:0; padding:0.5rem 0.9rem calc(0.8rem + env(safe-area-inset-bottom, 0px)); background:var(--surface); border-top-left-radius:20px; border-top-right-radius:20px; box-shadow:0 -12px 24px -8px rgba(30,33,28,0.22);">
+            <div class="entry-zone" style="margin:0;">
+              <div class="entry-row">
+                <span class="add-btn">+</span>
+                <span class="entry-text">12.50 coffee at Starbucks</span>
+                <span class="mic-btn"><svg width="11" height="11" viewBox="0 0 14 14" fill="none"><rect x="5" y="1" width="4" height="7" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 6.5C2.5 9 4.5 11 7 11C9.5 11 11.5 9 11.5 6.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M7 11V13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+              </div>
+              <div class="parse-preview">
+                <p class="parse-label">understood</p>
+                <div class="parse-fields">
+                  <div class="parse-field"><span class="k">Amount</span><span class="v">-$12.50</span></div>
+                  <div class="parse-field"><span class="k">Category</span><span class="v">Coffee</span></div>
+                  <div class="parse-field"><span class="k">When</span><span class="v">today</span><span class="defaulted">default</span></div>
+                  <div class="parse-field"><span class="k">Account</span><span class="v">Scotiabank &mdash; Visa</span><span class="defaulted">default</span></div>
+                  <div class="parse-field"><span class="k">Merchant</span><span class="v">Starbucks</span><span class="defaulted">guessed</span></div>
+                </div>
+                <div class="parse-actions"><span class="ghost-chip">Edit</span><span class="save-btn">&#10003; Save</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="risk-callout" style="border-color: var(--ink-faint); color: var(--ink-muted); background: var(--surface-sunken);">No scrim behind the card &mdash; the list stays visible and interactive, just genuinely covered at the bottom (Gas, Metro Market here). A full modal scrim would block tapping into the list while composing, which cuts against this app's "quick capture, data still visible" feel &mdash; left out on purpose, not an oversight.</div>
+    </figure>
+
+    <!-- D: COMPACT STATUS PULL -->
+    <figure class="frame-block">
+      <div class="frame-head">
+        <span class="frame-step">D &middot; compact status pull</span>
+        <h2 class="frame-title">One glanceable budget line</h2>
+        <p class="frame-sub">A single line + a thin existing-pattern progress bar (not a chart), still leading with entry-first.</p>
+        <span class="frame-flag">&#9888; revisits docs/07 D147</span>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="review-note">&#9888; revisits docs/07 D147 &mdash; budgets/chart were deliberately moved off Home to /insights. flagged for discussion, not decided.</div>
+          <div class="app-bar" style="padding-top:0.7rem;">
+            <span class="wordmark">piggypal</span>
+            <div class="bar-icons"><span style="color:var(--ink-muted);display:inline-flex;padding:4px;"><svg width="16" height="16" viewBox="0 0 18 18" fill="none"><rect x="2" y="9" width="3" height="7" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="7.5" y="5" width="3" height="11" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="13" y="2" width="3" height="14" rx="1" stroke="currentColor" stroke-width="1.4"/></svg></span><span class="kebab"><span></span><span></span><span></span></span></div>
+          </div>
+          <div class="status-pull">
+            <span class="txt">On track &mdash; <b>$340</b> left this month</span>
+            <div class="status-track"><div class="status-fill"></div></div>
+          </div>
+          <div class="entry-zone">
+            <div class="entry-row">
+              <span class="add-btn">+</span>
+              <span class="entry-text idle">type or say what you spent&hellip;</span>
+              <span class="mic-btn"><svg width="11" height="11" viewBox="0 0 14 14" fill="none"><rect x="5" y="1" width="4" height="7" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 6.5C2.5 9 4.5 11 7 11C9.5 11 11.5 9 11.5 6.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M7 11V13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+            </div>
+          </div>
+          <div class="inbox-banner"><span class="inbox-badge">3</span><p>3 entries need a category</p><span class="inbox-chevron">&rsaquo;</span></div>
+          <div class="section-label">Recent</div>
+          <div class="recent">
+            <div class="tx-row"><span><span class="tx-note">Whole Foods</span><span class="tx-meta">today &middot; Scotiabank &mdash; Visa</span></span><span class="tx-amt">-$62.40</span></div>
+            <div class="tx-row"><span><span class="tx-note">Uber</span><span class="tx-meta">today &middot; Tangerine &mdash; Debit</span></span><span class="tx-amt">-$14.20</span></div>
+            <div class="tx-row"><span><span class="tx-note">Salary</span><span class="tx-meta">yesterday &middot; Tangerine &mdash; Chequing</span></span><span class="tx-amt in">+$2,150.00</span></div>
+            <div class="tx-row"><span><span class="tx-note">Netflix</span><span class="tx-meta">yesterday &middot; Scotiabank &mdash; Visa</span></span><span class="tx-amt">-$16.99</span></div>
+            <div class="tx-row"><span><span class="tx-note">Padaria do Bairro</span><span class="tx-meta">2 days ago &middot; Nubank &mdash; Cart&atilde;o</span></span><span class="tx-amt">-R$18,50</span></div>
+          </div>
+          <span class="see-all">see all &rarr;</span>
+        </div>
+      </div>
+    </figure>
+
+  </section>
+</div>

@@ -23,7 +23,7 @@ export default function App() {
   }
 
   return (
-    <main className="home">
+    <main className="home home-with-dock">
       <div className="app-bar">
         <span className="wordmark">piggypal</span>
         <div className="app-bar-actions">
@@ -34,12 +34,21 @@ export default function App() {
         </div>
       </div>
 
-      <EntryZone onSubmitted={showToast} />
       <InboxBanner />
       <RecentList />
 
+      {/* docs/31 — trial: entry zone docked to the bottom of the screen
+          instead of the top. position:fixed takes it out of document flow
+          entirely, so its DOM position doesn't affect where it renders —
+          kept last, after the scrolling content, to match visual reading
+          order top-to-bottom into the composer (same reasoning most
+          chat-style UIs place their composer last). */}
+      <div className="entry-zone-dock">
+        <EntryZone onSubmitted={showToast} />
+      </div>
+
       {toast && (
-        <div className="toast">
+        <div className="toast toast-above-dock">
           <span>{toast.message}</span>
           {toast.onUndo && (
             <button

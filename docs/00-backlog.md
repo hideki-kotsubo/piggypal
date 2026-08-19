@@ -10,7 +10,13 @@ it needs doing.
 
 ## 🔵 Now
 
-*(nothing blocking right now)*
+- [ ] Home bottom-entry trial (`docs/31-home-bottom-entry-trial.md`,
+      branch `home-bottom-entry-overlay`) — the entry zone docked to the
+      bottom of the screen, overlay-style, built 2026-08-19 for hands-on
+      evaluation after the Home-directions design exploration. Not
+      decided: waiting on trying it on a real device before deciding
+      whether to keep it, revise it (the push/shrink variant instead, or
+      add a scrim), or discard the branch.
 
 ## ⚪ Next
 
@@ -33,6 +39,22 @@ it needs doing.
 - [ ] Set up a test runner (Vitest, matches Vite) — no tests exist yet.
 - [ ] Decide on GitHub/Gitea setup for backlog + PR workflow (this doc is
       the interim, file-based version).
+- [ ] Home status pull, reframed as a period-over-period comparison instead
+      of a budget target — surfaced 2026-08-19 reviewing the Home-directions
+      design exploration (`docs/artifacts/piggypal-home-directions.html`,
+      direction D). D's "on track — $340 left this month" line assumed a
+      budget-target framing the user is unsure about; their counter-idea:
+      compare current spending to the previous month/period instead (e.g.
+      "$120 less than last month," or "X% down vs. last month at this point
+      in the month"), rather than against a set target. Not designed —
+      real open questions before this is buildable: what exactly gets
+      compared (same-day-of-month cumulative spend? whole prior month?
+      all categories or a subset? which account(s)?), and how it behaves
+      for multi-currency users (docs/10 — totals are never blended across
+      currencies, so a cross-currency "vs last month" comparison isn't a
+      single number by default). Same docs/07 D147 flag as direction D
+      itself applies: this is Home-narrowing territory, reopen deliberately
+      if pursued, not by default.
 
 ## ⚫ Later / someday
 
