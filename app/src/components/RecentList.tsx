@@ -45,22 +45,24 @@ export function RecentList() {
                 ))}
               </span>
             </div>
-            {group.items.map((t) => {
-              const account = store.accounts.find((a) => a.id === t.accountId);
-              const category = store.categories.find((c) => c.id === t.categoryId);
-              return (
-                <Link key={t.id} to={`/transactions/${t.id}`} className="tx-row tx-row-tappable">
-                  <div className="tx-main">
-                    <span className="tx-note">{transactionTitle(t, category)}</span>
-                    {/* day-label above already carries the date — just the account here */}
-                    <span className="tx-meta">{account ? accountLabel(account) : '—'}</span>
-                  </div>
-                  <span className={`tx-amt ${t.amountCents < 0 ? 'out' : 'in'}`}>
-                    {formatAmount(t.amountCents, t.currency)}
-                  </span>
-                </Link>
-              );
-            })}
+            <div className="day-card">
+              {group.items.map((t) => {
+                const account = store.accounts.find((a) => a.id === t.accountId);
+                const category = store.categories.find((c) => c.id === t.categoryId);
+                return (
+                  <Link key={t.id} to={`/transactions/${t.id}`} className="tx-row tx-row-tappable">
+                    <div className="tx-main">
+                      <span className="tx-note">{transactionTitle(t, category)}</span>
+                      {/* day-label above already carries the date — just the account here */}
+                      <span className="tx-meta">{account ? accountLabel(account) : '—'}</span>
+                    </div>
+                    <span className={`tx-amt ${t.amountCents < 0 ? 'out' : 'in'}`}>
+                      {formatAmount(t.amountCents, t.currency)}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
           </Fragment>
         ))}
       </div>

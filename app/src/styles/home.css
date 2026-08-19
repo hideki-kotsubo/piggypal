@@ -517,6 +517,32 @@
   color: var(--ink-muted);
   white-space: nowrap;
 }
+/* docs/37 — each day's rows now sit inside their own bordered, sunken
+   card (the app's existing entry-zone "sunken zone" pattern), chosen
+   over three other bolder-than-a-hairline options after a plain
+   hairline rule (docs/36) was tried and rejected as still too weak.
+   The sticky day-label (docs/34) stays a separate element ABOVE the
+   card rather than becoming the card's own header, unlike the design
+   mockup: a label that's both sticky AND inside a bordered/radius'd box
+   looks broken once the card's rounded top edge has to scroll underneath
+   a pinned header — keeping it outside preserves the already-shipped
+   sticky behavior instead of silently dropping it. .tx-row:last-child's
+   existing rule already drops the border on each card's final row for
+   free, since :last-child now resolves per-card instead of per-list. */
+.day-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-sunken);
+  overflow: hidden;
+  margin-bottom: 0.8rem;
+}
+.day-card:last-child {
+  margin-bottom: 0;
+}
+.day-card .tx-row {
+  padding-left: 0.9rem;
+  padding-right: 0.9rem;
+}
 .empty-note {
   margin: 0 1.1rem;
   font-size: 0.85rem;

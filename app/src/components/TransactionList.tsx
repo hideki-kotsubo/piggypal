@@ -254,24 +254,26 @@ export function TransactionList() {
                   ))}
                 </span>
               </div>
-              {group.items.map((t) => {
-                const category = store.categories.find((c) => c.id === t.categoryId);
-                const account = store.accounts.find((a) => a.id === t.accountId);
-                return (
-                  <Link key={t.id} to={`/transactions/${t.id}`} className="tx-row tx-row-tappable">
-                    <div className="tx-main">
-                      <span className="tx-note">{transactionTitle(t, category)}</span>
-                      {/* day-label above already carries the date — just time here, still genuinely new info */}
-                      <span className="tx-meta">
-                        {category?.name ?? 'Uncategorized'} · {formatTime(t.occurredAt)} · {account ? accountLabel(account) : '—'}
+              <div className="day-card">
+                {group.items.map((t) => {
+                  const category = store.categories.find((c) => c.id === t.categoryId);
+                  const account = store.accounts.find((a) => a.id === t.accountId);
+                  return (
+                    <Link key={t.id} to={`/transactions/${t.id}`} className="tx-row tx-row-tappable">
+                      <div className="tx-main">
+                        <span className="tx-note">{transactionTitle(t, category)}</span>
+                        {/* day-label above already carries the date — just time here, still genuinely new info */}
+                        <span className="tx-meta">
+                          {category?.name ?? 'Uncategorized'} · {formatTime(t.occurredAt)} · {account ? accountLabel(account) : '—'}
+                        </span>
+                      </div>
+                      <span className={`tx-amt ${t.amountCents < 0 ? 'out' : 'in'}`}>
+                        {formatAmount(t.amountCents, t.currency)}
                       </span>
-                    </div>
-                    <span className={`tx-amt ${t.amountCents < 0 ? 'out' : 'in'}`}>
-                      {formatAmount(t.amountCents, t.currency)}
-                    </span>
-                  </Link>
-                );
-              })}
+                    </Link>
+                  );
+                })}
+              </div>
             </Fragment>
           ))}
         </div>

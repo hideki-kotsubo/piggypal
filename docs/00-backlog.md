@@ -466,6 +466,18 @@ it needs doing.
 
 ## ✅ Done
 
+- [x] Day groups now render as sunken cards
+      (`docs/37-day-group-sunken-card.md`) — a plain full-bleed hairline
+      rule was tried and rejected as still not enough separation; four
+      bolder alternatives were mocked up
+      (`docs/artifacts/piggypal-day-group-separation.html`) and the user
+      picked sunken card. Declined turning it into a user-selectable
+      setting (unlike Light/Dark, not something anyone would toggle
+      repeatedly — not worth the ongoing cost of four parallel
+      treatments for a once-made choice). Sticky headers (docs/34) kept
+      by deliberately not matching the mockup exactly — the label stays
+      a separate sticky element above the card rather than becoming the
+      card's own header, which would've looked broken while stuck.
 - [x] Per-day subtotals (`docs/35-day-subtotals.md`) — requested
       2026-08-19, the third "make section boundaries clearer" idea after
       sticky headers. Each `.day-label` now shows that day's total(s),
