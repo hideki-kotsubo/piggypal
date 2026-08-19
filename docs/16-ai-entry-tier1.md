@@ -130,6 +130,37 @@ for that one tap rather than leaving the mic button dead. Flagged
 honestly: this mitigates a platform limitation, it isn't a guaranteed fix
 across every iOS/Safari version.
 
+**Still prompting on every app open — tried and reverted, 2026-08-19
+(D161)**: reported directly — D149's fix reuses one instance, but that
+instance lives only in memory, so it resets to `null` on every fresh
+page load. Reopening the app (not just re-tapping within a session) is a
+fresh load, so the very first tap after each reopen still constructs a
+genuinely new instance and hits the same WebKit quirk. Tried: priming
+with a `getUserMedia({ audio: true })` call (open, immediately stop the
+track) before ever constructing/starting the recognition instance, on
+the theory — per D149's own diagnosis — that `getUserMedia`'s grant
+reliably persists per-origin across reloads on Safari where
+`SpeechRecognition`'s own doesn't, so priming with the reliable one
+first might satisfy the unreliable one's check without a second native
+prompt. **Tested on a real iPhone, PWA build, 2026-08-19: the prompt
+still appeared on all 3 app opens tested. Reverted** — kept the added
+`async` plumbing (`startSpeechInput` becoming async, `EntryZone.tsx`'s
+`toggleVoice` awaiting it, a `startingVoiceRef` double-tap guard) would
+have been pure cost for a mitigation confirmed not to work, so all of it
+came back out; `startSpeechInput` is synchronous again, unchanged from
+D149. Current read, not yet tested further: this may not be an
+instance-vs-origin scoping quirk at all in a *standalone, home-screen-
+installed* PWA specifically — iOS has a longer-standing, still-not-fully-
+resolved class of WebKit bugs around installed PWAs not persisting media
+permissions across separate launches *at all*, regardless of which API
+established the grant, which would explain why both the reuse-instance
+mitigation (D149) and the prime-with-getUserMedia one (D161) failed the
+same way. If true, this isn't fixable from the web-app side at all — the
+practical floor is one mic-permission tap per app open, which doesn't
+block voice entry, just adds a tap. Not confirmed; no further mitigation
+attempted yet pending the user's call on whether it's worth chasing
+further.
+
 ## Merchant matching, and saving what wasn't recognized (D150)
 
 Two related gaps closed together, 2026-08-17, backlogged the day before:
@@ -263,5 +294,6 @@ unaffected.
 | D150 | `parser.ts` gains closed-vocabulary merchant matching (against `store.rankedMerchants()`, never an unseen name) and every extraction function now records the text span it matched, so `parseUtterance` can compute whatever's left over; that leftover becomes `note` instead of a copy of the category name | Merchant: narrows D92/docs/15 D77's Tier-1-never-guesses-merchant call to "never guesses an *unseen* one" — recognizing an already-known merchant is closed-vocabulary, the same shape as category/account matching. Note: nothing the user said should be silently thrown away when it doesn't map to a structured field; docs/07 D148's fallback already covers the case where there's no leftover to show |
 | D151 | Absolute month-name dates and a clock time are now parsed (bilingual, closed vocabulary); a single proper-noun-ish token after "at"/"no"/"na" is guessed as a new merchant when no known one matches, flagged `merchantGuessed: true` rather than written silently; amount extraction now skips digits already claimed by a date/time span | Date/time: same closed-vocabulary shape as the rest of the file, just a bigger fixed vocabulary (month names) than before. Merchant guess: the one deliberate exception to never-guess, made safe by reusing docs/22's existing preview-then-Save confirmation gate rather than inventing a new one — under-capturing (a single token) is a safer failure mode than over-capturing location/date words into the guess. Amount-skip: a day-first date or a pre-amount time would otherwise have its own digits mistaken for the amount |
 | D152 | The merchant guess's "at `<merchant>`" span is left unclaimed (was claimed in D151's first pass) so it stays readable in the Note; a bare currency symbol next to the amount is claimed and dropped from the Note instead; `computeUnrecognized`'s edge trim takes an exact `protect` phrase so it never strips the merchant's own "at" while still trimming any other stray connector word | User's direct read on the saved note wording — keep the merchant's lead-in visible, drop the now-meaningless bare "$". Un-claiming the span reopened the exact edge-trim problem D151 existed to solve ("20 at Target" would lose "at" as edge noise with nothing before it), so the trim needed to become phrase-aware rather than exempting "at" everywhere |
+| D161 | Priming microphone permission via `getUserMedia` before `SpeechRecognition` (tried, then fully reverted same day) | Attempted fix for the mic prompt still appearing once per app open. **Tested on a real iPhone PWA build and confirmed NOT to fix it** — reverted rather than keep the added complexity for no benefit. Recorded here so the same dead end isn't retried later without checking this note first |
 
 **Implemented 2026-08-12.**

@@ -84,6 +84,17 @@ function configuredRecognition(handlers: SpeechInputHandlers): SpeechRecognition
   return recognition;
 }
 
+// docs/16 D161 tried priming with a getUserMedia call before ever
+// touching SpeechRecognition, on the theory that its grant persists per-
+// origin on Safari where SpeechRecognition's own doesn't (D149's
+// diagnosis) — tested on a real iPhone (PWA build) 2026-08-19: the
+// prompt still appeared on every app open. Reverted rather than keep the
+// added async plumbing for a mitigation confirmed not to work; see
+// docs/16 for the full note and what's now believed to actually be going
+// on (likely a broader iOS standalone-PWA permission-persistence
+// limitation, not something either reuse-the-instance or prime-with-
+// getUserMedia can fix from the web side).
+
 export function startSpeechInput(handlers: SpeechInputHandlers): { stop: () => void; abort: () => void } | null {
   let recognition = configuredRecognition(handlers);
   if (!recognition) return null;

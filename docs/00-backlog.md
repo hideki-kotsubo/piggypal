@@ -426,6 +426,23 @@ it needs doing.
 
 ## 🐛 Bugs
 
+- [ ] Mic permission prompt still appears on every app open, not just
+      every tap (docs/16 D149 only fixed the latter) — reported
+      2026-08-19. One attempted mitigation (D161: prime via `getUserMedia`
+      before `SpeechRecognition`) was tried and **confirmed NOT to fix
+      it** on a real iPhone PWA build (prompted on all 3 opens tested),
+      then fully reverted rather than keep the added complexity for no
+      benefit. Current read, not yet confirmed: may not be an instance-
+      vs-origin scoping quirk at all for a standalone/home-screen-
+      installed PWA specifically — iOS has a longer-standing class of
+      WebKit bugs around installed PWAs not persisting *any* media
+      permission across separate launches, which would explain why both
+      D149's and D161's mitigations failed the same way and suggest this
+      isn't fixable from the web-app side. Doesn't block voice entry,
+      just adds a tap each open. Needs the user's call on whether it's
+      worth chasing further (e.g. researching known WebKit bug reports
+      for this exact standalone-PWA case) or accepting it as a platform
+      limitation.
 - [ ] `BudgetBars.tsx:19` throws `Uncaught TypeError: Cannot mix BigInt and
       other types, use explicit conversions` — reported 2026-08-12. Root
       cause: `store.tsx:75` maps `amountCents: r.amount_cents` straight from
