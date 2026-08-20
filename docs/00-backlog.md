@@ -100,6 +100,17 @@ it needs doing.
       breakpoint tweak — what changes structurally at wider widths (a
       list+detail split? a persistent sidebar instead of the bottom-
       docked entry zone, docs/31?) isn't decided.
+      2026-08-20: three structural directions sketched, not built or
+      decided (`docs/artifacts/piggypal-desktop-tablet-directions.html`):
+      A) persistent left nav rail + entry zone moved to a permanent
+      right-hand panel, replacing the bottom dock; B) list+detail split —
+      Transactions' row tap opens the edit form beside the list instead
+      of pushing `/transactions/:id`, falls back to today's push-nav
+      below tablet width; C) minimal — today's exact phone layout
+      (bottom dock included), just centered in a wider window, near-zero
+      build cost but leaves most of the window empty. Each shown at a
+      desktop (~1280px) and tablet (~820px) width since the rail/composer
+      collapse differently at each. No direction chosen.
 - [ ] Household sharing (multi-user) + P2P device sync — designed
       2026-08-14, docs/24-household-sharing.md and
       docs/25-p2p-device-sync.md (D108-D120, +D117a, +D113 revised). A UI
