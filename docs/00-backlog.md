@@ -56,9 +56,50 @@ it needs doing.
       visual, extends the app's existing hairline vocabulary — lowest
       priority of the three since the other two already address the
       original ask.
+- [ ] Accounts Management: improve UI — flagged 2026-08-19, general, not
+      yet scoped to specifics.
+- [ ] Categories Management: improve UI — flagged 2026-08-19, general, not
+      yet scoped to specifics.
+- [ ] Categories Management: increase the left padding/margin for leaf
+      nodes (the "↳ Espresso"-under-"Café" rows, docs/14) — flagged
+      2026-08-19.
+- [ ] Categories Management: make it more visually clear when a category
+      row is in edit mode — flagged 2026-08-19.
+- [ ] Categories Management: Archive Category — needs discussion first
+      (what it should actually mean/do), plus a way to bring an archived
+      category back, which doesn't exist today — flagged 2026-08-19.
+- [ ] Categories Management: adding a new Budget — suggestion floated
+      2026-08-19: a shortcut for this directly on the Insights screen
+      (`/insights`, docs/07 D147), rather than only reachable via
+      Categories.
+- [ ] Categories Management: Income categories — needs discussion, not
+      yet scoped — flagged 2026-08-19.
+- [ ] Insights icon on Home (the ▤ icon next to Settings' kebab, docs/07
+      D147) — improve its UI or choose a different icon — flagged
+      2026-08-19.
+- [ ] Insights screen: filters on the trend chart? New report types (per
+      week, per household member, per account)? — flagged 2026-08-19,
+      open question, not yet scoped. Per-member filtering would depend on
+      docs/38's household data actually existing for a given user.
 
 ## ⚫ Later / someday
 
+- [ ] Import records from CSV/XLSX (or another format) — flagged
+      2026-08-19, not yet scoped. Already named as explicitly out of MVP
+      scope in docs/01 ("CSV/bank import" — deferred, meant to reuse the
+      Tier 1/2 parsing pipeline later); this is the reverse direction of
+      the existing CSV *export* (docs/08). Real open questions once this
+      gets picked up: format/column mapping (bank-statement CSVs vary a
+      lot), duplicate detection against existing transactions, and how
+      much of docs/16's parser (category/merchant matching) gets reused
+      vs. needing its own mapping step.
+- [ ] Custom UI for tablets and desktops — flagged 2026-08-19, not yet
+      scoped. Today the entire app (every screen, every mockup) is
+      designed and built phone-first/single-column, ~390px viewport; a
+      real tablet/desktop layout is an open question, not just a CSS
+      breakpoint tweak — what changes structurally at wider widths (a
+      list+detail split? a persistent sidebar instead of the bottom-
+      docked entry zone, docs/31?) isn't decided.
 - [ ] Household sharing (multi-user) + P2P device sync — designed
       2026-08-14, docs/24-household-sharing.md and
       docs/25-p2p-device-sync.md (D108-D120, +D117a, +D113 revised). A UI
@@ -432,6 +473,11 @@ it needs doing.
 
 ## 🐛 Bugs
 
+- [ ] Accounts screen: editing an account's Institution doesn't reflect in
+      the list (its institution-grouped header/row) until leaving and
+      re-entering the Accounts screen — flagged 2026-08-19. The edit panel
+      itself updates fine; it's the list's own grouping that doesn't
+      re-render live off the same edit.
 - [ ] Mic permission prompt still appears on every app open, not just
       every tap (docs/16 D149 only fixed the latter) — reported
       2026-08-19. One attempted mitigation (D161: prime via `getUserMedia`
