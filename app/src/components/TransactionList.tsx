@@ -11,6 +11,10 @@ import {
   type TransactionFilters,
 } from '../lib/filterTransactions';
 import { CategoryPicker } from './CategoryPicker';
+import { getLocalUserId } from '../lib/identity';
+import { hasHousehold, personLabel } from '../lib/household';
+import { usePairedPeers } from '../lib/peers';
+import { PayerBadge } from './PayerBadge';
 
 const MERCHANT_CAP = 8;
 const DATE_PRESETS: { id: DatePreset; label: string }[] = [
@@ -23,6 +27,8 @@ type FilterKey = 'category' | 'account' | 'merchant' | 'date';
 
 export function TransactionList() {
   const store = useStore();
+  const [peers] = usePairedPeers();
+  const showPayerBadge = hasHousehold(peers);
   const [searchParams, setSearchParams] = useSearchParams();
   const [openFilter, setOpenFilter] = useState<FilterKey | null>(null);
   const [merchantExpanded, setMerchantExpanded] = useState(false);
@@ -260,12 +266,17 @@ export function TransactionList() {
                   const account = store.accounts.find((a) => a.id === t.accountId);
                   return (
                     <Link key={t.id} to={`/transactions/${t.id}`} className="tx-row tx-row-tappable">
-                      <div className="tx-main">
-                        <span className="tx-note">{transactionTitle(t, category)}</span>
-                        {/* day-label above already carries the date — just time here, still genuinely new info */}
-                        <span className="tx-meta">
-                          {category?.name ?? 'Uncategorized'} · {formatTime(t.occurredAt)} · {account ? accountLabel(account) : '—'}
-                        </span>
+                      <div className="tx-left">
+                        {showPayerBadge && (
+                          <PayerBadge label={personLabel(t.paidByUserId, peers)} mine={t.paidByUserId === getLocalUserId()} />
+                        )}
+                        <div className="tx-main">
+                          <span className="tx-note">{transactionTitle(t, category)}</span>
+                          {/* day-label above already carries the date — just time here, still genuinely new info */}
+                          <span className="tx-meta">
+                            {category?.name ?? 'Uncategorized'} · {formatTime(t.occurredAt)} · {account ? accountLabel(account) : '—'}
+                          </span>
+                        </div>
                       </div>
                       <span className={`tx-amt ${t.amountCents < 0 ? 'out' : 'in'}`}>
                         {formatAmount(t.amountCents, t.currency)}

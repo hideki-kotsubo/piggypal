@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { accountLabel, formatAmount } from '../lib/format';
 import { getLocalUserId } from '../lib/identity';
+import { hasHousehold, personLabel } from '../lib/household';
+import { usePairedPeers } from '../lib/peers';
 import type { Account, AccountKind } from '../lib/types';
 
 // docs/12: name, kind, institution all read/write through the account
@@ -28,6 +30,13 @@ export function AccountsScreen() {
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string> | null>(null);
   const [archivedOpen, setArchivedOpen] = useState(false);
+  const [peers] = usePairedPeers();
+  // docs/26 D123 — owner_user_id renders as a name prefix in the row's
+  // existing name slot, but only once a household actually has 2+
+  // members (D110); a solo household must render exactly as it always
+  // has, no layout change.
+  const showOwner = hasHousehold(peers);
+  const ownerPrefix = (a: Account) => (showOwner ? personLabel(a.ownerUserId, peers) : null);
 
   const active = store.accounts.filter((a) => !a.archived);
   const archived = store.accounts.filter((a) => a.archived);
@@ -100,11 +109,15 @@ export function AccountsScreen() {
     const isEditing = openPanel?.type === 'edit' && openPanel.id === account.id;
     const balances = store.balancesFor(account.id);
     const label = showInstitutionInLabel ? accountLabel(account) : account.name;
+    const owner = ownerPrefix(account);
     return (
       <div className="account-block" key={account.id}>
         <button className="account-row" onClick={() => toggleRow(account)}>
           <div className="account-row-top">
-            <span className="account-name">{label}</span>
+            <span className="account-name">
+              {owner && <span className="owner-prefix">{owner} — </span>}
+              {label}
+            </span>
             <span className="account-kind">{KIND_LABELS[account.kind]}</span>
           </div>
           <div className="account-balances">
@@ -180,7 +193,10 @@ export function AccountsScreen() {
             archived.map((a) => (
               <div className="account-row archived-row" key={a.id}>
                 <div className="account-row-top">
-                  <span className="account-name">{accountLabel(a)}</span>
+                  <span className="account-name">
+                    {ownerPrefix(a) && <span className="owner-prefix">{ownerPrefix(a)} — </span>}
+                    {accountLabel(a)}
+                  </span>
                   <span className="account-kind">{KIND_LABELS[a.kind]}</span>
                 </div>
                 <div className="account-balances">

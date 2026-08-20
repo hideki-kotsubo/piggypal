@@ -637,12 +637,96 @@
 .tx-row:last-child {
   border-bottom: none;
 }
+.tx-left {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
 .tx-main {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 .tx-note {
   color: var(--ink);
+}
+
+/* docs/38 — payer/owner household UI (docs/26's sketch, built once P2P
+   sync actually merged two people's data). Reuses the app's existing
+   accent-fill = mine / outline = not-mine convention (.chip.picked,
+   .pill-tap.active) rather than a per-person color system (D121). Absent
+   entirely below 2 household members (see lib/household.ts hasHousehold)
+   — no layout shift for the common solo case. */
+.payer-badge {
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+.payer-badge.mine {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.payer-badge.theirs {
+  background: var(--surface);
+  color: var(--ink-muted);
+  border: 1px solid var(--line);
+}
+.chip-payer {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.chip-payer .payer-badge {
+  width: 15px;
+  height: 15px;
+  font-size: 0.55rem;
+}
+.chip.picked .payer-badge.theirs {
+  background: var(--accent-ink);
+  border-color: var(--accent-ink);
+  color: var(--accent);
+}
+.provenance {
+  font-size: 0.76rem;
+  color: var(--ink-faint);
+  font-style: italic;
+  margin-top: 0.4rem;
+}
+.owner-prefix {
+  font-weight: 400;
+  color: var(--ink-muted);
+}
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.member-row:last-child {
+  border-bottom: none;
+}
+.member-name {
+  font-size: 0.87rem;
+  color: var(--ink);
+}
+.member-you {
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  margin-left: 0.35rem;
+}
+.member-badge {
+  width: 26px;
+  height: 26px;
+  font-size: 0.72rem;
 }
 .tx-meta {
   font-family: var(--mono);

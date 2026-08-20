@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { db } from './db';
 import { getLocalUserId, setLocalUserId } from './identity';
+import { clearPairedPeers } from './peers';
 import type { Account, AccountKind, Budget, Category, CategoryKeyword, MergeSummary, PeerDataset, Transaction } from './types';
 import { seedAccounts, seedBudgets, seedCategories, seedCategoryKeywords, seedTransactions } from './seed';
 
@@ -550,6 +551,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           await tx.execute('DELETE FROM categories');
           await tx.execute('DELETE FROM accounts');
         });
+        // The SQLite wipe above doesn't touch peers.ts' localStorage list —
+        // left alone, Settings would still show paired devices pointing at
+        // data that no longer exists, and a "repeat sync" (docs/25 D138)
+        // would skip straight past the merge prompt for a peer this device
+        // no longer actually shares any history with.
+        clearPairedPeers();
         window.location.reload();
       },
 

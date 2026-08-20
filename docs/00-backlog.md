@@ -386,6 +386,12 @@ it needs doing.
       relay pairing re-run end to end confirming the QrShowStep refactor
       didn't regress anything; and a dedicated encode/decode round-trip
       for a real generated code specifically. `tsc -b`/`oxlint` clean.
+      2026-08-19: docs/26's payer/owner/logger UI sketch (badge on rows,
+      Paid-by chip/Logged-by caption, owner prefix, Settings members
+      list) is now actually built — see the Done entry above and
+      `docs/38`. Derived from `peers.ts`, not the still-unbuilt
+      `households` table, so this line's "still fully unbuilt" for the
+      server-side data model is otherwise unchanged.
 - [ ] "Merge account" as its own explicit action, not only something that
       happens automatically at pairing time — flagged 2026-08-14, future
       work, not designed. Idea: a standalone Settings entry point (paid
@@ -483,6 +489,41 @@ it needs doing.
 
 ## ✅ Done
 
+- [x] Payer/owner UI (docs/26's sketch, actually built) — reported
+      2026-08-19: after a real P2P merge with another person, there was
+      no badge/label anywhere showing who paid for a transaction, who
+      logged it, or who owns an account, even though those columns
+      (docs/24 D110) have been real and populated since 2026-08-14.
+      `docs/38-household-payer-owner-ui.md`: payer badge on Recent/
+      Transactions rows, "Paid by" chip + "Logged by" caption on the
+      transaction edit screen, owner-name prefix on Accounts rows, and a
+      new Settings → Household members list — all gated on `peers.ts`
+      having a real `someone-else` peer (`lib/household.ts`), since
+      docs/24's actual `households` table still doesn't exist. One
+      deliberate gap vs. the docs/26 mockup: "Logged by" shows name only,
+      no timestamp (no `created_at` column locally to show). Verified
+      with Playwright: solo state unchanged (no badges, no layout
+      shift), a simulated merged peer/account/transaction (inserted
+      directly through the app's own db instance, same shape docs/24's
+      real merge produces) renders correct badge styles and owner
+      prefixes, the "Paid by" chip commits and the list badge updates
+      live with no reload, dark theme re-checked. `tsc -b`/`oxlint`
+      clean, zero console errors. Still open: no UI to edit an account's
+      owner after creation.
+      Same-day follow-up, reported right after: "Reset local data" wiped
+      every SQLite table but left `peers.ts`' paired-peers list untouched,
+      so a reset device kept showing a stale Household section for a
+      "household" that no longer had any actual shared data behind it.
+      Fixed with `clearPairedPeers()` (`lib/peers.ts`), called from
+      `resetLocalData`; the reset confirm dialog now also says it forgets
+      paired devices. Verified with Playwright: peers cleared to `null`
+      and both the Paired-devices and Household sections disappear after
+      a reset, zero console errors.
+      Also same day: root/`app`/`api` `package.json` bumped 0.1.0 → 0.2.0
+      (docs/29 D153 — hand-bumped together whenever a release-worthy
+      change ships), `package-lock.json` resynced. Confirmed live on the
+      running dev servers: `api`'s `/health` and both Settings' "About
+      piggypal" row and the `/about` screen show `0.2.0`.
 - [x] Day groups now render as sunken cards
       (`docs/37-day-group-sunken-card.md`) — a plain full-bleed hairline
       rule was tried and rejected as still not enough separation; four

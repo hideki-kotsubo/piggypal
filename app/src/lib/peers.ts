@@ -29,6 +29,15 @@ function readPeers(): PairedPeer[] {
   }
 }
 
+// Settings' "Reset local data" wipes the SQLite tables (store.tsx
+// resetLocalData) but that leaves this localStorage list untouched — a
+// paired-peers row pointing at data that no longer exists. Exported as a
+// plain function (not part of the hook) since resetLocalData runs outside
+// any component.
+export function clearPairedPeers(): void {
+  localStorage.removeItem(PEERS_KEY);
+}
+
 export function usePairedPeers(): [PairedPeer[], (peerLocalUserId: string, label: string, identityMode: PairedPeer['identityMode']) => void] {
   const [peers, setPeers] = useState<PairedPeer[]>(readPeers);
 

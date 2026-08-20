@@ -3,6 +3,9 @@ import { useStore } from '../lib/store';
 import { AccountCurrencyPicker } from './AccountCurrencyPicker';
 import { AmountKeypad } from './AmountKeypad';
 import { CategoryPicker } from './CategoryPicker';
+import { PayerBadge } from './PayerBadge';
+import { hasHousehold, householdMembers, personLabel } from '../lib/household';
+import { usePairedPeers } from '../lib/peers';
 import type { Transaction } from '../lib/types';
 
 // occurredAt is "YYYY-MM-DDTHH:MM:SS" — split for the two native inputs,
@@ -21,6 +24,8 @@ function combine(date: string, time: string): string {
 // RecentList (Home's preview) — same expand-in-place edit panel either way.
 export function TransactionEditForm({ transaction, onDone }: { transaction: Transaction; onDone: () => void }) {
   const store = useStore();
+  const [peers] = usePairedPeers();
+  const showHousehold = hasHousehold(peers);
   const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
   // Local mirror of the Note field — `transaction.note` comes straight
   // from the store, and commit() writes through an async DB round-trip
@@ -110,6 +115,32 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
           />
         )}
       </div>
+
+      {showHousehold && (
+        <div>
+          <div className="field-label">Paid by</div>
+          <div className="chip-row">
+            {householdMembers(peers).map((m) => (
+              <button
+                key={m.userId}
+                className={`chip chip-payer ${m.userId === transaction.paidByUserId ? 'picked' : ''}`}
+                onClick={() => commit({ paidByUserId: m.userId })}
+              >
+                <PayerBadge label={m.label} mine={m.isYou} />
+                {m.label}
+              </button>
+            ))}
+          </div>
+          {/* createdByUserId is immutable (set once at insert, docs/24 D110)
+              — plain caption text, no tap target, mirroring that at the
+              interaction level. No creation timestamp shown alongside the
+              name: this app doesn't track one locally (occurredAt is the
+              user-editable transaction date, not a log-time), so this is
+              deliberately narrower than docs/26's mockup rather than
+              fabricating a time that isn't real. */}
+          <p className="provenance">Logged by {personLabel(transaction.createdByUserId, peers)}</p>
+        </div>
+      )}
 
       <div className="field-pair">
         <label className="field-label">

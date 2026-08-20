@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { ACCOUNT_PICKER_SCALE_THRESHOLD, guessDeviceLabel, useAccountPickerMode, useDeviceLabel, useThemeMode } from '../lib/settings';
 import { usePairedPeers } from '../lib/peers';
+import { hasHousehold, householdMembers } from '../lib/household';
+import { PayerBadge } from './PayerBadge';
 import { APP_VERSION } from '../lib/version';
 
 // "synced just now" / "N minutes/hours ago" — finer-grained than
@@ -31,7 +33,7 @@ export function SettingsScreen() {
   function resetData() {
     if (
       !window.confirm(
-        'Erase all local data and reload with fresh seed data? This deletes every account, category, transaction, and budget on this device.',
+        'Erase all local data and reload with fresh seed data? This deletes every account, category, transaction, and budget on this device, and forgets every paired device.',
       )
     ) {
       return;
@@ -90,6 +92,27 @@ export function SettingsScreen() {
                 <span>{p.label}</span>
                 <span style={{ color: 'var(--ink-faint)', fontSize: '0.8rem' }}>synced {formatSyncedAgo(p.lastSyncedAt)}</span>
               </Link>
+            ))}
+          </div>
+        </>
+      )}
+
+      {hasHousehold(peers) && (
+        <>
+          {/* docs/26 D124 — bare read-only members list, just enough to say
+              who the payer/owner badges elsewhere refer to. No invite/
+              pair/leave actions here; that surface belongs to docs/25's
+              pairing flow above, not this list. */}
+          <div className="section-label">Household</div>
+          <div className="accounts-list">
+            {householdMembers(peers).map((m) => (
+              <div className="member-row" key={m.userId}>
+                <PayerBadge label={m.label} mine={m.isYou} className="member-badge" />
+                <span className="member-name">
+                  {m.label}
+                  {m.isYou && <span className="member-you">you</span>}
+                </span>
+              </div>
             ))}
           </div>
         </>
