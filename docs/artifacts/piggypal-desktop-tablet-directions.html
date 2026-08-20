@@ -1,0 +1,611 @@
+<title>Desktop &amp; Tablet Directions</title>
+<style>
+  :root {
+    --bg: #eef0ea;
+    --surface: #ffffff;
+    --surface-sunken: #f4f5f0;
+    --ink: #1e211c;
+    --ink-muted: #5c6259;
+    --ink-faint: #8b9186;
+    --line: #dadedb;
+    --accent: #3f7d69;
+    --accent-ink: #ffffff;
+    --accent-soft: #dceae3;
+    --warn: #b8752e;
+    --warn-soft: #f3e3d0;
+    --shadow: 0 30px 60px -25px rgba(30, 33, 28, 0.35);
+    --serif: Charter, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141713; --surface: #1d211b; --surface-sunken: #171a15;
+      --ink: #edeee7; --ink-muted: #9ba398; --ink-faint: #6b7267;
+      --line: #2c322a; --accent: #6fbfa0; --accent-ink: #0f1512;
+      --accent-soft: #24352c; --warn: #d99a52; --warn-soft: #3a2c1c;
+      --shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141713; --surface: #1d211b; --surface-sunken: #171a15;
+    --ink: #edeee7; --ink-muted: #9ba398; --ink-faint: #6b7267;
+    --line: #2c322a; --accent: #6fbfa0; --accent-ink: #0f1512;
+    --accent-soft: #24352c; --warn: #d99a52; --warn-soft: #3a2c1c;
+    --shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.6);
+  }
+  :root[data-theme="light"] {
+    --bg: #eef0ea; --surface: #ffffff; --surface-sunken: #f4f5f0;
+    --ink: #1e211c; --ink-muted: #5c6259; --ink-faint: #8b9186;
+    --line: #dadedb; --accent: #3f7d69; --accent-ink: #ffffff;
+    --accent-soft: #dceae3; --warn: #b8752e; --warn-soft: #f3e3d0;
+    --shadow: 0 30px 60px -25px rgba(30, 33, 28, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+  body { overflow-x: hidden; }
+  a { color: var(--accent); }
+  ::selection { background: var(--accent-soft); }
+
+  .page { max-width: 1180px; margin: 0 auto; padding: 4rem 1.5rem 6rem; }
+
+  .intro { max-width: 44rem; margin-bottom: 2.4rem; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.09em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 0.9rem;
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 500; font-size: clamp(1.9rem, 4vw, 2.6rem);
+    line-height: 1.15; letter-spacing: -0.01em; text-wrap: balance; margin: 0 0 0.9rem;
+  }
+  .lede { font-size: 1.02rem; line-height: 1.6; color: var(--ink-muted); margin: 0 0 0.9rem; max-width: 42rem; }
+  .lede b { color: var(--ink); font-weight: 600; }
+  .lede code { font-family: var(--mono); font-size: 0.88em; background: var(--surface-sunken); border: 1px solid var(--line); border-radius: 4px; padding: 0.05em 0.35em; }
+
+  .scope-note {
+    display: flex; gap: 0.6rem; align-items: flex-start; max-width: 42rem;
+    background: var(--warn-soft); border-radius: 12px; padding: 0.75rem 0.95rem;
+    font-size: 0.85rem; line-height: 1.55; color: var(--ink); margin-top: 1.2rem;
+  }
+  .scope-note b { color: var(--ink); }
+
+  /* ---- comparison strip ---- */
+  .compare {
+    margin: 3rem 0 4.5rem;
+    border: 1px solid var(--line); border-radius: var(--radius-md, 12px);
+    overflow-x: auto; background: var(--surface);
+  }
+  table.compare-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; min-width: 640px; }
+  .compare-table th, .compare-table td { text-align: left; padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .compare-table th { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); font-weight: 500; background: var(--surface-sunken); }
+  .compare-table tr:last-child td { border-bottom: none; }
+  .compare-table td:first-child, .compare-table th:first-child { font-weight: 600; color: var(--ink); white-space: nowrap; }
+  .compare-table td { color: var(--ink-muted); line-height: 1.5; }
+  .tag {
+    display: inline-block; font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.02em;
+    padding: 0.12rem 0.45rem; border-radius: 999px; margin-right: 0.3rem;
+  }
+  .tag-good { background: var(--accent-soft); color: var(--accent); }
+  .tag-cost { background: var(--warn-soft); color: var(--warn); }
+
+  /* ---- direction sections ---- */
+  .direction { margin: 4.5rem 0; padding-top: 3rem; border-top: 1px solid var(--line); }
+  .direction:first-of-type { border-top: none; padding-top: 0; }
+  .dir-head { max-width: 46rem; margin-bottom: 2rem; }
+  .dir-letter {
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.09em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 0.6rem; display: block;
+  }
+  .dir-title { font-family: var(--serif); font-weight: 500; font-size: 1.5rem; margin: 0 0 0.7rem; letter-spacing: -0.01em; }
+  .dir-desc { font-size: 0.95rem; line-height: 1.65; color: var(--ink-muted); margin: 0 0 0.9rem; }
+  .dir-desc b { color: var(--ink); font-weight: 600; }
+  .dir-tradeoff { font-size: 0.84rem; line-height: 1.6; color: var(--ink-muted); }
+
+  .frame-caption {
+    font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--ink-faint); margin: 0 0 0.6rem;
+  }
+
+  /* ---- window chrome ---- */
+  .desk-frame {
+    border-radius: 14px; overflow: hidden; background: var(--surface);
+    border: 1px solid var(--line); box-shadow: var(--shadow);
+  }
+  .desk-titlebar {
+    height: 34px; display: flex; align-items: center; gap: 8px; padding: 0 14px;
+    border-bottom: 1px solid var(--line); background: var(--surface-sunken); flex-shrink: 0;
+  }
+  .desk-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-faint); opacity: 0.45; }
+  .desk-url {
+    flex: 1; text-align: center; font-family: var(--mono); font-size: 0.68rem;
+    color: var(--ink-faint); letter-spacing: 0.01em;
+  }
+  .desk-body { display: flex; min-height: 460px; }
+
+  .desk-frame.tablet-frame { max-width: 620px; margin: 2.4rem auto 0; }
+  .desk-frame.tablet-frame .desk-body { min-height: 400px; }
+
+  /* ---- nav rail ---- */
+  .nav-rail {
+    width: 178px; flex-shrink: 0; border-right: 1px solid var(--line);
+    padding: 1.1rem 0.7rem; display: flex; flex-direction: column; gap: 0.15rem; background: var(--surface);
+  }
+  .nav-rail.compact { width: 60px; align-items: center; padding: 1.1rem 0.4rem; }
+  .rail-word { font-family: var(--serif); font-weight: 600; font-size: 0.95rem; padding: 0 0.6rem; margin-bottom: 1rem; }
+  .nav-rail.compact .rail-word { display: none; }
+  .nav-rail.compact::before {
+    content: "pp"; font-family: var(--serif); font-weight: 700; font-size: 0.8rem;
+    color: var(--accent); margin-bottom: 1.1rem;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 0.65rem; padding: 0.55rem 0.65rem;
+    border-radius: 10px; color: var(--ink-muted); font-size: 0.85rem; font-weight: 500;
+  }
+  .nav-rail.compact .nav-item { justify-content: center; padding: 0.55rem; width: 40px; }
+  .nav-item svg { flex-shrink: 0; }
+  .nav-item.active { background: var(--accent-soft); color: var(--accent); }
+  .nav-rail.compact .nav-label { display: none; }
+  .nav-spacer { flex: 1; }
+
+  /* ---- shared content atoms (mirrors app/src/styles) ---- */
+  .content-col { flex: 1; min-width: 0; padding: 1.5rem 1.8rem; overflow: hidden; }
+  .content-col.narrow { padding: 1.3rem 1.1rem; }
+  .col-heading { font-family: var(--serif); font-size: 1.15rem; font-weight: 500; margin: 0 0 1.1rem; }
+  .section-label { font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 0.6rem; }
+
+  .day-label { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.72rem; color: var(--ink-faint); margin: 1rem 0 0.4rem; font-family: var(--mono); letter-spacing: 0.02em; }
+  .day-label:first-of-type { margin-top: 0; }
+  .day-subtotal { font-variant-numeric: tabular-nums; }
+  .day-card { background: var(--surface-sunken); border: 1px solid var(--line); border-radius: var(--radius-lg, 16px); overflow: hidden; }
+  .tx-row { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--line); text-decoration: none; color: var(--ink); }
+  .tx-row:last-child { border-bottom: none; }
+  .tx-main { display: flex; flex-direction: column; gap: 0.1rem; }
+  .tx-note { font-size: 0.88rem; font-weight: 500; }
+  .tx-meta { font-size: 0.74rem; color: var(--ink-faint); }
+  .tx-amt { font-variant-numeric: tabular-nums; font-size: 0.88rem; font-weight: 600; flex-shrink: 0; }
+  .tx-amt.out { color: var(--ink); }
+  .tx-amt.in { color: var(--accent); }
+  .tx-row.selected { background: var(--accent-soft); position: relative; }
+  .tx-row.selected::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent); }
+  .tx-row.selected .tx-amt.out { color: var(--ink); }
+
+  /* ---- entry composer variants ---- */
+  .side-composer {
+    width: 250px; flex-shrink: 0; border-left: 1px solid var(--line); padding: 1.3rem 1.1rem;
+    background: var(--surface); display: flex; flex-direction: column; gap: 0.9rem;
+  }
+  .composer-label { font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); }
+  .composer-box {
+    background: var(--surface-sunken); border: 1px solid var(--line); border-radius: var(--radius-lg, 16px); padding: 0.8rem;
+  }
+  .composer-input-row { display: flex; align-items: center; gap: 0.5rem; }
+  .mini-btn {
+    width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: var(--accent-ink);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .mini-input { flex: 1; font-size: 0.82rem; color: var(--ink-faint); }
+  .mic-dot { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--line); flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--ink-faint); }
+  .composer-preview { margin-top: 0.7rem; padding-top: 0.7rem; border-top: 1px dashed var(--line); font-size: 0.76rem; color: var(--ink-muted); line-height: 1.6; }
+  .composer-preview b { color: var(--ink); }
+
+  .composer-bar {
+    display: flex; align-items: center; gap: 0.6rem; background: var(--surface-sunken);
+    border: 1px solid var(--line); border-radius: var(--radius-lg, 16px); padding: 0.6rem 0.8rem; margin-bottom: 1.2rem;
+  }
+
+  .dock-frame { display: flex; flex-direction: column; }
+  .dock-scroll { flex: 1; padding: 1.6rem 2rem 0; overflow: hidden; }
+  .entry-dock { max-width: 560px; margin: 0 auto; padding: 0 1.6rem 1.6rem; }
+  .entry-zone-mock {
+    background: var(--surface-sunken); border: 1px solid var(--line); border-radius: var(--radius-lg, 16px); padding: 0.85rem;
+  }
+
+  /* ---- detail panel (direction B) ---- */
+  .detail-col { flex: 1; min-width: 0; padding: 1.5rem 1.8rem; border-left: 1px solid var(--line); background: var(--surface); }
+  .detail-amount { font-family: var(--serif); font-size: 2rem; font-variant-numeric: tabular-nums; margin: 0 0 1.1rem; }
+  .field-group { margin-bottom: 1rem; }
+  .field-k { display: block; font-family: var(--mono); font-size: 0.64rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 0.35rem; }
+  .field-pair { display: flex; gap: 0.7rem; }
+  .field-pair .field-group { flex: 1; }
+  .pill-tap { display: inline-flex; align-items: center; gap: 0.4rem; background: var(--surface-sunken); border: 1px solid var(--line); border-radius: 999px; padding: 0.35rem 0.75rem; font-size: 0.82rem; }
+  .fake-input { background: var(--surface-sunken); border: 1px solid var(--line); border-radius: var(--radius-sm, 10px); padding: 0.45rem 0.65rem; font-size: 0.82rem; color: var(--ink-muted); }
+  .chip-row { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .chip { font-size: 0.74rem; background: var(--surface-sunken); border: 1px solid var(--line); border-radius: 999px; padding: 0.28rem 0.65rem; color: var(--ink-muted); }
+  .chip.picked { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+
+  .empty-detail { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--ink-faint); font-size: 0.85rem; text-align: center; padding: 2rem; }
+
+  /* ---- closing ---- */
+  .closing { max-width: 42rem; margin: 5rem 0 0; padding-top: 2.4rem; border-top: 1px solid var(--line); }
+  .closing p { font-size: 0.92rem; line-height: 1.65; color: var(--ink-muted); }
+  .closing b { color: var(--ink); }
+
+  @media (max-width: 760px) {
+    .desk-body { flex-direction: column; }
+    .nav-rail, .side-composer, .detail-col { width: auto; border-right: none; border-left: none; border-bottom: 1px solid var(--line); flex-direction: row; flex-wrap: wrap; }
+  }
+</style>
+
+<div class="page">
+  <div class="intro">
+    <p class="eyebrow">Layout exploration — backlog, later/someday</p>
+    <h1>What piggypal looks like past 900px</h1>
+    <p class="lede">
+      Every screen today is designed and built phone-first at roughly a
+      <b>390px</b> single column — including the bottom-docked entry zone
+      (<code>docs/31</code>). This sketches what actually changes structurally
+      once there's real width to work with, rather than just stretching the
+      same column: <b>does navigation become a persistent rail? does the
+      entry zone move off the bottom dock? do list screens (Transactions,
+      Accounts) split into a list-plus-detail view instead of pushing a new
+      screen?</b> Three directions below, each shown at a desktop width and
+      a tablet width, since the two don't necessarily collapse the same way.
+    </p>
+    <div class="scope-note">
+      <span>&#9888;</span>
+      <span><b>Nothing here is built.</b> This is the "Custom UI for tablets
+      and desktops" item from <code>docs/00-backlog.md</code>'s Later/someday
+      section — flagged, not scoped. None of these directions are decided;
+      picking one (or none — the phone-only build may just stay the shipped
+      experience) is a call for later, and would graduate into its own
+      numbered doc the way every other decision here has.</span>
+    </div>
+  </div>
+
+  <div class="compare">
+    <table class="compare-table">
+      <thead>
+        <tr><th>Direction</th><th>Navigation</th><th>Entry zone</th><th>List screens</th><th>Build cost</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>A — Rail + side composer</td>
+          <td>Persistent left rail, collapses to icons on tablet</td>
+          <td>Docked right, always visible — replaces the bottom dock entirely</td>
+          <td>Unchanged, still push to a full screen/route</td>
+          <td><span class="tag tag-cost">new nav shell</span><span class="tag tag-cost">new composer chrome</span></td>
+        </tr>
+        <tr>
+          <td>B — List + detail</td>
+          <td>Same rail as A</td>
+          <td>Shrinks to a compact top bar over the list column</td>
+          <td><span class="tag tag-good">master-detail</span> on tablet+, drops to today's push-navigation below it</td>
+          <td><span class="tag tag-cost">biggest change</span> — every list screen needs a detail-pane variant</td>
+        </tr>
+        <tr>
+          <td>C — Minimal / centered</td>
+          <td>Unchanged app-bar (▤ + kebab), just centered</td>
+          <td><span class="tag tag-good">unchanged</span> — same bottom dock as phone</td>
+          <td>Unchanged</td>
+          <td><span class="tag tag-good">near zero</span> — a max-width wrapper</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============ DIRECTION A ============ -->
+  <section class="direction">
+    <div class="dir-head">
+      <span class="dir-letter">Direction A</span>
+      <h2 class="dir-title">Persistent rail, entry zone moves to the side</h2>
+      <p class="dir-desc">
+        Home/Transactions/Accounts/Categories/Insights/Settings become a
+        <b>left-hand rail</b> instead of the app-bar's ▤ icon + kebab. The
+        recent list is untouched — same sunken day-cards, sticky labels,
+        per-day subtotals (docs/33-37) — but the entry zone leaves the
+        bottom dock for a <b>persistent right-hand panel</b>, since
+        <code>position: fixed; bottom: 0</code> is a mobile-thumb-reach
+        pattern that has no reason to exist once a mouse and a full-height
+        window are available.
+      </p>
+      <p class="dir-tradeoff">
+        Closest analog to a "normal" desktop app shell. Costs two new
+        pieces of chrome (rail, side composer) that don't exist on phone at
+        all — the composer especially needs its own compact idle/preview
+        states designed from scratch, not just docs/22's panel dropped in
+        sideways.
+      </p>
+    </div>
+
+    <p class="frame-caption">Desktop, ~1280px+</p>
+    <div class="desk-frame">
+      <div class="desk-titlebar"><span class="desk-dot"></span><span class="desk-dot"></span><span class="desk-dot"></span><span class="desk-url">app.piggypal.codexbase.dev</span></div>
+      <div class="desk-body">
+        <nav class="nav-rail">
+          <div class="rail-word">piggypal</div>
+          <a class="nav-item active">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2.5 8L8 3.2L13.5 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.2 7V13H11.8V7" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+            <span class="nav-label">Home</span>
+          </a>
+          <a class="nav-item">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><line x1="2.5" y1="4.5" x2="13.5" y2="4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="2.5" y1="8" x2="13.5" y2="8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="2.5" y1="11.5" x2="13.5" y2="11.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            <span class="nav-label">Transactions</span>
+          </a>
+          <a class="nav-item">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3.5" width="13" height="9" rx="1.6" stroke="currentColor" stroke-width="1.4"/><line x1="1.5" y1="6.5" x2="14.5" y2="6.5" stroke="currentColor" stroke-width="1.4"/></svg>
+            <span class="nav-label">Accounts</span>
+          </a>
+          <a class="nav-item">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 2H7.2L14 8.8L8.8 14L2 7.2V2Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="5" cy="5" r="0.9" fill="currentColor"/></svg>
+            <span class="nav-label">Categories</span>
+          </a>
+          <a class="nav-item">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="9" width="2.6" height="5" fill="currentColor"/><rect x="6.7" y="5" width="2.6" height="9" fill="currentColor"/><rect x="11.4" y="2" width="2.6" height="12" fill="currentColor"/></svg>
+            <span class="nav-label">Insights</span>
+          </a>
+          <div class="nav-spacer"></div>
+          <a class="nav-item">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="4" cy="8" r="1.3" fill="currentColor"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="12" cy="8" r="1.3" fill="currentColor"/></svg>
+            <span class="nav-label">Settings</span>
+          </a>
+        </nav>
+
+        <div class="content-col">
+          <p class="col-heading">Recent</p>
+          <div class="day-label"><span>Today</span><span class="day-subtotal">-$76.90</span></div>
+          <div class="day-card">
+            <div class="tx-row"><div class="tx-main"><span class="tx-note">Uber</span><span class="tx-meta">Rideshare · Visa Infinite</span></div><span class="tx-amt out">-$14.80</span></div>
+            <div class="tx-row"><div class="tx-main"><span class="tx-note">Metro</span><span class="tx-meta">Groceries · Tangerine Checking</span></div><span class="tx-amt out">-$62.10</span></div>
+          </div>
+          <div class="day-label"><span>Yesterday</span><span class="day-subtotal">-$129.20</span></div>
+          <div class="day-card">
+            <div class="tx-row"><div class="tx-main"><span class="tx-note">Costco</span><span class="tx-meta">Household · RBC Checking</span></div><span class="tx-amt out">-$129.20</span></div>
+          </div>
+        </div>
+
+        <aside class="side-composer">
+          <span class="composer-label">Add</span>
+          <div class="composer-box">
+            <div class="composer-input-row">
+              <span class="mini-btn">+</span>
+              <span class="mini-input">type or say what you spent…</span>
+              <span class="mic-dot">
+                <svg width="10" height="10" viewBox="0 0 14 14" fill="none"><rect x="5" y="1" width="4" height="7" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 6.5C2.5 9 4.5 11 7 11C9.5 11 11.5 9 11.5 6.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              </span>
+            </div>
+            <div class="composer-preview">
+              <div><b>understood</b></div>
+              -$14.80 · Rideshare<br/>today · Visa Infinite
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <p class="frame-caption">Tablet, ~820px — rail drops labels, composer drops under the list</p>
+    <div class="desk-frame tablet-frame">
+      <div class="desk-titlebar"><span class="desk-dot"></span><span class="desk-dot"></span><span class="desk-dot"></span><span class="desk-url">app.piggypal.codexbase.dev</span></div>
+      <div class="desk-body">
+        <nav class="nav-rail compact">
+          <a class="nav-item active"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2.5 8L8 3.2L13.5 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.2 7V13H11.8V7" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></a>
+          <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><line x1="2.5" y1="4.5" x2="13.5" y2="4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="2.5" y1="8" x2="13.5" y2="8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="2.5" y1="11.5" x2="13.5" y2="11.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
+          <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3.5" width="13" height="9" rx="1.6" stroke="currentColor" stroke-width="1.4"/><line x1="1.5" y1="6.5" x2="14.5" y2="6.5" stroke="currentColor" stroke-width="1.4"/></svg></a>
+          <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2" y="9" width="2.6" height="5" fill="currentColor"/><rect x="6.7" y="5" width="2.6" height="9" fill="currentColor"/><rect x="11.4" y="2" width="2.6" height="12" fill="currentColor"/></svg></a>
+        </nav>
+        <div class="content-col narrow">
+          <p class="col-heading">Recent</p>
+          <div class="day-label"><span>Today</span><span class="day-subtotal">-$76.90</span></div>
+          <div class="day-card">
+            <div class="tx-row"><div class="tx-main"><span class="tx-note">Uber</span><span class="tx-meta">Rideshare</span></div><span class="tx-amt out">-$14.80</span></div>
+            <div class="tx-row"><div class="tx-main"><span class="tx-note">Metro</span><span class="tx-meta">Groceries</span></div><span class="tx-amt out">-$62.10</span></div>
+          </div>
+          <div class="composer-bar" style="margin-top: 1.2rem;">
+            <span class="mini-btn">+</span>
+            <span class="mini-input">type or say what you spent…</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DIRECTION B ============ -->
+  <section class="direction">
+    <div class="dir-head">
+      <span class="dir-letter">Direction B</span>
+      <h2 class="dir-title">List + detail split, answering "does a screen open beside the list, not over it?"</h2>
+      <p class="dir-desc">
+        Same rail as A for wayfinding, but the list screens themselves
+        restructure: tapping a Transactions row today pushes
+        <code>/transactions/:id</code> (docs/17) full-screen — here it opens
+        the same edit form <b>beside</b> the list instead, master-detail
+        style, no navigation at all. The composer shrinks to a slim bar
+        above the list column, since the detail pane is now doing most of
+        the work the old bottom-dock preview did.
+      </p>
+      <p class="dir-tradeoff">
+        The most structurally different of the three, and the most
+        work — Transactions, Accounts, and Categories each already have a
+        real full-screen edit form that would need a "does this render
+        inline or as a route" fork, not just a wider container. Worth it
+        mainly if editing-while-scanning-the-list turns out to be a real
+        desktop workflow, which isn't validated yet.
+      </p>
+    </div>
+
+    <p class="frame-caption">Desktop, ~1280px+ — Transactions screen</p>
+    <div class="desk-frame">
+      <div class="desk-titlebar"><span class="desk-dot"></span><span class="desk-dot"></span><span class="desk-dot"></span><span class="desk-url">app.piggypal.codexbase.dev/transactions</span></div>
+      <div class="desk-body">
+        <nav class="nav-rail">
+          <div class="rail-word">piggypal</div>
+          <a class="nav-item"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2.5 8L8 3.2L13.5 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.2 7V13H11.8V7" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg><span class="nav-label">Home</span></a>
+          <a class="nav-item active"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><line x1="2.5" y1="4.5" x2="13.5" y2="4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="2.5" y1="8" x2="13.5" y2="8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="2.5" y1="11.5" x2="13.5" y2="11.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><span class="nav-label">Transactions</span></a>
+          <a class="nav-item"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3.5" width="13" height="9" rx="1.6" stroke="currentColor" stroke-width="1.4"/><line x1="1.5" y1="6.5" x2="14.5" y2="6.5" stroke="currentColor" stroke-width="1.4"/></svg><span class="nav-label">Accounts</span></a>
+          <a class="nav-item"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 2H7.2L14 8.8L8.8 14L2 7.2V2Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="5" cy="5" r="0.9" fill="currentColor"/></svg><span class="nav-label">Categories</span></a>
+          <a class="nav-item"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="9" width="2.6" height="5" fill="currentColor"/><rect x="6.7" y="5" width="2.6" height="9" fill="currentColor"/><rect x="11.4" y="2" width="2.6" height="12" fill="currentColor"/></svg><span class="nav-label">Insights</span></a>
+          <div class="nav-spacer"></div>
+          <a class="nav-item"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="4" cy="8" r="1.3" fill="currentColor"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="12" cy="8" r="1.3" fill="currentColor"/></svg><span class="nav-label">Settings</span></a>
+        </nav>
+
+        <div class="content-col narrow" style="max-width: 280px;">
+          <div class="composer-bar">
+            <span class="mini-btn">+</span>
+            <span class="mini-input" style="font-size:0.76rem;">search or add…</span>
+          </div>
+          <div class="day-card">
+            <div class="tx-row selected"><div class="tx-main"><span class="tx-note">Costco</span><span class="tx-meta">Yesterday · Household</span></div><span class="tx-amt out">-$129.20</span></div>
+            <div class="tx-row"><div class="tx-main"><span class="tx-note">Metro</span><span class="tx-meta">Today · Groceries</span></div><span class="tx-amt out">-$62.10</span></div>
+            <div class="tx-row"><div class="tx-main"><span class="tx-note">Uber</span><span class="tx-meta">Today · Rideshare</span></div><span class="tx-amt out">-$14.80</span></div>
+          </div>
+        </div>
+
+        <div class="detail-col">
+          <p class="detail-amount">-$129.20</p>
+          <div class="field-group">
+            <span class="field-k">Category</span>
+            <span class="pill-tap">Household ▾</span>
+          </div>
+          <div class="field-pair">
+            <div class="field-group">
+              <span class="field-k">Date</span>
+              <span class="fake-input">Aug 19, 2026</span>
+            </div>
+            <div class="field-group">
+              <span class="field-k">Time</span>
+              <span class="fake-input">6:42 PM</span>
+            </div>
+          </div>
+          <div class="field-group">
+            <span class="field-k">Account</span>
+            <span class="fake-input">RBC — Checking</span>
+          </div>
+          <div class="field-group">
+            <span class="field-k">Location</span>
+            <div class="chip-row">
+              <span class="chip picked">Costco</span>
+              <span class="chip">Costco Gas</span>
+              <span class="chip">+ new</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="frame-caption">Tablet, ~820px — detail pane no longer fits beside the list, falls back to today's push-navigation</p>
+    <div class="desk-frame tablet-frame">
+      <div class="desk-titlebar"><span class="desk-dot"></span><span class="desk-dot"></span><span class="desk-dot"></span><span class="desk-url">app.piggypal.codexbase.dev/transactions</span></div>
+      <div class="desk-body">
+        <nav class="nav-rail compact">
+          <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2.5 8L8 3.2L13.5 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.2 7V13H11.8V7" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></a>
+          <a class="nav-item active"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><line x1="2.5" y1="4.5" x2="13.5" y2="4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="2.5" y1="8" x2="13.5" y2="8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="2.5" y1="11.5" x2="13.5" y2="11.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
+          <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3.5" width="13" height="9" rx="1.6" stroke="currentColor" stroke-width="1.4"/><line x1="1.5" y1="6.5" x2="14.5" y2="6.5" stroke="currentColor" stroke-width="1.4"/></svg></a>
+          <a class="nav-item"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 2H7.2L14 8.8L8.8 14L2 7.2V2Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="5" cy="5" r="0.9" fill="currentColor"/></svg></a>
+        </nav>
+        <div class="content-col narrow">
+          <div class="composer-bar"><span class="mini-btn">+</span><span class="mini-input" style="font-size:0.76rem;">search or add…</span></div>
+          <div class="day-card">
+            <div class="tx-row"><div class="tx-main"><span class="tx-note">Costco</span><span class="tx-meta">Yesterday · Household</span></div><span class="tx-amt out">-$129.20</span></div>
+            <div class="tx-row"><div class="tx-main"><span class="tx-note">Metro</span><span class="tx-meta">Today · Groceries</span></div><span class="tx-amt out">-$62.10</span></div>
+            <div class="tx-row"><div class="tx-main"><span class="tx-note">Uber</span><span class="tx-meta">Today · Rideshare</span></div><span class="tx-amt out">-$14.80</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DIRECTION C ============ -->
+  <section class="direction">
+    <div class="dir-head">
+      <span class="dir-letter">Direction C</span>
+      <h2 class="dir-title">Minimal — the phone layout, just centered</h2>
+      <p class="dir-desc">
+        No structural change at all: the exact same single component tree
+        as the phone build, bottom-docked entry zone included, just capped
+        at a comfortable reading width (~560px) and centered in whatever
+        window it's given, background filling the rest. The app-bar's ▤
+        Insights icon and kebab Settings stay exactly as they are — no
+        persistent rail.
+      </p>
+      <p class="dir-tradeoff">
+        Effectively free to build — a max-width wrapper, nothing else
+        changes. Honest cost: it leaves most of a desktop window empty,
+        and a <code>position: fixed; bottom: 0</code> composer floating in
+        the middle of tall window reads more like an unfinished port than
+        a considered desktop layout. Reasonable as a stopgap if desktop
+        usage turns out to be rare — not as the final answer if it's not.
+      </p>
+    </div>
+
+    <p class="frame-caption">Desktop, ~1280px+ — same layout scales down for tablet with nothing to collapse</p>
+    <div class="desk-frame">
+      <div class="desk-titlebar"><span class="desk-dot"></span><span class="desk-dot"></span><span class="desk-dot"></span><span class="desk-url">app.piggypal.codexbase.dev</span></div>
+      <div class="desk-body dock-frame">
+        <div class="dock-scroll">
+          <div class="entry-dock">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.4rem;">
+              <span class="rail-word">piggypal</span>
+              <div style="display:flex; gap:0.5rem; color: var(--ink-faint);">
+                <span>▤</span>
+                <span style="display:flex; gap:2px; align-items:center;"><i style="width:3px;height:3px;border-radius:50%;background:currentColor;display:block;"></i><i style="width:3px;height:3px;border-radius:50%;background:currentColor;display:block;"></i><i style="width:3px;height:3px;border-radius:50%;background:currentColor;display:block;"></i></span>
+              </div>
+            </div>
+            <p class="col-heading">Recent</p>
+            <div class="day-label"><span>Today</span><span class="day-subtotal">-$76.90</span></div>
+            <div class="day-card">
+              <div class="tx-row"><div class="tx-main"><span class="tx-note">Uber</span><span class="tx-meta">Rideshare</span></div><span class="tx-amt out">-$14.80</span></div>
+              <div class="tx-row"><div class="tx-main"><span class="tx-note">Metro</span><span class="tx-meta">Groceries</span></div><span class="tx-amt out">-$62.10</span></div>
+            </div>
+            <div class="day-label"><span>Yesterday</span><span class="day-subtotal">-$129.20</span></div>
+            <div class="day-card">
+              <div class="tx-row"><div class="tx-main"><span class="tx-note">Costco</span><span class="tx-meta">Household</span></div><span class="tx-amt out">-$129.20</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="entry-dock" style="padding-top:0;">
+          <div class="entry-zone-mock">
+            <div class="composer-input-row">
+              <span class="mini-btn">+</span>
+              <span class="mini-input">type or say what you spent…</span>
+              <span class="mic-dot"><svg width="10" height="10" viewBox="0 0 14 14" fill="none"><rect x="5" y="1" width="4" height="7" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 6.5C2.5 9 4.5 11 7 11C9.5 9 11.5 9 11.5 6.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="frame-caption">Tablet, ~820px — identical, column just sits in less empty space</p>
+    <div class="desk-frame tablet-frame">
+      <div class="desk-titlebar"><span class="desk-dot"></span><span class="desk-dot"></span><span class="desk-dot"></span><span class="desk-url">app.piggypal.codexbase.dev</span></div>
+      <div class="desk-body dock-frame">
+        <div class="dock-scroll" style="padding: 1.6rem 1.2rem 0;">
+          <div class="entry-dock" style="padding: 0 0 1.2rem;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.2rem;">
+              <span class="rail-word">piggypal</span>
+              <span style="color:var(--ink-faint);">▤</span>
+            </div>
+            <div class="day-label"><span>Today</span><span class="day-subtotal">-$76.90</span></div>
+            <div class="day-card">
+              <div class="tx-row"><div class="tx-main"><span class="tx-note">Uber</span><span class="tx-meta">Rideshare</span></div><span class="tx-amt out">-$14.80</span></div>
+              <div class="tx-row"><div class="tx-main"><span class="tx-note">Metro</span><span class="tx-meta">Groceries</span></div><span class="tx-amt out">-$62.10</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="entry-dock" style="padding: 0 1.2rem 1.2rem;">
+          <div class="entry-zone-mock">
+            <div class="composer-input-row">
+              <span class="mini-btn">+</span>
+              <span class="mini-input">type or say what you spent…</span>
+              <span class="mic-dot"><svg width="10" height="10" viewBox="0 0 14 14" fill="none"><rect x="5" y="1" width="4" height="7" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 6.5C2.5 9 4.5 11 7 11C9.5 9 11.5 9 11.5 6.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="closing">
+    <p class="eyebrow" style="margin-bottom:0.6rem;">Not decided</p>
+    <p>
+      These are three honest structural options, not a recommendation —
+      the backlog item this answers was explicitly "not yet scoped." <b>A</b>
+      is the safest general-purpose desktop shell; <b>B</b> is the most
+      capable but the most work, and depends on desktop editing-while-
+      scanning turning out to be a real workflow; <b>C</b> is nearly free but
+      leaves the desktop window looking like an unfinished port. If one of
+      these gets picked up for real, it should graduate into its own
+      numbered doc the way docs/31–38 did, per <code>docs/00-backlog.md</code>'s
+      own convention — reopened deliberately, not by default.
+    </p>
+  </div>
+</div>
