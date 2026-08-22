@@ -14,15 +14,23 @@ it needs doing.
 
 ## ⚪ Next
 
-- [ ] App-side auth: the `/auth/verify` page (reads local user id/device
-      id, calls the now-real `GET /api/auth/verify`, docs/41), a new
-      client-generated `deviceId` (separate from `getLocalUserId()` —
-      nothing generates this yet), and D14's "keep N existing local
-      transactions and merge them into your account?" prompt when the
-      account id differs from what's already on-device. Flagged
-      2026-08-22 as the direct followup to docs/41's server-side auth
-      routes — none of this is built yet, and the server routes can't
-      actually be used for real without it.
+- [ ] Generate + deploy a production JWT keypair, and decide/expose
+      PowerSync Service's public subdomain (docs/39 open question #4).
+      This is what's actually left before a real device can sync
+      end-to-end: docs/42-43 (2026-08-22) made the client fully capable
+      of signing in and connecting — `app/.env`'s `VITE_POWERSYNC_URL`
+      is the override point — but there's still no real production JWKS
+      or PowerSync URL for it to point at (`deploy/powersync/README.md`'s
+      own "still blocking real client use" section).
+- [ ] A "sign in to sync" banner for a failed silent reconnect (docs/05,
+      docs/42) — `useSyncStatus()` exists and Settings surfaces it, but
+      nothing proactively surfaces a disconnect outside of visiting
+      Settings. Flagged 2026-08-22.
+- [ ] `resetLocalData()`'s interaction with a connected sync session is
+      unexamined (docs/43) — once a device is signed in, its hard-delete-
+      every-table reset will now queue and apply real DELETEs
+      server-side too, not just locally. Flagged 2026-08-22, not
+      reproduced or fixed.
 - [ ] Institution field (AccountsScreen's AccountForm) should suggest from
       the user's existing institutions instead of being a bare text input —
       requested 2026-08-10. Behavior: on focus/tap, show every distinct

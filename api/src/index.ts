@@ -5,6 +5,7 @@ import express from 'express';
 import { createServer } from 'node:http';
 import { attachRelay } from './relay.js';
 import { authRouter } from './auth/routes.js';
+import { syncRouter } from './sync/routes.js';
 import { getJwks } from './jwt.js';
 import { API_VERSION } from './version.js';
 
@@ -23,13 +24,29 @@ const port = process.env.PORT ?? 3000;
 
 // docs/05's refresh cookie needs credentials sent on cross-origin
 // requests from app/ (a different subdomain — app.piggypal.codexbase.dev
-// vs api-beta.piggypal.codexbase.dev). CORS_ORIGIN unset in dev falls
-// back to the Vite dev server's own origin.
-app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:3001', credentials: true }));
+// vs api-beta.piggypal.codexbase.dev). A single hard-coded CORS_ORIGIN
+// default was a real gap, only surfaced once docs/42's sign-in flow
+// shipped: it's the first code ever to make an HTTP fetch() from
+// app-beta to api-beta — everything before it (docs/28's relay) was
+// WebSocket, which never triggers a CORS preflight at all, so a wrong
+// default here went unnoticed since docs/28. CORS_ORIGIN now accepts a
+// comma-separated list; unset falls back to every origin vite.config.ts's
+// own allowedHosts already anticipates (both app subdomains) plus the
+// dev server's own origin, instead of hard-coding just one.
+const DEFAULT_CORS_ORIGINS = [
+  'http://localhost:3001',
+  'https://app.piggypal.codexbase.dev',
+  'https://app-beta.piggypal.codexbase.dev',
+];
+const corsOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+  : DEFAULT_CORS_ORIGINS;
+app.use(cors({ origin: corsOrigins, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 
 app.use('/api/auth', authRouter);
+app.use('/api/sync', syncRouter);
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', version: API_VERSION });
@@ -54,7 +71,6 @@ app.get('/.well-known/jwks.json', async (_req, res) => {
 });
 
 // Still to come:
-//   /api/sync/upload       — docs/03-schema-and-sync-rules.md
 //   /api/parse             — docs/04-ai-entry-pipeline.md
 //   /api/stripe/webhook    — docs/06-subscription-and-billing.md
 

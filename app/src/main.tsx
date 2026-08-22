@@ -16,6 +16,7 @@ import { InsightsScreen } from './components/InsightsScreen'
 import { SettingsScreen } from './components/SettingsScreen'
 import { PairingScreen } from './components/PairingScreen'
 import { AboutScreen } from './components/AboutScreen'
+import { AuthVerifyScreen } from './components/AuthVerifyScreen'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -29,6 +30,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/insights" element={<InsightsScreen />} />
           <Route path="/settings" element={<SettingsScreen />} />
           <Route path="/settings/pair" element={<PairingScreen />} />
+          <Route path="/auth/verify" element={<AuthVerifyScreen />} />
           <Route path="/about" element={<AboutScreen />} />
           <Route path="/accounts" element={<AccountsScreen />} />
           <Route path="/categories" element={<CategoriesScreen />} />

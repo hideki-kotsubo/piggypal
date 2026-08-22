@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { db } from './db';
+import type { Transaction as SqliteTransaction } from '@powersync/web';
+import { connectSync, db } from './db';
+import { getAuthAccount } from './auth';
 import { getLocalUserId, setLocalUserId } from './identity';
 import { clearPairedPeers } from './peers';
 import type { Account, AccountKind, Budget, Category, CategoryKeyword, MergeSummary, PeerDataset, Transaction } from './types';
@@ -163,6 +165,20 @@ const TRANSACTION_COLUMNS: Record<keyof Transaction, string> = {
   createdByUserId: 'created_by_user_id',
 };
 
+// Shared by applyPeerDataset's docs/25 D126 rewrite and adoptAccountId's
+// docs/05 D14 rewrite — both are "every local row this device owns now
+// belongs to a different identity," just triggered by two different flows
+// (P2P own-device pairing vs. signing into an existing account). Only
+// rewrites if the ids actually differ, so either caller can invoke this
+// unconditionally without checking first.
+async function rewriteOwnerIdentity(tx: SqliteTransaction, oldId: string, newId: string): Promise<void> {
+  if (oldId === newId) return;
+  await tx.execute('UPDATE accounts SET owner_user_id = ? WHERE owner_user_id = ?', [newId, oldId]);
+  await tx.execute('UPDATE transactions SET paid_by_user_id = ? WHERE paid_by_user_id = ?', [newId, oldId]);
+  await tx.execute('UPDATE transactions SET created_by_user_id = ? WHERE created_by_user_id = ?', [newId, oldId]);
+  setLocalUserId(newId);
+}
+
 // Shared by seeding and addAccount — one place that knows the accounts
 // INSERT shape.
 async function insertAccountRow(a: Account): Promise<void> {
@@ -273,6 +289,14 @@ interface StoreApi extends StoreState {
   // case (someone-else pairing, or the non-joining side of an own-device
   // pairing).
   applyPeerDataset: (peer: PeerDataset, adoptPeerIdentity: boolean) => Promise<MergeSummary>;
+  // docs/05 D14/D11: rewrites every local row's owner/payer/creator to
+  // newId and adopts it as this device's own identity — the auth
+  // equivalent of applyPeerDataset's adoptPeerIdentity rewrite, minus the
+  // peer-dataset merge (there's no other device's rows to insert here,
+  // just this device's own local data reconciling with the account id
+  // the server just resolved). Safe to call even when there's nothing to
+  // rewrite (fresh device, D14's "skip the prompt" case) — a no-op then.
+  adoptAccountId: (newId: string) => Promise<void>;
 }
 
 const StoreContext = createContext<StoreApi | null>(null);
@@ -374,6 +398,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       });
 
     return () => controller.abort();
+  }, []);
+
+  // docs/05 "Reconnect after weeks offline": the access JWT is memory-only
+  // (D13) and lost on every reload, but a prior sign-in on this device is
+  // still remembered (auth.ts's non-secret email/userId marker) — attempt
+  // a silent reconnect via the refresh cookie once on load rather than
+  // requiring a fresh sign-in every time the app is opened. connectSync's
+  // fetchCredentials returning null (cookie expired/revoked) just leaves
+  // the SDK disconnected; nothing here needs to distinguish why.
+  useEffect(() => {
+    if (getAuthAccount()) void connectSync();
   }, []);
 
   const api = useMemo<StoreApi>(() => {
@@ -543,6 +578,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return [...seen];
       },
 
+      async adoptAccountId(newId) {
+        await db.writeTransaction(async (tx) => {
+          await rewriteOwnerIdentity(tx, getLocalUserId(), newId);
+        });
+      },
+
       async resetLocalData() {
         await db.writeTransaction(async (tx) => {
           await tx.execute('DELETE FROM transactions');
@@ -585,17 +626,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           // ids actually differ, so calling this twice (or against a peer
           // that's already the same person) is a safe no-op.
           if (adoptPeerIdentity) {
-            const oldId = getLocalUserId();
-            const newId = peer.localUserId;
-            if (oldId !== newId) {
-              await tx.execute('UPDATE accounts SET owner_user_id = ? WHERE owner_user_id = ?', [newId, oldId]);
-              await tx.execute('UPDATE transactions SET paid_by_user_id = ? WHERE paid_by_user_id = ?', [newId, oldId]);
-              await tx.execute('UPDATE transactions SET created_by_user_id = ? WHERE created_by_user_id = ?', [
-                newId,
-                oldId,
-              ]);
-              setLocalUserId(newId);
-            }
+            await rewriteOwnerIdentity(tx, getLocalUserId(), peer.localUserId);
           }
 
           // Categories — merge by id (docs/24): seed categories share

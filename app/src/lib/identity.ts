@@ -29,3 +29,21 @@ export function getLocalUserId(): string {
 export function setLocalUserId(id: string): void {
   localStorage.setItem(LOCAL_USER_ID_KEY, id);
 }
+
+const DEVICE_ID_KEY = 'piggypal:device-id';
+
+// docs/05 D12/D13: refresh tokens are tracked per (user, device), keyed by
+// a client-generated device_id — a separate identity from the user id
+// above, and deliberately never rewritten by the own-device pairing merge
+// (setLocalUserId's case): two devices that just unified their *user*
+// identity are still two distinct devices for refresh-token/revocation
+// purposes. Flagged by docs/41 as the one piece nothing in app/ generated
+// yet — everything else that endpoint needs already existed.
+export function getDeviceId(): string {
+  let id = localStorage.getItem(DEVICE_ID_KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(DEVICE_ID_KEY, id);
+  }
+  return id;
+}

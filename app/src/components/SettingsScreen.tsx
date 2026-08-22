@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { ACCOUNT_PICKER_SCALE_THRESHOLD, guessDeviceLabel, useAccountPickerMode, useDeviceLabel, useThemeMode } from '../lib/settings';
@@ -5,6 +6,8 @@ import { usePairedPeers } from '../lib/peers';
 import { hasHousehold, householdMembers } from '../lib/household';
 import { PayerBadge } from './PayerBadge';
 import { APP_VERSION } from '../lib/version';
+import { requestMagicLink, useAuthAccount } from '../lib/auth';
+import { useSyncStatus } from '../lib/db';
 
 // "synced just now" / "N minutes/hours ago" — finer-grained than
 // format.ts's formatRelativeDate (which only resolves to whole calendar
@@ -26,9 +29,26 @@ export function SettingsScreen() {
   const [themeMode, setThemeMode] = useThemeMode();
   const [deviceLabel, setDeviceLabel] = useDeviceLabel();
   const [peers] = usePairedPeers();
+  const [authAccount] = useAuthAccount();
+  const syncStatus = useSyncStatus();
+  const [emailInput, setEmailInput] = useState('');
+  const [linkState, setLinkState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [linkError, setLinkError] = useState('');
   // docs/13 D69 — only surface this once it'd actually do something,
   // rather than a control that's a no-op below the threshold.
   const showPickerModeSetting = store.accounts.filter((a) => !a.archived).length > ACCOUNT_PICKER_SCALE_THRESHOLD;
+
+  // docs/05 flow step 1: "User taps 'Enable sync & AI' → enters email."
+  async function sendMagicLink() {
+    setLinkState('sending');
+    try {
+      await requestMagicLink(emailInput.trim());
+      setLinkState('sent');
+    } catch (err) {
+      setLinkState('error');
+      setLinkError(err instanceof Error ? err.message : 'Could not send the link.');
+    }
+  }
 
   function resetData() {
     if (
@@ -59,6 +79,47 @@ export function SettingsScreen() {
           <span className="settings-row-arrow">›</span>
         </Link>
       </div>
+
+      <div className="section-label">Account</div>
+      {authAccount ? (
+        <div className="accounts-list">
+          <div className="settings-row settings-row-static">
+            <span>Signed in as</span>
+            <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>{authAccount.email || '(this device)'}</span>
+          </div>
+          <div className="settings-row settings-row-static">
+            <span>Cloud sync</span>
+            <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>
+              {syncStatus.connected ? 'Connected' : syncStatus.connecting ? 'Connecting…' : 'Not connected'}
+            </span>
+          </div>
+        </div>
+      ) : linkState === 'sent' ? (
+        <div className="settings-row settings-row-static">
+          <span>Check your email for a sign-in link.</span>
+        </div>
+      ) : (
+        <div className="settings-field">
+          <label className="field-label">
+            Enable cloud sync & AI entry
+            <input
+              className="text-input"
+              type="email"
+              placeholder="you@example.com"
+              value={emailInput}
+              onChange={(e) => setEmailInput(e.target.value)}
+            />
+          </label>
+          <button
+            className="save-btn"
+            onClick={() => void sendMagicLink()}
+            disabled={!emailInput.trim() || linkState === 'sending'}
+          >
+            {linkState === 'sending' ? 'Sending…' : 'Send sign-in link'}
+          </button>
+          {linkState === 'error' && <p className="qr-caption">{linkError}</p>}
+        </div>
+      )}
 
       <div className="section-label">Sync</div>
       <div className="settings-field">
