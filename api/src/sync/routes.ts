@@ -48,9 +48,24 @@ const TABLE_COLUMNS: Record<string, readonly string[]> = {
 // columns are real `boolean`.
 const BOOLEAN_COLUMNS = new Set(['archived']);
 
+// A real bug, found testing this endpoint against a real signed-in
+// device: categories.sort_order is `not null default 0` in db/schema.sql,
+// but nothing in app/ ever populates it (categories don't support manual
+// reordering — docs/12/13's "no manual reordering" applies here too) —
+// schema.ts's own column has no local NOT NULL enforcement, so it's just
+// SQLite-NULL on every real row, and explicitly writing NULL for a column
+// always overrides its Postgres DEFAULT, unlike omitting the column
+// entirely. Substituting the column's own intended default here (rather
+// than omitting null columns generally) keeps PUT's full-row-replace
+// semantics correct for every genuinely nullable column (institution,
+// merchant, note, ...) — clearing one of those must still write a real
+// NULL, not silently leave a stale value in place.
+const COLUMN_DEFAULTS: Record<string, unknown> = { sort_order: 0 };
+
 function coerce(column: string, value: unknown): unknown {
   if (BOOLEAN_COLUMNS.has(column)) return value === 1 || value === true;
-  return value ?? null;
+  if (value === null || value === undefined) return COLUMN_DEFAULTS[column] ?? null;
+  return value;
 }
 
 function isValidOp(op: unknown): op is SyncOp {

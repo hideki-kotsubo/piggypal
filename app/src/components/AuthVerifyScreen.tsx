@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { connectSync, db } from '../lib/db';
 import { getLocalUserId } from '../lib/identity';
@@ -11,75 +11,76 @@ import { useStore } from '../lib/store';
 // emailed link depends on, since a raw browser navigation can't supply
 // localUserId/deviceId on its own.
 type Step =
+  | { kind: 'confirm'; token: string }
   | { kind: 'verifying' }
   | { kind: 'merge-prompt'; userId: string; existingAccounts: number; existingTransactions: number }
   | { kind: 'done' }
   | { kind: 'declined' }
   | { kind: 'error'; message: string };
 
+function initialStep(token: string | null): Step {
+  if (!token) return { kind: 'error', message: 'This link is missing its sign-in token.' };
+  return { kind: 'confirm', token };
+}
+
 export function AuthVerifyScreen() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const store = useStore();
   const [, setAuthAccount] = useAuthAccount();
-  const [step, setStep] = useState<Step>({ kind: 'verifying' });
-  // React StrictMode double-invokes effects in dev (mount → cleanup →
-  // mount) — a real bug, hit while first testing this screen: the token
-  // is single-use (docs/41), so the second invocation's verify call
-  // always fails with "already consumed," and its error state landed
-  // after the first call's real success/merge-prompt state, clobbering
-  // it. Same bug class as docs/25 D136, different fix — this is a
-  // one-shot effect, not a shared DOM node, so a ref guard is enough.
+  const [step, setStep] = useState<Step>(() => initialStep(searchParams.get('token')));
+  // A real bug, found testing this against a real Resend send: the token
+  // was already consumed 26 seconds after sending, well before a human
+  // could have clicked it — Resend/SES's own click-tracking wraps every
+  // link in a redirect that gets auto-visited shortly after send (a
+  // known failure mode for one-time-use links behind any click-tracking
+  // or mail-security link-scanner, not specific to this provider). Fixed
+  // by never calling verifyMagicLink from page load at all — only a real
+  // tap on the button below does, since automated visitors load the page
+  // (or don't even run its JS) but essentially never simulate a click.
+  // verifiedRef is a defensive double-click guard on top of that, not the
+  // primary fix — a human tapping twice fast shouldn't fire two calls
+  // against a single-use token either.
   const verifiedRef = useRef(false);
 
-  useEffect(() => {
+  async function confirmSignIn(token: string) {
     if (verifiedRef.current) return;
     verifiedRef.current = true;
+    setStep({ kind: 'verifying' });
 
-    const token = searchParams.get('token');
-    if (!token) {
-      setStep({ kind: 'error', message: 'This link is missing its sign-in token.' });
-      return;
-    }
+    try {
+      const result = await verifyMagicLink(token);
 
-    (async () => {
-      try {
-        const result = await verifyMagicLink(token);
-
-        // docs/05 D14: only the second-device-joins-an-existing-account
-        // case can possibly have a conflict to ask about — a brand-new
-        // account (isNewUser) was created *using* this device's own local
-        // id (D11), so there's nothing to reconcile.
-        if (!result.isNewUser && result.userId !== getLocalUserId()) {
-          // Queried directly against SQLite, not store.accounts/
-          // store.transactions — a real bug, found while first testing
-          // this screen: StoreProvider flips `ready` (and so mounts this
-          // screen) right after *registering* its db.watch() calls, not
-          // after their first result actually lands, so this effect can
-          // run while React's store state is still the empty initial
-          // array even though real seeded data already exists in SQLite.
-          // A direct await here can't be fooled by that timing gap.
-          const [{ count: existingAccounts }] = await db.getAll<{ count: number }>('SELECT COUNT(*) as count FROM accounts');
-          const [{ count: existingTransactions }] = await db.getAll<{ count: number }>(
-            'SELECT COUNT(*) as count FROM transactions WHERE deleted_at IS NULL',
-          );
-          if (existingAccounts === 0 && existingTransactions === 0) {
-            await finish(result.userId);
-          } else {
-            setStep({ kind: 'merge-prompt', userId: result.userId, existingAccounts, existingTransactions });
-          }
-          return;
+      // docs/05 D14: only the second-device-joins-an-existing-account
+      // case can possibly have a conflict to ask about — a brand-new
+      // account (isNewUser) was created *using* this device's own local
+      // id (D11), so there's nothing to reconcile.
+      if (!result.isNewUser && result.userId !== getLocalUserId()) {
+        // Queried directly against SQLite, not store.accounts/
+        // store.transactions — a real bug, found while first testing
+        // this screen: StoreProvider flips `ready` (and so mounts this
+        // screen) right after *registering* its db.watch() calls, not
+        // after their first result actually lands, so this handler can
+        // run while React's store state is still the empty initial
+        // array even though real seeded data already exists in SQLite.
+        // A direct await here can't be fooled by that timing gap.
+        const [{ count: existingAccounts }] = await db.getAll<{ count: number }>('SELECT COUNT(*) as count FROM accounts');
+        const [{ count: existingTransactions }] = await db.getAll<{ count: number }>(
+          'SELECT COUNT(*) as count FROM transactions WHERE deleted_at IS NULL',
+        );
+        if (existingAccounts === 0 && existingTransactions === 0) {
+          await finish(result.userId);
+        } else {
+          setStep({ kind: 'merge-prompt', userId: result.userId, existingAccounts, existingTransactions });
         }
-
-        await finish(result.userId);
-      } catch (err) {
-        setStep({ kind: 'error', message: err instanceof Error ? err.message : 'Sign-in failed.' });
+        return;
       }
-    })();
-    // Runs once against this load's token, deliberately not on every
-    // searchParams/store change — a second run would try to consume an
-    // already-consumed single-use magic link (docs/41).
-  }, []);
+
+      await finish(result.userId);
+    } catch (err) {
+      setStep({ kind: 'error', message: err instanceof Error ? err.message : 'Sign-in failed.' });
+    }
+  }
 
   async function finish(userId: string) {
     setAuthAccount({ userId, email: takePendingEmail() });
@@ -97,6 +98,15 @@ export function AuthVerifyScreen() {
       <div className="app-bar">
         <span className="wordmark">Sign in</span>
       </div>
+
+      {step.kind === 'confirm' && (
+        <div className="qr-stage">
+          <p className="qr-caption">Tap below to finish signing in.</p>
+          <button className="save-btn" onClick={() => void confirmSignIn(step.token)}>
+            Sign in
+          </button>
+        </div>
+      )}
 
       {step.kind === 'verifying' && (
         <div className="qr-stage">

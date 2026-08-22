@@ -35,11 +35,23 @@ create table accounts (
 );
 
 create table categories (
-  id          uuid primary key,
+  id          text primary key,   -- NOT uuid — docs/24's household-merge
+                                   -- design deliberately gives every seed
+                                   -- category a fixed, human-readable slug
+                                   -- id ("cat-food", seed.ts) shared across
+                                   -- every install, so two independently-
+                                   -- seeded devices dedupe by id on merge
+                                   -- instead of duplicating. accounts/
+                                   -- transactions/budgets keep real
+                                   -- crypto.randomUUID() ids — categories
+                                   -- is the one deliberate exception. A
+                                   -- uuid column here 500s on the very
+                                   -- first sync upload of seed data — see
+                                   -- docs/45.
   user_id     uuid not null,
   name        text not null,
   kind        text not null default 'expense',   -- expense | income
-  parent_id   uuid references categories(id),    -- nullable; exactly 2
+  parent_id   text references categories(id),    -- nullable; exactly 2
                                                    -- levels, enforced
                                                    -- app-side only — see
                                                    -- docs/14 D70
@@ -54,7 +66,7 @@ create table transactions (
   id           uuid primary key,
   user_id      uuid not null,
   account_id   uuid not null references accounts(id),
-  category_id  uuid references categories(id),   -- nullable: uncategorized inbox
+  category_id  text references categories(id),   -- nullable: uncategorized inbox; text, not uuid — see categories.id above
   amount_cents bigint not null,                  -- negative = expense, positive = income
   currency     char(3) not null default 'CAD',   -- the purchase's own currency, chosen
                                                   -- independently of the account at entry
@@ -84,7 +96,7 @@ create table transactions (
 create table budgets (
   id           uuid primary key,
   user_id      uuid not null,
-  category_id  uuid not null references categories(id),
+  category_id  text not null references categories(id),  -- text, not uuid — see categories.id above
   month        date not null,                    -- always first of month, e.g. 2026-08-01
   currency     char(3) not null default 'CAD',    -- budgets are per currency, not just per
                                                    -- category/month — see docs/10
@@ -97,9 +109,15 @@ create table budgets (
 -- Per-user learning vocab for the AI entry pipeline (docs/04). Synced to
 -- device like the tables above so Tier 1's on-device parser benefits too.
 create table category_keywords (
-  id           uuid primary key default gen_random_uuid(),
+  id           text primary key,   -- NOT uuid, same reason as categories.id
+                                    -- above — seed.ts's keywords also use
+                                    -- fixed slug ids ("ckw-1"), and D5's
+                                    -- client-generated-id convention means
+                                    -- there's no case where this table
+                                    -- needs a server-generated id either —
+                                    -- see docs/45.
   user_id      uuid not null,
-  category_id  uuid not null references categories(id),
+  category_id  text not null references categories(id),  -- text, not uuid — see categories.id above
   keyword      text not null,
   hits         int not null default 1,
   created_at   timestamptz not null default now(),
