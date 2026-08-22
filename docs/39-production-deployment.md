@@ -85,7 +85,7 @@ this doc's own proposal, not previously fixed anywhere:
 | `DATABASE_URL` | `api/` (all routes), PowerSync Service config | 02 |
 | `JWT_PRIVATE_KEY` / `JWT_PUBLIC_KEY` (RS256 keypair) | `api/` signs access JWTs; also served at `/.well-known/jwks.json` for PowerSync Service to verify | 05 D13 |
 | `MAGIC_LINK_TOKEN_SECRET` (or DB-only, hashed at rest per D12 — pick one) | `api/`'s magic-link issuance | 05 D12 |
-| Azure Communication Services connection string | `sendMagicLinkEmail` adapter | 05 D15 |
+| ~~Azure Communication Services connection string~~ → `RESEND_API_KEY`/`RESEND_FROM_ADDRESS` (revised 2026-08-22, docs/44) | `sendMagicLinkEmail` adapter | 05 D15 |
 | `STRIPE_SECRET_KEY` | Checkout session creation | 06 |
 | `STRIPE_WEBHOOK_SECRET` | `/api/stripe/webhook` signature verification — **not** JWT-authenticated, this is its only auth | 06 |
 | `STRIPE_PRICE_ID` | Checkout session creation | 06 |
@@ -159,11 +159,17 @@ host actually runs `api/`, e.g. `pm2`/systemd/Docker/bare `node`, so
 match whatever that already is rather than introducing a second
 pattern).
 
-### 5. Stripe & Azure Communication Services accounts
+### 5. Stripe & magic-link email provider accounts
 
 Both are real external accounts to set up (product/price in Stripe,
-a verified sending domain in Azure Communication Services) — outside
-anything this repo can do unattended. **Needs the user directly.**
+a verified sending domain with the email provider) — outside anything
+this repo can do unattended. **Needs the user directly.**
+
+**Revised 2026-08-22 (docs/05 D15, docs/44):** the email provider named
+throughout this doc's original write-up was Azure Communication Services
+— since revised to Resend, same day, at the user's request. The account
+setup this step describes is still real and still needed, just against
+Resend's dashboard instead of the Azure Portal.
 
 ### 6. Client cutover
 

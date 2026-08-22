@@ -18,10 +18,14 @@ changed in spirit, just gained a real caller.
   hashing (docs/05 D12: tokens are opaque and hashed at rest, plaintext
   only ever exists in the one email/cookie it's sent in).
 - **`api/src/auth/email.ts`** — `sendMagicLinkEmail`, the one-function
-  adapter D15 calls for. Logs the link to the console when
-  `AZURE_COMMUNICATION_CONNECTION_STRING` is unset (true today — no ACS
-  account exists yet, docs/39 open question #5) — which also happens to
-  be exactly what local dev/testing needs, no inbox to check.
+  adapter D15 calls for. Logs the link to the console when the real
+  provider's API key env var is unset — which also happens to be exactly
+  what local dev/testing needs, no inbox to check. **Provider swapped
+  2026-08-22, see docs/44**: built here against Azure Communication
+  Services (`AZURE_COMMUNICATION_CONNECTION_STRING`); the same day, at
+  the user's request, swapped to Resend (`RESEND_API_KEY`/
+  `RESEND_FROM_ADDRESS`) — no caller changed, proving out D15's own
+  same-day-swap claim for real rather than just asserting it.
 - **`api/src/auth/middleware.ts`** — `requireAccessToken`, a small Bearer
   gate reusable by any future route needing a signed-in user (the
   still-unbuilt sync-upload/parse routes, docs/03-04).
@@ -109,9 +113,12 @@ against the real Postgres, 21/21 assertions passing:
 - **Device-id generation on the client** — a new, separate local identity
   from `getLocalUserId()`, needed before the app can call `verify` for
   real.
-- **Real Azure Communication Services sending** — the adapter boundary
-  exists (`email.ts`); the actual ACS SDK call doesn't, since no ACS
-  account exists yet (docs/39 open question #5).
+- ~~Real Azure Communication Services sending~~ — superseded 2026-08-22:
+  the real ACS SDK call *was* implemented (`@azure/communication-email`),
+  then swapped to Resend the same day at the user's request, before any
+  real ACS account existed to actually send through — see docs/44.
+  `email.ts`'s adapter boundary is what made the swap a zero-caller-change
+  edit.
 - **Rate limiting on `request-link`** — not specified anywhere in docs/05,
   not added speculatively.
 - **The subscription gate** (docs/06) isn't wired into any of these
