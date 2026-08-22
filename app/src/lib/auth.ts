@@ -32,6 +32,18 @@ export function getAuthAccount(): AuthAccount | null {
   }
 }
 
+// Plain function (not part of the hook), same reasoning as peers.ts's
+// clearPairedPeers — store.tsx's resetLocalData runs outside any
+// component and already clears paired peers on reset; a real gap found
+// testing this for real: it left this marker behind, so a reset device
+// still showed "Signed in as ___" and auto-attempted a reconnect with a
+// refresh cookie that reset didn't (and can't, being local-only) touch —
+// confusing 401 in the console for what's actually a completely expected
+// "fresh device, not signed in" state.
+export function clearAuthAccount(): void {
+  localStorage.removeItem(AUTH_ACCOUNT_KEY);
+}
+
 export function useAuthAccount(): [AuthAccount | null, (account: AuthAccount | null) => void] {
   const [account, setAccountState] = useState<AuthAccount | null>(getAuthAccount);
   function setAccount(next: AuthAccount | null) {

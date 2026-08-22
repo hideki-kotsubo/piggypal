@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Transaction as SqliteTransaction } from '@powersync/web';
 import { connectSync, db } from './db';
-import { getAuthAccount } from './auth';
+import { clearAuthAccount, getAuthAccount } from './auth';
 import { getLocalUserId, setLocalUserId } from './identity';
 import { clearPairedPeers } from './peers';
 import type { Account, AccountKind, Budget, Category, CategoryKeyword, MergeSummary, PeerDataset, Transaction } from './types';
@@ -598,6 +598,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         // would skip straight past the merge prompt for a peer this device
         // no longer actually shares any history with.
         clearPairedPeers();
+        // Same reasoning, found testing this for real (docs/45-adjacent):
+        // leaving auth.ts's "signed in as ___" marker behind made a reset
+        // device look still signed in, so it auto-attempted a reconnect
+        // using a refresh cookie reset can't touch (server-side, httpOnly)
+        // — a confusing 401 for what's actually a correct "fresh device"
+        // state. A reset device is signed out, full stop; signing back in
+        // mints a real new session same as any other fresh device would.
+        clearAuthAccount();
         window.location.reload();
       },
 
