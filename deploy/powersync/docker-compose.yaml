@@ -1,0 +1,50 @@
+# PowerSync Service (self-hosted Open Edition) for piggypal — docs/02, docs/39.
+#
+# Reuses the SAME production Postgres from docs/39 step 1 for both source
+# replication AND sync-bucket storage (different schema — PowerSync creates
+# its own `powersync` schema there), rather than standing up a second
+# Postgres just for bucket storage. PowerSync's own self-host-demo runs two
+# separate Postgres containers, but that's a demo-isolation choice, not a
+# requirement — nothing in the storage config forces a separate instance.
+# If PS_STORAGE_SOURCE_URI ever needs to point elsewhere, just change it.
+#
+# Reference: https://github.com/powersync-ja/self-host-demo (services/powersync.yaml)
+#
+# Joins the existing `docker-stack_backend` network (confirmed 2026-08-21
+# via `docker inspect postgres`) rather than creating an isolated one —
+# needed for the `postgres` hostname in .env's connection URIs to actually
+# resolve via Docker's embedded DNS. If your Postgres container lives on a
+# different network, change the name below to match.
+networks:
+  default:
+    name: docker-stack_backend
+    external: true
+
+services:
+  powersync:
+    image: journeyapps/powersync-service:latest
+    restart: unless-stopped
+    command: ["start", "-r", "unified"]
+    env_file:
+      - .env
+    environment:
+      POWERSYNC_CONFIG_PATH: /config/service.yaml
+      # ~80% of the container's memory limit — adjust to match whatever
+      # this host actually gives the container.
+      NODE_OPTIONS: --max-old-space-size=1000
+    volumes:
+      - ./service.yaml:/config/service.yaml:ro
+      - ./sync-config.yaml:/config/sync-config.yaml:ro
+    ports:
+      - "${PS_PORT}:${PS_PORT}"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:${PS_PORT}/probes/liveness').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 1s
+      retries: 15

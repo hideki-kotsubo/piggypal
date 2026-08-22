@@ -1,0 +1,48 @@
+# yaml-language-server: $schema=https://unpkg.com/@powersync/service-sync-rules@latest/schema/sync_rules.json
+#
+# Sync Streams (edition 3) — PowerSync's currently-recommended format,
+# replacing the older bucket_definitions style docs/03's own inline YAML
+# still shows (that block also predates docs/10/12/15/24's currency/
+# institution/merchant/payer-owner columns — doubly stale, kept in docs/03
+# for historical context only, not meant to be used as-is anymore).
+#
+# Every stream filters on auth.user_id() (docs/03's original "bucket per
+# user" design, D1-D6) — NOT household_id, since docs/24's households
+# table still doesn't exist. Columns verified directly against the live
+# db/schema.sql (psql \d), not assumed from docs/03's stale inline SQL.
+#
+# category_keywords deliberately excluded — same reasoning as docs/25's
+# PeerDataset exclusion (docs/16 D91: the learning loop that would ever
+# write to it post-seed isn't built yet, nothing for a device to pull).
+
+config:
+  edition: 3
+
+streams:
+  accounts:
+    auto_subscribe: true
+    query: SELECT * FROM accounts WHERE user_id = auth.user_id()
+
+  categories:
+    auto_subscribe: true
+    query: SELECT * FROM categories WHERE user_id = auth.user_id()
+
+  budgets:
+    auto_subscribe: true
+    query: SELECT * FROM budgets WHERE user_id = auth.user_id()
+
+  # docs/03's 18-month rolling window is DROPPED here, not just simplified —
+  # confirmed 2026-08-22 against a real PowerSync Service instance: sync
+  # rules must be deterministic, so now()/interval/any date arithmetic are
+  # flatly unsupported ("Unknown function, Invalid SQLite cast" is what
+  # that looks like at runtime, not a syntax typo). PowerSync's own
+  # maintainers' recommended pattern (github.com/orgs/powersync-ja/
+  # discussions/445) needs either a cron-maintained boolean column
+  # (`sync_active`, flipped daily) or client-computed time-bucket
+  # parameters (a `time_bucket_key` column + the app requesting only the
+  # weeks it wants) — genuine schema/app work, not a one-line fix, and not
+  # done here. Syncs ALL transaction history for now; re-add real
+  # windowing as a follow-up (tracked in docs/00-backlog.md).
+  transactions:
+    auto_subscribe: true
+    query: SELECT * FROM transactions WHERE user_id = auth.user_id()

@@ -475,6 +475,126 @@ it needs doing.
       in docs/02-06 but intentionally not implemented yet (deliberate
       local-only-first build order). Tier 1 (on-device, free, offline) is
       now real — docs/16.
+      2026-08-21: `docs/39-production-deployment.md` written — a
+      step-by-step runbook (Postgres → secrets/JWT keypair → JWKS →
+      PowerSync Service → auth/sync-upload/Stripe routes on `api/` →
+      external Stripe/Azure Communication Services accounts → client
+      cutover, in that dependency order) plus the open questions that
+      still need the user's answer (which host, managed vs. self-hosted
+      Postgres, secrets storage). Real finding along the way: this dev
+      sandbox can't run Docker *or* rootless Podman at all — its outer
+      container lacks `CAP_SYS_ADMIN` (blocks overlay mounts) and the
+      `unshare(CLONE_NEWUSER)` syscall (blocks rootless), confirmed by
+      directly attempting both `dockerd` and `podman run`; neither is
+      fixable from inside. Worked around for schema verification only —
+      a native `apt install postgresql` in this sandbox has
+      `db/schema.sql` applied and confirmed (all 9 tables). PowerSync
+      Service itself still can't run here at all (Docker-image-only) —
+      needs a real external host, still open which one.
+      Same day, user confirmed the `api-beta.piggypal.codexbase.dev` host
+      does have real Docker access, and asked for a runbook to run
+      themselves rather than SSH access for me. `deploy/powersync/`
+      written: `docker-compose.yaml`/`service.yaml`/`sync-config.yaml`/
+      `.env.example`/`README.md`, against PowerSync's actual current
+      self-hosted config schema (checked against
+      github.com/powersync-ja/self-host-demo's Postgres-bucket-storage
+      variant, not guessed) and this repo's real live `db/schema.sql`
+      (column names verified via `psql \d` against the sandbox's native
+      Postgres, not docs/03's stale inline SQL). Uses PowerSync's newer
+      Sync Streams format (`auth.user_id()`, `edition: 3`) instead of the
+      legacy `bucket_definitions` style, since bucket_definitions is
+      legacy-but-supported and streams is the currently-recommended
+      format for new setups. Reuses the same production Postgres for both
+      source replication and sync-bucket storage (PowerSync's own
+      `powersync` schema there) rather than standing up a second Postgres
+      just for storage. Two real blockers flagged in the README:
+      unknown whether the production Postgres has `wal_level=logical`
+      set (required, restart-needed — still open) and the `PS_JWKS_URL`
+      it points at (partially resolved same day, see next item — code's
+      real now, production keypair still isn't). Not yet run for real
+      anywhere.
+      Same day: `docs/40-jwt-keypair-and-jwks.md` — docs/05 D13's RS256
+      signing/verification piece built for real (`api/src/jwt.ts`'s
+      `signAccessToken`/`getJwks`, `GET /.well-known/jwks.json`,
+      `npm run -w api generate-jwt-keys` as the one place a keypair is
+      ever generated, never at server boot). New `jose` dependency on
+      `api`. Verified with an actual round trip, not just types: signed
+      a token, fetched the live JWKS endpoint over real HTTP, verified
+      the token against it with `jose`'s `createRemoteJWKSet`, confirmed
+      `sub`/`aud`/`kid`/`alg` and the real 900-second TTL, confirmed a
+      tampered token is rejected, confirmed a missing-key env throws a
+      clear error instead of a broken response. `tsc --noEmit` clean on
+      `api` (one real fix along the way: `jose` 6.x's types export
+      `CryptoKey`, not the `KeyLike` name older examples still use).
+      This is only the signing primitive — `/api/auth/*` (magic link,
+      calling this for real, refresh tokens, cookies) is still fully
+      unbuilt, and no production keypair has been generated yet either.
+      Same day, later: the user ran the Postgres pre-flight checklist for
+      real against their own Docker Postgres (`docker-stack_backend`
+      network, container named `postgres`) — role/database created,
+      `db/schema.sql` applied (9 tables confirmed), `wal_level` was
+      already `logical`, `piggypal` granted `REPLICATION`. One real snag
+      along the way: `ALTER ROLE piggypal WITH REPLICATION` first failed
+      with a permission error because it was run connected *as*
+      `piggypal` rather than the superuser — a role can't grant itself
+      privileges it doesn't have. docs/39 steps 1/2's open questions #1
+      (does the host have Docker) and #2 (managed vs. self-hosted
+      Postgres) are now both resolved: yes, and self-hosted, respectively.
+      `deploy/powersync/docker-compose.yaml` updated to join
+      `docker-stack_backend` explicitly (`networks: default: external:
+      true`) rather than an isolated network, and `.env.example` updated
+      to use `postgres` as the connection hostname (Docker DNS, not
+      localhost) with `PS_DB_SSLMODE=disable` (no TLS on that internal
+      connection). Postgres side of docs/39 step 1 is now fully done, not
+      just theoretical.
+      2026-08-22: PowerSync Service itself is now genuinely running —
+      `docker compose up -d` against `deploy/powersync/`, confirmed
+      healthy (`{"ready":true,"started":true}`) and actively replicating
+      (`"Initial replication already done"`, streaming WAL ops, zero
+      errors). Three real problems surfaced and fixed getting there, full
+      detail in `deploy/powersync/README.md`'s "Real problems hit and
+      fixed": (1) `PS_PORT=8080` collided with another service already on
+      the host — `.env.example` default changed to `8090`; (2) PowerSync's
+      Postgres client (`pgwire`) failed `scram-sha-256` authentication
+      against `piggypal` even with a confirmed-correct password (verified
+      via a throwaway `psql` container on the exact same network path,
+      which authenticated fine) — a real client-library incompatibility,
+      worked around by switching `piggypal` to `md5` auth specifically
+      (own `pg_hba.conf` rule ahead of the scram-sha-256 catch-all,
+      password re-set under `password_encryption=md5`); an earlier
+      same-container loopback `psql` "test" had given a false pass here,
+      since `127.0.0.1` hits a `trust` rule with no password check at
+      all — flagged as a real mistake in the README so it isn't repeated;
+      (3) `CREATE PUBLICATION powersync FOR ALL TABLES;` was required and
+      not obvious — PowerSync doesn't create it automatically, failing
+      with a clear `PSYNC_S1141` error until it's run manually. A fourth
+      issue changed scope rather than just getting fixed: `sync-config.yaml`'s
+      original 18-month rolling transaction window
+      (`occurred_at >= now() - interval '18 months'`) turned out to be
+      impossible to express at all — PowerSync sync rules must be fully
+      deterministic, so `now()`/`interval`/any date arithmetic are
+      unsupported by design (confirmed against PowerSync's own docs and
+      github.com/orgs/powersync-ja/discussions/445), not a syntax bug.
+      Dropped to full-history sync for now; real windowing needs either a
+      cron-maintained `sync_active` boolean column or client-computed
+      time-bucket parameters (PowerSync's own recommended patterns) —
+      tracked as its own Next item below, not solved here. Still open:
+      real client auth (same JWKS/production-keypair gap as before), and
+      an actual sync round-trip test from `app/` (still local-only mode,
+      no PowerSync connector wired in yet).
+- [ ] Re-add a real rolling transaction-sync window (docs/03's original
+      18-month design) — dropped 2026-08-22 (see the PowerSync-running
+      entry above) because PowerSync sync rules can't express
+      `now()`/`interval` date arithmetic at all, full stop, not a syntax
+      issue. `deploy/powersync/sync-config.yaml`'s `transactions` stream
+      currently syncs full history with no window. Two real options,
+      neither designed yet: a cron-job-maintained `sync_active` boolean
+      column on `transactions` (simpler, but generates ongoing writes and
+      leaves stale bucket-storage rows until defragmentation), or
+      client-computed time-bucket parameters (a `time_bucket_key` column
+      + the app requesting only the weeks/months it actually wants —
+      PowerSync's own recommended pattern, more precise, more app-side
+      work). Needs a real design pass before either gets built.
 - [ ] Recurring transactions — explicitly out of MVP scope (docs/01).
 - [ ] Household sharing — explicitly out of MVP scope (docs/01).
 - [ ] docs/04 learning loop (writing corrections back into

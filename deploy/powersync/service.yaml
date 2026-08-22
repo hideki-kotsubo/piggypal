@@ -1,0 +1,47 @@
+# yaml-language-server: $schema=https://unpkg.com/@powersync/service-schema@latest/json-schema/powersync-config.json
+#
+# PowerSync Service config — docs/02, docs/39. `!env PS_*` tags pull values
+# from .env at container start (only PS_-prefixed vars can be substituted
+# this way). See .env.example for what to fill in.
+
+telemetry:
+  disable_telemetry_sharing: false
+
+# Source database replication — the real production Postgres from docs/39
+# step 1. Requires wal_level=logical on that Postgres instance (a
+# restart-required setting, not reloadable) — see README.md's "before you
+# start" checklist. This is the single most common reason this fails on
+# first boot.
+replication:
+  connections:
+    - type: postgresql
+      uri: !env PS_DATA_SOURCE_URI
+      sslmode: !env PS_DB_SSLMODE
+
+# Sync-bucket storage — same Postgres, PowerSync manages its own `powersync`
+# schema there. See docker-compose.yaml's comment on why this isn't a
+# separate instance.
+storage:
+  type: postgresql
+  uri: !env PS_STORAGE_SOURCE_URI
+  sslmode: !env PS_DB_SSLMODE
+
+port: !env PS_PORT
+
+sync_config:
+  path: sync-config.yaml
+
+# Client (app end user) authentication — verifies the JWT our own api/
+# issues (docs/05 D13), via its published JWKS, no shared secret between
+# the two deployments.
+client_auth:
+  jwks_uri: !env PS_JWKS_URL
+  audience: ["piggypal"]
+
+api:
+  tokens:
+    # PowerSync's own admin/management API auth — distinct from client_auth
+    # above, unrelated to end-user JWTs. Generate with:
+    #   openssl rand -hex 32
+    # Do not reuse the self-host-demo's placeholder value in production.
+    - !env PS_ADMIN_API_TOKEN
