@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { exportJWK, importPKCS8, importSPKI, SignJWT, type CryptoKey, type JWK } from 'jose';
+import { exportJWK, importPKCS8, importSPKI, jwtVerify, SignJWT, type CryptoKey, type JWK } from 'jose';
 
 // docs/05 D13: RS256 access JWT, PowerSync verifies it via our own JWKS
 // (docs/39 step 4) rather than a shared secret between the two
@@ -65,6 +65,20 @@ export async function signAccessToken(userId: string): Promise<string> {
     .setIssuedAt()
     .setExpirationTime(ACCESS_TOKEN_TTL)
     .sign(key);
+}
+
+// Self-verification for our own routes that require a valid access token
+// (docs/05's "PowerSync token" endpoint, and any future gated route) —
+// checks against our own public key directly rather than round-tripping
+// through the public JWKS HTTP endpoint we serve to PowerSync. Throws on
+// anything invalid (expired, wrong audience, bad signature); callers
+// don't need to distinguish why, an auth middleware just turns any throw
+// into a 401.
+export async function verifyAccessToken(token: string): Promise<{ userId: string }> {
+  const key = await publicKey();
+  const { payload } = await jwtVerify(token, key, { audience: AUDIENCE, algorithms: [ALG] });
+  if (!payload.sub) throw new Error('Token has no subject');
+  return { userId: payload.sub };
 }
 
 // GET /.well-known/jwks.json — PowerSync's client_auth.jwks_uri

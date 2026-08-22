@@ -14,6 +14,15 @@ it needs doing.
 
 ## ⚪ Next
 
+- [ ] App-side auth: the `/auth/verify` page (reads local user id/device
+      id, calls the now-real `GET /api/auth/verify`, docs/41), a new
+      client-generated `deviceId` (separate from `getLocalUserId()` —
+      nothing generates this yet), and D14's "keep N existing local
+      transactions and merge them into your account?" prompt when the
+      account id differs from what's already on-device. Flagged
+      2026-08-22 as the direct followup to docs/41's server-side auth
+      routes — none of this is built yet, and the server routes can't
+      actually be used for real without it.
 - [ ] Institution field (AccountsScreen's AccountForm) should suggest from
       the user's existing institutions instead of being a bare text input —
       requested 2026-08-10. Behavior: on focus/tap, show every distinct
@@ -582,6 +591,32 @@ it needs doing.
       real client auth (same JWKS/production-keypair gap as before), and
       an actual sync round-trip test from `app/` (still local-only mode,
       no PowerSync connector wired in yet).
+      Same day, later: docs/05's actual magic-link sign-in flow is real
+      too — `docs/41-auth-magic-link.md`. `POST /api/auth/request-link`,
+      `GET /api/auth/verify`, `POST /api/auth/refresh`,
+      `GET /api/auth/powersync-token` (`api/src/auth/`), plus a new
+      lazily-constructed Postgres pool (`api/src/db.ts`). One real bug
+      caught and fixed along the way: the pool was originally built at
+      module-load time, which (ES modules always fully evaluate imports
+      before the importing file's own code runs) happened *before*
+      `index.ts`'s `process.loadEnvFile()` — `DATABASE_URL` was reliably
+      `undefined`, surfacing as an opaque `pg` SASL error with no obvious
+      link back to "env var not loaded yet." Verified with a real
+      end-to-end script against the live dev server and real Postgres,
+      21/21 passing: full signup, magic-link single-use, second-device/
+      existing-account resolution (docs/05 D11), refresh-token rotation,
+      theft-signal whole-chain revocation on reuse, and input validation.
+      Email sending is stubbed (logs the link) until a real Azure
+      Communication Services account exists (docs/39 open question #5).
+      Two things docs/05 left implicit, resolved and documented in
+      docs/41: the emailed link points at an app/ route (not this API
+      directly) since only client-side JS can supply the clicking
+      device's local user id/device id; and `deviceId` is a required,
+      not silently-generated, parameter — `app/` doesn't generate one yet
+      (only `getLocalUserId()`, a user identity, exists), tracked as a
+      followup below. Not built: the app-side `/auth/verify` page,
+      client device-id generation, and D14's local-data merge-prompt UX.
+      `tsc --noEmit` clean on `api`.
 - [ ] Re-add a real rolling transaction-sync window (docs/03's original
       18-month design) — dropped 2026-08-22 (see the PowerSync-running
       entry above) because PowerSync sync rules can't express

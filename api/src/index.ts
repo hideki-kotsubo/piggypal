@@ -1,7 +1,10 @@
 import { existsSync } from 'node:fs';
+import cookieParser from 'cookie-parser';
+import cors from 'cors';
 import express from 'express';
 import { createServer } from 'node:http';
 import { attachRelay } from './relay.js';
+import { authRouter } from './auth/routes.js';
 import { getJwks } from './jwt.js';
 import { API_VERSION } from './version.js';
 
@@ -17,6 +20,16 @@ if (existsSync('.env')) {
 
 const app = express();
 const port = process.env.PORT ?? 3000;
+
+// docs/05's refresh cookie needs credentials sent on cross-origin
+// requests from app/ (a different subdomain — app.piggypal.codexbase.dev
+// vs api-beta.piggypal.codexbase.dev). CORS_ORIGIN unset in dev falls
+// back to the Vite dev server's own origin.
+app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:3001', credentials: true }));
+app.use(express.json());
+app.use(cookieParser());
+
+app.use('/api/auth', authRouter);
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', version: API_VERSION });
@@ -40,9 +53,7 @@ app.get('/.well-known/jwks.json', async (_req, res) => {
   }
 });
 
-// Future routes land here as they're built out:
-//   /api/auth/*            — docs/05-auth-and-devices.md (issues tokens
-//                             signAccessToken/jwt.ts signs)
+// Still to come:
 //   /api/sync/upload       — docs/03-schema-and-sync-rules.md
 //   /api/parse             — docs/04-ai-entry-pipeline.md
 //   /api/stripe/webhook    — docs/06-subscription-and-billing.md
