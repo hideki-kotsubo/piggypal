@@ -585,14 +585,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
 
       async resetLocalData() {
-        await db.writeTransaction(async (tx) => {
-          await tx.execute('DELETE FROM transactions');
-          await tx.execute('DELETE FROM budgets');
-          await tx.execute('DELETE FROM category_keywords');
-          await tx.execute('DELETE FROM categories');
-          await tx.execute('DELETE FROM accounts');
-        });
-        // The SQLite wipe above doesn't touch peers.ts' localStorage list —
+        // db.disconnectAndClear() — PowerSync's own "use this when logging
+        // out" API — not a hand-rolled DELETE FROM loop (what this used to
+        // be). A real bug, found testing a real signed-in device: manual
+        // DELETEs only clear the app's own visible table rows, not
+        // PowerSync's separate internal pending-upload queue/oplog — a
+        // failed upload (docs/45's categories/accounts uuid mismatches)
+        // stayed queued forever, surviving every reset, permanently
+        // blocking every upload attempted after it since the SDK always
+        // retries the oldest pending operation first. disconnectAndClear
+        // clears both together, and disconnects the sync stream too.
+        await db.disconnectAndClear();
+        // The wipe above doesn't touch peers.ts' localStorage list —
         // left alone, Settings would still show paired devices pointing at
         // data that no longer exists, and a "repeat sync" (docs/25 D138)
         // would skip straight past the merge prompt for a peer this device
