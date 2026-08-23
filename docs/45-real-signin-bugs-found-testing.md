@@ -1,13 +1,15 @@
-# 45 — Three Real Bugs Found Testing a Real Sign-In, End to End
+# 45 — Four Real Bugs Found Testing a Real Sign-In, End to End
 
 ## What this closes
 
 Nothing planned — this is the direct result of actually testing docs/42's
 sign-in flow and docs/43's sync upload against a **real** Resend send and
-real seeded local data, instead of only synthetic test fixtures. All three
-bugs below were invisible to docs/41's 21/21 script and docs/43's own
-11/11 script, because both used hand-crafted UUIDs and never exercised
-this app's actual seed data or a real email provider's infrastructure.
+real seeded local data, instead of only synthetic test fixtures. Bugs 1-3
+were invisible to docs/41's 21/21 script and docs/43's own 11/11 script,
+because both used hand-crafted UUIDs and never exercised this app's
+actual seed data or a real email provider's infrastructure. Bug 4 only
+surfaced after deploying and testing against the real, already-running
+production app, which had pre-existing local data of its own.
 
 ## Bug 1: click-tracking auto-consumed the single-use magic-link token
 
@@ -83,6 +85,51 @@ omitting null columns generally — omitting generally would have broken
 PUT's full-row-replace semantics for every genuinely nullable column
 (clearing `institution`/`merchant`/`note` client-side would silently fail
 to clear them server-side).
+
+## Bug 4 (found after deploy, against production): "Reset local data" didn't clear PowerSync's own upload queue
+
+**Found**: after this whole pass shipped, the user's real `app-beta`
+browser hit `invalid input syntax for type uuid: "acc-visa"` against
+production — a *pre-migration* account id, from before `accounts.id`
+switched from fixed slugs to `crypto.randomUUID()` (a much older commit,
+unrelated to today's work — that device's local data simply predated the
+switch and had never been re-seeded since). Tapping Settings' "Reset
+local data" and signing in again did **not** fix it — the exact same
+error recurred.
+
+**Root cause**: `resetLocalData()` ran a hand-rolled
+`DELETE FROM <table>` loop against the app's own visible tables only.
+PowerSync tracks every write to a synced table in its own internal
+pending-upload queue/oplog, separate from those tables — the DELETEs
+never touched that queue. The original failed upload (containing the
+stale `"acc-visa"` op) stayed queued forever, surviving every reset,
+permanently blocking every subsequent upload attempt behind it, since
+the SDK always retries the oldest pending operation first — a poison-pill
+queue that no amount of app-table resetting could ever clear.
+
+**Fix**: `store.tsx`'s `resetLocalData()` now calls PowerSync's own
+`db.disconnectAndClear()` — the SDK's documented "use this when logging
+out" API — instead of the manual DELETE loop. It clears the app's tables
+*and* the pending-upload queue together in one call, and disconnects the
+sync stream too. Verified the common (not-signed-in, local-only mode)
+reset path still works cleanly via Playwright — reload, reseed, zero
+console errors. The exact poisoned-queue scenario itself wasn't
+re-reproduced from scratch (current code can no longer generate a
+non-UUID account id to poison a queue with — that was only possible under
+the old, since-changed seed scheme), but `disconnectAndClear()`'s
+documented contract directly addresses the mechanism found: tables and
+queue cleared together, not tables alone.
+
+Same commit also fixed a smaller, related gap found along the way:
+`resetLocalData()` cleared `peers.ts`'s paired-device list but left
+`auth.ts`'s "signed in as ___" localStorage marker behind, so a freshly
+reset device still looked signed in and auto-attempted a reconnect
+against a refresh cookie the reset can't touch (server-side, httpOnly) —
+a confusing 401 for what's actually a correct "fresh device" state, and
+one with no visible way back to the sign-in form in Settings (the signed-
+in view has no "sign out"/email-entry escape hatch). Fixed by clearing
+that marker too (`clearAuthAccount()`, mirroring `peers.ts`'s own
+`clearPairedPeers()`).
 
 ## Verified
 

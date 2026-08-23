@@ -10,17 +10,7 @@ it needs doing.
 
 ## 🔵 Now
 
-- [ ] 🐛 **Apply docs/45's schema migration to the real production
-      Postgres** (behind `api-beta`/PowerSync Service) —
-      `categories.id`/`categories.parent_id`/`transactions.category_id`/
-      `budgets.category_id`/`category_keywords.id`/
-      `category_keywords.category_id`, all `uuid` → `text`
-      (`db/schema.sql` already updated to the target state; see docs/45
-      for the exact `ALTER TABLE` statements this sandbox ran locally).
-      Without this, every real device's first sync fails uploading its
-      own seeded categories — confirmed by real end-to-end testing
-      2026-08-22, not theoretical. This sandbox has no access to that
-      host (docs/39's standing constraint) — needs the user directly.
+*(nothing blocking right now)*
 
 ## ⚪ Next
 
@@ -719,6 +709,16 @@ it needs doing.
 
 ## ✅ Done
 
+- [x] 🐛 Apply docs/45's schema migration to the real production
+      Postgres — `categories.id`/`categories.parent_id`/
+      `transactions.category_id`/`budgets.category_id`/
+      `category_keywords.id`/`category_keywords.category_id`, `uuid` →
+      `text`. Applied 2026-08-22 via
+      `db/migrations/2026-08-22-categories-id-text.sql` (guard query
+      confirmed all four affected tables were empty first); `\d`
+      afterward confirmed both tables landed on `text` with all four FK
+      constraints correctly re-attached and the `powersync` publication
+      still intact.
 - [x] Payer/owner UI (docs/26's sketch, actually built) — reported
       2026-08-19: after a real P2P merge with another person, there was
       no badge/label anywhere showing who paid for a transaction, who
