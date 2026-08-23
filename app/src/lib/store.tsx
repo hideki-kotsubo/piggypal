@@ -192,6 +192,19 @@ async function insertAccountRow(a: Account): Promise<void> {
 // ---- one-time seed on an empty database ----
 
 async function seedIfEmpty() {
+  // A real bug, found testing docs/45's discardAndAdoptAccountId for
+  // real: that call wipes local data and adopts a real account id, with
+  // no reload — but even a subsequent reload would have hit this same
+  // function and injected fresh demo placeholders (Visa/Mastercard/Uber,
+  // ...) straight into the user's real signed-in account, which is worse
+  // than just staying empty. Demo data is only ever appropriate for a
+  // device that's never been signed into anything — once
+  // auth.ts's marker exists, this device belongs to a real account and
+  // should get real data from sync (once that's working), never fake
+  // placeholders. Checked before the transaction, not inside it — this
+  // is a read of a completely separate store (localStorage), not a race
+  // with the writeTransaction's own emptiness check below.
+  if (getAuthAccount()) return;
   try {
     await db.writeTransaction(async (tx) => {
       // The emptiness check must run inside the same transaction as the

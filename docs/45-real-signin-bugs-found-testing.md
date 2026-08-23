@@ -1,4 +1,4 @@
-# 45 — Six Real Problems Found Testing a Real Sign-In, End to End
+# 45 — Seven Real Problems Found Testing a Real Sign-In, End to End
 
 ## What this closes
 
@@ -211,6 +211,32 @@ exist (one per category), not 4 and not a crash.
 seed ids (`ckw-<n>`) are deterministic, not random like budgets, so two
 devices' seeded keywords always share the same `id` and dedupe through
 the ordinary path before the separate constraint could ever be reached.
+
+## Problem 7: discardAndAdoptAccountId (problem 5's own fix) could have reseeded fake data into a real account
+
+**Found**: the user tapped "Discard this device's data & sign in"
+(problem 5's fix) and reported "all data on the second device was lost."
+
+**Investigation**: that report is actually *correct*, expected behavior
+— discard means discard, and there's nowhere for real data to come from
+yet (no working PowerSync download-sync, see docs/43's own open items),
+so empty is the right state. But investigating it surfaced a real latent
+bug in the same fix: `discardAndAdoptAccountId` wipes local data and
+adopts the account id with no reload, and `seedIfEmpty()` — the function
+that seeds demo placeholders (fake Visa/Uber/etc.) on any empty local
+database — had no way to know the difference between "a genuinely fresh,
+never-signed-in device" (where demo data is exactly right) and "a device
+that just discarded its data and adopted a real account" (where it very
+much isn't). Any *subsequent* page reload on that device — closing and
+reopening the tab, a browser restart, anything — would have silently
+injected fresh fake demo transactions straight into the user's real
+signed-in account.
+
+**Fix**: `seedIfEmpty()` now checks `auth.ts`'s `getAuthAccount()` first
+and skips seeding entirely if the device is signed in — demo data is
+only ever appropriate for a device with no account at all. Verified
+directly: discard → confirmed empty (correct) → explicit page reload →
+still correctly empty, not re-seeded with demo placeholders.
 
 ## Verified
 
