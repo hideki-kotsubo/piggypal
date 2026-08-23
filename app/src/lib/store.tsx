@@ -297,6 +297,17 @@ interface StoreApi extends StoreState {
   // the server just resolved). Safe to call even when there's nothing to
   // rewrite (fresh device, D14's "skip the prompt" case) — a no-op then.
   adoptAccountId: (newId: string) => Promise<void>;
+  // docs/05 D14's third option, added after real use surfaced the gap:
+  // "merge" and "keep separate" don't cover the common case of a
+  // never-touched fresh device whose only "existing data" is
+  // seedIfEmpty()'s own demo placeholders — nothing worth merging, but
+  // "keep separate" means never actually signing in for real either.
+  // Wipes local data (db.disconnectAndClear(), same as Settings' Reset
+  // local data — clears PowerSync's pending-upload queue too, so none of
+  // the discarded demo rows ever get uploaded) and adopts newId as this
+  // device's identity outright, no row-rewrite needed since nothing's
+  // left to rewrite.
+  discardAndAdoptAccountId: (newId: string) => Promise<void>;
 }
 
 const StoreContext = createContext<StoreApi | null>(null);
@@ -582,6 +593,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         await db.writeTransaction(async (tx) => {
           await rewriteOwnerIdentity(tx, getLocalUserId(), newId);
         });
+      },
+
+      async discardAndAdoptAccountId(newId) {
+        await db.disconnectAndClear();
+        setLocalUserId(newId);
       },
 
       async resetLocalData() {

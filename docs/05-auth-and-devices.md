@@ -73,11 +73,18 @@ create table refresh_tokens (
    free-tier before linking) → client detects `local user_id != account
    user_id` after verify and asks: *"Keep N existing local transactions and
    merge them into your account?"* before touching anything.
-   - Accept → rewrite `user_id` on local rows to the account id, then
+   - Merge → rewrite `user_id` on local rows to the account id, then
      connect PowerSync.
-   - Decline → those rows are never silently merged or silently discarded;
-     the user is offered an explicit choice (e.g. discard, or keep as a
-     separate unsynced set) rather than either extreme happening for them.
+   - Discard → wipe the local rows and adopt the account id outright, no
+     rewrite needed since nothing's left. Real data deserves an explicit
+     choice between these two, not either happening silently.
+   - **Revised 2026-08-22**: no third "keep this device separate" option.
+     Typing the account's email and tapping the magic link already *is*
+     the explicit "this is me" signal (docs/42/45's real-use testing
+     surfaced this as a genuine flow error, not a hypothetical) — anyone
+     who actually wants a separate account would use a different email.
+     The only real remaining choice is what happens to this device's
+     local data, merge or discard, not whether to sign in at all.
 
 ### Access token refresh (app open & online)
 
@@ -118,7 +125,7 @@ create table refresh_tokens (
 | D11 | Client-generated `user_id` doubles as the Postgres `users.id` on first sign-up (no server-side id generation) | Consistent with D5's client-owned-ID philosophy; avoids a rekey on the common "single device, upgrade in place" path |
 | D12 | Refresh tokens: opaque (not JWT), hashed at rest, rotating, 60-day sliding TTL, per-device | Bounds a lost/stolen-device window to ~2 months while tolerating realistic offline gaps between app opens |
 | D13 | Refresh token stored as httpOnly/Secure/SameSite cookie; access JWT (RS256) kept in memory only | Standard XSS-resistant pattern; iOS home-screen PWA storage/ITP behavior noted as a thing to verify empirically once built, not assumed |
-| D14 | Device joining an existing account with pre-existing standalone local data: ask before merging, never silently rekey or silently discard | User-visible financial data deserves an explicit choice, not either extreme |
+| D14 | Device joining an existing account with pre-existing standalone local data: ask merge-or-discard, never silently rekey or silently discard. **Revised 2026-08-22**: dropped the original third "keep this device separate" option — signing in with that email already is the explicit "this is me" signal, so there's nothing left to ask about *except* what happens to the local data | User-visible financial data deserves an explicit choice, not either extreme; a real "keep separate" option was found confusing/nonsensical in real use — it implied you could decline an identity you'd already asserted by signing in |
 | D15 | Magic-link email sent via a one-function adapter (`sendMagicLinkEmail`) | The adapter boundary makes swapping providers a same-day change — the entire auth model (tokens, hashing, expiry, Postgres) is vendor-agnostic, only the send call + DNS/domain verification move. **Revised 2026-08-22**: originally Azure Communication Services (staying in the existing Azure stack); swapped to Resend the same day, at the user's request, after ACS's Portal/domain-verification setup was compared against alternatives — this D15 revision *is* the same-day-change claim actually proven out, not just asserted. See docs/41/docs/43 for what shipped either side of the swap. |
 | D16 | Device list / per-device revoke UI deferred past v1 | Data model (`device_id` on refresh_tokens) supports it already; no UI needed until multi-device usage is common enough to justify it |
 

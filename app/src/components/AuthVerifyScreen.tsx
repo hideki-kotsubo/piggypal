@@ -15,7 +15,6 @@ type Step =
   | { kind: 'verifying' }
   | { kind: 'merge-prompt'; userId: string; existingAccounts: number; existingTransactions: number }
   | { kind: 'done' }
-  | { kind: 'declined' }
   | { kind: 'error'; message: string };
 
 function initialStep(token: string | null): Step {
@@ -93,6 +92,11 @@ export function AuthVerifyScreen() {
     await finish(userId);
   }
 
+  async function discardAndFinish(userId: string) {
+    await store.discardAndAdoptAccountId(userId);
+    await finish(userId);
+  }
+
   return (
     <main className="home">
       <div className="app-bar">
@@ -118,14 +122,23 @@ export function AuthVerifyScreen() {
         <div className="qr-stage">
           <p className="qr-caption">
             This device already has {step.existingAccounts} account{step.existingAccounts === 1 ? '' : 's'} and{' '}
-            {step.existingTransactions} transaction{step.existingTransactions === 1 ? '' : 's'}. Merge them into your
-            account, or keep this device separate?
+            {step.existingTransactions} transaction{step.existingTransactions === 1 ? '' : 's'}. What would you like
+            to do?
           </p>
           <button className="save-btn" onClick={() => void mergeAndFinish(step.userId)}>
             Merge into my account
           </button>
-          <button className="text-link" onClick={() => setStep({ kind: 'declined' })}>
-            Keep this device separate
+          {/* docs/05 D14, revised: typing this email and tapping the
+              magic link IS the explicit "this is me" signal — there's no
+              real "keep separate" case left once that's happened (anyone
+              who genuinely wants a separate account would use a
+              different email). The only real question is what happens to
+              THIS device's existing local data — merge it in, or discard
+              it (the common real case: a never-touched device whose only
+              "existing data" is seedIfEmpty()'s own demo placeholders,
+              not anything worth keeping). */}
+          <button className="text-link" onClick={() => void discardAndFinish(step.userId)}>
+            Discard this device's data & sign in
           </button>
         </div>
       )}
@@ -134,15 +147,6 @@ export function AuthVerifyScreen() {
         <div className="qr-stage">
           <div className="confirm-check">✓</div>
           <p className="qr-caption">Signed in. Sync will continue in the background.</p>
-          <button className="save-btn" onClick={() => navigate('/settings')}>
-            Done
-          </button>
-        </div>
-      )}
-
-      {step.kind === 'declined' && (
-        <div className="qr-stage">
-          <p className="qr-caption">Not signed in — this device's data was left untouched.</p>
           <button className="save-btn" onClick={() => navigate('/settings')}>
             Done
           </button>

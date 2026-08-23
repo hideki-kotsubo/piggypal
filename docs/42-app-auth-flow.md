@@ -51,19 +51,21 @@ client-side values. This is that caller.
   banner UI was built for the failure case (not asked for, see docs/43's
   own known-gaps note on this).
 
-## One interpretation call D14 leaves open
+## Superseded same day — see docs/45
 
-docs/05 D14 says decline should offer "an explicit choice (e.g. discard,
-or keep as a separate unsynced set)" — genuinely two further sub-options,
-not fully specified. This pass mirrors docs/25 D126's own already-built
-merge-prompt pattern exactly instead (two flat buttons: merge, or
-"keep this device separate"): declining does nothing at all — no
-adoptAccountId call, no auth-account marker saved, no sync connect. Local
-data and identity are left completely untouched; the device just isn't
-signed in. This satisfies "never silently merged or discarded" without
-building the deeper discard-vs-keep-separate sub-flow docs/05 gestured at
-but didn't design. Flagged, not silently decided, same as docs/41's own
-two interpretation calls.
+This originally shipped mirroring docs/25 D126's merge-prompt pattern
+exactly: two flat buttons, "Merge into my account" or "Keep this device
+separate" (the latter doing nothing — no `adoptAccountId` call, no
+sign-in). Real use the same day found that pattern genuinely wrong, not
+just under-specified: once someone has typed the account's email and
+tapped the magic link, "keep separate" is incoherent — they've already
+asserted the identity by signing in. docs/05 D14 and this screen were
+both revised (docs/45) to drop that option entirely and add a real third
+action in its place — `store.discardAndAdoptAccountId()`, which wipes
+local data via `db.disconnectAndClear()` and adopts the account id
+outright — covering the actually-common case (a never-touched device
+whose only "local data" is `seedIfEmpty()`'s own demo placeholders, not
+anything worth merging).
 
 ## Two real bugs found and fixed
 

@@ -1,4 +1,4 @@
-# 45 — Four Real Bugs Found Testing a Real Sign-In, End to End
+# 45 — Five Real Problems Found Testing a Real Sign-In, End to End
 
 ## What this closes
 
@@ -7,9 +7,11 @@ sign-in flow and docs/43's sync upload against a **real** Resend send and
 real seeded local data, instead of only synthetic test fixtures. Bugs 1-3
 were invisible to docs/41's 21/21 script and docs/43's own 11/11 script,
 because both used hand-crafted UUIDs and never exercised this app's
-actual seed data or a real email provider's infrastructure. Bug 4 only
-surfaced after deploying and testing against the real, already-running
-production app, which had pre-existing local data of its own.
+actual seed data or a real email provider's infrastructure. Bugs 4 and 5
+only surfaced after deploying and testing against the real, already-
+running production app — bug 5 specifically only surfaced from a second
+real device and a real person reacting to the actual UI, not something
+any script could have caught.
 
 ## Bug 1: click-tracking auto-consumed the single-use magic-link token
 
@@ -130,6 +132,47 @@ one with no visible way back to the sign-in form in Settings (the signed-
 in view has no "sign out"/email-entry escape hatch). Fixed by clearing
 that marker too (`clearAuthAccount()`, mirroring `peers.ts`'s own
 `clearPairedPeers()`).
+
+## Problem 5: D14's "keep this device separate" option was actually a design flaw, not just under-specified
+
+**Found**: real second-device testing — a genuinely fresh browser, which
+auto-seeds demo data before ever reaching Settings (`seedIfEmpty()`),
+signed in with an email already tied to an existing account. That's
+exactly D14's merge-prompt case, and it correctly showed: "This device
+already has 5 accounts and 5 transactions. Merge them into your account,
+or keep this device separate?" The user's own reaction, verbatim: *"I
+don't want to keep this device separate... there is no reason to offer a
+'separate device.' It is the same email account, so it must necessarily
+merge."*
+
+**Why this was a real flaw, not a preference**: docs/42 had already
+flagged the original "keep this device separate" button as an
+interpretation call (docs/05 D14 only said decline should offer *some*
+explicit choice, not fully specified which). But the flaw runs deeper
+than under-specification — "keep separate" is *incoherent* once someone
+has typed an existing account's email and tapped its magic link. That
+action already asserts "this is me." There's no real device left that
+"stays separate" after that; anyone who actually wants two distinct
+accounts would simply use two different emails. Offering a button whose
+effect is "pretend you didn't just prove who you are" is a genuine flow
+error, not a missing nice-to-have.
+
+**Also surfaced by the same testing**: even before the wording problem,
+merge-vs-separate wasn't a complete pair of options anyway. The
+*common* real case — a never-touched fresh device — has nothing worth
+merging (just `seedIfEmpty()`'s own demo placeholders), but the old
+"keep separate" path meant never actually signing in for real either.
+Neither original option fit that case correctly.
+
+**Fix**: `store.tsx` gained `discardAndAdoptAccountId(newId)` — wipes
+local data via `db.disconnectAndClear()` (clearing PowerSync's pending-
+upload queue too, so none of the discarded demo rows ever get uploaded)
+and adopts the account id outright, no row-rewrite needed since nothing's
+left to rewrite. `AuthVerifyScreen`'s merge-prompt now offers exactly two
+options — "Merge into my account" or "Discard this device's data & sign
+in" — and the `'declined'` step/"keep separate" button are gone
+entirely, not just relabeled. docs/05 D14 revised in place to record
+both the original design and why it changed.
 
 ## Verified
 
