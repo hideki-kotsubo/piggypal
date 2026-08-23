@@ -156,4 +156,12 @@ here, since no real device has ever synced before docs/43 existed today),
 exactly as it did here before the fix. This is the single most important
 followup from this whole session — tracked in `docs/00-backlog.md`.
 
+**Confirmed working against the real production stack, 2026-08-22**:
+after deploying this branch's commits to `api-beta` and applying the
+schema migration to production Postgres (`db/migrations/2026-08-22-
+categories-id-text.sql`), the user did a final real sign-in on the
+deployed `app-beta` and confirmed sync succeeds end to end — not just in
+this sandbox's local reproduction. All four bugs above are resolved in
+the real deployed environment, not only verified locally.
+
 **2026-08-22.**
