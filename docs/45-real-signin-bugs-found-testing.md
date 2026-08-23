@@ -1,4 +1,4 @@
-# 45 — Five Real Problems Found Testing a Real Sign-In, End to End
+# 45 — Six Real Problems Found Testing a Real Sign-In, End to End
 
 ## What this closes
 
@@ -11,7 +11,8 @@ actual seed data or a real email provider's infrastructure. Bugs 4 and 5
 only surfaced after deploying and testing against the real, already-
 running production app — bug 5 specifically only surfaced from a second
 real device and a real person reacting to the actual UI, not something
-any script could have caught.
+any script could have caught. Problem 6 was the direct next thing a real
+merge hit, immediately after problem 5 was fixed.
 
 ## Bug 1: click-tracking auto-consumed the single-use magic-link token
 
@@ -173,6 +174,43 @@ options — "Merge into my account" or "Discard this device's data & sign
 in" — and the `'declined'` step/"keep separate" button are gone
 entirely, not just relabeled. docs/05 D14 revised in place to record
 both the original design and why it changed.
+
+## Problem 6: real "Merge into my account" hit budgets' unique-constraint collision
+
+**Found**: with problem 5 fixed, the user actually completed a real merge
+— "Merge into my account" on a second device signed in to their existing
+account — and immediately hit `duplicate key value violates unique
+constraint "budgets_user_id_category_id_month_currency_key"` on
+`/api/sync/upload`.
+
+**Root cause**: docs/43 had already flagged this exact gap as a "narrow
+edge case, not fixed" — but it wasn't narrow, it was the very next thing
+a real merge would hit. `seed.ts` deliberately gives every install's
+seeded budgets a random `id` (docs/24 D113, specifically so two devices'
+budgets for the same `(category, month, currency)` collide on that
+natural key instead of silently overwriting by id) — meaning **any** two
+devices signing into the same account, each with their own untouched
+seed data, have colliding budgets by construction. `sync/upload`'s `PUT`
+handling only ever targeted the `id` primary key's `ON CONFLICT` (Postgres
+allows one arbiter per `INSERT`), so the second device's budget upload
+hit the table's *separate* unique constraint and threw, uncaught.
+
+**Fix**: `budgets`' `PUT` handling now checks for an existing row by
+`(user_id, category_id, month, currency)` first. Existing row with a
+different id → resolve per docs/02's stated policy (higher amount wins,
+matching the exact rule `store.tsx`'s P2P merge — `applyPeerDataset` —
+already implemented locally) and skip inserting the second id entirely.
+No collision → falls through to the ordinary id-based upsert. Verified
+against the actual failure shape: two separate browser profiles, same
+email, each independently seeding a budget for `cat-food-groceries`
+(both $600.00, so a real tie) — after both sync, exactly 2 budget rows
+exist (one per category), not 4 and not a crash.
+
+`category_keywords` has a matching unique constraint
+(`(user_id, category_id, keyword)`) but doesn't need the same fix — its
+seed ids (`ckw-<n>`) are deterministic, not random like budgets, so two
+devices' seeded keywords always share the same `id` and dedupe through
+the ordinary path before the separate constraint could ever be reached.
 
 ## Verified
 

@@ -117,6 +117,43 @@ syncRouter.post('/upload', requireAccessToken, async (req: AuthedRequest, res) =
         continue;
       }
 
+      if (op.op === 'PUT' && op.table === 'budgets') {
+        // docs/02's budget-collision policy ("unique constraint + LWW on
+        // amount"), matching the exact rule store.tsx's P2P merge
+        // (applyPeerDataset) already implements locally — confirmed as a
+        // real, not just theoretical, case by docs/45's real second-
+        // device merge. seed.ts deliberately gives every install's seeded
+        // budgets a random id (docs/24 D113) specifically so two devices'
+        // budgets for the same (category, month, currency) collide on
+        // that natural key, not silently overwrite by id — Postgres only
+        // allows one ON CONFLICT arbiter per INSERT, so budgets can't use
+        // the generic id-based upsert below without hitting the table's
+        // own separate unique constraint.
+        const categoryId = coerce('category_id', op.data?.category_id);
+        const month = coerce('month', op.data?.month);
+        const currency = coerce('currency', op.data?.currency);
+        const amountCents = coerce('amount_cents', op.data?.amount_cents);
+        const existing = await client.query<{ id: string; amount_cents: string }>(
+          'SELECT id, amount_cents FROM budgets WHERE user_id = $1 AND category_id = $2 AND month = $3 AND currency = $4',
+          [userId, categoryId, month, currency],
+        );
+        const collision = existing.rows[0];
+        if (collision && collision.id !== op.id) {
+          if (Number(amountCents) > Number(collision.amount_cents)) {
+            await client.query('UPDATE budgets SET amount_cents = $1, updated_at = now() WHERE id = $2', [
+              amountCents,
+              collision.id,
+            ]);
+          }
+          // Lower or equal amount: the existing row already wins, nothing
+          // to do. Either way, op.id itself is never inserted as a second
+          // row for the same slot — that's the whole point of this branch.
+          continue;
+        }
+        // No collision (nothing here yet, or it's this exact row being
+        // re-uploaded) — falls through to the generic upsert below.
+      }
+
       if (op.op === 'PUT') {
         // Full-row upsert: every configured column, defaulting to null
         // when absent — matches CrudEntry's own PUT semantics ("all

@@ -63,21 +63,21 @@ retrying forever — not a stub worth shipping on its own.
    exists yet), so a gate here could only ever reject every request —
    that's not "enforcing paid tier," just breaking sync for everyone.
    Wire it in once docs/06 is real.
-3. **Budgets' and category_keywords' own unique constraints
-   (`(user_id, category_id, month, currency)` /
-   `(user_id, category_id, keyword)`) aren't specially reconciled.**
-   docs/02's conflict table describes "unique constraint + LWW on
-   amount" for budget collisions specifically. This endpoint's upsert
-   only targets the `id` primary key's `ON CONFLICT` — Postgres allows
-   one conflict arbiter per `INSERT`, and handling *both* the id
-   collision and the separate unique-constraint collision in one
-   statement isn't straightforward. The real scenario this misses: two
-   devices, both offline, independently create a budget (or keyword) for
-   the same slot with two different client-generated ids — on upload,
-   the second one hits a genuine Postgres unique-violation error, which
-   this handler just rethrows (500, PowerSync retries indefinitely)
-   rather than resolving per docs/02's policy. Narrow edge case, not
-   fixed here.
+3. ~~Budgets' own unique constraint (`(user_id, category_id, month,
+   currency)`) isn't specially reconciled.~~ **Fixed 2026-08-22, see
+   docs/45**: this was flagged as a narrow edge case here but turned out
+   to be a real, immediately-hit one — the very first real docs/45 D14
+   merge (two devices, same email, each with their own seeded budget)
+   hit exactly this collision. `budgets`' `PUT` handling now checks the
+   natural key first and resolves per docs/02's policy (higher amount
+   wins), matching the rule `store.tsx`'s P2P merge (`applyPeerDataset`)
+   already implemented locally. `category_keywords`' matching unique
+   constraint (`(user_id, category_id, keyword)`) genuinely doesn't need
+   the same treatment — unlike budgets, its seed ids (`seed.ts`'s
+   `ckw-<n>`) are deterministic and identical across every install (not
+   random per D113's fix), so two devices' seeded keywords always land on
+   the same `id` and dedupe via the ordinary `id`-based `ON CONFLICT`
+   before the separate unique constraint could ever be reached.
 
 ## A real bug found and fixed, after initial deploy
 
