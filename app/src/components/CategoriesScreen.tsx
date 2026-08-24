@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../lib/store';
+import { nowUtc } from '../lib/format';
 import type { Budget, Category } from '../lib/types';
 
 // Local date construction, not toISOString() — that's UTC and would land
@@ -158,7 +159,14 @@ function CategoryForm({
     // Subcategory inherits its parent's kind — a group and its children
     // are always the same kind (expense group, expense children).
     const parent = initialParentId ? store.categories.find((p) => p.id === initialParentId) : null;
-    return { id: '', name: '', kind: parent?.kind ?? 'expense', parentId: initialParentId, archived: false };
+    return {
+      id: '',
+      name: '',
+      kind: parent?.kind ?? 'expense',
+      parentId: initialParentId,
+      archived: false,
+      updatedAt: nowUtc(),
+    };
   });
   const current: Category = category ?? draft;
   const [pickerOpen, setPickerOpen] = useState<'kind' | 'group' | null>(null);
@@ -327,6 +335,7 @@ function BudgetsForCategory({ categoryId }: { categoryId: string }) {
       month: currentMonth,
       currency: newCurrency,
       amountCents: Math.round(n * 100),
+      updatedAt: nowUtc(),
     });
     setNewAmountStr('');
     setAddOpen(false);

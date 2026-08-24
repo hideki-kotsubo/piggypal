@@ -17,6 +17,13 @@ export interface Account {
   // in the UI once a household has 2+ members, but every account needs a
   // value from day one so there's nothing to backfill later.
   ownerUserId: string;
+  // docs/46 D170 — real local bookkeeping timestamp (UTC), added so the
+  // sign-in merge redesign's manual-review UI can show real recency
+  // ("local edited at ___ vs. server's copy edited at ___") instead of
+  // guessing. Postgres already had this; only the local schema was
+  // missing it. Not user-facing — never the wall-clock semantics
+  // occurredAt uses elsewhere in this app.
+  updatedAt: string;
 }
 
 // parentId nullable, exactly 2 levels deep — enforced app-side only (a
@@ -28,6 +35,7 @@ export interface Category {
   kind: 'expense' | 'income';
   parentId: string | null;
   archived: boolean;
+  updatedAt: string; // docs/46 D170 — see Account.updatedAt
 }
 
 export type TransactionSource = 'manual' | 'ai' | 'import';
@@ -51,6 +59,7 @@ export interface Transaction {
   // Account.ownerUserId above.
   paidByUserId: string;
   createdByUserId: string;
+  updatedAt: string; // docs/46 D170 — see Account.updatedAt
 }
 
 export interface Budget {
@@ -59,6 +68,7 @@ export interface Budget {
   month: string; // first of month, ISO date
   currency: string;
   amountCents: number;
+  updatedAt: string; // docs/46 D170 — see Account.updatedAt
 }
 
 // docs/16: vocabulary the Tier 1 rule-based parser matches against, on top

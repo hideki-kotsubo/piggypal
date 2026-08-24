@@ -22,7 +22,11 @@ const accCashId = crypto.randomUUID();
 // getLocalUserId() would produce anywhere else in the app.
 const localUserId = getLocalUserId();
 
-export const seedAccounts: Account[] = [
+// docs/46 D170 — `updatedAt` deliberately excluded from every seed array's
+// element type: these literals only ever feed store.tsx's seedIfEmpty(),
+// which stamps a real insert-time timestamp itself (see nowUtc() calls
+// there) rather than reading one off this static data.
+export const seedAccounts: Omit<Account, 'updatedAt'>[] = [
   {
     id: accVisaId,
     institution: 'Your Bank',
@@ -73,7 +77,7 @@ export const seedAccounts: Account[] = [
 // deliberately (docs/24 D112) — household merge relies on two installs'
 // identical starter taxonomy sharing the same id so it collapses into one
 // row instead of duplicating. Don't "fix" these to generated ids too.
-export const seedCategories: Category[] = [
+export const seedCategories: Omit<Category, 'updatedAt'>[] = [
   { id: 'cat-food', name: 'Food & Groceries', kind: 'expense', parentId: null, archived: false },
   { id: 'cat-food-groceries', name: 'Groceries', kind: 'expense', parentId: 'cat-food', archived: false },
   { id: 'cat-food-dining', name: 'Dining Out', kind: 'expense', parentId: 'cat-food', archived: false },
@@ -140,7 +144,7 @@ const isoDaysAgo = (days: number, time = '12:00:00') => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${time}`;
 };
 
-export const seedTransactions: Transaction[] = [
+export const seedTransactions: Omit<Transaction, 'updatedAt'>[] = [
   {
     // aiRaw stays Portuguese deliberately — demo data for the bilingual
     // pt-BR parsing story (docs/04/09), independent of the seed
@@ -242,7 +246,7 @@ const monthStart = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-01`;
 // collision, not the row id. A shared fixed id would let plain
 // last-write-wins silently pick whichever side synced more recently
 // instead, defeating the intended merge rule.
-export const seedBudgets: Budget[] = [
+export const seedBudgets: Omit<Budget, 'updatedAt'>[] = [
   { id: crypto.randomUUID(), categoryId: 'cat-food-groceries', month: monthStart, currency: 'CAD', amountCents: 60000 },
   { id: crypto.randomUUID(), categoryId: 'cat-transport-rideshare', month: monthStart, currency: 'CAD', amountCents: 18000 },
 ];

@@ -22,12 +22,18 @@ import { column, Schema, Table } from '@powersync/web';
 // D5's client-generated UUIDs, so it's never declared explicitly here.
 // Booleans (archived) store as integer 0/1, SQLite's own convention.
 
+// updated_at (all four tables below): docs/46 D170 — Postgres already had
+// this; the local schema didn't. Stored as ISO text, same convention as
+// occurred_at/deleted_at, not a real local wall-clock semantic like
+// occurred_at — pure bookkeeping for the sign-in merge redesign's
+// recency display.
 const accounts = new Table({
   institution: column.text, // nullable — grouping/display only, see docs/12 D60/D61
   name: column.text,
   kind: column.text, // checking | credit | cash | savings
   archived: column.integer,
   owner_user_id: column.text, // docs/24 D110 — whose payment instrument this is
+  updated_at: column.text,
 });
 
 const categories = new Table({
@@ -37,6 +43,7 @@ const categories = new Table({
   icon: column.text,
   sort_order: column.integer,
   archived: column.integer,
+  updated_at: column.text,
 });
 
 const transactions = new Table(
@@ -56,6 +63,7 @@ const transactions = new Table(
     // separate columns, not one.
     paid_by_user_id: column.text,
     created_by_user_id: column.text,
+    updated_at: column.text,
   },
   { indexes: { by_account: ['account_id'], by_category: ['category_id'] } },
 );
@@ -66,6 +74,7 @@ const budgets = new Table(
     month: column.text,
     currency: column.text,
     amount_cents: column.integer,
+    updated_at: column.text,
   },
   { indexes: { by_category_month: ['category_id', 'month'] } },
 );
