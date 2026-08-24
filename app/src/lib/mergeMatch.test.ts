@@ -5,6 +5,8 @@ import {
   matchAccounts,
   matchCategories,
   normalizeName,
+  resolveAccountRewrites,
+  resolveCategoryRewrites,
 } from './mergeMatch';
 import type { Account, Category } from './types';
 
@@ -225,5 +227,65 @@ describe('matchAccounts', () => {
     expect(matchAccounts(wifeLocal, wifeServer).merged).toEqual([]);
     // Neither call ever saw the other's account — nothing to assert
     // beyond both resolving independently without throwing.
+  });
+});
+
+describe('resolveCategoryRewrites', () => {
+  it('a merge reinserts nothing — the server already has the row', () => {
+    const local = [cat({ id: 'local-groceries', name: 'Groceries' })];
+    const result = matchCategories(local, [cat({ id: 'cat-food-groceries', name: 'Groceries' })]);
+    const rewrites = resolveCategoryRewrites(local, result, {});
+    expect(rewrites).toEqual([{ oldId: 'local-groceries', newId: 'cat-food-groceries', reinsert: null }]);
+  });
+
+  it('a split reinserts the local row\'s own data at the new id — the real bug this caught before it shipped', () => {
+    const local = [cat({ id: 'cat-food', name: 'Mercado', kind: 'expense' })];
+    const result = matchCategories(local, [cat({ id: 'cat-food', name: 'Groceries' })]);
+    const rewrites = resolveCategoryRewrites(local, result, {});
+    expect(rewrites).toHaveLength(1);
+    expect(rewrites[0].oldId).toBe('cat-food');
+    expect(rewrites[0].reinsert).not.toBeNull();
+    expect(rewrites[0].reinsert?.name).toBe('Mercado');
+    expect(rewrites[0].reinsert?.id).toBe(rewrites[0].newId);
+  });
+
+  it('an unresolved manual conflict produces no rewrite at all', () => {
+    const local = [cat({ id: 'local-gas', name: 'Gass', parentId: 'local-transport' })];
+    const server = [
+      cat({ id: 'server-utilities', name: 'Utilities', parentId: null }),
+      cat({ id: 'server-gas', name: 'Gas', parentId: 'server-utilities' }),
+    ];
+    const result = matchCategories(local, server);
+    expect(resolveCategoryRewrites(local, result, {})).toEqual([]);
+  });
+
+  it('"keep theirs" resolves like a merge; "keep mine" resolves like a split', () => {
+    const local = [cat({ id: 'local-gas', name: 'Gass', parentId: 'local-transport' })];
+    const server = [
+      cat({ id: 'server-utilities', name: 'Utilities', parentId: null }),
+      cat({ id: 'server-gas', name: 'Gas', parentId: 'server-utilities' }),
+    ];
+    const result = matchCategories(local, server);
+
+    const keepTheirs = resolveCategoryRewrites(local, result, { 'local-gas': 'server' });
+    expect(keepTheirs).toEqual([{ oldId: 'local-gas', newId: 'server-gas', reinsert: null }]);
+
+    const keepMine = resolveCategoryRewrites(local, result, { 'local-gas': 'local' });
+    expect(keepMine).toHaveLength(1);
+    expect(keepMine[0].reinsert?.name).toBe('Gass');
+    expect(keepMine[0].reinsert?.id).toBe(keepMine[0].newId);
+    expect(keepMine[0].newId).not.toBe('local-gas');
+  });
+});
+
+describe('resolveAccountRewrites', () => {
+  it('a split reinserts the local account\'s own data at the new id', () => {
+    const local = [acct({ id: 'shared-id', kind: 'credit', name: 'Mastercard', ownerUserId: 'owner-1' })];
+    const server = [acct({ id: 'shared-id', kind: 'checking', name: 'Mastercard', ownerUserId: 'owner-1' })];
+    const result = matchAccounts(local, server);
+    const rewrites = resolveAccountRewrites(local, result, {});
+    expect(rewrites).toHaveLength(1);
+    expect(rewrites[0].reinsert?.kind).toBe('credit');
+    expect(rewrites[0].reinsert?.id).toBe(rewrites[0].newId);
   });
 });

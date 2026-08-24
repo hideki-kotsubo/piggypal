@@ -344,3 +344,81 @@ export function matchAccounts(local: Account[], server: Account[]): AccountMatch
 
   return { merged, split, manual };
 }
+
+// ---- resolving a match result into concrete local rewrite instructions ----
+//
+// docs/46 D164/D167/D168's last step: turn merged/split/manual (plus the
+// user's picks for whatever's manual) into one flat list AuthVerifyScreen
+// can execute. A merge and a "keep theirs" manual resolution are the same
+// operation (adopt the server's id, delete the local row, `reinsert:
+// null` — nothing to re-insert, the server already has it); a split and a
+// "keep mine" resolution are the same operation too (generate a fresh id,
+// `reinsert` the local row's own data under it, since it's staying as a
+// genuinely distinct row). Every entry a caller doesn't have a resolution
+// for yet is simply omitted — callers should block applying the plan
+// until every manual conflict has one.
+
+export interface CategoryRewrite {
+  oldId: string;
+  newId: string;
+  reinsert: Category | null;
+}
+
+export type ManualResolution = 'local' | 'server';
+
+export function resolveCategoryRewrites(
+  local: Category[],
+  result: CategoryMatchResult,
+  manualResolutions: Record<string, ManualResolution>,
+): CategoryRewrite[] {
+  const localById = new Map(local.map((c) => [c.id, c]));
+  const rewrites: CategoryRewrite[] = [];
+  for (const m of result.merged) rewrites.push({ oldId: m.localId, newId: m.serverId, reinsert: null });
+  for (const s of result.split) {
+    // A split un-collides two same-id-different-content rows by giving
+    // the local one a new home — it must be reinserted with its own
+    // data, not just deleted, or the category silently vanishes.
+    const loc = localById.get(s.localId)!;
+    rewrites.push({ oldId: s.localId, newId: s.newId, reinsert: { ...loc, id: s.newId } });
+  }
+  for (const man of result.manual) {
+    const resolution = manualResolutions[man.local.id];
+    if (resolution === 'server') {
+      rewrites.push({ oldId: man.local.id, newId: man.server.id, reinsert: null });
+    } else if (resolution === 'local') {
+      const newId = crypto.randomUUID();
+      rewrites.push({ oldId: man.local.id, newId, reinsert: { ...man.local, id: newId } });
+    }
+  }
+  return rewrites;
+}
+
+export interface AccountRewrite {
+  oldId: string;
+  newId: string;
+  reinsert: Account | null;
+}
+
+export function resolveAccountRewrites(
+  local: Account[],
+  result: AccountMatchResult,
+  manualResolutions: Record<string, ManualResolution>,
+): AccountRewrite[] {
+  const localById = new Map(local.map((a) => [a.id, a]));
+  const rewrites: AccountRewrite[] = [];
+  for (const m of result.merged) rewrites.push({ oldId: m.localId, newId: m.serverId, reinsert: null });
+  for (const s of result.split) {
+    const loc = localById.get(s.localId)!;
+    rewrites.push({ oldId: s.localId, newId: s.newId, reinsert: { ...loc, id: s.newId } });
+  }
+  for (const man of result.manual) {
+    const resolution = manualResolutions[man.local.id];
+    if (resolution === 'server') {
+      rewrites.push({ oldId: man.local.id, newId: man.server.id, reinsert: null });
+    } else if (resolution === 'local') {
+      const newId = crypto.randomUUID();
+      rewrites.push({ oldId: man.local.id, newId, reinsert: { ...man.local, id: newId } });
+    }
+  }
+  return rewrites;
+}

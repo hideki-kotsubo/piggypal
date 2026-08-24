@@ -56,6 +56,21 @@ export function formatTime(occurredAt: string): string {
   return new Intl.DateTimeFormat(UI_LOCALE, { hour: 'numeric', minute: '2-digit' }).format(new Date(occurredAt));
 }
 
+// docs/46 D169 — for the sign-in merge review's "which is more recent"
+// display. Deliberately absolute, not relative ("2 days ago"): the local
+// and server copies of an `updatedAt` being compared are often both
+// "today" in ordinary testing/early use, where a coarse relative label
+// would be useless for actually telling them apart — an exact timestamp
+// always is. Epoch (NEVER_UPDATED, store.tsx) reads as "never" rather
+// than a real, misleadingly precise 1970 date.
+export function formatDateTime(iso: string): string {
+  if (iso === '1970-01-01T00:00:00.000Z') return 'never';
+  return new Intl.DateTimeFormat(UI_LOCALE, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(iso));
+}
+
 // Local wall-clock "now" as "YYYY-MM-DDTHH:MM:SS" — deliberately NOT
 // `new Date().toISOString()`, which is UTC and can land on the wrong
 // calendar day in the evening for any negative-UTC-offset timezone (e.g.

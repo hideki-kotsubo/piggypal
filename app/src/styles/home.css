@@ -1002,6 +1002,15 @@
   color: var(--accent-ink);
   cursor: pointer;
 }
+/* docs/46 D169 — the merge-review's Continue button is the first
+   .save-btn that's ever genuinely disabled (every manual conflict must
+   get a pick first); no prior screen needed this state. */
+.save-btn:disabled {
+  background: var(--ink-faint);
+  border-color: var(--ink-faint);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
 
 .toast {
   position: fixed;
@@ -1275,4 +1284,43 @@
 .relay-mode-toggle {
   align-self: center;
   margin: 0.8rem 1.1rem 0;
+}
+
+/* docs/46 D169 — sign-in merge review. Unlike .qr-stage's centered/
+   flex-1 layout (fine for a short prompt, wrong for a list that can run
+   long), this scrolls normally as part of the page — same shape as
+   .accounts-list's grouped rows. Each conflict reuses .parse-fields/
+   .parse-field (EntryZone's own local-vs-server-style comparison rows)
+   and .chip/.chip.picked for the two-way pick, rather than inventing a
+   second comparison pattern. */
+.merge-review {
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.merge-conflicts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+.merge-conflict {
+  background: var(--surface-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 0.85rem 0.9rem;
+}
+.merge-conflict-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin: 0 0 0.3rem;
+}
+.merge-conflict-detail {
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+  line-height: 1.5;
+  margin: 0 0 0.7rem;
+}
+.merge-conflict .parse-fields {
+  margin-bottom: 0.5rem;
 }

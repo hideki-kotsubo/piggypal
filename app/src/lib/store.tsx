@@ -3,9 +3,10 @@ import type { ReactNode } from 'react';
 import type { Transaction as SqliteTransaction } from '@powersync/web';
 import { connectSync, db } from './db';
 import { clearAuthAccount, getAuthAccount } from './auth';
-import { getLocalUserId, setLocalUserId } from './identity';
+import { clearDeviceRole, getLocalUserId, setDeviceRole, setLocalUserId } from './identity';
 import { clearPairedPeers } from './peers';
 import { nowUtc } from './format';
+import type { AccountRewrite, CategoryRewrite } from './mergeMatch';
 import type { Account, AccountKind, Budget, Category, CategoryKeyword, MergeSummary, PeerDataset, Transaction } from './types';
 import { seedAccounts, seedBudgets, seedCategories, seedCategoryKeywords, seedTransactions } from './seed';
 
@@ -343,6 +344,21 @@ interface StoreApi extends StoreState {
   // the server just resolved). Safe to call even when there's nothing to
   // rewrite (fresh device, D14's "skip the prompt" case) — a no-op then.
   adoptAccountId: (newId: string) => Promise<void>;
+  // docs/46 D164/D167/D168/D169 — replaces adoptAccountId for the "real
+  // local data to reconcile" case: applies mergeMatch.ts's resolved
+  // category/account rewrites (a merge/"keep theirs" deletes the local
+  // row and cascades every reference to the server's id; a split/"keep
+  // mine" gives the local row a fresh id and reinserts it, still
+  // cascading references) and, only when `identity` is set (D165's "my
+  // own device" branch — never for "someone else"), rewrites owner/payer/
+  // creator via the same rewriteOwnerIdentity() applyPeerDataset already
+  // uses. One atomic transaction: a partial rewrite would leave
+  // references pointing at ids that no longer exist.
+  applySignInMergePlan: (plan: {
+    categoryRewrites: CategoryRewrite[];
+    accountRewrites: AccountRewrite[];
+    identity: { newId: string } | null;
+  }) => Promise<void>;
   // docs/05 D14's third option, added after real use surfaced the gap:
   // "merge" and "keep separate" don't cover the common case of a
   // never-touched fresh device whose only "existing data" is
@@ -659,9 +675,64 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         });
       },
 
+      async applySignInMergePlan(plan) {
+        await db.writeTransaction(async (tx) => {
+          for (const r of plan.categoryRewrites) {
+            // DELETE + INSERT, not an UPDATE of the id column itself —
+            // PowerSync's CRUD tracking (and the server's PATCH handler,
+            // which never touches id) has no concept of "rename this row's
+            // id," only insert/update/delete of a row at a given id. A
+            // merge's `reinsert: null` means exactly that: delete the
+            // local duplicate, nothing to re-add since the server already
+            // has it at newId.
+            await tx.execute('DELETE FROM categories WHERE id = ?', [r.oldId]);
+            if (r.reinsert) {
+              await tx.execute(
+                `INSERT INTO categories (id, name, kind, parent_id, archived, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
+                [r.newId, r.reinsert.name, r.reinsert.kind, r.reinsert.parentId, r.reinsert.archived ? 1 : 0, r.reinsert.updatedAt],
+              );
+            }
+            // Cascade every reference — a child's parent_id, and every
+            // table that points at a category by id. Categories are only
+            // 2 levels deep (docs/14 D70) and mergeMatch.ts resolves
+            // parents before children, so by the time a child's own
+            // rewrite (if any) runs here, this has already moved it onto
+            // the parent's real final id.
+            await tx.execute('UPDATE categories SET parent_id = ? WHERE parent_id = ?', [r.newId, r.oldId]);
+            await tx.execute('UPDATE transactions SET category_id = ? WHERE category_id = ?', [r.newId, r.oldId]);
+            await tx.execute('UPDATE budgets SET category_id = ? WHERE category_id = ?', [r.newId, r.oldId]);
+            await tx.execute('UPDATE category_keywords SET category_id = ? WHERE category_id = ?', [r.newId, r.oldId]);
+          }
+
+          for (const r of plan.accountRewrites) {
+            await tx.execute('DELETE FROM accounts WHERE id = ?', [r.oldId]);
+            if (r.reinsert) {
+              await tx.execute(
+                `INSERT INTO accounts (id, institution, name, kind, archived, owner_user_id, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                [r.newId, r.reinsert.institution, r.reinsert.name, r.reinsert.kind, r.reinsert.archived ? 1 : 0, r.reinsert.ownerUserId, r.reinsert.updatedAt],
+              );
+            }
+            await tx.execute('UPDATE transactions SET account_id = ? WHERE account_id = ?', [r.newId, r.oldId]);
+          }
+
+          // D165: identity is only ever rewritten for "my own device" —
+          // never for "someone else," where this device's own local
+          // identity staying distinct is the entire point.
+          if (plan.identity) {
+            await rewriteOwnerIdentity(tx, getLocalUserId(), plan.identity.newId);
+          }
+        });
+      },
+
       async discardAndAdoptAccountId(newId) {
         await db.disconnectAndClear();
         setLocalUserId(newId);
+        // docs/46 D165/D166: discarding directly unifies this device's
+        // identity with the account (setLocalUserId above) regardless of
+        // who's physically using it — there's no pre-existing personal
+        // data left to misattribute. That's "own device" semantics, so a
+        // repeat sign-in on this same device shouldn't re-ask the fork.
+        setDeviceRole('own');
       },
 
       async resetLocalData() {
@@ -690,6 +761,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         // state. A reset device is signed out, full stop; signing back in
         // mints a real new session same as any other fresh device would.
         clearAuthAccount();
+        // docs/46 D165/D166 — same reasoning as the two clears above: a
+        // reset device has no memory of anything, including which role
+        // (own device / someone else) it last answered at sign-in.
+        clearDeviceRole();
         window.location.reload();
       },
 

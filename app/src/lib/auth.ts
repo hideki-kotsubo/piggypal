@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { getDeviceId, getLocalUserId } from './identity';
+import type { Account, Category } from './types';
 
 // docs/05's magic-link flow, client side — talks to docs/41's real
 // api/src/auth/routes.ts. Mirrors relayClient.ts's own VITE_-env-with-
@@ -143,6 +144,23 @@ export async function fetchPowerSyncCredentials(): Promise<{ token: string } | n
     token = await refreshAccessToken();
     if (!token) return null;
     res = await apiFetch('/api/auth/powersync-token', { headers: { Authorization: `Bearer ${token}` } });
+  }
+  if (!res.ok) return null;
+  return res.json();
+}
+
+// docs/46 D164/D167/D168 — the account's real categories/accounts, read
+// directly (api/src/sync/routes.ts's new GET /api/sync/snapshot), not
+// through PowerSync's local sync — see that endpoint's own comment for
+// exactly why local SQLite can't answer this question on its own.
+export async function fetchServerSnapshot(): Promise<{ categories: Category[]; accounts: Account[] } | null> {
+  let token = await ensureAccessToken();
+  if (!token) return null;
+  let res = await apiFetch('/api/sync/snapshot', { headers: { Authorization: `Bearer ${token}` } });
+  if (res.status === 401) {
+    token = await refreshAccessToken();
+    if (!token) return null;
+    res = await apiFetch('/api/sync/snapshot', { headers: { Authorization: `Bearer ${token}` } });
   }
   if (!res.ok) return null;
   return res.json();

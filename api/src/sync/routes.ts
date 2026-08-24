@@ -245,3 +245,55 @@ syncRouter.post('/upload', requireAccessToken, async (req: AuthedRequest, res) =
     client.release();
   }
 });
+
+// docs/46 D164/D167/D168 — a direct read of this account's real
+// categories/accounts, bypassing PowerSync's local sync entirely. This
+// exists because of a real mechanic the merge redesign ran into: locally,
+// PowerSync's synced tables are keyed by bare `id` (schema.ts has no
+// user_id column at all — "a single device's local DB only ever holds
+// one user's data," its own comment says). If this device already has a
+// pending, not-yet-uploaded local category with the same id as one the
+// account already has server-side (the exact "second device with its own
+// pre-existing local data" case this whole redesign is about), the local
+// optimistic write overlays and *hides* the real server row for that id
+// — querying local SQLite after `db.waitForFirstSync()` would show this
+// device's own not-yet-reconciled value, not the account's actual state,
+// making it impossible to tell the two apart for D167/D168's merge
+// cascade. This endpoint sidesteps that entirely by reading the true
+// server state directly, the same way applyPeerDataset gets a clean
+// dataset from a P2P peer instead of trying to infer it from local state.
+syncRouter.get('/snapshot', requireAccessToken, async (req: AuthedRequest, res) => {
+  const userId = req.userId!;
+  const client = await pool().connect();
+  try {
+    const categories = await client.query(
+      'SELECT id, name, kind, parent_id, archived, updated_at FROM categories WHERE user_id = $1',
+      [userId],
+    );
+    const accounts = await client.query(
+      'SELECT id, institution, name, kind, archived, owner_user_id, updated_at FROM accounts WHERE user_id = $1',
+      [userId],
+    );
+    res.json({
+      categories: categories.rows.map((c) => ({
+        id: c.id,
+        name: c.name,
+        kind: c.kind,
+        parentId: c.parent_id,
+        archived: c.archived,
+        updatedAt: c.updated_at,
+      })),
+      accounts: accounts.rows.map((a) => ({
+        id: a.id,
+        institution: a.institution,
+        name: a.name,
+        kind: a.kind,
+        archived: a.archived,
+        ownerUserId: a.owner_user_id,
+        updatedAt: a.updated_at,
+      })),
+    });
+  } finally {
+    client.release();
+  }
+});
