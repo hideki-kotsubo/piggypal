@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../lib/store';
-import { accountLabel, formatAmount } from '../lib/format';
+import { accountLabel, formatAmount, nowUtc } from '../lib/format';
 import { getLocalUserId } from '../lib/identity';
 import { hasHousehold, personLabel } from '../lib/household';
 import { usePairedPeers } from '../lib/peers';
@@ -229,6 +229,7 @@ function AccountForm({ account, onDone }: { account: Account | null; onDone: () 
         kind: 'checking',
         archived: false,
         ownerUserId: getLocalUserId(),
+        updatedAt: nowUtc(),
       },
   );
   const current: Account = account ?? draft;

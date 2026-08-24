@@ -67,6 +67,16 @@ export function nowLocal(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
+// docs/46 D170 — real UTC bookkeeping timestamp for the new `updatedAt`
+// field on Account/Category/Transaction/Budget. Deliberately separate
+// from nowLocal() above: that one is the user-facing wall-clock semantic
+// occurredAt uses (docs/16 D93 and friends never UTC-convert it);
+// updatedAt is pure sync/merge bookkeeping and should be real UTC, same
+// as Postgres's own `timestamptz not null default now()` on these tables.
+export function nowUtc(): string {
+  return new Date().toISOString();
+}
+
 // docs/12 D61 — institution disambiguates same-named accounts at different
 // banks ("TD — Checking" vs "Itaú — Checking"); falls back to the bare name
 // when institution isn't set.

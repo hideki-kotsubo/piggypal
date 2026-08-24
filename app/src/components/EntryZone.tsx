@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../lib/store';
-import { accountLabel, formatAmount, formatRelativeDate, nowLocal } from '../lib/format';
+import { accountLabel, formatAmount, formatRelativeDate, nowLocal, nowUtc } from '../lib/format';
 import { getLocalUserId } from '../lib/identity';
 import { parseUtterance } from '../lib/parser';
 import { isSpeechInputSupported, startSpeechInput } from '../lib/speechInput';
@@ -65,6 +65,7 @@ export function EntryZone({ onSubmitted }: Props) {
       deletedAt: null,
       paidByUserId: getLocalUserId(),
       createdByUserId: getLocalUserId(),
+      updatedAt: nowUtc(),
     };
     store.addTransaction(tx);
     navigate(`/transactions/${tx.id}`);
@@ -142,6 +143,7 @@ export function EntryZone({ onSubmitted }: Props) {
       deletedAt: null,
       paidByUserId: getLocalUserId(),
       createdByUserId: getLocalUserId(),
+      updatedAt: nowUtc(),
     };
     store.addTransaction(tx);
     setPreview(null);

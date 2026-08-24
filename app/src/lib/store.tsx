@@ -5,6 +5,7 @@ import { connectSync, db } from './db';
 import { clearAuthAccount, getAuthAccount } from './auth';
 import { getLocalUserId, setLocalUserId } from './identity';
 import { clearPairedPeers } from './peers';
+import { nowUtc } from './format';
 import type { Account, AccountKind, Budget, Category, CategoryKeyword, MergeSummary, PeerDataset, Transaction } from './types';
 import { seedAccounts, seedBudgets, seedCategories, seedCategoryKeywords, seedTransactions } from './seed';
 
@@ -17,6 +18,14 @@ import { seedAccounts, seedBudgets, seedCategories, seedCategoryKeywords, seedTr
 
 // ---- row <-> domain mapping (SQLite is snake_case, our types are camelCase) ----
 
+// docs/46 D170 — same "column added after some rows already existed"
+// situation occurred_at/owner_user_id's own fallbacks below already
+// document: genuinely null for any row written before updated_at existed.
+// Epoch, not "now" — an untouched old row should read as maximally stale
+// in the merge-redesign's recency display, never accidentally look more
+// recent than a row that's actually just been edited.
+const NEVER_UPDATED = '1970-01-01T00:00:00.000Z';
+
 interface AccountRow {
   id: string;
   institution: string | null;
@@ -24,6 +33,7 @@ interface AccountRow {
   kind: string;
   archived: number;
   owner_user_id: string | null; // see rowToAccount's fallback note
+  updated_at: string | null;
 }
 function rowToAccount(r: AccountRow): Account {
   return {
@@ -38,6 +48,7 @@ function rowToAccount(r: AccountRow): Account {
     // rather than leaving it empty, since every pre-existing local
     // account was, definitionally, owned by whoever's device it's on.
     ownerUserId: r.owner_user_id ?? getLocalUserId(),
+    updatedAt: r.updated_at ?? NEVER_UPDATED,
   };
 }
 
@@ -47,6 +58,7 @@ interface CategoryRow {
   kind: string;
   parent_id: string | null;
   archived: number;
+  updated_at: string | null;
 }
 function rowToCategory(r: CategoryRow): Category {
   return {
@@ -55,6 +67,7 @@ function rowToCategory(r: CategoryRow): Category {
     kind: r.kind as Category['kind'],
     parentId: r.parent_id,
     archived: Boolean(r.archived),
+    updatedAt: r.updated_at ?? NEVER_UPDATED,
   };
 }
 
@@ -79,6 +92,7 @@ interface TransactionRow {
   deleted_at: string | null;
   paid_by_user_id: string | null; // see rowToTransaction's fallback note
   created_by_user_id: string | null;
+  updated_at: string | null;
 }
 function rowToTransaction(r: TransactionRow): Transaction {
   return {
@@ -100,6 +114,7 @@ function rowToTransaction(r: TransactionRow): Transaction {
     // today's single-user-per-device world, so that's the fallback here.
     paidByUserId: r.paid_by_user_id ?? getLocalUserId(),
     createdByUserId: r.created_by_user_id ?? getLocalUserId(),
+    updatedAt: r.updated_at ?? NEVER_UPDATED,
   };
 }
 
@@ -109,9 +124,17 @@ interface BudgetRow {
   month: string;
   currency: string;
   amount_cents: number;
+  updated_at: string | null;
 }
 function rowToBudget(r: BudgetRow): Budget {
-  return { id: r.id, categoryId: r.category_id, month: r.month, currency: r.currency, amountCents: r.amount_cents };
+  return {
+    id: r.id,
+    categoryId: r.category_id,
+    month: r.month,
+    currency: r.currency,
+    amountCents: r.amount_cents,
+    updatedAt: r.updated_at ?? NEVER_UPDATED,
+  };
 }
 
 interface CategoryKeywordRow {
@@ -131,6 +154,7 @@ const ACCOUNT_COLUMNS: Record<keyof Account, string> = {
   kind: 'kind',
   archived: 'archived',
   ownerUserId: 'owner_user_id',
+  updatedAt: 'updated_at',
 };
 
 const CATEGORY_COLUMNS: Record<keyof Category, string> = {
@@ -139,6 +163,7 @@ const CATEGORY_COLUMNS: Record<keyof Category, string> = {
   kind: 'kind',
   parentId: 'parent_id',
   archived: 'archived',
+  updatedAt: 'updated_at',
 };
 
 const BUDGET_COLUMNS: Record<keyof Budget, string> = {
@@ -147,6 +172,7 @@ const BUDGET_COLUMNS: Record<keyof Budget, string> = {
   month: 'month',
   currency: 'currency',
   amountCents: 'amount_cents',
+  updatedAt: 'updated_at',
 };
 
 const TRANSACTION_COLUMNS: Record<keyof Transaction, string> = {
@@ -163,6 +189,7 @@ const TRANSACTION_COLUMNS: Record<keyof Transaction, string> = {
   deletedAt: 'deleted_at',
   paidByUserId: 'paid_by_user_id',
   createdByUserId: 'created_by_user_id',
+  updatedAt: 'updated_at',
 };
 
 // Shared by applyPeerDataset's docs/25 D126 rewrite and adoptAccountId's
@@ -173,9 +200,10 @@ const TRANSACTION_COLUMNS: Record<keyof Transaction, string> = {
 // unconditionally without checking first.
 async function rewriteOwnerIdentity(tx: SqliteTransaction, oldId: string, newId: string): Promise<void> {
   if (oldId === newId) return;
-  await tx.execute('UPDATE accounts SET owner_user_id = ? WHERE owner_user_id = ?', [newId, oldId]);
-  await tx.execute('UPDATE transactions SET paid_by_user_id = ? WHERE paid_by_user_id = ?', [newId, oldId]);
-  await tx.execute('UPDATE transactions SET created_by_user_id = ? WHERE created_by_user_id = ?', [newId, oldId]);
+  const now = nowUtc();
+  await tx.execute('UPDATE accounts SET owner_user_id = ?, updated_at = ? WHERE owner_user_id = ?', [newId, now, oldId]);
+  await tx.execute('UPDATE transactions SET paid_by_user_id = ?, updated_at = ? WHERE paid_by_user_id = ?', [newId, now, oldId]);
+  await tx.execute('UPDATE transactions SET created_by_user_id = ?, updated_at = ? WHERE created_by_user_id = ?', [newId, now, oldId]);
   setLocalUserId(newId);
 }
 
@@ -183,9 +211,9 @@ async function rewriteOwnerIdentity(tx: SqliteTransaction, oldId: string, newId:
 // INSERT shape.
 async function insertAccountRow(a: Account): Promise<void> {
   await db.execute(
-    `INSERT INTO accounts (id, institution, name, kind, archived, owner_user_id)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [a.id, a.institution, a.name, a.kind, a.archived ? 1 : 0, a.ownerUserId],
+    `INSERT INTO accounts (id, institution, name, kind, archived, owner_user_id, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [a.id, a.institution, a.name, a.kind, a.archived ? 1 : 0, a.ownerUserId, a.updatedAt],
   );
 }
 
@@ -219,30 +247,35 @@ async function seedIfEmpty() {
       const existing = await tx.getAll<{ id: string }>('SELECT id FROM accounts LIMIT 1');
       if (existing.length > 0) return;
 
+      // One shared timestamp for the whole seed batch rather than a fresh
+      // nowUtc() per row — these rows are all "created right now, as one
+      // batch," so there's no real distinction between them worth a
+      // separate call per insert.
+      const seededAt = nowUtc();
       for (const a of seedAccounts) {
         await tx.execute(
-          `INSERT INTO accounts (id, institution, name, kind, archived, owner_user_id)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [a.id, a.institution, a.name, a.kind, a.archived ? 1 : 0, a.ownerUserId],
+          `INSERT INTO accounts (id, institution, name, kind, archived, owner_user_id, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [a.id, a.institution, a.name, a.kind, a.archived ? 1 : 0, a.ownerUserId, seededAt],
         );
       }
       for (const c of seedCategories) {
         await tx.execute(
-          `INSERT INTO categories (id, name, kind, parent_id, archived) VALUES (?, ?, ?, ?, ?)`,
-          [c.id, c.name, c.kind, c.parentId, c.archived ? 1 : 0],
+          `INSERT INTO categories (id, name, kind, parent_id, archived, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
+          [c.id, c.name, c.kind, c.parentId, c.archived ? 1 : 0, seededAt],
         );
       }
       for (const t of seedTransactions) {
         await tx.execute(
-          `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_at, note, merchant, source, ai_raw, deleted_at, paid_by_user_id, created_by_user_id)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [t.id, t.accountId, t.categoryId, t.amountCents, t.currency, t.occurredAt, t.note, t.merchant, t.source, t.aiRaw, t.deletedAt, t.paidByUserId, t.createdByUserId],
+          `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_at, note, merchant, source, ai_raw, deleted_at, paid_by_user_id, created_by_user_id, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [t.id, t.accountId, t.categoryId, t.amountCents, t.currency, t.occurredAt, t.note, t.merchant, t.source, t.aiRaw, t.deletedAt, t.paidByUserId, t.createdByUserId, seededAt],
         );
       }
       for (const b of seedBudgets) {
         await tx.execute(
-          `INSERT INTO budgets (id, category_id, month, currency, amount_cents) VALUES (?, ?, ?, ?, ?)`,
-          [b.id, b.categoryId, b.month, b.currency, b.amountCents],
+          `INSERT INTO budgets (id, category_id, month, currency, amount_cents, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
+          [b.id, b.categoryId, b.month, b.currency, b.amountCents, seededAt],
         );
       }
       for (const k of seedCategoryKeywords) {
@@ -446,32 +479,46 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       addTransaction(tx) {
         void db.execute(
-          `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_at, note, merchant, source, ai_raw, deleted_at, paid_by_user_id, created_by_user_id)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [tx.id, tx.accountId, tx.categoryId, tx.amountCents, tx.currency, tx.occurredAt, tx.note, tx.merchant, tx.source, tx.aiRaw, tx.deletedAt, tx.paidByUserId, tx.createdByUserId],
+          `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_at, note, merchant, source, ai_raw, deleted_at, paid_by_user_id, created_by_user_id, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [tx.id, tx.accountId, tx.categoryId, tx.amountCents, tx.currency, tx.occurredAt, tx.note, tx.merchant, tx.source, tx.aiRaw, tx.deletedAt, tx.paidByUserId, tx.createdByUserId, tx.updatedAt],
         );
       },
 
+      // docs/46 D170 — updated_at always bumped to now, regardless of
+      // what's in patch: every updateX(patch) call site would otherwise
+      // need to separately remember to include it, and any real change
+      // to a row is, by definition, an update "now."
       updateTransaction(transactionId, patch) {
-        const entries = Object.entries(patch) as [keyof Transaction, unknown][];
+        const entries = (Object.entries(patch) as [keyof Transaction, unknown][]).filter(([k]) => k !== 'updatedAt');
         if (entries.length === 0) return;
         const setClause = entries.map(([k]) => `${TRANSACTION_COLUMNS[k]} = ?`).join(', ');
-        void db.execute(`UPDATE transactions SET ${setClause} WHERE id = ?`, [...entries.map(([, v]) => v), transactionId]);
+        void db.execute(`UPDATE transactions SET ${setClause}, updated_at = ? WHERE id = ?`, [
+          ...entries.map(([, v]) => v),
+          nowUtc(),
+          transactionId,
+        ]);
       },
 
       // Soft delete (deleted_at), not a real DELETE — db/schema.sql's
       // design principle: a device offline during a delete converges
       // cleanly, and it's how every list already filters (activeTx()).
       deleteTransaction(transactionId) {
-        void db.execute('UPDATE transactions SET deleted_at = ? WHERE id = ?', [
-          new Date().toISOString(),
+        const now = nowUtc();
+        void db.execute('UPDATE transactions SET deleted_at = ?, updated_at = ? WHERE id = ?', [
+          now,
+          now,
           transactionId,
         ]);
       },
 
       // docs/07 D26: categorize an inbox item in place.
       categorizeTransaction(transactionId, categoryId) {
-        void db.execute('UPDATE transactions SET category_id = ? WHERE id = ?', [categoryId, transactionId]);
+        void db.execute('UPDATE transactions SET category_id = ?, updated_at = ? WHERE id = ?', [
+          categoryId,
+          nowUtc(),
+          transactionId,
+        ]);
       },
 
       addAccount(account) {
@@ -480,40 +527,44 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       // Also how archiving works (docs/12 D56) — updateAccount(id, { archived: true }).
       updateAccount(accountId, patch) {
-        const entries = Object.entries(patch) as [keyof Account, unknown][];
+        const entries = (Object.entries(patch) as [keyof Account, unknown][]).filter(([k]) => k !== 'updatedAt');
         if (entries.length === 0) return;
         const setClause = entries.map(([k]) => `${ACCOUNT_COLUMNS[k]} = ?`).join(', ');
         const params = entries.map(([k, v]) => (k === 'archived' ? (v ? 1 : 0) : v));
-        void db.execute(`UPDATE accounts SET ${setClause} WHERE id = ?`, [...params, accountId]);
+        void db.execute(`UPDATE accounts SET ${setClause}, updated_at = ? WHERE id = ?`, [...params, nowUtc(), accountId]);
       },
 
       addCategory(category) {
         void db.execute(
-          `INSERT INTO categories (id, name, kind, parent_id, archived) VALUES (?, ?, ?, ?, ?)`,
-          [category.id, category.name, category.kind, category.parentId, category.archived ? 1 : 0],
+          `INSERT INTO categories (id, name, kind, parent_id, archived, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
+          [category.id, category.name, category.kind, category.parentId, category.archived ? 1 : 0, category.updatedAt],
         );
       },
 
       updateCategory(categoryId, patch) {
-        const entries = Object.entries(patch) as [keyof Category, unknown][];
+        const entries = (Object.entries(patch) as [keyof Category, unknown][]).filter(([k]) => k !== 'updatedAt');
         if (entries.length === 0) return;
         const setClause = entries.map(([k]) => `${CATEGORY_COLUMNS[k]} = ?`).join(', ');
         const params = entries.map(([k, v]) => (k === 'archived' ? (v ? 1 : 0) : v));
-        void db.execute(`UPDATE categories SET ${setClause} WHERE id = ?`, [...params, categoryId]);
+        void db.execute(`UPDATE categories SET ${setClause}, updated_at = ? WHERE id = ?`, [...params, nowUtc(), categoryId]);
       },
 
       addBudget(budget) {
         void db.execute(
-          `INSERT INTO budgets (id, category_id, month, currency, amount_cents) VALUES (?, ?, ?, ?, ?)`,
-          [budget.id, budget.categoryId, budget.month, budget.currency, budget.amountCents],
+          `INSERT INTO budgets (id, category_id, month, currency, amount_cents, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
+          [budget.id, budget.categoryId, budget.month, budget.currency, budget.amountCents, budget.updatedAt],
         );
       },
 
       updateBudget(budgetId, patch) {
-        const entries = Object.entries(patch) as [keyof Budget, unknown][];
+        const entries = (Object.entries(patch) as [keyof Budget, unknown][]).filter(([k]) => k !== 'updatedAt');
         if (entries.length === 0) return;
         const setClause = entries.map(([k]) => `${BUDGET_COLUMNS[k]} = ?`).join(', ');
-        void db.execute(`UPDATE budgets SET ${setClause} WHERE id = ?`, [...entries.map(([, v]) => v), budgetId]);
+        void db.execute(`UPDATE budgets SET ${setClause}, updated_at = ? WHERE id = ?`, [
+          ...entries.map(([, v]) => v),
+          nowUtc(),
+          budgetId,
+        ]);
       },
 
       // Budgets have no archived/deleted_at column (db/schema.sql) — unlike
@@ -676,13 +727,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           for (const c of peer.categories) {
             const existing = await tx.getAll<{ id: string }>('SELECT id FROM categories WHERE id = ?', [c.id]);
             if (existing.length > 0) continue;
-            await tx.execute(`INSERT INTO categories (id, name, kind, parent_id, archived) VALUES (?, ?, ?, ?, ?)`, [
-              c.id,
-              c.name,
-              c.kind,
-              c.parentId,
-              c.archived ? 1 : 0,
-            ]);
+            await tx.execute(
+              `INSERT INTO categories (id, name, kind, parent_id, archived, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
+              [c.id, c.name, c.kind, c.parentId, c.archived ? 1 : 0, c.updatedAt],
+            );
             summary.categoriesAdded += 1;
           }
 
@@ -694,8 +742,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             const existing = await tx.getAll<{ id: string }>('SELECT id FROM accounts WHERE id = ?', [a.id]);
             if (existing.length > 0) continue;
             await tx.execute(
-              `INSERT INTO accounts (id, institution, name, kind, archived, owner_user_id) VALUES (?, ?, ?, ?, ?, ?)`,
-              [a.id, a.institution, a.name, a.kind, a.archived ? 1 : 0, a.ownerUserId],
+              `INSERT INTO accounts (id, institution, name, kind, archived, owner_user_id, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+              [a.id, a.institution, a.name, a.kind, a.archived ? 1 : 0, a.ownerUserId, a.updatedAt],
             );
             summary.accountsAdded += 1;
           }
@@ -706,8 +754,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             const existing = await tx.getAll<{ id: string }>('SELECT id FROM transactions WHERE id = ?', [t.id]);
             if (existing.length > 0) continue;
             await tx.execute(
-              `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_at, note, merchant, source, ai_raw, deleted_at, paid_by_user_id, created_by_user_id)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_at, note, merchant, source, ai_raw, deleted_at, paid_by_user_id, created_by_user_id, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
               [
                 t.id,
                 t.accountId,
@@ -722,6 +770,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 t.deletedAt,
                 t.paidByUserId,
                 t.createdByUserId,
+                t.updatedAt,
               ],
             );
             summary.transactionsAdded += 1;
@@ -736,16 +785,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               [b.categoryId, b.month, b.currency],
             );
             if (existing.length === 0) {
-              await tx.execute(`INSERT INTO budgets (id, category_id, month, currency, amount_cents) VALUES (?, ?, ?, ?, ?)`, [
-                b.id,
-                b.categoryId,
-                b.month,
-                b.currency,
-                b.amountCents,
-              ]);
+              await tx.execute(
+                `INSERT INTO budgets (id, category_id, month, currency, amount_cents, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
+                [b.id, b.categoryId, b.month, b.currency, b.amountCents, b.updatedAt],
+              );
               summary.budgetsAdded += 1;
             } else if (b.amountCents > existing[0].amount_cents) {
-              await tx.execute('UPDATE budgets SET amount_cents = ? WHERE id = ?', [b.amountCents, existing[0].id]);
+              await tx.execute('UPDATE budgets SET amount_cents = ?, updated_at = ? WHERE id = ?', [
+                b.amountCents,
+                b.updatedAt,
+                existing[0].id,
+              ]);
               summary.budgetsUpdated += 1;
             }
           }
