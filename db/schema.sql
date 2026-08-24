@@ -35,7 +35,7 @@ create table accounts (
 );
 
 create table categories (
-  id          text primary key,   -- NOT uuid — docs/24's household-merge
+  id          text not null,      -- NOT uuid — docs/24's household-merge
                                    -- design deliberately gives every seed
                                    -- category a fixed, human-readable slug
                                    -- id ("cat-food", seed.ts) shared across
@@ -51,7 +51,7 @@ create table categories (
   user_id     uuid not null,
   name        text not null,
   kind        text not null default 'expense',   -- expense | income
-  parent_id   text references categories(id),    -- nullable; exactly 2
+  parent_id   text,                              -- nullable; exactly 2
                                                    -- levels, enforced
                                                    -- app-side only — see
                                                    -- docs/14 D70
@@ -59,14 +59,22 @@ create table categories (
   sort_order  int not null default 0,
   archived    boolean not null default false,
   created_at  timestamptz not null default now(),
-  updated_at  timestamptz not null default now()
+  updated_at  timestamptz not null default now(),
+  -- docs/46 D162 — composite, not a bare `id primary key`: the fixed
+  -- slug above is only unique *within one person's own devices* by
+  -- design (that's the whole point of the dedup-on-merge mechanism), but
+  -- a bare `id` primary key made it unique *globally*, across every
+  -- unrelated account on the deployment — confirmed as a real bug, not
+  -- theoretical, see db/migrations/2026-08-24-categories-composite-key.sql.
+  primary key (user_id, id),
+  foreign key (user_id, parent_id) references categories (user_id, id)
 );
 
 create table transactions (
   id           uuid primary key,
   user_id      uuid not null,
   account_id   uuid not null references accounts(id),
-  category_id  text references categories(id),   -- nullable: uncategorized inbox; text, not uuid — see categories.id above
+  category_id  text,   -- nullable: uncategorized inbox; text, not uuid — see categories.id above
   amount_cents bigint not null,                  -- negative = expense, positive = income
   currency     char(3) not null default 'CAD',   -- the purchase's own currency, chosen
                                                   -- independently of the account at entry
@@ -90,26 +98,31 @@ create table transactions (
                                        -- docs/24 D110. Deliberately not the
                                        -- same column: see docs/24 for why.
   created_at   timestamptz not null default now(),
-  updated_at   timestamptz not null default now()
+  updated_at   timestamptz not null default now(),
+  -- docs/46 D162 — composite, matching categories' own composite key
+  -- above; see that table's comment for why a bare `references
+  -- categories(id)` isn't correct.
+  foreign key (user_id, category_id) references categories (user_id, id)
 );
 
 create table budgets (
   id           uuid primary key,
   user_id      uuid not null,
-  category_id  text not null references categories(id),  -- text, not uuid — see categories.id above
+  category_id  text not null,  -- text, not uuid — see categories.id above
   month        date not null,                    -- always first of month, e.g. 2026-08-01
   currency     char(3) not null default 'CAD',    -- budgets are per currency, not just per
                                                    -- category/month — see docs/10
   amount_cents bigint not null,
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now(),
-  unique (user_id, category_id, month, currency)
+  unique (user_id, category_id, month, currency),
+  foreign key (user_id, category_id) references categories (user_id, id) -- docs/46 D162
 );
 
 -- Per-user learning vocab for the AI entry pipeline (docs/04). Synced to
 -- device like the tables above so Tier 1's on-device parser benefits too.
 create table category_keywords (
-  id           text primary key,   -- NOT uuid, same reason as categories.id
+  id           text not null,     -- NOT uuid, same reason as categories.id
                                     -- above — seed.ts's keywords also use
                                     -- fixed slug ids ("ckw-1"), and D5's
                                     -- client-generated-id convention means
@@ -117,12 +130,17 @@ create table category_keywords (
                                     -- needs a server-generated id either —
                                     -- see docs/45.
   user_id      uuid not null,
-  category_id  text not null references categories(id),  -- text, not uuid — see categories.id above
+  category_id  text not null,  -- text, not uuid — see categories.id above
   keyword      text not null,
   hits         int not null default 1,
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now(),
-  unique (user_id, category_id, keyword)
+  unique (user_id, category_id, keyword),
+  -- docs/46 D162 — composite, same reasoning as categories itself: a bare
+  -- `id primary key` would be globally unique across every unrelated
+  -- account, not just within one person's own devices.
+  primary key (user_id, id),
+  foreign key (user_id, category_id) references categories (user_id, id)
 );
 
 -- Indexes the sync + app queries will lean on

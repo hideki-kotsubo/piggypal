@@ -8,6 +8,7 @@ import { PayerBadge } from './PayerBadge';
 import { APP_VERSION } from '../lib/version';
 import { requestMagicLink, useAuthAccount } from '../lib/auth';
 import { useSyncStatus } from '../lib/db';
+import { useSkippedSyncOps } from '../lib/connector';
 
 // "synced just now" / "N minutes/hours ago" — finer-grained than
 // format.ts's formatRelativeDate (which only resolves to whole calendar
@@ -31,6 +32,7 @@ export function SettingsScreen() {
   const [peers] = usePairedPeers();
   const [authAccount] = useAuthAccount();
   const syncStatus = useSyncStatus();
+  const skippedSyncOps = useSkippedSyncOps();
   const [emailInput, setEmailInput] = useState('');
   const [linkState, setLinkState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [linkError, setLinkError] = useState('');
@@ -93,6 +95,17 @@ export function SettingsScreen() {
               {syncStatus.connected ? 'Connected' : syncStatus.connecting ? 'Connecting…' : 'Not connected'}
             </span>
           </div>
+          {/* docs/46 D163 — the whole point of this endpoint no longer
+              returning a bare { ok: true }: a skipped op is now visible
+              here instead of silently vanishing from view. */}
+          {skippedSyncOps.length > 0 && (
+            <div className="settings-row settings-row-static">
+              <span>Sync</span>
+              <span style={{ color: 'var(--warn)', fontSize: '0.85rem' }}>
+                {skippedSyncOps.length} item{skippedSyncOps.length === 1 ? '' : 's'} didn't sync
+              </span>
+            </div>
+          )}
         </div>
       ) : linkState === 'sent' ? (
         <div className="settings-row settings-row-static">

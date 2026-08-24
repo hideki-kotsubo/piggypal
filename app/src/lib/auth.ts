@@ -155,10 +155,20 @@ export interface SyncOp {
   data?: Record<string, unknown>;
 }
 
+// docs/46 D163 — the endpoint's response, mirroring api/src/sync/routes.ts's
+// UploadResult exactly. `skipped` is the whole point of this change: what
+// used to be a bare `{ ok: true }` (indistinguishable from "every row
+// really landed") now tells the caller precisely which ops didn't apply
+// and why, so connector.ts can surface it instead of silently dropping it.
+export interface UploadSyncResult {
+  applied: string[];
+  skipped: { table: string; id: string; reason: string }[];
+}
+
 // connector.ts's uploadData — same bearer + one-retry-on-401 shape as
 // fetchPowerSyncCredentials above, against our own /api/sync/upload
 // (docs/03) instead of PowerSync's own token endpoint.
-export async function uploadSyncOps(ops: SyncOp[]): Promise<void> {
+export async function uploadSyncOps(ops: SyncOp[]): Promise<UploadSyncResult> {
   let token = await ensureAccessToken();
   if (!token) throw new Error('Not signed in.');
   const send = () =>
@@ -174,4 +184,5 @@ export async function uploadSyncOps(ops: SyncOp[]): Promise<void> {
     res = await send();
   }
   if (!res.ok) throw new Error(`Sync upload failed (${res.status})`);
+  return res.json();
 }

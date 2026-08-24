@@ -1,6 +1,40 @@
+import { useSyncExternalStore } from 'react';
 import type { CommonPowerSyncDatabase, PowerSyncBackendConnector } from '@powersync/web';
 import { fetchPowerSyncCredentials, uploadSyncOps } from './auth';
 import type { SyncOp } from './auth';
+
+// docs/46 D163 — every op the server reports as `skipped` gets recorded
+// here and surfaced (Settings' sync status), never silently dropped the
+// way a bare `{ ok: true }` response used to leave it. Deliberately a
+// separate tracker from useSyncStatus() (db.ts) rather than bolted onto
+// PowerSync's own SyncStatus type, which this app doesn't own the shape
+// of. Capped at 20 — this is "what recently needed attention," not a
+// permanent audit log.
+export interface SkippedSyncOp {
+  table: string;
+  id: string;
+  reason: string;
+  at: string;
+}
+
+let recentSkips: SkippedSyncOp[] = [];
+const skipListeners = new Set<() => void>();
+
+function recordSkips(skipped: { table: string; id: string; reason: string }[]) {
+  if (skipped.length === 0) return;
+  const at = new Date().toISOString();
+  recentSkips = [...skipped.map((s) => ({ ...s, at })), ...recentSkips].slice(0, 20);
+  for (const listener of skipListeners) listener();
+}
+
+function subscribeSkippedSyncOps(listener: () => void): () => void {
+  skipListeners.add(listener);
+  return () => skipListeners.delete(listener);
+}
+
+export function useSkippedSyncOps(): SkippedSyncOp[] {
+  return useSyncExternalStore(subscribeSkippedSyncOps, () => recentSkips);
+}
 
 // The PowerSync Service's own public endpoint — distinct from API_BASE_URL
 // (our Node API) in auth.ts, even though both eventually sit behind the
@@ -43,7 +77,13 @@ export class PiggypalConnector implements PowerSyncBackendConnector {
     // Any throw here is retried later by the SDK itself (default 5s
     // backoff, per PowerSyncBackendConnector's own doc comment) — no
     // custom retry loop needed on top of that.
-    await uploadSyncOps(ops);
+    const result = await uploadSyncOps(ops);
+    // A skipped op still gets transaction.complete()'d below — the
+    // server already made its final decision on it (an ownership
+    // mismatch, a superseded budget, a not-found target), so retrying
+    // won't change the outcome. "Skipped" means "recorded, not silently
+    // lost," not "failed, try again" — see docs/46 D163.
+    recordSkips(result.skipped);
     await transaction.complete();
   }
 }

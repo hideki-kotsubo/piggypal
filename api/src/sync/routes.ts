@@ -48,6 +48,16 @@ const TABLE_COLUMNS: Record<string, readonly string[]> = {
 // columns are real `boolean`.
 const BOOLEAN_COLUMNS = new Set(['archived']);
 
+// docs/46 D162 — categories/category_keywords use a composite
+// `(user_id, id)` primary key (db/migrations/2026-08-24-categories-
+// composite-key.sql), so a different user's row is never even a conflict
+// target for them — no ownership WHERE needed, and a collision there can
+// only ever be this same user's own repeat upload. Every other table
+// still uses the bare `id` primary key (real crypto.randomUUID()s, cross-
+// user collision is astronomically unlikely but not impossible) and
+// keeps the WHERE guard as defense-in-depth.
+const COMPOSITE_KEY_TABLES = new Set(['categories', 'category_keywords']);
+
 // A real bug, found testing this endpoint against a real signed-in
 // device: categories.sort_order is `not null default 0` in db/schema.sql,
 // but nothing in app/ ever populates it (categories don't support manual
@@ -80,6 +90,24 @@ function isValidOp(op: unknown): op is SyncOp {
   );
 }
 
+// docs/46 D163 — every op now resolves to exactly one of these two
+// buckets instead of a bare `{ ok: true }`. `skipped` covers three real,
+// distinct non-write outcomes: an ownership-guard WHERE that didn't match
+// (an id that exists, but under a different user — see COMPOSITE_KEY_TABLES
+// above for why this can now only happen on the still-bare-id tables), a
+// PATCH/DELETE target that matched no row at all (not found, or not
+// yours — deliberately not distinguished, same no-information-leak
+// property the WHERE guard itself already had), and a budget resolved by
+// docs/02's collision policy without inserting the uploaded id as a
+// second row. The connector (app/src/lib/connector.ts) treats every
+// `skipped` entry as something to surface, not silently drop — the
+// entire point of this change is that "the server said 200" must stop
+// being treated as "every row landed."
+interface UploadResult {
+  applied: string[];
+  skipped: { table: string; id: string; reason: string }[];
+}
+
 // docs/03 handler responsibilities 1-3 (JWT → user_id, validate, apply
 // with last-write-wins). Responsibility 4 (subscription gate) is
 // deliberately NOT implemented here — same call docs/41 made for its own
@@ -104,6 +132,7 @@ syncRouter.post('/upload', requireAccessToken, async (req: AuthedRequest, res) =
     return;
   }
   const ops = rawOps as SyncOp[];
+  const result: UploadResult = { applied: [], skipped: [] };
 
   const client = await pool().connect();
   try {
@@ -113,7 +142,9 @@ syncRouter.post('/upload', requireAccessToken, async (req: AuthedRequest, res) =
       const columns = TABLE_COLUMNS[op.table];
 
       if (op.op === 'DELETE') {
-        await client.query(`DELETE FROM ${op.table} WHERE id = $1 AND user_id = $2`, [op.id, userId]);
+        const r = await client.query(`DELETE FROM ${op.table} WHERE id = $1 AND user_id = $2`, [op.id, userId]);
+        if (r.rowCount === 0) result.skipped.push({ table: op.table, id: op.id, reason: 'not-found' });
+        else result.applied.push(op.id);
         continue;
       }
 
@@ -144,10 +175,15 @@ syncRouter.post('/upload', requireAccessToken, async (req: AuthedRequest, res) =
               amountCents,
               collision.id,
             ]);
+            result.applied.push(op.id);
+          } else {
+            // Lower or equal amount: the existing row already wins, and
+            // op.id itself is never inserted as a second row for the same
+            // slot — that's the whole point of this branch. Reported, not
+            // silent — this device's own upload queue can still safely
+            // consider op.id "handled" (there's nothing left to retry).
+            result.skipped.push({ table: op.table, id: op.id, reason: 'lower-amount-superseded' });
           }
-          // Lower or equal amount: the existing row already wins, nothing
-          // to do. Either way, op.id itself is never inserted as a second
-          // row for the same slot — that's the whole point of this branch.
           continue;
         }
         // No collision (nothing here yet, or it's this exact row being
@@ -158,40 +194,50 @@ syncRouter.post('/upload', requireAccessToken, async (req: AuthedRequest, res) =
         // Full-row upsert: every configured column, defaulting to null
         // when absent — matches CrudEntry's own PUT semantics ("all
         // non-null columns are included," so a missing one means null).
-        // The WHERE on the DO UPDATE branch only fires against the
-        // *existing* conflicting row — it never blocks a fresh insert —
-        // and stops one user's client-generated id from ever overwriting
-        // a different user's row on the astronomically unlikely event of
-        // a UUID collision (same trust model this codebase already
-        // applies to every other client-generated id).
         const values = columns.map((c) => coerce(c, op.data?.[c]));
         const placeholders = columns.map((_, i) => `$${i + 3}`).join(', ');
         const updateSet = columns.map((c, i) => `${c} = $${i + 3}`).join(', ');
-        await client.query(
-          `INSERT INTO ${op.table} (id, user_id, ${columns.join(', ')})
-           VALUES ($1, $2, ${placeholders})
-           ON CONFLICT (id) DO UPDATE SET ${updateSet}, updated_at = now()
-           WHERE ${op.table}.user_id = $2`,
-          [op.id, userId, ...values],
-        );
+        const composite = COMPOSITE_KEY_TABLES.has(op.table);
+        // Composite-key tables conflict only on (user_id, id) — a
+        // different user's row was never a possible conflict target in
+        // the first place, so there's no WHERE guard to silently fail.
+        // Bare-id tables keep the WHERE guard (stops a same-id write from
+        // ever touching a different user's row on the astronomically
+        // unlikely event of a UUID collision) and now report it via
+        // rowCount instead of staying silent.
+        const query = composite
+          ? `INSERT INTO ${op.table} (id, user_id, ${columns.join(', ')})
+             VALUES ($1, $2, ${placeholders})
+             ON CONFLICT (user_id, id) DO UPDATE SET ${updateSet}, updated_at = now()`
+          : `INSERT INTO ${op.table} (id, user_id, ${columns.join(', ')})
+             VALUES ($1, $2, ${placeholders})
+             ON CONFLICT (id) DO UPDATE SET ${updateSet}, updated_at = now()
+             WHERE ${op.table}.user_id = $2`;
+        const r = await client.query(query, [op.id, userId, ...values]);
+        if (r.rowCount === 0) result.skipped.push({ table: op.table, id: op.id, reason: 'owned-by-another-user' });
+        else result.applied.push(op.id);
         continue;
       }
 
       // PATCH — only the columns actually present in opData, same
       // ownership guard as PUT via the WHERE clause.
       const presentCols = columns.filter((c) => op.data && c in op.data);
-      if (presentCols.length === 0) continue;
+      if (presentCols.length === 0) {
+        result.applied.push(op.id); // nothing to do is not a failure
+        continue;
+      }
       const setClause = presentCols.map((c, i) => `${c} = $${i + 3}`).join(', ');
       const values = presentCols.map((c) => coerce(c, op.data![c]));
-      await client.query(`UPDATE ${op.table} SET ${setClause}, updated_at = now() WHERE id = $1 AND user_id = $2`, [
-        op.id,
-        userId,
-        ...values,
-      ]);
+      const r = await client.query(
+        `UPDATE ${op.table} SET ${setClause}, updated_at = now() WHERE id = $1 AND user_id = $2`,
+        [op.id, userId, ...values],
+      );
+      if (r.rowCount === 0) result.skipped.push({ table: op.table, id: op.id, reason: 'not-found' });
+      else result.applied.push(op.id);
     }
 
     await client.query('COMMIT');
-    res.json({ ok: true });
+    res.json(result);
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
