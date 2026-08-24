@@ -110,6 +110,102 @@ it needs doing.
       lot), duplicate detection against existing transactions, and how
       much of docs/16's parser (category/merchant matching) gets reused
       vs. needing its own mapping step.
+      Re-flagged 2026-08-23, specifically as bank/credit-card statement
+      import — same underlying feature, restated with the concrete source
+      in mind rather than generic "CSV/XLSX." Sharpens the open questions
+      above: statement exports differ per institution (date format, one
+      combined signed-amount column vs. separate debit/credit columns,
+      running-balance column to ignore, header/footer junk rows to skip),
+      so column mapping likely needs to be either user-configurable per
+      import or per-institution presets learned over time, not a single
+      fixed layout. Multi-currency (docs/10) and multi-account (docs/12)
+      both need a spot in that mapping too — which `account_id` a given
+      statement's rows land under, and whether the file's own currency is
+      trusted or asked.
+      Extended 2026-08-23: this must be a real **reconciliation**, not
+      just an insert-with-dedupe. The user's actual workflow already
+      logs transactions by hand or by voice/typed entry (docs/16) as
+      they happen, day to day — a statement import isn't the first time
+      most of those transactions enter the app, it's a later check that
+      what's in the app matches what the bank/card actually recorded.
+      So this needs the classic bank-reconciliation shape, not a plain
+      duplicate check: match each statement row against an existing
+      transaction (same account, amount, and a date near enough to
+      allow for post/settlement lag) and mark a real match as
+      confirmed/cleared against the bank's own record, rather than
+      silently skipping it as a duplicate or silently inserting a second
+      row. Statement rows with no match become new transactions (probably
+      landing in the existing Inbox, docs/07/20, uncategorized, same as
+      any other AI/import-sourced entry). Existing *app* transactions
+      that never show up in the statement need to surface too — a
+      missed/duplicate manual entry, a pending charge that hasn't posted
+      yet, or a real bank-side error are all real cases here, not edge
+      cases to ignore. Open questions this adds on top of the ones above:
+      no schema support for a reconciled/cleared state exists today
+      (`transactions` has no such column) so this likely needs one;
+      fuzzy-match tolerance for amount/date (statement dates are post
+      dates, not the transaction date the user logged) needs real rules,
+      not exact-match only; and the review UI itself — a three-way
+      matched/unmatched-in-app/unmatched-in-statement view — is
+      unscoped, though it's the same shape of problem as docs/24's
+      household-merge review UI, worth a look for reusable patterns.
+      Not designed further than this.
+- [ ] Spreadsheet-style filterable data view for transactions/reports —
+      flagged 2026-08-23, not yet scoped. Distinct from the existing
+      "Insights screen" filter/report-type open question above (which is
+      about the trend chart specifically): this is a general Excel-like
+      grid over transaction data — sort by any column, and filter any
+      column with comparison operators (equals, greater/less than, in
+      range — not just the fixed category/account/date-range chips
+      docs/18 already built for `/transactions`). Real open questions:
+      whether this replaces or sits alongside docs/18's existing
+      search/filter UI; how a generic per-column filter UI fits the
+      phone-first layout the rest of the app is built around (the
+      "Custom UI for tablets and desktops" item right below is likely a
+      prerequisite, not a coincidence — a real column-based grid probably
+      wants the wider desktop/tablet layout more than it wants to be
+      squeezed into a ~390px column); whether multi-currency totals
+      (docs/10 — never blended) still hold once rows can be freely
+      filtered/sorted across currencies; and how much of this is a new
+      screen vs. an evolution of docs/18's filter chips into something
+      more general. Likely connects to the also-open "new report types"
+      half of the Insights-screen item above rather than being fully
+      separate. Not designed further than this.
+- [ ] Spanish support: speech recognition + Tier 1 parser vocabulary, and
+      an explicit, user-selectable UI language (not just auto-detected) —
+      flagged 2026-08-23, not yet scoped. **Flag, not a silent change**:
+      this reopens two decisions docs/09 already locked — D31 ("full
+      bilingual UI" is specifically pt-BR + English, not three-way) and
+      D32 (language is auto-detected from browser locale, not a user-
+      facing setting). Whoever picks this up should treat those as
+      explicitly reopened by this request, not silently expanded.
+      Current actual state, so the gap is scoped correctly: docs/09 itself
+      is spec-only — no language toggle exists yet anywhere in the app.
+      Voice input (docs/16, `speechInput.ts`) just passes the browser's
+      raw `navigator.language` straight to the Web Speech API with no
+      language selection UI at all — so browser-side speech-to-text for
+      Spanish (or Portuguese, on a browser set to a Spanish locale) may
+      already work today incidentally, untested either way. The real gap
+      is downstream: `parser.ts` (docs/16) is deliberately bilingual
+      pt-BR/English only — its amount-word, date-word, category-keyword,
+      and currency-word vocabularies, plus the merchant-guess connector
+      grammar ("at"/"no"/"na"), all assume one of those two languages, so
+      a Spanish utterance would mis-parse or silently match on
+      Portuguese/English overlap words (e.g. "tres" already matches both
+      docs/16's Portuguese "três" and Spanish, incidentally, not by
+      design) rather than genuinely understanding Spanish. Real open
+      questions once scoped: whether Spanish becomes a real third
+      language in the parser (its own keyword/number/date vocab,
+      docs/16's existing dedupe-by-slug categories would need Spanish
+      labels too) or STT-only with parsing best-effort; whether the UI
+      language picker is per-device (matches D32's existing "not synced"
+      call) or promoted to a synced account setting now that auth exists
+      (docs/41-43); and full-interface translation itself (docs/09 D33's
+      i18next-or-similar plan) is still entirely unbuilt regardless of
+      language count — this request effectively also promotes "actually
+      build docs/09" from spec-only to scoped work, not just "add a
+      language" to something already implemented. Not designed further
+      than this.
 - [ ] Custom UI for tablets and desktops — flagged 2026-08-19, not yet
       scoped. Today the entire app (every screen, every mockup) is
       designed and built phone-first/single-column, ~390px viewport; a
