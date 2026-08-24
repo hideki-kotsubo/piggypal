@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { Transaction as SqliteTransaction } from '@powersync/web';
 import { connectSync, db } from './db';
 import { clearAuthAccount, getAuthAccount } from './auth';
-import { clearDeviceRole, getLocalUserId, setDeviceRole, setLocalUserId } from './identity';
+import { clearDeviceRole, clearLocalUserId, getLocalUserId, setDeviceRole, setLocalUserId } from './identity';
 import { clearPairedPeers } from './peers';
 import { nowUtc } from './format';
 import type { AccountRewrite, CategoryRewrite } from './mergeMatch';
@@ -765,6 +765,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         // reset device has no memory of anything, including which role
         // (own device / someone else) it last answered at sign-in.
         clearDeviceRole();
+        // docs/46 — a real bug found testing this for real: a device that
+        // had ever adopted a real account's id (any earlier "Merge into my
+        // account") kept that id across every subsequent reset, so its
+        // next sign-in saw "already the same identity" and skipped straight
+        // past the household fork *and* the whole merge cascade, even
+        // though the fresh post-reset local data was never reconciled with
+        // anything. See identity.ts's clearLocalUserId() for the full
+        // trace — this is what makes "reset" actually mean reset.
+        clearLocalUserId();
         window.location.reload();
       },
 

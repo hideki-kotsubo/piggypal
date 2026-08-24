@@ -23,11 +23,26 @@ export function getLocalUserId(): string {
 
 // docs/25 D126: "own device" pairing unifies identity by having the
 // joining device adopt the other device's id, rather than keeping the one
-// it generated on first launch. This is the only place that value is
-// meant to change after the fact — every other read goes through
-// getLocalUserId() above.
+// it generated on first launch. Also the mechanism `AuthVerifyScreen`'s
+// "my own device" branch uses on sign-in (docs/46 D165) — every other read
+// goes through getLocalUserId() above.
 export function setLocalUserId(id: string): void {
   localStorage.setItem(LOCAL_USER_ID_KEY, id);
+}
+
+// docs/46 — a real bug found testing this for real: `resetLocalData()`
+// wipes every local row but was never clearing this. A device that had
+// ever adopted a real account's id (any earlier "Merge into my account")
+// kept carrying that id across every subsequent reset — so a *reset*
+// device's next sign-in saw `result.userId === getLocalUserId()` already
+// true, treated it as "nothing to reconcile, already the same identity,"
+// and skipped straight past both the household fork and the whole merge
+// cascade, even though the fresh post-reset local data had never actually
+// been reconciled with anything. `getLocalUserId()` regenerates a fresh
+// random id on next access once this is cleared, matching what a
+// genuinely new device would have — exactly what "reset" should mean.
+export function clearLocalUserId(): void {
+  localStorage.removeItem(LOCAL_USER_ID_KEY);
 }
 
 const DEVICE_ID_KEY = 'piggypal:device-id';
