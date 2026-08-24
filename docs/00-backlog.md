@@ -473,6 +473,27 @@ it needs doing.
       reuses docs/25 D125-D127's identity-unification mechanics and docs/05
       D14's ask-before-merging pattern rather than inventing a third one,
       but that's a guess, not a plan — needs its own design pass.
+- [ ] Manual, user-triggered record-level merge — user picks two specific
+      Category rows, or two specific Account rows, and merges them into
+      one on demand — flagged 2026-08-23, alongside docs/46's sign-in
+      merge redesign discussion. Distinct from the "Merge account" item
+      just above: that one reconciles two whole *datasets* (device-to-
+      device or account-to-account); this is a fine-grained tool for the
+      everyday case of two records that drifted apart with no merge event
+      involved at all — e.g. "Grocery" and "Groceries" typed at different
+      times on the same device, never part of any pairing or sign-in.
+      Likely reuses docs/46 D167/D168's own merge mechanics (id rewrite +
+      cascading reference updates — `transactions`/`budgets`/
+      `category_keywords` for a merged category, `transactions` for a
+      merged account, plus child `parent_id` rewrites if the surviving
+      category has children) but triggered explicitly by the user
+      picking two rows in Categories/Accounts Management, rather than
+      automatically during a device/sign-in merge. Not designed: where
+      in the UI this lives (a multi-select mode on the existing list? a
+      dedicated "Merge" action per row?), which record's other fields win
+      when the two disagree (kind, parent, institution), and whether it
+      should reuse docs/46 D169's manual-review-with-recency-context
+      presentation.
 - [ ] Revisit "piggypal" naming once there's a working product to react to
       (parked 2026-08-07 — see docs/01 item 5 for full context: name space
       is saturated, piggypal's real gaps are signaling private/local-first
