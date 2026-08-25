@@ -127,8 +127,14 @@ export function AuthVerifyScreen() {
     setStep({ kind: 'syncing' });
     try {
       await connectSync();
-      await db.waitForFirstSync();
-      const snapshot = await fetchServerSnapshot();
+      // fetchServerSnapshot() is a plain, independent HTTP call — it
+      // doesn't depend on PowerSync's own sync stream finishing, so there
+      // was no real reason to wait for waitForFirstSync() before starting
+      // it. A real user noticed the sequential version feels like a
+      // frozen screen for up to ~30s on a real account's data volume;
+      // running them together overlaps that network round trip with the
+      // (usually longer) download wait instead of adding to it.
+      const [, snapshot] = await Promise.all([db.waitForFirstSync(), fetchServerSnapshot()]);
 
       if (!snapshot) {
         // Real network hiccup — don't block sign-in forever over it.
@@ -227,7 +233,12 @@ export function AuthVerifyScreen() {
 
       {(step.kind === 'verifying' || step.kind === 'syncing') && (
         <div className="qr-stage">
-          <p className="qr-caption">{step.kind === 'verifying' ? 'Signing you in…' : 'Checking your account…'}</p>
+          <div className="spinner" aria-hidden="true" />
+          <p className="qr-caption">
+            {step.kind === 'verifying'
+              ? 'Signing you in…'
+              : "Downloading your account — this can take a moment on a real account's worth of data."}
+          </p>
         </div>
       )}
 

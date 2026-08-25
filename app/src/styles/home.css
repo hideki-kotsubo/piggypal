@@ -1324,3 +1324,23 @@
 .merge-conflict .parse-fields {
   margin-bottom: 0.5rem;
 }
+
+/* A real user reported the sign-in "syncing" step (waiting on a real
+   account's full download, up to ~30s) as reading like a frozen screen —
+   .qr-stage's static caption alone gave no sign anything was happening.
+   A plain rotating border, same minimal spirit as this app's other
+   indicators (mic-pulse), not a borrowed icon font. */
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation: none; }
+}
