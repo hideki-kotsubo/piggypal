@@ -145,8 +145,23 @@ export function AuthVerifyScreen() {
       // device" — never "someone else," where every local account stays
       // distinct by construction (this is the actual fix for two
       // household members' identically-named accounts never being
-      // conflated).
-      const accountMatch = role === 'own' ? matchAccounts(store.accounts, snapshot.accounts) : null;
+      // conflated). matchAccounts asserts both lists are single-owner
+      // (a real bug, found testing this against a real account with
+      // months of accumulated accounts from many different test
+      // devices/sessions, each tagged with whatever local identity was
+      // current at the time — passing the full unfiltered lists violated
+      // that precondition immediately). Narrow to exactly the comparison
+      // D168 actually means: this device's own current accounts against
+      // the *target* identity's own existing accounts — never anyone
+      // else's, e.g. another household member's, even though their rows
+      // sit in the same snapshot.
+      const accountMatch =
+        role === 'own'
+          ? matchAccounts(
+              store.accounts.filter((a) => a.ownerUserId === getLocalUserId()),
+              snapshot.accounts.filter((a) => a.ownerUserId === userId),
+            )
+          : null;
 
       const needsReview = categoryMatch.manual.length > 0 || (accountMatch?.manual.length ?? 0) > 0;
       if (!needsReview) {

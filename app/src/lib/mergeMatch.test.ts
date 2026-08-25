@@ -289,3 +289,41 @@ describe('resolveAccountRewrites', () => {
     expect(rewrites[0].reinsert?.id).toBe(rewrites[0].newId);
   });
 });
+
+describe('matchAccounts caller contract — AuthVerifyScreen.tsx must pre-filter by owner', () => {
+  // A real bug, found testing against a real account with months of
+  // accumulated accounts from many different test devices/sessions, each
+  // tagged with whatever local identity happened to be current at upload
+  // time: AuthVerifyScreen originally called matchAccounts(store.accounts,
+  // snapshot.accounts) with the *entire* unfiltered lists, immediately
+  // tripping this exact assertion the moment a real account had accounts
+  // from more than one owner. This locks in the correct caller pattern —
+  // filter both sides down to exactly one owner first.
+  it('the exact failure: an unfiltered multi-owner server snapshot throws', () => {
+    const local = [acct({ id: 'local-a', ownerUserId: 'me' })];
+    const serverAccumulatedFromManyDevices = [
+      acct({ id: 'server-a', ownerUserId: 'me' }),
+      acct({ id: 'server-b', ownerUserId: 'old-device-identity-1' }),
+      acct({ id: 'server-c', ownerUserId: 'old-device-identity-2' }),
+    ];
+    expect(() => matchAccounts(local, serverAccumulatedFromManyDevices)).toThrow(/single owner/);
+  });
+
+  it('the fix: filtering both sides to the current identity first works correctly', () => {
+    const targetUserId = 'me';
+    const local = [acct({ id: 'local-a', ownerUserId: targetUserId })];
+    const serverAccumulatedFromManyDevices = [
+      acct({ id: 'server-a', ownerUserId: targetUserId, name: 'Checking' }),
+      acct({ id: 'server-b', ownerUserId: 'old-device-identity-1' }),
+      acct({ id: 'server-c', ownerUserId: 'old-device-identity-2' }),
+    ];
+    const result = matchAccounts(
+      local.filter((a) => a.ownerUserId === targetUserId),
+      serverAccumulatedFromManyDevices.filter((a) => a.ownerUserId === targetUserId),
+    );
+    // Only ever compared against this device's own prior accounts —
+    // the other owners' accounts never entered the comparison at all.
+    expect(result.merged).toEqual([]);
+    expect(result.manual).toEqual([]);
+  });
+});
