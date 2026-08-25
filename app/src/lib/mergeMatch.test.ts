@@ -174,14 +174,25 @@ describe('matchAccounts', () => {
     expect(() => matchAccounts(local, [])).toThrow(/single owner/);
   });
 
-  it('rejects comparing across two different owners — the household guard', () => {
-    // The exact docs/46 scenario: husband and wife each created an
-    // identically-named "RBC Bank — Mastercard — Credit" account. Calling
-    // matchAccounts across their two owners must be structurally
-    // impossible, not just discouraged.
-    const husbandAccount = acct({ id: 'husband-acct', ownerUserId: 'husband' });
-    const wifeAccount = acct({ id: 'wife-acct', ownerUserId: 'wife' });
-    expect(() => matchAccounts([husbandAccount], [wifeAccount])).toThrow(/never compare across owners/);
+  it('the "own device" case: local and server owners legitimately differ, and matching still works', () => {
+    // A real bug, found on a real second-device sign-in: this is the
+    // ordinary "my own device" case, not a household mismatch — this
+    // device's local accounts are still owned by its own pre-adoption
+    // getLocalUserId() (here "device-identity"), while the account
+    // being signed into already has its own owner_user_id (here
+    // "real-account-id"), set by whichever device created it. These are
+    // *supposed* to differ at this point — reconciling that mismatch via
+    // rewriteOwnerIdentity is the entire point of "own device" sign-in.
+    // matchAccounts must not reject this; it should just match normally.
+    const local = [acct({ id: 'local-a', institution: 'RBC', name: 'Mastercard', ownerUserId: 'device-identity' })];
+    const server = [acct({ id: 'server-a', institution: 'RBC', name: 'Mastercard', ownerUserId: 'real-account-id' })];
+    const result = matchAccounts(local, server);
+    expect(result.merged).toEqual([{ localId: 'local-a', serverId: 'server-a', via: 'exact' }]);
+  });
+
+  it('rejects a server list mixing owners', () => {
+    const server = [acct({ id: 'a', ownerUserId: 'owner-1' }), acct({ id: 'b', ownerUserId: 'owner-2' })];
+    expect(() => matchAccounts([], server)).toThrow(/single owner/);
   });
 
   it('merges an exact institution+name+kind match under different ids, same owner', () => {

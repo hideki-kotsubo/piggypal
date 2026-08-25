@@ -271,22 +271,30 @@ function accountsFuzzyMatch(a: Account, b: Account): boolean {
   );
 }
 
-// D168's hard precondition: this only ever compares accounts already
-// known to share one owner — the actual mechanism that keeps two
-// household members' identically-named accounts (docs/46's "RBC Bank —
-// Mastercard — Credit" example) from ever being conflated. Enforced, not
-// just documented: throws if either list mixes owners, or if the two
-// lists' owners don't match each other.
+// D168's hard precondition: each side must *internally* be a single
+// owner's accounts — the actual mechanism that keeps two household
+// members' identically-named accounts (docs/46's "RBC Bank — Mastercard —
+// Credit" example) from ever being conflated. Enforced, not just
+// documented: throws if either list mixes more than one owner within
+// itself.
+//
+// Deliberately does NOT require the two sides' owners to be the *same*
+// value — a real bug, found testing a real second-device sign-in: the
+// "own device" case is exactly two different, not-yet-unified ids (this
+// device's pre-adoption getLocalUserId() vs. the account's own existing
+// owner_user_id) that are ABOUT to become the same person via
+// rewriteOwnerIdentity. Requiring cross-side equality here would make
+// that reconciliation impossible to ever run — the mismatch is the
+// entire reason it exists. Preventing a genuine cross-*person* comparison
+// (docs/46's real "never compare across owners" guarantee) is the
+// caller's job: AuthVerifyScreen only ever calls this for role === 'own'
+// in the first place, and never passes another household member's slice
+// of either list.
 export function matchAccounts(local: Account[], server: Account[]): AccountMatchResult {
   const localOwners = new Set(local.map((a) => a.ownerUserId));
   const serverOwners = new Set(server.map((a) => a.ownerUserId));
   if (localOwners.size > 1 || serverOwners.size > 1) {
     throw new Error('matchAccounts: local and server lists must each belong to a single owner');
-  }
-  const localOwner = [...localOwners][0];
-  const serverOwner = [...serverOwners][0];
-  if (localOwner !== undefined && serverOwner !== undefined && localOwner !== serverOwner) {
-    throw new Error('matchAccounts: local and server owners differ — never compare across owners');
   }
 
   const merged: AccountMerge[] = [];
