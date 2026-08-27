@@ -132,13 +132,29 @@ syncRouter.post('/upload', requireAccessToken, async (req: AuthedRequest, res) =
     return;
   }
   const ops = rawOps as SyncOp[];
+  // A real bug, found from a real merge upload batch: a batch can contain
+  // both a DELETE of a duplicate row and a PATCH elsewhere that repoints a
+  // foreign key *away* from that same row (e.g. store.tsx's merge-plan
+  // cascade deleting a duplicate account while repointing its transactions
+  // to the surviving account id) — see docs/46 D167/D168's merge cascade.
+  // PowerSync's CRUD queue preserves local write order, but the local write
+  // order isn't guaranteed to detach every reference before deleting its
+  // target, and Postgres checks FK constraints immediately, not at COMMIT.
+  // Applying every PUT/PATCH before any DELETE (stable within each group)
+  // guarantees every reference is repointed before its old target is
+  // removed, regardless of the order the client queued them in. This is
+  // safe because a single merge-plan application never reuses an id across
+  // both a DELETE and a PUT/PATCH — "split" resolutions delete the old id
+  // and reinsert under a brand-new one, "merge" resolutions delete the
+  // losing id with no reinsert at all.
+  const orderedOps = [...ops.filter((op) => op.op !== 'DELETE'), ...ops.filter((op) => op.op === 'DELETE')];
   const result: UploadResult = { applied: [], skipped: [] };
 
   const client = await pool().connect();
   try {
     await client.query('BEGIN');
 
-    for (const op of ops) {
+    for (const op of orderedOps) {
       const columns = TABLE_COLUMNS[op.table];
 
       if (op.op === 'DELETE') {
