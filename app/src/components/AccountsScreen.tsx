@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { accountLabel, formatAmount, nowUtc } from '../lib/format';
 import { getLocalUserId } from '../lib/identity';
@@ -27,7 +27,13 @@ type OpenPanel = { type: 'edit'; id: string; institutionSnapshot: string | null 
 
 export function AccountsScreen() {
   const store = useStore();
-  const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
+  const location = useLocation();
+  // EntryZone routes here with this when a real zero-accounts user tries
+  // to log a transaction before adding their first account — jumps
+  // straight to the create form instead of an empty list they'd still
+  // have to find "+" on.
+  const redirectState = location.state as { openCreate?: boolean; reason?: string } | null;
+  const [openPanel, setOpenPanel] = useState<OpenPanel>(redirectState?.openCreate ? { type: 'create' } : null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string> | null>(null);
   const [archivedOpen, setArchivedOpen] = useState(false);
   const [peers] = usePairedPeers();
@@ -158,6 +164,7 @@ export function AccountsScreen() {
       {openPanel?.type === 'create' && (
         <section className="account-create">
           <div className="section-label">New account</div>
+          {redirectState?.reason && <p className="empty-note">{redirectState.reason}</p>}
           <AccountForm account={null} onDone={() => setOpenPanel(null)} />
         </section>
       )}

@@ -49,6 +49,23 @@ export function EntryZone({ onSubmitted }: Props) {
   // docs/16 D94) — the blank row is real the instant it's created, same
   // as tap-entry always was.
   function startBlank() {
+    // A real, now-reachable case since accounts are no longer auto-seeded
+    // (a fresh real install starts with zero) — without this guard,
+    // defaultAccountId()'s '' fallback would silently create a
+    // transaction with no real account, invisible in the picker and
+    // rejected by Postgres's NOT NULL/FK on the next sync upload.
+    //
+    // Carried via router state, not onSubmitted()'s toast: the toast is
+    // App's own local state, unmounted the instant this navigate() commits
+    // — a real Playwright check caught it rendering for one ~50ms frame
+    // and never actually being visible to a user. AccountsScreen renders
+    // this reason itself instead, so it survives the route change.
+    if (store.accounts.length === 0) {
+      navigate('/accounts', {
+        state: { openCreate: true, reason: 'Add an account first, then log your first transaction' },
+      });
+      return;
+    }
     const accountId = store.defaultAccountId();
     const currency = store.defaultCurrencyFor(accountId);
     const tx: Transaction = {
@@ -87,6 +104,14 @@ export function EntryZone({ onSubmitted }: Props) {
   function buildPreview(rawText: string) {
     const text = rawText.trim();
     if (!text) return;
+
+    // Same zero-accounts guard as startBlank() above.
+    if (store.accounts.length === 0) {
+      navigate('/accounts', {
+        state: { openCreate: true, reason: 'Add an account first, then log your first transaction' },
+      });
+      return;
+    }
 
     const result = parseUtterance(text, {
       categories: store.categories,

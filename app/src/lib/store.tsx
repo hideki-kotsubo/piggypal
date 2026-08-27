@@ -9,7 +9,7 @@ import { nowUtc } from './format';
 import type { AccountRewrite, CategoryRewrite } from './mergeMatch';
 import type { Account, AccountKind, Budget, Category, CategoryKeyword, MergeSummary, PeerDataset, Transaction } from './types';
 import { AppSkeleton } from '../components/AppSkeleton';
-import { seedAccounts, seedBudgets, seedCategories, seedCategoryKeywords, seedTransactions } from './seed';
+import { seedCategories, seedCategoryKeywords } from './seed';
 
 // Real local data layer — docs/01 D1 (on-device SQLite via wa-sqlite/
 // PowerSync web SDK), running in local-only mode (no connector passed to
@@ -222,18 +222,21 @@ async function insertAccountRow(a: Account): Promise<void> {
 // ---- one-time seed on an empty database ----
 
 async function seedIfEmpty() {
-  // A real bug, found testing docs/45's discardAndAdoptAccountId for
-  // real: that call wipes local data and adopts a real account id, with
-  // no reload — but even a subsequent reload would have hit this same
-  // function and injected fresh demo placeholders (Visa/Mastercard/Uber,
-  // ...) straight into the user's real signed-in account, which is worse
-  // than just staying empty. Demo data is only ever appropriate for a
-  // device that's never been signed into anything — once
-  // auth.ts's marker exists, this device belongs to a real account and
-  // should get real data from sync (once that's working), never fake
-  // placeholders. Checked before the transaction, not inside it — this
-  // is a read of a completely separate store (localStorage), not a race
-  // with the writeTransaction's own emptiness check below.
+  // Only categories/category_keywords are seeded here — real starter
+  // defaults every install needs (the Tier 1 parser has nothing to match
+  // against without the keyword vocabulary), not demo data. Accounts/
+  // transactions/budgets used to be seeded too as fake UI-dev fixtures
+  // (Visa/Costco/Uber/...), which meant every real new user's first
+  // launch silently mixed fictional financial data into their own store.
+  // Removed — a real user's Home starts genuinely empty.
+  //
+  // Still skipped entirely once signed in (docs/45's discardAndAdopt-
+  // AccountId bug): a signed-in device belongs to a real account and
+  // should get real data from sync, never seed defaults locally that
+  // might collide with what's about to download. Checked before the
+  // transaction, not inside it — this is a read of a completely separate
+  // store (localStorage), not a race with the writeTransaction's own
+  // emptiness check below.
   if (getAuthAccount()) return;
   try {
     await db.writeTransaction(async (tx) => {
@@ -246,7 +249,7 @@ async function seedIfEmpty() {
       // inside means the second call's check runs only after the first's
       // transaction has fully committed, so it correctly sees non-empty
       // and skips seeding instead of racing on the same hardcoded IDs.
-      const existing = await tx.getAll<{ id: string }>('SELECT id FROM accounts LIMIT 1');
+      const existing = await tx.getAll<{ id: string }>('SELECT id FROM categories LIMIT 1');
       if (existing.length > 0) return;
 
       // One shared timestamp for the whole seed batch rather than a fresh
@@ -254,30 +257,10 @@ async function seedIfEmpty() {
       // batch," so there's no real distinction between them worth a
       // separate call per insert.
       const seededAt = nowUtc();
-      for (const a of seedAccounts) {
-        await tx.execute(
-          `INSERT INTO accounts (id, institution, name, kind, archived, owner_user_id, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [a.id, a.institution, a.name, a.kind, a.archived ? 1 : 0, a.ownerUserId, seededAt],
-        );
-      }
       for (const c of seedCategories) {
         await tx.execute(
           `INSERT INTO categories (id, name, kind, parent_id, archived, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
           [c.id, c.name, c.kind, c.parentId, c.archived ? 1 : 0, seededAt],
-        );
-      }
-      for (const t of seedTransactions) {
-        await tx.execute(
-          `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_at, note, merchant, source, ai_raw, deleted_at, paid_by_user_id, created_by_user_id, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [t.id, t.accountId, t.categoryId, t.amountCents, t.currency, t.occurredAt, t.note, t.merchant, t.source, t.aiRaw, t.deletedAt, t.paidByUserId, t.createdByUserId, seededAt],
-        );
-      }
-      for (const b of seedBudgets) {
-        await tx.execute(
-          `INSERT INTO budgets (id, category_id, month, currency, amount_cents, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
-          [b.id, b.categoryId, b.month, b.currency, b.amountCents, seededAt],
         );
       }
       for (const k of seedCategoryKeywords) {
