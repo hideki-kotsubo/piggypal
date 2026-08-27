@@ -1344,3 +1344,34 @@
 @media (prefers-reduced-motion: reduce) {
   .spinner { animation: none; }
 }
+
+/* AppSkeleton — shown while the local DB is still opening (real, if brief,
+   wall-clock cost even fully offline: WASM compile + Worker/OPFS handshake).
+   Reuses .tx-row/.day-card's exact box shape so the transition into real
+   content doesn't jump around; bars shimmer in place of text/amount. */
+.skeleton-bar {
+  display: block;
+  height: 0.8em;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--line) 25%, var(--surface) 50%, var(--line) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+.skeleton-bar-note {
+  width: 8.5em;
+  margin-bottom: 0.35rem;
+}
+.skeleton-bar-meta {
+  width: 5em;
+  height: 0.62rem;
+}
+.skeleton-bar-amt {
+  width: 3.2em;
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-bar { animation: none; }
+}

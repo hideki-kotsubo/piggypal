@@ -8,6 +8,7 @@ import { clearPairedPeers } from './peers';
 import { nowUtc } from './format';
 import type { AccountRewrite, CategoryRewrite } from './mergeMatch';
 import type { Account, AccountKind, Budget, Category, CategoryKeyword, MergeSummary, PeerDataset, Transaction } from './types';
+import { AppSkeleton } from '../components/AppSkeleton';
 import { seedAccounts, seedBudgets, seedCategories, seedCategoryKeywords, seedTransactions } from './seed';
 
 // Real local data layer — docs/01 D1 (on-device SQLite via wa-sqlite/
@@ -392,13 +393,33 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       .finally(() => {
         if (controller.signal.aborted) return;
 
+        // `ready` used to flip true as soon as these five watches were
+        // registered, not once they'd actually delivered their first real
+        // rows — db.watch()'s first callback (even with triggerImmediate)
+        // still crosses an async round-trip to the wa-sqlite worker, so
+        // real content briefly rendered with every field still at its
+        // initial-state default `[]`. That's not "no data," but looked
+        // exactly like RecentList's genuine empty state ("Nothing logged
+        // yet"), a real bug found from a real report. `ready` now waits
+        // for every table's first snapshot before showing real content —
+        // AppSkeleton stays up for that whole window instead.
+        const pendingFirstLoad = new Set(['accounts', 'categories', 'transactions', 'budgets', 'categoryKeywords']);
+        function markFirstLoad(table: string) {
+          if (pendingFirstLoad.delete(table) && pendingFirstLoad.size === 0) setReady(true);
+        }
+
         db.watch(
           'SELECT * FROM accounts',
           [],
           {
-            onResult: (r) =>
-              setState((s) => ({ ...s, accounts: r.rows?._array.map(rowToAccount) ?? [] })),
-            onError: (err) => console.error('piggypal: accounts watch failed', err),
+            onResult: (r) => {
+              setState((s) => ({ ...s, accounts: r.rows?._array.map(rowToAccount) ?? [] }));
+              markFirstLoad('accounts');
+            },
+            onError: (err) => {
+              console.error('piggypal: accounts watch failed', err);
+              markFirstLoad('accounts');
+            },
           },
           // triggerImmediate: without it, watch() only fires on a FUTURE
           // table change — it does not proactively query current state on
@@ -412,9 +433,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           'SELECT * FROM categories',
           [],
           {
-            onResult: (r) =>
-              setState((s) => ({ ...s, categories: r.rows?._array.map(rowToCategory) ?? [] })),
-            onError: (err) => console.error('piggypal: categories watch failed', err),
+            onResult: (r) => {
+              setState((s) => ({ ...s, categories: r.rows?._array.map(rowToCategory) ?? [] }));
+              markFirstLoad('categories');
+            },
+            onError: (err) => {
+              console.error('piggypal: categories watch failed', err);
+              markFirstLoad('categories');
+            },
           },
           // triggerImmediate: without it, watch() only fires on a FUTURE
           // table change — it does not proactively query current state on
@@ -428,9 +454,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           'SELECT * FROM transactions ORDER BY occurred_at DESC',
           [],
           {
-            onResult: (r) =>
-              setState((s) => ({ ...s, transactions: r.rows?._array.map(rowToTransaction) ?? [] })),
-            onError: (err) => console.error('piggypal: transactions watch failed', err),
+            onResult: (r) => {
+              setState((s) => ({ ...s, transactions: r.rows?._array.map(rowToTransaction) ?? [] }));
+              markFirstLoad('transactions');
+            },
+            onError: (err) => {
+              console.error('piggypal: transactions watch failed', err);
+              markFirstLoad('transactions');
+            },
           },
           // triggerImmediate: without it, watch() only fires on a FUTURE
           // table change — it does not proactively query current state on
@@ -444,9 +475,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           'SELECT * FROM budgets',
           [],
           {
-            onResult: (r) =>
-              setState((s) => ({ ...s, budgets: r.rows?._array.map(rowToBudget) ?? [] })),
-            onError: (err) => console.error('piggypal: budgets watch failed', err),
+            onResult: (r) => {
+              setState((s) => ({ ...s, budgets: r.rows?._array.map(rowToBudget) ?? [] }));
+              markFirstLoad('budgets');
+            },
+            onError: (err) => {
+              console.error('piggypal: budgets watch failed', err);
+              markFirstLoad('budgets');
+            },
           },
           // triggerImmediate: without it, watch() only fires on a FUTURE
           // table change — it does not proactively query current state on
@@ -460,14 +496,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           'SELECT * FROM category_keywords',
           [],
           {
-            onResult: (r) =>
-              setState((s) => ({ ...s, categoryKeywords: r.rows?._array.map(rowToCategoryKeyword) ?? [] })),
-            onError: (err) => console.error('piggypal: category_keywords watch failed', err),
+            onResult: (r) => {
+              setState((s) => ({ ...s, categoryKeywords: r.rows?._array.map(rowToCategoryKeyword) ?? [] }));
+              markFirstLoad('categoryKeywords');
+            },
+            onError: (err) => {
+              console.error('piggypal: category_keywords watch failed', err);
+              markFirstLoad('categoryKeywords');
+            },
           },
           { signal: controller.signal, triggerImmediate: true },
         );
-
-        setReady(true);
       });
 
     return () => controller.abort();
@@ -890,7 +929,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
   }, [state]);
 
-  if (!ready) return null;
+  if (!ready) return <AppSkeleton />;
 
   return <StoreContext.Provider value={api}>{children}</StoreContext.Provider>;
 }
