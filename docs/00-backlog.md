@@ -101,6 +101,15 @@ it needs doing.
 
 ## ⚫ Later / someday
 
+- [ ] Admin/ops panel — a dev-only diagnostic tool for the owner (user
+      lookup, sync/device state, session inspection), requested and
+      scoped 2026-08-24: docs/47-admin-panel.md. Locked so far: a
+      brand-new separate git repo, its own least-privilege Postgres role
+      (same production DB, no shared endpoints with `api/`), and its own
+      password+TOTP auth against a new `admin_users` table. Repo
+      name/location, the DB role's actual grants, v0 feature scope, and
+      deployment subdomain are all still open — see the doc's own "still
+      open" list. Nothing built yet.
 - [ ] Import records from CSV/XLSX (or another format) — flagged
       2026-08-19, not yet scoped. Already named as explicitly out of MVP
       scope in docs/01 ("CSV/bank import" — deferred, meant to reuse the
