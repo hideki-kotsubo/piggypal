@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { nowUtc } from '../lib/format';
+import { canMergeCategoryIntoSurvivor, categoryMergeBlockedReason } from '../lib/manualMerge';
 import type { Budget, Category } from '../lib/types';
 
 // Local date construction, not toISOString() — that's UTC and would land
@@ -10,6 +11,13 @@ const _now = new Date();
 const currentMonth = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-01`;
 
 type OpenPanel = { type: 'edit'; id: string } | { type: 'create'; parentId: string | null } | null;
+
+// Backlog 2026-08-23's manual merge-duplicates tool — same shape as
+// AccountsScreen's own MergeState.
+type MergeState =
+  | { step: 'off' }
+  | { step: 'picking'; survivorId: string | null; loserIds: Set<string> }
+  | { step: 'review'; survivorId: string; loserIds: string[] };
 
 // docs/14: no full collapse/expand grouping here (that solved the picker's
 // crowding problem, docs/13-style) — this is a management list, not a
@@ -45,6 +53,7 @@ export function CategoriesScreen() {
   const store = useStore();
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
   const [archivedOpen, setArchivedOpen] = useState(false);
+  const [mergeState, setMergeState] = useState<MergeState>({ step: 'off' });
 
   const active = store.categories.filter((c) => !c.archived);
   const archived = store.categories.filter((c) => c.archived);
@@ -55,13 +64,79 @@ export function CategoriesScreen() {
     setOpenPanel((p) => (p?.type === 'edit' && p.id === id ? null : { type: 'edit', id }));
   }
 
+  function toggleMergeMode() {
+    setOpenPanel(null);
+    setMergeState((m) => (m.step === 'off' ? { step: 'picking', survivorId: null, loserIds: new Set() } : { step: 'off' }));
+  }
+
+  function handleMergeTap(category: Category) {
+    if (mergeState.step !== 'picking') return;
+    if (mergeState.survivorId === null) {
+      setMergeState({ ...mergeState, survivorId: category.id });
+      return;
+    }
+    if (category.id === mergeState.survivorId) return;
+    const survivor = active.find((c) => c.id === mergeState.survivorId);
+    if (!survivor || !canMergeCategoryIntoSurvivor(survivor, category, store.categories)) return;
+    const next = new Set(mergeState.loserIds);
+    if (next.has(category.id)) next.delete(category.id);
+    else next.add(category.id);
+    setMergeState({ ...mergeState, loserIds: next });
+  }
+
+  function changeKeeper() {
+    setMergeState({ step: 'picking', survivorId: null, loserIds: new Set() });
+  }
+
+  function reviewMerge() {
+    if (mergeState.step !== 'picking' || !mergeState.survivorId || mergeState.loserIds.size === 0) return;
+    setMergeState({ step: 'review', survivorId: mergeState.survivorId, loserIds: [...mergeState.loserIds] });
+  }
+
+  async function confirmMerge() {
+    if (mergeState.step !== 'review') return;
+    await store.mergeCategories(mergeState.survivorId, mergeState.loserIds);
+    setMergeState({ step: 'off' });
+  }
+
+  const txCountForCategory = (categoryId: string) =>
+    store.transactions.filter((t) => !t.deletedAt && t.categoryId === categoryId).length;
+  const childCountForCategory = (categoryId: string) =>
+    store.categories.filter((c) => !c.archived && c.parentId === categoryId).length;
+
   function renderRow(category: Category) {
     const isEditing = openPanel?.type === 'edit' && openPanel.id === category.id;
+    const label = category.parentId ? `↳ ${category.name}` : category.name;
+
+    if (mergeState.step === 'picking') {
+      const isSurvivor = mergeState.survivorId === category.id;
+      const isPicked = mergeState.loserIds.has(category.id);
+      const survivor = mergeState.survivorId ? active.find((c) => c.id === mergeState.survivorId) : null;
+      const blockedReason = survivor && !isSurvivor ? categoryMergeBlockedReason(survivor, category, store.categories) : null;
+      return (
+        <button
+          key={category.id}
+          className={`account-row ${isSurvivor ? 'picked-survivor' : ''} ${isPicked ? 'picked-duplicate' : ''} ${blockedReason ? 'merge-disabled' : ''}`}
+          disabled={isSurvivor || !!blockedReason}
+          onClick={() => handleMergeTap(category)}
+        >
+          <div className="account-row-top">
+            <span className="account-name">
+              {isSurvivor && <span className="merge-badge">Keeper</span>}
+              {!isSurvivor && survivor && !blockedReason && <span className="merge-check">{isPicked ? '✓' : '○'}</span>}
+              {label}
+            </span>
+          </div>
+          {blockedReason && <p className="merge-disabled-note">{blockedReason}</p>}
+        </button>
+      );
+    }
+
     return (
       <div className="account-block" key={category.id}>
         <button className="account-row" onClick={() => toggleRow(category.id)}>
           <div className="account-row-top">
-            <span className="account-name">{category.parentId ? `↳ ${category.name}` : category.name}</span>
+            <span className="account-name">{label}</span>
           </div>
         </button>
         {isEditing && (
@@ -82,14 +157,80 @@ export function CategoriesScreen() {
       <div className="app-bar">
         <Link to="/settings" className="back-link">← Back</Link>
         <span className="wordmark">Categories</span>
-        <button
-          className="icon-btn"
-          aria-label="Add category"
-          onClick={() => setOpenPanel((p) => (p?.type === 'create' ? null : { type: 'create', parentId: null }))}
-        >
-          +
-        </button>
+        <div className="app-bar-actions">
+          {mergeState.step === 'off' && active.length >= 2 && (
+            <button className="icon-btn" aria-label="Merge duplicates" onClick={toggleMergeMode}>⇄</button>
+          )}
+          {mergeState.step === 'off' && (
+            <button
+              className="icon-btn"
+              aria-label="Add category"
+              onClick={() => setOpenPanel((p) => (p?.type === 'create' ? null : { type: 'create', parentId: null }))}
+            >
+              +
+            </button>
+          )}
+        </div>
       </div>
+
+      {mergeState.step === 'picking' &&
+        (() => {
+          const survivor = mergeState.survivorId ? active.find((c) => c.id === mergeState.survivorId) : null;
+          return (
+            <div className="merge-toolbar">
+              <span>
+                {!survivor
+                  ? 'Tap a row to keep as the original'
+                  : mergeState.loserIds.size === 0
+                    ? `Now tap any duplicates of "${survivor.name}" to fold in`
+                    : `${mergeState.loserIds.size} will merge into "${survivor.name}"`}
+              </span>
+              <div className="chip-row">
+                {survivor && <button className="chip ghost" onClick={changeKeeper}>Change keeper</button>}
+                {survivor && mergeState.loserIds.size > 0 && (
+                  <button className="save-btn" onClick={reviewMerge}>Review merge</button>
+                )}
+                <button className="chip ghost" onClick={() => setMergeState({ step: 'off' })}>Cancel</button>
+              </div>
+            </div>
+          );
+        })()}
+
+      {mergeState.step === 'review' &&
+        (() => {
+          const survivor = store.categories.find((c) => c.id === mergeState.survivorId)!;
+          const losers = mergeState.loserIds.map((id) => store.categories.find((c) => c.id === id)!).filter(Boolean);
+          return (
+            <div className="merge-review">
+              <p className="section-label">Merge {losers.length} into "{survivor.name}"</p>
+              <div className="merge-conflicts">
+                <div className="merge-conflict">
+                  <p className="merge-conflict-title">Keeping: {survivor.name}</p>
+                  <p className="merge-conflict-detail">Nothing changes on this one.</p>
+                </div>
+                {losers.map((loser) => {
+                  const n = txCountForCategory(loser.id);
+                  const childN = childCountForCategory(loser.id);
+                  return (
+                    <div className="merge-conflict" key={loser.id}>
+                      <p className="merge-conflict-title">Folding in: {loser.name}</p>
+                      <p className="merge-conflict-detail">
+                        {n} transaction{n === 1 ? '' : 's'} move to "{survivor.name}". This category will be deleted.
+                      </p>
+                      {childN > 0 && (
+                        <p className="merge-conflict-detail">
+                          {childN} subcategor{childN === 1 ? 'y' : 'ies'} move under "{survivor.name}".
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <button className="save-btn" onClick={() => void confirmMerge()}>Merge {losers.length}</button>
+              <button className="chip ghost" onClick={() => setMergeState({ step: 'off' })}>Cancel</button>
+            </div>
+          );
+        })()}
 
       {openPanel?.type === 'create' && (
         <section className="account-create">
@@ -106,17 +247,36 @@ export function CategoriesScreen() {
         </section>
       )}
 
-      <div className="accounts-list">
-        <div className="section-label">Expense</div>
-        {expense.length === 0 && <p className="empty-note">No expense categories yet.</p>}
-        {expense.map(renderRow)}
+      {mergeState.step !== 'review' &&
+        (() => {
+          const pickingSurvivor = mergeState.step === 'picking' ? active.find((c) => c.id === mergeState.survivorId) : null;
+          // Once a survivor is picked, the other kind's whole section is
+          // hidden — cross-kind categories are never valid merge candidates,
+          // and showing them inert would just be confusing clutter.
+          const showExpense = !pickingSurvivor || pickingSurvivor.kind === 'expense';
+          const showIncome = !pickingSurvivor || pickingSurvivor.kind === 'income';
+          return (
+            <div className="accounts-list">
+              {showExpense && (
+                <>
+                  <div className="section-label">Expense</div>
+                  {expense.length === 0 && <p className="empty-note">No expense categories yet.</p>}
+                  {expense.map(renderRow)}
+                </>
+              )}
 
-        <div className="section-label">Income</div>
-        {income.length === 0 && <p className="empty-note">No income categories yet.</p>}
-        {income.map(renderRow)}
-      </div>
+              {showIncome && (
+                <>
+                  <div className="section-label">Income</div>
+                  {income.length === 0 && <p className="empty-note">No income categories yet.</p>}
+                  {income.map(renderRow)}
+                </>
+              )}
+            </div>
+          );
+        })()}
 
-      {archived.length > 0 && (
+      {mergeState.step === 'off' && archived.length > 0 && (
         <div className="account-group">
           <button className="group-header" onClick={() => setArchivedOpen((o) => !o)}>
             <span>Archived ({archived.length})</span>

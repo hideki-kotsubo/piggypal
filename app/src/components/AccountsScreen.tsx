@@ -5,6 +5,7 @@ import { accountLabel, formatAmount, nowUtc } from '../lib/format';
 import { getLocalUserId } from '../lib/identity';
 import { hasHousehold, personLabel } from '../lib/household';
 import { usePairedPeers } from '../lib/peers';
+import { crossOwnerLosers } from '../lib/manualMerge';
 import type { Account, AccountKind } from '../lib/types';
 
 // docs/12: name, kind, institution all read/write through the account
@@ -25,6 +26,15 @@ const KIND_LABELS: Record<AccountKind, string> = {
 // AccountForm and losing focus mid-edit.
 type OpenPanel = { type: 'edit'; id: string; institutionSnapshot: string | null } | { type: 'create' } | null;
 
+// Backlog 2026-08-23's manual merge-duplicates tool. 'picking' collects a
+// survivor first (tap any row), then any number of duplicates to fold
+// into it; 'review' is the confirm-with-consequences step before the
+// actual write (store.mergeAccounts).
+type MergeState =
+  | { step: 'off' }
+  | { step: 'picking'; survivorId: string | null; loserIds: Set<string> }
+  | { step: 'review'; survivorId: string; loserIds: string[] };
+
 export function AccountsScreen() {
   const store = useStore();
   const location = useLocation();
@@ -36,6 +46,7 @@ export function AccountsScreen() {
   const [openPanel, setOpenPanel] = useState<OpenPanel>(redirectState?.openCreate ? { type: 'create' } : null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string> | null>(null);
   const [archivedOpen, setArchivedOpen] = useState(false);
+  const [mergeState, setMergeState] = useState<MergeState>({ step: 'off' });
   const [peers] = usePairedPeers();
   // docs/26 D123 — owner_user_id renders as a name prefix in the row's
   // existing name slot, but only once a household actually has 2+
@@ -94,7 +105,12 @@ export function AccountsScreen() {
 
   // Most-recently-used group expanded by default, others collapsed — a single
   // computed default, not re-derived after the user starts toggling groups.
-  const effectiveExpandedGroups = expandedGroups ?? new Set(groups[0] ? [groups[0].institution] : []);
+  // While merging, every group is forced open instead — a duplicate
+  // sitting in a collapsed group would otherwise be impossible to pick.
+  const effectiveExpandedGroups =
+    mergeState.step !== 'off'
+      ? new Set(groups.map((g) => g.institution))
+      : (expandedGroups ?? new Set(groups[0] ? [groups[0].institution] : []));
 
   function toggleGroup(institution: string) {
     const next = new Set(effectiveExpandedGroups);
@@ -111,11 +127,84 @@ export function AccountsScreen() {
     );
   }
 
+  function toggleMergeMode() {
+    setOpenPanel(null);
+    setMergeState((m) => (m.step === 'off' ? { step: 'picking', survivorId: null, loserIds: new Set() } : { step: 'off' }));
+  }
+
+  function handleMergeTap(account: Account) {
+    if (mergeState.step !== 'picking') return;
+    if (mergeState.survivorId === null) {
+      setMergeState({ ...mergeState, survivorId: account.id });
+      return;
+    }
+    if (account.id === mergeState.survivorId) return;
+    const next = new Set(mergeState.loserIds);
+    if (next.has(account.id)) next.delete(account.id);
+    else next.add(account.id);
+    setMergeState({ ...mergeState, loserIds: next });
+  }
+
+  function changeKeeper() {
+    setMergeState({ step: 'picking', survivorId: null, loserIds: new Set() });
+  }
+
+  function reviewMerge() {
+    if (mergeState.step !== 'picking' || !mergeState.survivorId || mergeState.loserIds.size === 0) return;
+    setMergeState({ step: 'review', survivorId: mergeState.survivorId, loserIds: [...mergeState.loserIds] });
+  }
+
+  async function confirmMerge() {
+    if (mergeState.step !== 'review') return;
+    await store.mergeAccounts(mergeState.survivorId, mergeState.loserIds);
+    setMergeState({ step: 'off' });
+  }
+
+  const txCountForAccount = (accountId: string) =>
+    store.transactions.filter((t) => !t.deletedAt && t.accountId === accountId).length;
+
   function renderRow(account: Account, showInstitutionInLabel: boolean) {
     const isEditing = openPanel?.type === 'edit' && openPanel.id === account.id;
     const balances = store.balancesFor(account.id);
     const label = showInstitutionInLabel ? accountLabel(account) : account.name;
     const owner = ownerPrefix(account);
+
+    if (mergeState.step === 'picking') {
+      const isSurvivor = mergeState.survivorId === account.id;
+      const isPicked = mergeState.loserIds.has(account.id);
+      return (
+        <button
+          key={account.id}
+          className={`account-row ${isSurvivor ? 'picked-survivor' : ''} ${isPicked ? 'picked-duplicate' : ''}`}
+          disabled={isSurvivor}
+          onClick={() => handleMergeTap(account)}
+        >
+          <div className="account-row-top">
+            <span className="account-name">
+              {isSurvivor && <span className="merge-badge">Keeper</span>}
+              {!isSurvivor && mergeState.survivorId !== null && (
+                <span className="merge-check">{isPicked ? '✓' : '○'}</span>
+              )}
+              {owner && <span className="owner-prefix">{owner} — </span>}
+              {label}
+            </span>
+            <span className="account-kind">{KIND_LABELS[account.kind]}</span>
+          </div>
+          <div className="account-balances">
+            {balances.length === 0 ? (
+              <span className="balance-line empty">no activity yet</span>
+            ) : (
+              balances.map((b) => (
+                <span className="balance-line" key={b.currency}>
+                  {formatAmount(b.cents, b.currency)}
+                </span>
+              ))
+            )}
+          </div>
+        </button>
+      );
+    }
+
     return (
       <div className="account-block" key={account.id}>
         <button className="account-row" onClick={() => toggleRow(account)}>
@@ -152,14 +241,80 @@ export function AccountsScreen() {
       <div className="app-bar">
         <Link to="/settings" className="back-link">← Back</Link>
         <span className="wordmark">Accounts</span>
-        <button
-          className="icon-btn"
-          aria-label="Add account"
-          onClick={() => setOpenPanel((p) => (p?.type === 'create' ? null : { type: 'create' }))}
-        >
-          +
-        </button>
+        <div className="app-bar-actions">
+          {mergeState.step === 'off' && active.length >= 2 && (
+            <button className="icon-btn" aria-label="Merge duplicates" onClick={toggleMergeMode}>⇄</button>
+          )}
+          {mergeState.step === 'off' && (
+            <button
+              className="icon-btn"
+              aria-label="Add account"
+              onClick={() => setOpenPanel((p) => (p?.type === 'create' ? null : { type: 'create' }))}
+            >
+              +
+            </button>
+          )}
+        </div>
       </div>
+
+      {mergeState.step === 'picking' &&
+        (() => {
+          const survivor = mergeState.survivorId ? store.accounts.find((a) => a.id === mergeState.survivorId) : null;
+          return (
+            <div className="merge-toolbar">
+              <span>
+                {!survivor
+                  ? 'Tap a row to keep as the original'
+                  : mergeState.loserIds.size === 0
+                    ? `Now tap any duplicates of "${accountLabel(survivor)}" to fold in`
+                    : `${mergeState.loserIds.size} will merge into "${accountLabel(survivor)}"`}
+              </span>
+              <div className="chip-row">
+                {survivor && <button className="chip ghost" onClick={changeKeeper}>Change keeper</button>}
+                {survivor && mergeState.loserIds.size > 0 && (
+                  <button className="save-btn" onClick={reviewMerge}>Review merge</button>
+                )}
+                <button className="chip ghost" onClick={() => setMergeState({ step: 'off' })}>Cancel</button>
+              </div>
+            </div>
+          );
+        })()}
+
+      {mergeState.step === 'review' &&
+        (() => {
+          const survivor = store.accounts.find((a) => a.id === mergeState.survivorId)!;
+          const losers = mergeState.loserIds.map((id) => store.accounts.find((a) => a.id === id)!).filter(Boolean);
+          const flagged = new Set(crossOwnerLosers(survivor, losers).map((a) => a.id));
+          return (
+            <div className="merge-review">
+              <p className="section-label">Merge {losers.length} into "{accountLabel(survivor)}"</p>
+              <div className="merge-conflicts">
+                <div className="merge-conflict">
+                  <p className="merge-conflict-title">Keeping: {accountLabel(survivor)}</p>
+                  <p className="merge-conflict-detail">Nothing changes on this one.</p>
+                </div>
+                {losers.map((loser) => {
+                  const n = txCountForAccount(loser.id);
+                  return (
+                    <div className="merge-conflict" key={loser.id}>
+                      <p className="merge-conflict-title">Folding in: {accountLabel(loser)}</p>
+                      <p className="merge-conflict-detail">
+                        {n} transaction{n === 1 ? '' : 's'} move to "{accountLabel(survivor)}". This account will be deleted.
+                      </p>
+                      {flagged.has(loser.id) && (
+                        <p className="merge-conflict-detail merge-conflict-warning">
+                          ⚠ Owned by {personLabel(loser.ownerUserId, peers)} — merging reassigns it to {personLabel(survivor.ownerUserId, peers)}.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <button className="save-btn" onClick={() => void confirmMerge()}>Merge {losers.length}</button>
+              <button className="chip ghost" onClick={() => setMergeState({ step: 'off' })}>Cancel</button>
+            </div>
+          );
+        })()}
 
       {openPanel?.type === 'create' && (
         <section className="account-create">
@@ -169,28 +324,30 @@ export function AccountsScreen() {
         </section>
       )}
 
-      <div className="accounts-list">
-        {groups.map((g) => {
-          const isOpen = effectiveExpandedGroups.has(g.institution);
-          return (
-            <div className="account-group" key={g.institution}>
-              <button className="group-header" onClick={() => toggleGroup(g.institution)}>
-                <span>{isOpen ? '▾' : '▸'} {g.institution}</span>
-                <span className="group-count">({g.accounts.length})</span>
-              </button>
-              {isOpen && g.accounts.map((a) => renderRow(a, false))}
-            </div>
-          );
-        })}
+      {mergeState.step !== 'review' && (
+        <div className="accounts-list">
+          {groups.map((g) => {
+            const isOpen = effectiveExpandedGroups.has(g.institution);
+            return (
+              <div className="account-group" key={g.institution}>
+                <button className="group-header" onClick={() => toggleGroup(g.institution)}>
+                  <span>{isOpen ? '▾' : '▸'} {g.institution}</span>
+                  <span className="group-count">({g.accounts.length})</span>
+                </button>
+                {isOpen && g.accounts.map((a) => renderRow(a, false))}
+              </div>
+            );
+          })}
 
-        {ungrouped.map((a) => renderRow(a, true))}
+          {ungrouped.map((a) => renderRow(a, true))}
 
-        {active.length === 0 && !openPanel && (
-          <p className="empty-note">No accounts yet — tap + to add one.</p>
-        )}
-      </div>
+          {active.length === 0 && !openPanel && (
+            <p className="empty-note">No accounts yet — tap + to add one.</p>
+          )}
+        </div>
+      )}
 
-      {archived.length > 0 && (
+      {mergeState.step === 'off' && archived.length > 0 && (
         <div className="account-group">
           <button className="group-header" onClick={() => setArchivedOpen((o) => !o)}>
             <span>Archived ({archived.length})</span>

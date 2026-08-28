@@ -209,6 +209,32 @@ async function rewriteOwnerIdentity(tx: SqliteTransaction, oldId: string, newId:
   setLocalUserId(newId);
 }
 
+// Shared by applySignInMergePlan's own cascade (below) and the manual
+// merge-duplicates tool (mergeCategories/mergeAccounts) — both are "every
+// reference to oldId now belongs to newId," just triggered by two
+// different flows (sign-in reconciliation vs. an on-demand user pick).
+async function cascadeCategoryReferences(tx: SqliteTransaction, oldId: string, newId: string): Promise<void> {
+  await tx.execute('UPDATE categories SET parent_id = ? WHERE parent_id = ?', [newId, oldId]);
+  await tx.execute('UPDATE transactions SET category_id = ? WHERE category_id = ?', [newId, oldId]);
+  await tx.execute('UPDATE budgets SET category_id = ? WHERE category_id = ?', [newId, oldId]);
+  await tx.execute('UPDATE category_keywords SET category_id = ? WHERE category_id = ?', [newId, oldId]);
+}
+async function cascadeAccountReferences(tx: SqliteTransaction, oldId: string, newId: string): Promise<void> {
+  await tx.execute('UPDATE transactions SET account_id = ? WHERE account_id = ?', [newId, oldId]);
+}
+
+// Manual-merge-only entry points: unlike applySignInMergePlan's rewrites,
+// there's never a "reinsert under a new id" case here — both rows already
+// exist locally, this just collapses loserId into an existing survivorId.
+async function mergeCategoryInto(tx: SqliteTransaction, loserId: string, survivorId: string): Promise<void> {
+  await tx.execute('DELETE FROM categories WHERE id = ?', [loserId]);
+  await cascadeCategoryReferences(tx, loserId, survivorId);
+}
+async function mergeAccountInto(tx: SqliteTransaction, loserId: string, survivorId: string): Promise<void> {
+  await tx.execute('DELETE FROM accounts WHERE id = ?', [loserId]);
+  await cascadeAccountReferences(tx, loserId, survivorId);
+}
+
 // Shared by seeding and addAccount — one place that knows the accounts
 // INSERT shape.
 async function insertAccountRow(a: Account): Promise<void> {
@@ -354,6 +380,15 @@ interface StoreApi extends StoreState {
   // device's identity outright, no row-rewrite needed since nothing's
   // left to rewrite.
   discardAndAdoptAccountId: (newId: string) => Promise<void>;
+  // Manual, user-triggered record-level merge (backlog 2026-08-23) —
+  // distinct from applySignInMergePlan above: no matching/reconciliation
+  // step, the user has already picked which rows are duplicates. Folds
+  // every id in loserIds into survivorId in one atomic write; the picker
+  // (AccountsScreen/CategoriesScreen) is responsible for never offering an
+  // illegal combination (self-merge, cross-kind, depth-cap violation via
+  // manualMerge.ts) — these methods trust their input.
+  mergeCategories: (survivorId: string, loserIds: string[]) => Promise<void>;
+  mergeAccounts: (survivorId: string, loserIds: string[]) => Promise<void>;
 }
 
 const StoreContext = createContext<StoreApi | null>(null);
@@ -719,11 +754,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             // 2 levels deep (docs/14 D70) and mergeMatch.ts resolves
             // parents before children, so by the time a child's own
             // rewrite (if any) runs here, this has already moved it onto
-            // the parent's real final id.
-            await tx.execute('UPDATE categories SET parent_id = ? WHERE parent_id = ?', [r.newId, r.oldId]);
-            await tx.execute('UPDATE transactions SET category_id = ? WHERE category_id = ?', [r.newId, r.oldId]);
-            await tx.execute('UPDATE budgets SET category_id = ? WHERE category_id = ?', [r.newId, r.oldId]);
-            await tx.execute('UPDATE category_keywords SET category_id = ? WHERE category_id = ?', [r.newId, r.oldId]);
+            // the parent's real final id. Shared with the manual
+            // merge-duplicates tool below (mergeCategories).
+            await cascadeCategoryReferences(tx, r.oldId, r.newId);
           }
 
           for (const r of plan.accountRewrites) {
@@ -734,7 +767,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 [r.newId, r.reinsert.institution, r.reinsert.name, r.reinsert.kind, r.reinsert.archived ? 1 : 0, r.reinsert.ownerUserId, r.reinsert.updatedAt],
               );
             }
-            await tx.execute('UPDATE transactions SET account_id = ? WHERE account_id = ?', [r.newId, r.oldId]);
+            await cascadeAccountReferences(tx, r.oldId, r.newId);
           }
 
           // D165: identity is only ever rewritten for "my own device" —
@@ -742,6 +775,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           // identity staying distinct is the entire point.
           if (plan.identity) {
             await rewriteOwnerIdentity(tx, getLocalUserId(), plan.identity.newId);
+          }
+        });
+      },
+
+      async mergeCategories(survivorId, loserIds) {
+        await db.writeTransaction(async (tx) => {
+          for (const loserId of loserIds) {
+            if (loserId === survivorId) continue;
+            await mergeCategoryInto(tx, loserId, survivorId);
+          }
+        });
+      },
+
+      async mergeAccounts(survivorId, loserIds) {
+        await db.writeTransaction(async (tx) => {
+          for (const loserId of loserIds) {
+            if (loserId === survivorId) continue;
+            await mergeAccountInto(tx, loserId, survivorId);
           }
         });
       },

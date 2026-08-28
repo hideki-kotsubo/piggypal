@@ -838,6 +838,63 @@
   flex-direction: column;
   margin-top: 0.15rem;
 }
+
+/* Backlog 2026-08-23 — the manual merge-duplicates tool (AccountsScreen/
+   CategoriesScreen). .account-row's own base styling (block button, no
+   border) is reused as-is; these just layer state on top of it. */
+.merge-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 0.4rem 1.1rem 0;
+  padding: 0.7rem 0.8rem;
+  background: var(--surface-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+.account-row.picked-survivor {
+  background: var(--accent-soft);
+  border-radius: var(--radius-sm);
+}
+.account-row.picked-duplicate {
+  background: var(--surface-sunken);
+  border-radius: var(--radius-sm);
+}
+.account-row.merge-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.merge-badge {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  margin-right: 0.4rem;
+}
+.merge-check {
+  display: inline-block;
+  width: 1.1rem;
+  color: var(--accent);
+  font-weight: 700;
+}
+.merge-disabled-note {
+  margin: 0.1rem 0 0;
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+}
+.merge-conflict-warning {
+  color: var(--warn);
+  background: var(--warn-soft);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.5rem;
+}
 .balance-line {
   font-variant-numeric: tabular-nums;
   font-size: 0.85rem;
