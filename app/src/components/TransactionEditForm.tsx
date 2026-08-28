@@ -37,6 +37,17 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
   const [noteStr, setNoteStr] = useState(() => transaction.note ?? '');
   // Same local-mirror reasoning as noteStr above — docs/15.
   const [merchantStr, setMerchantStr] = useState(() => transaction.merchant ?? '');
+  // Same local-mirror reasoning as noteStr/merchantStr — a real bug found
+  // via Playwright verifying an unrelated feature: pressDigit/backspace/
+  // toggleDirection all used to read transaction.amountCents (the prop,
+  // stale until commit()'s async round-trip resolves) as the basis for
+  // computing the next value. Digit presses faster than that round-trip
+  // raced — a second press read the still-stale amount and silently
+  // overwrote instead of appended (e.g. typing "1" then "0" fast enough
+  // could persist $1.00 instead of $10.00). Mirroring the signed amount
+  // locally (not just its digits) also keeps direction consistent through
+  // a rapid toggle-then-digit sequence.
+  const [amountCentsLocal, setAmountCentsLocal] = useState(() => transaction.amountCents);
   const category = store.categories.find((c) => c.id === transaction.categoryId);
   // docs/15 D79: recency order comes from the store; narrowing by the
   // typed substring (contains, not just starts-with — same rule as the
@@ -48,7 +59,7 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
   // starts at exactly $0, which a real, already-entered transaction never
   // is; treating that as expense (the common case) rather than income
   // gives digit entry the right sign from the first tap.
-  const direction: 'expense' | 'income' = transaction.amountCents <= 0 ? 'expense' : 'income';
+  const direction: 'expense' | 'income' = amountCentsLocal <= 0 ? 'expense' : 'income';
 
   function commit(patch: Partial<Transaction>) {
     store.updateTransaction(transaction.id, patch);
@@ -59,19 +70,24 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
   // empty. Each digit tap autosaves immediately, consistent with every
   // other field in this form (no separate "save" step for existing rows).
   function pressDigit(d: string) {
-    const digits = String(Math.abs(transaction.amountCents)) + d;
-    commit({ amountCents: direction === 'expense' ? -Number(digits) : Number(digits) });
+    const digits = String(Math.abs(amountCentsLocal)) + d;
+    const next = direction === 'expense' ? -Number(digits) : Number(digits);
+    setAmountCentsLocal(next);
+    commit({ amountCents: next });
   }
 
   function backspace() {
-    const digits = String(Math.abs(transaction.amountCents)).slice(0, -1);
+    const digits = String(Math.abs(amountCentsLocal)).slice(0, -1);
     const cents = digits === '' ? 0 : Number(digits);
-    commit({ amountCents: direction === 'expense' ? -cents : cents });
+    const next = direction === 'expense' ? -cents : cents;
+    setAmountCentsLocal(next);
+    commit({ amountCents: next });
   }
 
   function toggleDirection() {
-    const cents = Math.abs(transaction.amountCents);
-    commit({ amountCents: direction === 'expense' ? cents : -cents });
+    const next = -amountCentsLocal;
+    setAmountCentsLocal(next);
+    commit({ amountCents: next });
   }
 
   function remove() {
@@ -93,7 +109,7 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
       />
 
       <AmountKeypad
-        amountCents={Math.abs(transaction.amountCents)}
+        amountCents={Math.abs(amountCentsLocal)}
         currency={transaction.currency}
         direction={direction}
         onDigit={pressDigit}
