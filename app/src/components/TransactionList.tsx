@@ -104,7 +104,13 @@ export function TransactionList() {
       <div className="app-bar">
         <Link to="/" className="back-link">← Back</Link>
         <span className="wordmark">Transactions</span>
-        <span style={{ width: '3rem' }} />
+        <div className="app-bar-actions">
+          {all.length >= 2 && (
+            <Link to="/transactions/duplicates" className="icon-btn" aria-label="Find duplicates" data-testid="find-duplicates-btn">
+              ⇄
+            </Link>
+          )}
+        </div>
       </div>
 
       <div className="tx-filters">

@@ -856,11 +856,11 @@
   font-size: 0.85rem;
   color: var(--ink-muted);
 }
-.account-row.picked-survivor {
+.account-row.picked-survivor, .tx-row.picked-survivor {
   background: var(--accent-soft);
   border-radius: var(--radius-sm);
 }
-.account-row.picked-duplicate {
+.account-row.picked-duplicate, .tx-row.picked-duplicate {
   background: var(--surface-sunken);
   border-radius: var(--radius-sm);
 }
@@ -894,6 +894,25 @@
   background: var(--warn-soft);
   border-radius: var(--radius-sm);
   padding: 0.35rem 0.5rem;
+}
+/* Find-duplicate-transactions tool — confidence tier on each group's
+   title line, same pill/mono vocabulary as .merge-badge. */
+.dup-tier-badge {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  margin-left: 0.4rem;
+}
+.dup-tier-badge.tier-high {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+.dup-tier-badge.tier-secondary {
+  color: var(--ink-muted);
+  background: var(--surface-sunken);
+  border: 1px solid var(--line);
 }
 .balance-line {
   font-variant-numeric: tabular-nums;

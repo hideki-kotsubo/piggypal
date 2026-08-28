@@ -316,6 +316,12 @@ interface StoreApi extends StoreState {
   addTransaction: (tx: Transaction) => void;
   updateTransaction: (transactionId: string, patch: Partial<Transaction>) => void;
   deleteTransaction: (transactionId: string) => void;
+  // "Find duplicates" tool (duplicateTransactions.ts) — resolving a group
+  // soft-deletes every member except the tapped keeper. Wrapped in one
+  // db.writeTransaction (same atomicity convention as mergeAccounts/
+  // mergeCategories) instead of N independent fire-and-forget
+  // deleteTransaction() calls, so a group's rows converge together.
+  deleteTransactions: (transactionIds: string[]) => Promise<void>;
   categorizeTransaction: (transactionId: string, categoryId: string) => void;
   addAccount: (account: Account) => void;
   updateAccount: (accountId: string, patch: Partial<Account>) => void;
@@ -583,6 +589,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           now,
           transactionId,
         ]);
+      },
+
+      deleteTransactions(transactionIds) {
+        return db.writeTransaction(async (tx) => {
+          const now = nowUtc();
+          for (const id of transactionIds) {
+            await tx.execute('UPDATE transactions SET deleted_at = ?, updated_at = ? WHERE id = ?', [now, now, id]);
+          }
+        });
       },
 
       // docs/07 D26: categorize an inbox item in place.
