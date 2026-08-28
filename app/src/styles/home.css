@@ -897,13 +897,19 @@
 }
 /* Find-duplicate-transactions tool — confidence tier on each group's
    title line, same pill/mono vocabulary as .merge-badge. */
+.dup-group-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
 .dup-tier-badge {
   font-family: var(--mono);
   font-size: 0.62rem;
   text-transform: uppercase;
+  white-space: nowrap;
   border-radius: 999px;
   padding: 0.1rem 0.5rem;
-  margin-left: 0.4rem;
 }
 .dup-tier-badge.tier-high {
   color: var(--accent-ink);

@@ -61,9 +61,11 @@ export function DuplicateTransactionsScreen() {
               const first = group.transactions[0];
               return (
                 <div className="merge-conflict" key={group.key} data-testid="duplicate-group">
-                  <p className="merge-conflict-title">
-                    {group.transactions.length} transactions · {formatAmount(first.amountCents, first.currency)} ·{' '}
-                    {formatRelativeDate(first.occurredAt)}
+                  <p className="merge-conflict-title dup-group-title">
+                    <span>
+                      {group.transactions.length} transactions · {formatAmount(first.amountCents, first.currency)} ·{' '}
+                      {formatRelativeDate(first.occurredAt)}
+                    </span>
                     <span
                       className={`dup-tier-badge tier-${group.confidence}`}
                       data-testid="duplicate-tier-badge"
@@ -80,7 +82,7 @@ export function DuplicateTransactionsScreen() {
                       return (
                         <button
                           key={t.id}
-                          className={`tx-row ${cls}`}
+                          className={`tx-row tx-row-tappable ${cls}`}
                           data-testid="duplicate-row"
                           data-keeper={isKeeper}
                           onClick={() => selectKeeper(group.key, t.id)}
