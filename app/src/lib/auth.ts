@@ -115,15 +115,53 @@ export async function verifyMagicLink(token: string): Promise<VerifyResult> {
 // than throwing when there's no valid session (expired/revoked/never
 // signed in on this device), matching PowerSyncBackendConnector's own
 // "return null if not signed in" contract that connector.ts relies on.
+//
+// Concurrent callers within this same tab (e.g. connectSync()'s
+// reconnect-on-load check racing with another consumer) used to each fire
+// their own POST here. The refresh cookie rotates and is single-use
+// (docs/05 D13), so the second of two simultaneous calls always reused an
+// already-rotated cookie — a real device got fully signed out this way
+// after a stray double-reload raced two refresh attempts. Coalescing
+// concurrent calls into one in-flight request removes the race for
+// same-tab callers; the server's own grace window
+// (api/src/auth/routes.ts) covers the remaining cross-reload case this
+// can't see (a second request from an already-torn-down previous page).
+let refreshInFlight: Promise<string | null> | null = null;
 export async function refreshAccessToken(): Promise<string | null> {
-  const res = await apiFetch('/api/auth/refresh', { method: 'POST' });
-  if (!res.ok) {
-    accessToken = null;
-    return null;
+  if (refreshInFlight) return refreshInFlight;
+  refreshInFlight = (async () => {
+    const res = await apiFetch('/api/auth/refresh', { method: 'POST' });
+    if (!res.ok) {
+      accessToken = null;
+      return null;
+    }
+    const body = (await res.json()) as { accessToken: string };
+    accessToken = body.accessToken;
+    return accessToken;
+  })();
+  try {
+    return await refreshInFlight;
+  } finally {
+    refreshInFlight = null;
   }
-  const body = (await res.json()) as { accessToken: string };
-  accessToken = body.accessToken;
-  return accessToken;
+}
+
+// A real gap found alongside the refresh-reuse race: there was no way to
+// sign out at all — a device whose refresh chain got revoked server-side
+// (theft-signal or otherwise) was stuck forever showing "signed in as
+// ___" with no path back to a fresh sign-in. Best-effort against the
+// server (already-invalid cookies are a normal case here, not an error to
+// surface) — local state is cleared regardless so this always gets the
+// device unstuck. Callers still need to clear the `useAuthAccount()`
+// marker and disconnect PowerSync themselves (this module doesn't import
+// either).
+export async function signOut(): Promise<void> {
+  try {
+    await apiFetch('/api/auth/logout', { method: 'POST' });
+  } catch {
+    // Network failure signing out is still a sign-out, locally.
+  }
+  accessToken = null;
 }
 
 // Always tries the in-memory token first (cheap, no network) and only

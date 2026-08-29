@@ -9,6 +9,19 @@ export const authRouter = Router();
 
 const REFRESH_COOKIE = 'piggypal_refresh';
 const REFRESH_TTL_DAYS = 60;
+// docs/05 D13's rotation/reuse-detection is otherwise correct but has no
+// tolerance for two *legitimate* concurrent requests from the same
+// device — a real report found this: a double page-reload (a stray
+// second reload firing before the first reload's own silent-reconnect
+// refresh had gotten its rotated cookie applied) sent the same
+// already-rotated cookie twice, and the second request's reuse tripped a
+// full chain revocation, signing the device out entirely. A short grace
+// window lets a reuse that lands this fast keep the session alive instead
+// — a real attacker replaying a stolen token isn't realistically also
+// landing within single-digit seconds of the legitimate rotation, so this
+// doesn't meaningfully weaken the theft signal, just stops it from firing
+// on the client's own race.
+const REUSE_GRACE_MS = 10_000;
 const MAGIC_LINK_TTL_MINUTES = 15;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -149,10 +162,39 @@ authRouter.post('/refresh', async (req, res) => {
   }
 
   if (row.revoked_at || row.replaced_by) {
-    // Reuse of a token that's already been rotated away or revoked —
-    // exactly the theft signal docs/05 describes. Revoke every other
-    // still-live token for this same user+device (the rest of the
-    // chain), not just this one row.
+    // Within-grace reuse of a *normally rotated* token (replaced_by set,
+    // not a prior theft-revocation — that case has replaced_by null and
+    // always falls through to the hard revoke below) is treated as a
+    // same-device race, not theft: hop again off the chain's current tip
+    // rather than nuking it. If the tip was itself already consumed by a
+    // third concurrent request, tip.rows[0] comes back empty and this
+    // falls through to the real theft response same as before.
+    if (row.replaced_by && row.revoked_at && Date.now() - new Date(row.revoked_at).getTime() < REUSE_GRACE_MS) {
+      const tip = await pool().query<{ id: string }>(
+        'SELECT id FROM refresh_tokens WHERE id = $1 AND revoked_at IS NULL',
+        [row.replaced_by],
+      );
+      if (tip.rows[0]) {
+        const newToken = generateOpaqueToken();
+        const insertResult = await pool().query<{ id: string }>(
+          `INSERT INTO refresh_tokens (user_id, device_id, token_hash, expires_at) VALUES ($1, $2, $3, now() + interval '${REFRESH_TTL_DAYS} days') RETURNING id`,
+          [row.user_id, row.device_id, hashToken(newToken)],
+        );
+        await pool().query('UPDATE refresh_tokens SET revoked_at = now(), replaced_by = $1 WHERE id = $2', [
+          insertResult.rows[0].id,
+          tip.rows[0].id,
+        ]);
+        res.cookie(REFRESH_COOKIE, newToken, refreshCookieOptions());
+        res.json({ accessToken: await signAccessToken(row.user_id) });
+        return;
+      }
+    }
+
+    // Reuse of a token that's already been rotated away or revoked,
+    // outside the grace window (or the chain's tip was already gone too)
+    // — the theft signal docs/05 describes. Revoke every other still-live
+    // token for this same user+device (the rest of the chain), not just
+    // this one row.
     await pool().query(
       'UPDATE refresh_tokens SET revoked_at = now() WHERE user_id = $1 AND device_id = $2 AND revoked_at IS NULL',
       [row.user_id, row.device_id],
@@ -175,6 +217,27 @@ authRouter.post('/refresh', async (req, res) => {
 
   res.cookie(REFRESH_COOKIE, newToken, refreshCookieOptions());
   res.json({ accessToken: await signAccessToken(row.user_id) });
+});
+
+// A real gap found alongside the refresh-reuse race above: there was no
+// way for a device to actually sign out — Settings had no button for it,
+// and even if it had, nothing revoked the refresh cookie server-side.
+// Never fails on a missing/already-invalid cookie (a device whose whole
+// chain was already revoked, e.g. by the theft-signal branch above, still
+// needs this to succeed so it can clear its local state and re-sign-in)
+// — clearing the cookie and returning success is correct either way. No
+// requireAccessToken (same reasoning as /refresh itself): the access JWT
+// is memory-only and may already be gone by the time a real user reaches
+// for "sign out," but the refresh cookie is still there to revoke.
+authRouter.post('/logout', async (req, res) => {
+  const cookieToken = req.cookies?.[REFRESH_COOKIE];
+  res.clearCookie(REFRESH_COOKIE, refreshCookieOptions());
+  if (typeof cookieToken === 'string' && cookieToken) {
+    await pool().query('UPDATE refresh_tokens SET revoked_at = now() WHERE token_hash = $1 AND revoked_at IS NULL', [
+      hashToken(cookieToken),
+    ]);
+  }
+  res.status(204).end();
 });
 
 // docs/05: "requires a valid access token" — mints a fresh short-lived
