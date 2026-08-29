@@ -832,6 +832,40 @@ it needs doing.
       testing service — Linux WebKit has now been shown to diverge from
       real iOS Safari on this specific bug, not just theoretically.
       Deferred — parked per user 2026-08-11, revisit later.
+- [ ] Household display (payer badge, "Paid by"/"Logged by", owner-name
+      prefix on Accounts, Settings' member list — docs/38) never appears
+      for a household set up via magic-link sign-in's own "someone else
+      in my household" fork (`AuthVerifyScreen.tsx`'s `household-fork`
+      step, docs/46 D165/D166) — reported 2026-08-29, real second-phone
+      test (same email, "someone else" chosen on the second phone).
+      Root cause: `household.ts`'s `hasHousehold`/`householdMembers`/
+      `personLabel` are gated entirely on `peers.ts`'s P2P-paired-peers
+      list (docs/25's QR/WebRTC pairing, a completely separate mechanism)
+      — the magic-link sign-in fork never touches that list. The
+      sign-in fork's actual *data* handling is correct: choosing
+      "someone else" deliberately skips identity unification
+      (`applySignInMergePlan`'s `identity: null`) and account merging
+      (D168), so each phone's own transactions/accounts already sync
+      down tagged with that phone's own distinct `paid_by_user_id`/
+      `created_by_user_id`/`owner_user_id` — the raw data a household UI
+      needs is right there in synced rows on both phones. Only the
+      display layer can't see it, because it's looking at the wrong
+      list.
+      Why this isn't a one-line fix: the P2P pairing path can show a real
+      name because the two phones directly handshake and exchange a
+      device label; the magic-link path has no such handshake — each
+      phone only ever learns "someone else also wrote this row" from the
+      `paid_by_user_id`/`owner_user_id` values it observes in already-
+      synced data, never a name for whoever that id belongs to.
+      Proposed direction (not yet implemented, pending the user):
+      `hasHousehold`/`householdMembers`/`personLabel` should also treat
+      any observed transaction/account owner id that isn't
+      `getLocalUserId()` as a household member, not only `peers.ts`
+      entries — falling back to the existing generic "Household member"
+      label (`personLabel()`'s current catch-all) for one with no
+      `peers.ts` row to name it. Needs a decision on exactly where that
+      "distinct owner ids seen in the store" scan lives (store.tsx vs.
+      household.ts) before implementing.
 
 ## ✅ Done
 
