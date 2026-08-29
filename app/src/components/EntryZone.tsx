@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { accountLabel, formatAmount, formatRelativeDate, nowLocal, nowUtc } from '../lib/format';
 import { getLocalUserId } from '../lib/identity';
+import { markFreshBlank } from '../lib/freshBlankTransactions';
 import { parseUtterance } from '../lib/parser';
 import { isSpeechInputSupported, startSpeechInput } from '../lib/speechInput';
 import type { Transaction } from '../lib/types';
@@ -85,6 +86,7 @@ export function EntryZone({ onSubmitted }: Props) {
       updatedAt: nowUtc(),
     };
     store.addTransaction(tx);
+    markFreshBlank(tx.id);
     navigate(`/transactions/${tx.id}`);
   }
 

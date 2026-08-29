@@ -6,8 +6,8 @@ import { usePairedPeers } from '../lib/peers';
 import { hasHousehold, householdMembers } from '../lib/household';
 import { PayerBadge } from './PayerBadge';
 import { APP_VERSION } from '../lib/version';
-import { requestMagicLink, useAuthAccount } from '../lib/auth';
-import { useSyncStatus } from '../lib/db';
+import { fetchPowerSyncCredentials, requestMagicLink, signOut, useAuthAccount } from '../lib/auth';
+import { connectSync, disconnectSync, useSyncStatus } from '../lib/db';
 import { useSkippedSyncOps } from '../lib/connector';
 
 // "synced just now" / "N minutes/hours ago" — finer-grained than
@@ -30,12 +30,53 @@ export function SettingsScreen() {
   const [themeMode, setThemeMode] = useThemeMode();
   const [deviceLabel, setDeviceLabel] = useDeviceLabel();
   const [peers] = usePairedPeers();
-  const [authAccount] = useAuthAccount();
+  const [authAccount, setAuthAccount] = useAuthAccount();
   const syncStatus = useSyncStatus();
   const skippedSyncOps = useSkippedSyncOps();
   const [emailInput, setEmailInput] = useState('');
   const [linkState, setLinkState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [linkError, setLinkError] = useState('');
+  const [reconnecting, setReconnecting] = useState(false);
+
+  // A real gap found from a real stuck device: its refresh chain had been
+  // revoked server-side (see auth.ts's signOut comment), and there was no
+  // way to sign out or force a fresh connection attempt — Settings just
+  // showed "signed in as ___" next to a permanently "Not connected" cloud
+  // sync with no recourse but clearing browser storage by hand.
+  async function handleSignOut() {
+    const knownEmail = authAccount?.email ?? '';
+    await disconnectSync();
+    await signOut();
+    setAuthAccount(null);
+    setEmailInput(knownEmail);
+  }
+
+  // "Reconnect" only has something to do when the session itself is still
+  // valid — it can't revive one that's actually dead (revoked/expired),
+  // since there's no credential left to reconnect with (see auth.ts's
+  // signOut comment on why that's not a bug). A real report found that
+  // case looked identical to a broken button: tapping it just did
+  // nothing, with zero feedback either way. Checking credentials directly
+  // first tells the two apart — a dead session now drops straight into
+  // the sign-in-again form instead of silently failing, with the known
+  // email pre-filled since there's no reason to make the user retype
+  // something this device already knows.
+  async function handleReconnect() {
+    setReconnecting(true);
+    try {
+      await disconnectSync();
+      const credentials = await fetchPowerSyncCredentials();
+      if (!credentials) {
+        const knownEmail = authAccount?.email ?? '';
+        setAuthAccount(null);
+        setEmailInput(knownEmail);
+        return;
+      }
+      await connectSync();
+    } finally {
+      setReconnecting(false);
+    }
+  }
   // docs/13 D69 — only surface this once it'd actually do something,
   // rather than a control that's a no-op below the threshold.
   const showPickerModeSetting = store.accounts.filter((a) => !a.archived).length > ACCOUNT_PICKER_SCALE_THRESHOLD;
@@ -91,8 +132,19 @@ export function SettingsScreen() {
           </div>
           <div className="settings-row settings-row-static">
             <span>Cloud sync</span>
-            <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>
-              {syncStatus.connected ? 'Connected' : syncStatus.connecting ? 'Connecting…' : 'Not connected'}
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>
+                {reconnecting ? 'Reconnecting…' : syncStatus.connected ? 'Connected' : syncStatus.connecting ? 'Connecting…' : 'Not connected'}
+              </span>
+              {/* Not gated to the "Not connected" case only — a real report
+                  found the sync connection can silently stall without the
+                  status ever flipping away from "Connecting…", so this
+                  stays available whenever it isn't already mid-attempt. */}
+              {!reconnecting && !syncStatus.connected && (
+                <button type="button" className="chip ghost" onClick={() => void handleReconnect()}>
+                  Reconnect
+                </button>
+              )}
             </span>
           </div>
           {/* docs/46 D163 — the whole point of this endpoint no longer
@@ -106,6 +158,9 @@ export function SettingsScreen() {
               </span>
             </div>
           )}
+          <button className="settings-row settings-row-danger" onClick={() => void handleSignOut()}>
+            <span>Sign out</span>
+          </button>
         </div>
       ) : linkState === 'sent' ? (
         <div className="settings-row settings-row-static">

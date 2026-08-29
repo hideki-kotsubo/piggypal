@@ -1,4 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom';
+import { isFreshBlank } from '../lib/freshBlankTransactions';
 import { useStore } from '../lib/store';
 import { TransactionEditForm } from './TransactionEditForm';
 
@@ -18,11 +19,21 @@ export function TransactionScreen() {
 
   // Quick-add (docs/19) inserts a blank $0 row immediately so this screen has
   // something to edit. Every other entry path requires a nonzero amount
-  // before it ever inserts, so a $0 amount here only ever means the user
-  // opened the blank row and left without setting one — back out drops it
-  // instead of leaving a stray "0.00, Uncategorized" transaction behind.
+  // before it ever inserts, so a $0 amount here used to be treated as "the
+  // user opened the blank row and left without setting one" — back out
+  // drops it instead of leaving a stray "0.00, Uncategorized" transaction
+  // behind. That amount-only check isn't enough on its own: a real user
+  // hit this after their phone went offline, filled in amount/category/
+  // note (confirmed correct locally), then reconnected — the sync
+  // connection never resumed on its own (a separate bug), and after they
+  // reloaded to force it, this row's amount read back as 0 again before
+  // the edits had ever synced, and this exact guard deleted their real
+  // entry. `isFreshBlank` (freshBlankTransactions.ts, memory-only, doesn't
+  // survive a reload) narrows this to "still the same blank row from the
+  // quick-add that created it, in this same session" — never a
+  // preexisting row a reload brought back looking blank.
   function finish() {
-    if (transaction && transaction.amountCents === 0) {
+    if (transaction && transaction.amountCents === 0 && isFreshBlank(transaction.id)) {
       store.deleteTransaction(transaction.id);
     }
     navigate(-1);
