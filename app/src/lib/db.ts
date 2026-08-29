@@ -1,4 +1,4 @@
-import { PowerSyncDatabase, type SyncStatus } from '@powersync/web';
+import { LogLevels, PowerSyncDatabase, type SyncStatus } from '@powersync/web';
 import { useEffect, useState } from 'react';
 import { AppSchema } from './schema';
 import { PiggypalConnector } from './connector';
@@ -19,6 +19,13 @@ export const db = new PowerSyncDatabase({
     // No need to bump again now that the real cause is fixed.
     dbFilename: 'piggypal-v2.db',
   },
+  // Temporary — investigating a real report of sync not resuming on its
+  // own after a phone regained connectivity, needing a manual reload
+  // (Settings kept showing "Not connected" otherwise). This surfaces the
+  // SDK's own connect/retry/credential-fetch logging in the browser
+  // console so the next occurrence shows exactly which step stalls,
+  // instead of guessing. Revert once that's diagnosed.
+  sync: { logLevel: LogLevels.debug },
 });
 
 // Called once from a signed-in account exists (Settings' sign-in flow, and
