@@ -143,10 +143,42 @@ create table category_keywords (
   foreign key (user_id, category_id) references categories (user_id, id)
 );
 
+-- docs/48 D175 — one row per real person sharing this account. `id` is
+-- deliberately not a fresh server-generated id: it's the same uuid
+-- app/src/lib/identity.ts's getLocalUserId() already produces client-side
+-- (and, for the account owner specifically, is literally users.id itself
+-- — see that table's own comment below), so this table is purely
+-- additive — no existing transactions.paid_by_user_id/created_by_user_id
+-- or accounts.owner_user_id needs rewriting to adopt it. No `references
+-- users(id)`, same reasoning as accounts.owner_user_id above — this is a
+-- sync-domain table, decoupled from the server-only auth tables.
+create table profiles (
+  id           uuid primary key,
+  user_id      uuid not null,
+  display_name text not null,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
+
+-- docs/48 D176 — one row per physical device. `id` reuses
+-- identity.ts's existing getDeviceId() (already generated on every
+-- device for refresh-token tracking, docs/05 D12/D13) rather than a new
+-- identity. Synced like profiles above so any device can see every
+-- other device in the household, not just its own.
+create table devices (
+  id           uuid primary key,
+  user_id      uuid not null,
+  profile_id   uuid not null references profiles(id),
+  label        text not null,
+  last_seen_at timestamptz not null default now(),
+  created_at   timestamptz not null default now()
+);
+
 -- Indexes the sync + app queries will lean on
 create index on transactions (user_id, occurred_at desc);
 create index on transactions (user_id, category_id, occurred_at);
 create index on budgets      (user_id, month);
+create index on devices      (user_id, profile_id);
 
 -- ── Auth (docs/05) — server-only, not part of the sync buckets above ───────
 

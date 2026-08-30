@@ -85,12 +85,32 @@ const category_keywords = new Table({
   hits: column.integer,
 });
 
+// docs/48 D175 — one row per real person sharing this account. `id`
+// (PowerSync's auto-added primary key, per the file-level comment above)
+// is the same value identity.ts's getLocalUserId() already produces —
+// this table is additive, giving that existing id a real name.
+const profiles = new Table({
+  display_name: column.text,
+  updated_at: column.text,
+});
+
+// docs/48 D176 — one row per physical device, `id` reusing identity.ts's
+// existing getDeviceId(). Synced so every device can see the whole
+// household's devices, not just its own.
+const devices = new Table({
+  profile_id: column.text,
+  label: column.text,
+  last_seen_at: column.text,
+});
+
 export const AppSchema = new Schema({
   accounts,
   categories,
   transactions,
   budgets,
   category_keywords,
+  profiles,
+  devices,
 });
 
 export type Database = (typeof AppSchema)['types'];

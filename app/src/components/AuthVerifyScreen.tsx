@@ -1,9 +1,8 @@
-import { useRef, useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { connectSync, db } from '../lib/db';
-import { formatDateTime } from '../lib/format';
-import { getDeviceRole, getLocalUserId, setDeviceRole } from '../lib/identity';
-import type { DeviceRole } from '../lib/identity';
+import { formatDateTime, nowUtc } from '../lib/format';
+import { getLocalUserId } from '../lib/identity';
 import { fetchServerSnapshot, takePendingEmail, useAuthAccount, verifyMagicLink } from '../lib/auth';
 import { useStore } from '../lib/store';
 import { matchAccounts, matchCategories, resolveAccountRewrites, resolveCategoryRewrites } from '../lib/mergeMatch';
@@ -14,6 +13,7 @@ import type {
   CategoryMatchResult,
   ManualResolution,
 } from '../lib/mergeMatch';
+import type { Profile } from '../lib/types';
 
 // docs/41's flagged followup: the app-side half of docs/05's sign-up/
 // second-device flow. GET /api/auth/verify itself is real (docs/41); this
@@ -21,22 +21,32 @@ import type {
 // emailed link depends on, since a raw browser navigation can't supply
 // localUserId/deviceId on its own.
 //
-// docs/46 replaces the old bare merge-prompt with a real sequence: ask
-// own-device-vs-household-member first (D165/D166, mirrors docs/25
-// D125-127/D138-139's already-shipped P2P pattern) → connect and wait for
-// a real first download (D164, closes the exact race that caused the
-// reported vanished-data bug) → run the merge-matching cascade (D167/
-// D168) against the account's real state → only when something needs a
-// human's judgment, show it for review (D169) before applying anything.
+// docs/48 D177 generalizes docs/46's own-device-vs-someone-else fork
+// into a single "pick your profile, or someone new" picker: connect and
+// wait for a real first download (D164) → run the merge-matching cascade
+// (D167/D168, now parameterized by whichever profile was picked, not
+// hardcoded to "own") → only when something needs a human's judgment,
+// show it for review (D169) before applying anything.
+
+// Which profile this device is becoming/confirming. 'existing' covers
+// both what used to be "my own device" (picking the account owner's own
+// profile) and a returning household member's second device (picking
+// their own existing profile) — both are really the same operation now,
+// just targeting different existing profiles. 'new' is the one case that
+// never adopts anything: this device's own pre-existing id becomes the
+// new profile's id directly (docs/05 D11's same precedent the account
+// owner's very first profile already uses).
+type PickedIdentity = { kind: 'existing'; profile: Profile } | { kind: 'new'; displayName: string };
+
 type Step =
   | { kind: 'confirm'; token: string }
   | { kind: 'verifying' }
-  | { kind: 'household-fork'; userId: string; existingAccounts: number; existingTransactions: number }
+  | { kind: 'profile-picker'; userId: string; profiles: Profile[]; existingAccounts: number; existingTransactions: number }
   | { kind: 'syncing' }
   | {
       kind: 'merge-review';
       userId: string;
-      role: DeviceRole;
+      picked: PickedIdentity;
       categoryMatch: CategoryMatchResult;
       accountMatch: AccountMatchResult | null;
     }
@@ -78,7 +88,7 @@ export function AuthVerifyScreen() {
       const result = await verifyMagicLink(token);
 
       // docs/05 D14: only the second-device-joins-an-existing-account
-      // case can possibly need the fork/merge sequence below — a
+      // case can possibly need the picker/merge sequence below — a
       // brand-new account (isNewUser) was created *using* this device's
       // own local id (D11), so there's nothing to reconcile.
       if (!result.isNewUser && result.userId !== getLocalUserId()) {
@@ -95,26 +105,45 @@ export function AuthVerifyScreen() {
           'SELECT COUNT(*) as count FROM transactions WHERE deleted_at IS NULL',
         );
 
-        // docs/46 D166: a device that's already answered this question
-        // (this sign-in or a previous one) doesn't get asked again.
-        const remembered = getDeviceRole();
-        if (remembered) {
-          await proceedWithRole(result.userId, remembered);
+        // docs/48 D177: no separate "remembered, don't ask again" flag
+        // needed anymore (docs/46 D166's DEVICE_ROLE_KEY is gone) — if
+        // this device's own id already matches an existing profile (it
+        // adopted or created one on a previous sign-in), just proceed as
+        // that profile directly instead of asking again.
+        const snapshot = await fetchServerSnapshot();
+        const profiles = snapshot?.profiles ?? [];
+        const alreadyKnown = profiles.find((p) => p.id === getLocalUserId());
+        if (alreadyKnown) {
+          await proceedWithProfile(result.userId, { kind: 'existing', profile: alreadyKnown });
         } else {
-          setStep({ kind: 'household-fork', userId: result.userId, existingAccounts, existingTransactions });
+          setStep({ kind: 'profile-picker', userId: result.userId, profiles, existingAccounts, existingTransactions });
         }
         return;
       }
 
+      // docs/48 D177: a brand-new account — this device's own pre-existing
+      // id becomes the account owner's one and only profile, same "first
+      // device's id doubles as the real identity" precedent docs/05 D11
+      // already established for users.id itself. Guarded to only ever
+      // fire on the actual signup moment, never a repeat sign-in on an
+      // already-established device — this profile's id is a primary key.
+      if (result.isNewUser) {
+        store.addProfile({ id: getLocalUserId(), displayName: 'You', updatedAt: nowUtc() });
+      }
       await finish(result.userId);
     } catch (err) {
       setStep({ kind: 'error', message: err instanceof Error ? err.message : 'Sign-in failed.' });
     }
   }
 
-  async function chooseRole(userId: string, role: DeviceRole) {
-    setDeviceRole(role);
-    await proceedWithRole(userId, role);
+  async function choosePickedIdentity(userId: string, picked: PickedIdentity) {
+    if (picked.kind === 'new') {
+      // This device's own pre-existing getLocalUserId() becomes the new
+      // profile's id directly — no adoption/rewrite needed, it's already
+      // what every local row this device has ever written uses.
+      store.addProfile({ id: getLocalUserId(), displayName: picked.displayName, updatedAt: nowUtc() });
+    }
+    await proceedWithProfile(userId, picked);
   }
 
   // docs/46 D164: connect and wait for a real first download *before*
@@ -123,7 +152,7 @@ export function AuthVerifyScreen() {
   // this device had ever seen the account's real state; that race is
   // exactly what let a category collision silently vanish data instead of
   // surfacing as a conflict.
-  async function proceedWithRole(userId: string, role: DeviceRole) {
+  async function proceedWithProfile(userId: string, picked: PickedIdentity) {
     setStep({ kind: 'syncing' });
     try {
       await connectSync();
@@ -138,44 +167,40 @@ export function AuthVerifyScreen() {
 
       if (!snapshot) {
         // Real network hiccup — don't block sign-in forever over it.
-        // "own device" still gets identity unified (same as the old,
-        // simpler flow); "someone else" needed the snapshot for anything
-        // meaningful here anyway, so there's genuinely nothing more to do.
-        if (role === 'own') await store.adoptAccountId(userId);
+        // An existing profile still gets identity adopted (same as the
+        // old flow's "own device" fallback); a brand-new profile needed
+        // the snapshot for anything meaningful here anyway, so there's
+        // genuinely nothing more to do.
+        if (picked.kind === 'existing') await store.adoptAccountId(picked.profile.id);
         await finish(userId);
         return;
       }
 
       const categoryMatch = matchCategories(store.categories, snapshot.categories);
-      // D168's hard rule: account matching only ever runs for "my own
-      // device" — never "someone else," where every local account stays
-      // distinct by construction (this is the actual fix for two
-      // household members' identically-named accounts never being
-      // conflated). matchAccounts asserts both lists are single-owner
-      // (a real bug, found testing this against a real account with
-      // months of accumulated accounts from many different test
-      // devices/sessions, each tagged with whatever local identity was
-      // current at the time — passing the full unfiltered lists violated
-      // that precondition immediately). Narrow to exactly the comparison
-      // D168 actually means: this device's own current accounts against
-      // the *target* identity's own existing accounts — never anyone
-      // else's, e.g. another household member's, even though their rows
-      // sit in the same snapshot.
+      // docs/48 D177 generalizes D168's hard rule: account matching only
+      // ever runs when reconciling this device's own pre-existing local
+      // accounts against the *picked* profile's already-known accounts —
+      // true whether that profile is the account owner or any other
+      // already-known household member's own second device. Never runs
+      // for a brand-new profile (nothing server-side exists under that id
+      // yet — this is the actual fix for two household members'
+      // identically-named accounts never being conflated, generalized
+      // from "own vs. someone-else" to "any specific profile").
       const accountMatch =
-        role === 'own'
+        picked.kind === 'existing'
           ? matchAccounts(
               store.accounts.filter((a) => a.ownerUserId === getLocalUserId()),
-              snapshot.accounts.filter((a) => a.ownerUserId === userId),
+              snapshot.accounts.filter((a) => a.ownerUserId === picked.profile.id),
             )
           : null;
 
       const needsReview = categoryMatch.manual.length > 0 || (accountMatch?.manual.length ?? 0) > 0;
       if (!needsReview) {
-        await applyAndFinish(userId, role, categoryMatch, accountMatch, {});
+        await applyAndFinish(userId, picked, categoryMatch, accountMatch, {});
         return;
       }
       setResolutions({});
-      setStep({ kind: 'merge-review', userId, role, categoryMatch, accountMatch });
+      setStep({ kind: 'merge-review', userId, picked, categoryMatch, accountMatch });
     } catch (err) {
       setStep({ kind: 'error', message: err instanceof Error ? err.message : 'Could not check your account.' });
     }
@@ -183,7 +208,7 @@ export function AuthVerifyScreen() {
 
   async function applyAndFinish(
     userId: string,
-    role: DeviceRole,
+    picked: PickedIdentity,
     categoryMatch: CategoryMatchResult,
     accountMatch: AccountMatchResult | null,
     manualResolutions: Record<string, ManualResolution>,
@@ -193,15 +218,19 @@ export function AuthVerifyScreen() {
     await store.applySignInMergePlan({
       categoryRewrites,
       accountRewrites,
-      // D165: identity only ever unifies for "my own device."
-      identity: role === 'own' ? { newId: userId } : null,
+      // docs/48 D177: identity only ever rewrites onto an *existing*
+      // profile — a brand-new one is already this device's own id.
+      identity: picked.kind === 'existing' ? { newId: picked.profile.id } : null,
     });
     await finish(userId);
   }
 
   async function finish(userId: string) {
     setAuthAccount({ userId, email: takePendingEmail() });
-    void connectSync();
+    // docs/48 D176 — refresh this device's own devices row right after
+    // connecting, on every sign-in path that reaches here (new signup,
+    // repeat sign-in, or either profile-picker branch).
+    void connectSync().then(() => store.touchDevice());
     setStep({ kind: 'done' });
   }
 
@@ -242,28 +271,13 @@ export function AuthVerifyScreen() {
         </div>
       )}
 
-      {step.kind === 'household-fork' && (
-        <div className="qr-stage">
-          <p className="qr-caption">
-            This device already has {step.existingAccounts} account{step.existingAccounts === 1 ? '' : 's'} and{' '}
-            {step.existingTransactions} transaction{step.existingTransactions === 1 ? '' : 's'}. Is this your own
-            device, or is someone else in your household signing in?
-          </p>
-          <button className="save-btn" onClick={() => void chooseRole(step.userId, 'own')}>
-            This is my own device
-          </button>
-          <button className="chip ghost" onClick={() => void chooseRole(step.userId, 'someone-else')}>
-            Someone else in my household
-          </button>
-          {/* docs/05 D14, unchanged from before: typing this email and
-              tapping the magic link IS the explicit "this is me" signal —
-              discard is for the common real case of a never-touched
-              device whose only "existing data" is seedIfEmpty()'s own
-              demo placeholders, nothing worth reconciling either way. */}
-          <button className="text-link" onClick={() => void discardAndFinish(step.userId)}>
-            Discard this device's data & sign in
-          </button>
-        </div>
+      {step.kind === 'profile-picker' && (
+        <ProfilePicker
+          step={step}
+          onPickExisting={(profile) => void choosePickedIdentity(step.userId, { kind: 'existing', profile })}
+          onPickNew={(displayName) => void choosePickedIdentity(step.userId, { kind: 'new', displayName })}
+          onDiscard={() => void discardAndFinish(step.userId)}
+        />
       )}
 
       {step.kind === 'merge-review' && (
@@ -290,7 +304,7 @@ export function AuthVerifyScreen() {
           <button
             className="save-btn"
             disabled={!allManualResolved(step)}
-            onClick={() => void applyAndFinish(step.userId, step.role, step.categoryMatch, step.accountMatch, resolutions)}
+            onClick={() => void applyAndFinish(step.userId, step.picked, step.categoryMatch, step.accountMatch, resolutions)}
           >
             Continue
           </button>
@@ -316,6 +330,66 @@ export function AuthVerifyScreen() {
         </div>
       )}
     </main>
+  );
+}
+
+// docs/48 D177 — replaces the old fixed own-device/someone-else binary
+// with a list of every existing profile plus "someone new." Picking an
+// existing profile subsumes what used to be exactly one hardcoded choice
+// ("my own device") — any known profile, not just the account owner's,
+// can now be picked directly by whoever's device this is.
+function ProfilePicker({
+  step,
+  onPickExisting,
+  onPickNew,
+  onDiscard,
+}: {
+  step: Extract<Step, { kind: 'profile-picker' }>;
+  onPickExisting: (profile: Profile) => void;
+  onPickNew: (displayName: string) => void;
+  onDiscard: () => void;
+}) {
+  const [addingNew, setAddingNew] = useState(false);
+  const [newName, setNewName] = useState('');
+
+  if (addingNew) {
+    return (
+      <div className="qr-stage">
+        <p className="qr-caption">What's their name?</p>
+        <input className="text-input" placeholder="e.g. Wife" value={newName} onChange={(e) => setNewName(e.target.value)} />
+        <button className="save-btn" disabled={!newName.trim()} onClick={() => onPickNew(newName.trim())}>
+          Continue
+        </button>
+        <button className="chip ghost" onClick={() => setAddingNew(false)}>
+          Back
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="qr-stage">
+      <p className="qr-caption">
+        This device already has {step.existingAccounts} account{step.existingAccounts === 1 ? '' : 's'} and{' '}
+        {step.existingTransactions} transaction{step.existingTransactions === 1 ? '' : 's'}. Whose device is this?
+      </p>
+      {step.profiles.map((p) => (
+        <button key={p.id} className="save-btn" onClick={() => onPickExisting(p)}>
+          This is {p.displayName}'s device
+        </button>
+      ))}
+      <button className="chip ghost" onClick={() => setAddingNew(true)}>
+        Someone new
+      </button>
+      {/* docs/05 D14, unchanged from before: typing this email and
+          tapping the magic link IS the explicit "this is me" signal —
+          discard is for the common real case of a never-touched device
+          whose only "existing data" is seedIfEmpty()'s own demo
+          placeholders, nothing worth reconciling either way. */}
+      <button className="text-link" onClick={onDiscard}>
+        Discard this device's data & sign in
+      </button>
+    </div>
   );
 }
 

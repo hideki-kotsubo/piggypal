@@ -96,6 +96,24 @@ export interface PeerDataset {
   budgets: Budget[];
 }
 
+// docs/48 D175 — one row per real person sharing this account. `id` is
+// the same value identity.ts's getLocalUserId() already produces — see
+// that table's own comment in schema.ts/db/schema.sql.
+export interface Profile {
+  id: string;
+  displayName: string;
+  updatedAt: string;
+}
+
+// docs/48 D176 — one row per physical device, `id` reusing identity.ts's
+// getDeviceId().
+export interface Device {
+  id: string;
+  profileId: string;
+  label: string;
+  lastSeenAt: string;
+}
+
 export interface MergeSummary {
   categoriesAdded: number;
   accountsAdded: number;
