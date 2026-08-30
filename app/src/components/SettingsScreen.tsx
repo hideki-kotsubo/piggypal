@@ -275,7 +275,7 @@ export function SettingsScreen() {
               pairing flow above, not this list. */}
           <div className="section-label">Household</div>
           <div className="accounts-list">
-            {householdMembers(householdPeers).map((m) => (
+            {householdMembers(householdPeers, store.profiles).map((m) => (
               <div className="member-row" key={m.userId}>
                 <PayerBadge label={m.label} mine={m.isYou} className="member-badge" />
                 <span className="member-name">
