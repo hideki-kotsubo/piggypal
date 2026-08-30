@@ -52,7 +52,8 @@ export function AccountsScreen() {
   // members (D110); a solo household must render exactly as it always
   // has, no layout change.
   const showOwner = hasHousehold(peers);
-  const ownerPrefix = (a: Account) => (showOwner ? personLabel(a.ownerUserId, peers, store.profiles) : null);
+  const ownerPrefix = (a: Account) =>
+    showOwner ? (a.ownerUserId ? personLabel(a.ownerUserId, peers, store.profiles) : 'Shared') : null;
 
   const active = store.accounts.filter((a) => !a.archived);
   const archived = store.accounts.filter((a) => a.archived);
@@ -302,7 +303,8 @@ export function AccountsScreen() {
                       </p>
                       {flagged.has(loser.id) && (
                         <p className="merge-conflict-detail merge-conflict-warning">
-                          ⚠ Owned by {personLabel(loser.ownerUserId, peers, store.profiles)} — merging reassigns it to {personLabel(survivor.ownerUserId, peers, store.profiles)}.
+                          ⚠ Owned by {loser.ownerUserId ? personLabel(loser.ownerUserId, peers, store.profiles) : 'Shared'} — merging
+                          reassigns it to {survivor.ownerUserId ? personLabel(survivor.ownerUserId, peers, store.profiles) : 'Shared'}.
                         </p>
                       )}
                     </div>
@@ -397,7 +399,7 @@ function AccountForm({ account, onDone }: { account: Account | null; onDone: () 
   );
   const current: Account = account ?? draft;
 
-  const [pickerOpen, setPickerOpen] = useState<'kind' | null>(null);
+  const [pickerOpen, setPickerOpen] = useState<'kind' | 'owner' | null>(null);
   // Local mirrors of the free-text fields — `current.name`/`current.institution`
   // for an existing account come straight from the store, and commit() writes
   // through an async DB round-trip (PowerSync live query), so binding the
@@ -478,6 +480,46 @@ function AccountForm({ account, onDone }: { account: Account | null; onDone: () 
           </div>
         )}
       </div>
+
+      {/* A new feature request: an account can optionally be linked to a
+          real profile as its owner, so a transaction on it can default
+          its payer automatically instead of asking every time
+          (EntryZone.tsx's startBlank/confirmPreview). Only shown once
+          there's actually more than one profile to choose between —
+          identical to a solo account, this has nothing to offer. */}
+      {store.profiles.length > 1 && (
+        <div>
+          <div className="field-label">Owner</div>
+          <button className="pill-tap" onClick={() => setPickerOpen(pickerOpen === 'owner' ? null : 'owner')}>
+            {store.profiles.find((p) => p.id === current.ownerUserId)?.displayName ?? 'Shared'} ▾
+          </button>
+          {pickerOpen === 'owner' && (
+            <div className="chip-row">
+              <button
+                className={`chip ${current.ownerUserId === null ? 'picked' : ''}`}
+                onClick={() => {
+                  commit({ ownerUserId: null });
+                  setPickerOpen(null);
+                }}
+              >
+                Shared
+              </button>
+              {store.profiles.map((p) => (
+                <button
+                  key={p.id}
+                  className={`chip ${p.id === current.ownerUserId ? 'picked' : ''}`}
+                  onClick={() => {
+                    commit({ ownerUserId: p.id });
+                    setPickerOpen(null);
+                  }}
+                >
+                  {p.displayName}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="form-actions">
         {isNew ? (

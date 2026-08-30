@@ -83,7 +83,9 @@ function observedOtherUserIds(accounts: Account[], transactions: Transaction[]):
   // get the same treatment for the same reason — neither is "currently
   // relevant," just still sitting in history.
   for (const a of accounts) {
-    if (!a.archived && a.ownerUserId !== localId) ids.add(a.ownerUserId);
+    // ownerUserId is nullable now (a shared/joint account, docs/48's
+    // owner-linked-account feature) — null isn't anyone's id to add.
+    if (!a.archived && a.ownerUserId && a.ownerUserId !== localId) ids.add(a.ownerUserId);
   }
   for (const t of transactions) {
     if (t.deletedAt) continue;

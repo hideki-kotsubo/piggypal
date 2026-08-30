@@ -45,12 +45,12 @@ function rowToAccount(r: AccountRow): Account {
     name: r.name,
     kind: r.kind as AccountKind,
     archived: Boolean(r.archived),
-    // Same "column added after some rows already existed" situation as
-    // occurred_at below — genuinely null for any account written before
-    // this column existed. Falls back to this device's own identity
-    // rather than leaving it empty, since every pre-existing local
-    // account was, definitionally, owned by whoever's device it's on.
-    ownerUserId: r.owner_user_id ?? getLocalUserId(),
+    // docs/48's profile-linked-account feature repurposes null: it used
+    // to mean "genuinely missing, this row predates the column" (falling
+    // back to getLocalUserId()), but now means "shared/joint, deliberately
+    // no default payer" — a real, meaningful state going forward, so it's
+    // passed through as-is rather than coerced to this device's identity.
+    ownerUserId: r.owner_user_id,
     updatedAt: r.updated_at ?? NEVER_UPDATED,
   };
 }
@@ -404,6 +404,13 @@ interface StoreApi extends StoreState {
   balancesFor: (accountId: string) => { currency: string; cents: number }[];
   defaultAccountId: () => string;
   defaultCurrencyFor: (accountId: string) => string;
+  // A new feature request: an account can be linked to a real profile as
+  // its owner (Account.ownerUserId), so a transaction created against it
+  // defaults its payer to that profile automatically instead of asking
+  // every time. Falls back to this device's own identity for a "Shared"
+  // account (ownerUserId: null) or an unknown accountId — the same
+  // default every entry path already used before this existed.
+  defaultPayerFor: (accountId: string) => string;
   rankedAccounts: () => Account[];
   rankedCurrencies: (accountId: string) => string[];
   rankedCategories: () => Category[];
@@ -814,6 +821,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const recentOnAccount = activeTx().find((t) => t.accountId === accountId);
         if (recentOnAccount) return recentOnAccount.currency;
         return activeTx()[0]?.currency ?? 'CAD';
+      },
+
+      defaultPayerFor(accountId) {
+        return state.accounts.find((a) => a.id === accountId)?.ownerUserId ?? getLocalUserId();
       },
 
       rankedAccounts() {

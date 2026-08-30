@@ -81,7 +81,7 @@ export function EntryZone({ onSubmitted }: Props) {
       source: 'manual',
       aiRaw: null,
       deletedAt: null,
-      paidByUserId: getLocalUserId(),
+      paidByUserId: store.defaultPayerFor(accountId),
       createdByUserId: getLocalUserId(),
       updatedAt: nowUtc(),
     };
@@ -168,7 +168,7 @@ export function EntryZone({ onSubmitted }: Props) {
       source: 'ai',
       aiRaw: preview.text,
       deletedAt: null,
-      paidByUserId: getLocalUserId(),
+      paidByUserId: store.defaultPayerFor(preview.accountId),
       createdByUserId: getLocalUserId(),
       updatedAt: nowUtc(),
     };
