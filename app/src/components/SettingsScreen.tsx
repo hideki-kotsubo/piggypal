@@ -214,6 +214,12 @@ export function SettingsScreen() {
           <span>+ Connect a device</span>
           <span className="settings-row-arrow">›</span>
         </Link>
+        {authAccount && (
+          <Link to="/settings/profiles" className="settings-row">
+            <span>Household profiles</span>
+            <span className="settings-row-arrow">›</span>
+          </Link>
+        )}
       </div>
       {/* docs/48 D179 — every device across the whole household, grouped
           by profile, sourced from the synced devices/profiles tables —
