@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../lib/store';
 import { ACCOUNT_PICKER_SCALE_THRESHOLD, useAccountPickerMode } from '../lib/settings';
 import { accountLabel } from '../lib/format';
+import { personLabel, useHouseholdPeers } from '../lib/household';
 import type { Account } from '../lib/types';
 
 interface Props {
@@ -10,14 +11,45 @@ interface Props {
   onChange: (accountId: string, currency: string) => void;
 }
 
+// A real report: two household members' accounts sharing the same
+// institution AND name (each independently named "Scotiabank —
+// Checking") were indistinguishable in this picker — every label above
+// only ever disambiguates by institution, never by owner, so both
+// rendered as the bare "Checking". Groups by (institution, name) and
+// flags only the accounts genuinely ambiguous without an owner label —
+// distinct owners sharing that same pair, not just any duplicate (two of
+// the *same* person's identically-named accounts are a separate,
+// pre-existing "these look like real duplicates" case the manual-merge
+// tool already covers, not something an owner label would help with).
+function accountsNeedingOwnerLabel(accounts: Account[]): Set<string> {
+  const groups = new Map<string, Account[]>();
+  for (const a of accounts) {
+    const key = `${a.institution ?? ''} ${a.name}`;
+    const list = groups.get(key);
+    if (list) list.push(a);
+    else groups.set(key, [a]);
+  }
+  const result = new Set<string>();
+  for (const list of groups.values()) {
+    if (new Set(list.map((a) => a.ownerUserId)).size > 1) {
+      for (const a of list) result.add(a.id);
+    }
+  }
+  return result;
+}
+
 // D68 — an account whose institution has only one account under it shows
 // the institution alone ("Wise"), not "Wise — Checking": nothing to
 // disambiguate. Institution-less accounts are unaffected (still bare
 // name). Counts across ALL accounts, not just the visible slice, so this
-// stays correct under the Capped mode's top-N cut too.
-function flatChipLabel(a: Account, institutionCounts: Map<string, number>): string {
-  if (!a.institution) return a.name;
-  return (institutionCounts.get(a.institution) ?? 0) > 1 ? accountLabel(a) : a.institution;
+// stays correct under the Capped mode's top-N cut too. ownerPrefix (see
+// above) is applied last, after whichever base form was chosen, so an
+// owner-ambiguous solo-institution account still reads as "Hideki —
+// Wise" rather than losing its disambiguation to the institution-only
+// shortcut.
+function flatChipLabel(a: Account, institutionCounts: Map<string, number>, ownerPrefix: string | null): string {
+  const base = !a.institution ? a.name : (institutionCounts.get(a.institution) ?? 0) > 1 ? accountLabel(a) : a.institution;
+  return ownerPrefix ? `${ownerPrefix} — ${base}` : base;
 }
 
 function countByInstitution(accounts: Account[]): Map<string, number> {
@@ -37,6 +69,7 @@ function countByInstitution(accounts: Account[]): Map<string, number> {
 // creates anything.
 export function AccountCurrencyPicker({ accountId, currency, onChange }: Props) {
   const store = useStore();
+  const peers = useHouseholdPeers();
   const [pickerOpen, setPickerOpen] = useState<'account' | 'currency' | null>(null);
   const [pickerMode] = useAccountPickerMode();
   const [expandedInstitutions, setExpandedInstitutions] = useState<Set<string> | null>(null);
@@ -46,6 +79,9 @@ export function AccountCurrencyPicker({ accountId, currency, onChange }: Props) 
   const ranked = store.rankedAccounts();
   const currencyOptions = store.rankedCurrencies(accountId);
   const institutionCounts = countByInstitution(ranked);
+  const needsOwnerLabel = accountsNeedingOwnerLabel(ranked);
+  const ownerPrefixFor = (a: Account): string | null =>
+    needsOwnerLabel.has(a.id) ? (a.ownerUserId ? personLabel(a.ownerUserId, peers, store.profiles) : 'Shared') : null;
 
   const overThreshold = ranked.length > ACCOUNT_PICKER_SCALE_THRESHOLD;
   const grouped = overThreshold && pickerMode === 'grouped';
@@ -114,7 +150,7 @@ export function AccountCurrencyPicker({ accountId, currency, onChange }: Props) 
     <>
       <div className="pill-row">
         <button className="pill-tap" onClick={() => setPickerOpen(pickerOpen === 'account' ? null : 'account')}>
-          {account ? accountLabel(account) : '—'} ▾
+          {account ? (ownerPrefixFor(account) ? `${ownerPrefixFor(account)} — ` : '') + accountLabel(account) : '—'} ▾
         </button>
         <button className="pill-tap" onClick={() => setPickerOpen(pickerOpen === 'currency' ? null : 'currency')}>
           {currency} ▾
@@ -139,7 +175,7 @@ export function AccountCurrencyPicker({ accountId, currency, onChange }: Props) 
                           className={`chip ${a.id === accountId ? 'picked' : ''}`}
                           onClick={() => pickAccount(a)}
                         >
-                          {a.name}
+                          {ownerPrefixFor(a) ? `${ownerPrefixFor(a)} — ${a.name}` : a.name}
                         </button>
                       ))}
                     </div>
@@ -156,7 +192,7 @@ export function AccountCurrencyPicker({ accountId, currency, onChange }: Props) 
                   className={`chip ${a.id === accountId ? 'picked' : ''}`}
                   onClick={() => pickAccount(a)}
                 >
-                  {flatChipLabel(a, institutionCounts)}
+                  {flatChipLabel(a, institutionCounts, ownerPrefixFor(a))}
                 </button>
               ))}
             </>
@@ -168,7 +204,7 @@ export function AccountCurrencyPicker({ accountId, currency, onChange }: Props) 
                   className={`chip ${a.id === accountId ? 'picked' : ''}`}
                   onClick={() => pickAccount(a)}
                 >
-                  {flatChipLabel(a, institutionCounts)}
+                  {flatChipLabel(a, institutionCounts, ownerPrefixFor(a))}
                 </button>
               ))}
               {flatHiddenCount > 0 && (
