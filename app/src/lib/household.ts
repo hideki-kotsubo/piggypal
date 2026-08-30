@@ -49,14 +49,11 @@ export function personLabel(userId: string, peers: PairedPeer[]): string {
 // has its own "someone else" fork (AuthVerifyScreen.tsx, docs/46
 // D165/D166) that deliberately keeps identity and accounts unmerged for
 // that case, so a real second person's paid_by_user_id/created_by_user_id/
-// owner_user_id values sync down distinct from this device's own — with
-// no peers.ts row to name them, since that sign-in path never runs a P2P
-// handshake at all. Scanning the actual data for owner ids this device
-// didn't write covers that case too, using the same generic "Household
-// member" label personLabel() already falls back to for any id missing
-// from peers.ts. A real peers.ts entry for the same id still wins (it has
-// an actual name), synthesized entries only fill in ids nothing else
-// already names.
+// owner_user_id values sync down distinct from this device's own. Scanning
+// the actual data for owner ids this device didn't write covers ids from
+// before docs/48's profiles table existed, or any id that's somehow never
+// gotten a profile row — a real profiles entry (docs/48 D175) is always
+// preferred once one exists (see useHouseholdPeers below).
 function observedOtherUserIds(accounts: Account[], transactions: Transaction[]): string[] {
   const localId = getLocalUserId();
   const ids = new Set<string>();
@@ -79,19 +76,35 @@ function observedOtherUserIds(accounts: Account[], transactions: Transaction[]):
 }
 
 // The combined view every household.ts consumer should use in place of a
-// bare usePairedPeers() — real paired peers plus a synthesized entry for
-// any other owner id observed in synced data that no peers.ts row already
-// names. Deliberately NOT used by SettingsScreen's own "Paired devices"
-// list, which is P2P pairing management specifically (re-sync,
-// lastSyncedAt) — a synthesized entry has no real pairing session behind
-// it to manage.
+// bare usePairedPeers() — real paired peers, plus every other profile
+// (docs/48 D175, a real chosen name) and any other id merely observed in
+// synced data (pre-docs/48 fallback), synthesized as PairedPeer-shaped
+// entries. Precedence for the label, when more than one source knows the
+// same id: a real docs/25 P2P-paired peer's name wins first (an actual
+// handshake, not just data inference), then a profiles.display_name, then
+// the generic "Household member" catch-all for an id nothing names yet.
+// Deliberately NOT used by SettingsScreen's own "Paired devices" list,
+// which is P2P pairing management specifically (re-sync, lastSyncedAt) —
+// a synthesized entry has no real pairing session behind it to manage.
 export function useHouseholdPeers(): PairedPeer[] {
   const [peers] = usePairedPeers();
   const store = useStore();
+  const localId = getLocalUserId();
   const known = new Set(peers.map((p) => p.id));
-  const synthesized: PairedPeer[] = observedOtherUserIds(store.accounts, store.transactions)
+  const profileNameById = new Map(store.profiles.map((p) => [p.id, p.displayName]));
+  const otherIds = new Set([
+    ...observedOtherUserIds(store.accounts, store.transactions),
+    ...store.profiles.map((p) => p.id),
+  ]);
+  otherIds.delete(localId);
+  const synthesized: PairedPeer[] = [...otherIds]
     .filter((id) => !known.has(id))
-    .map((id) => ({ id, label: 'Household member', lastSyncedAt: '', identityMode: 'someone-else' }));
+    .map((id) => ({
+      id,
+      label: profileNameById.get(id) ?? 'Household member',
+      lastSyncedAt: '',
+      identityMode: 'someone-else',
+    }));
   return synthesized.length > 0 ? [...peers, ...synthesized] : peers;
 }
 

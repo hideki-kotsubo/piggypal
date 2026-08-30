@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { getDeviceId, getLocalUserId } from './identity';
-import type { Account, Category } from './types';
+import type { Account, Category, Profile } from './types';
 
 // docs/05's magic-link flow, client side — talks to docs/41's real
 // api/src/auth/routes.ts. Mirrors relayClient.ts's own VITE_-env-with-
@@ -191,7 +191,10 @@ export async function fetchPowerSyncCredentials(): Promise<{ token: string } | n
 // directly (api/src/sync/routes.ts's new GET /api/sync/snapshot), not
 // through PowerSync's local sync — see that endpoint's own comment for
 // exactly why local SQLite can't answer this question on its own.
-export async function fetchServerSnapshot(): Promise<{ categories: Category[]; accounts: Account[] } | null> {
+// docs/48 D177 — profiles added to the same read: the sign-in profile
+// picker needs every existing profile before this device has ever
+// connected/synced, same reasoning exactly.
+export async function fetchServerSnapshot(): Promise<{ categories: Category[]; accounts: Account[]; profiles: Profile[] } | null> {
   let token = await ensureAccessToken();
   if (!token) return null;
   let res = await apiFetch('/api/sync/snapshot', { headers: { Authorization: `Bearer ${token}` } });

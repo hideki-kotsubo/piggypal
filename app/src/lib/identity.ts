@@ -63,25 +63,12 @@ export function getDeviceId(): string {
   return id;
 }
 
-const DEVICE_ROLE_KEY = 'piggypal:device-role';
-export type DeviceRole = 'own' | 'someone-else';
-
-// docs/46 D165/D166 — mirrors docs/25 D125-127's own-device-vs-someone-
-// else fork for P2P pairing, now added to sign-in too: whether *this
-// device* signing into an already-used account is the same person's own
-// second device (identity unifies via getLocalUserId adopting the
-// account's id) or a different household member (identity stays
-// distinct). Remembered per device once answered (D166, same "known
-// peer skips the question" UX docs/25 D138-139 already shipped) so a
-// repeat sign-in on the same device doesn't ask again.
-export function getDeviceRole(): DeviceRole | null {
-  return localStorage.getItem(DEVICE_ROLE_KEY) as DeviceRole | null;
-}
-
-export function setDeviceRole(role: DeviceRole): void {
-  localStorage.setItem(DEVICE_ROLE_KEY, role);
-}
-
-export function clearDeviceRole(): void {
-  localStorage.removeItem(DEVICE_ROLE_KEY);
-}
+// docs/48 D177 — superseded docs/46 D165/D166's own-device-vs-someone-else
+// fork (and its DEVICE_ROLE_KEY "remembered, don't ask again" flag,
+// removed): the fork generalizes into "pick your profile, or someone
+// new," and "don't ask again" no longer needs a separate remembered flag
+// at all — it falls out for free from checking whether getLocalUserId()
+// already matches an existing profiles row (AuthVerifyScreen.tsx). A
+// fresh getLocalUserId() (a genuinely new device, or one just reset via
+// clearLocalUserId() below) naturally matches no profile and gets asked;
+// one that already adopted or created a profile naturally doesn't.

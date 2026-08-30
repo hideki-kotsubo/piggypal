@@ -198,7 +198,14 @@ export function SettingsScreen() {
             className="text-input"
             placeholder={guessDeviceLabel()}
             value={deviceLabel}
-            onChange={(e) => setDeviceLabel(e.target.value)}
+            onChange={(e) => {
+              setDeviceLabel(e.target.value);
+              // docs/48 D176 — keep this device's synced row's label in
+              // step with what Settings shows, so the household devices
+              // list below (and any other device's view of it) doesn't
+              // go stale the moment this is renamed.
+              void store.touchDevice();
+            }}
           />
         </label>
       </div>
@@ -208,6 +215,33 @@ export function SettingsScreen() {
           <span className="settings-row-arrow">›</span>
         </Link>
       </div>
+      {/* docs/48 D179 — every device across the whole household, grouped
+          by profile, sourced from the synced devices/profiles tables —
+          separate from "Paired devices" above, which is docs/25's P2P
+          pairing management specifically and stays exactly as it was. */}
+      {authAccount && store.devices.length > 0 && (
+        <>
+          <div className="section-label">Household devices</div>
+          <div className="accounts-list">
+            {store.profiles
+              .filter((p) => store.devices.some((d) => d.profileId === p.id))
+              .map((p) => (
+                <div key={p.id}>
+                  <div className="settings-row settings-row-static">
+                    <strong>{p.displayName}</strong>
+                  </div>
+                  {store.devices
+                    .filter((d) => d.profileId === p.id)
+                    .map((d) => (
+                      <div className="settings-row settings-row-static" key={d.id}>
+                        <span>{d.label}</span>
+                      </div>
+                    ))}
+                </div>
+              ))}
+          </div>
+        </>
+      )}
       {peers.length > 0 && (
         <>
           <div className="section-label">Paired devices</div>

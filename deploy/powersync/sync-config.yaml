@@ -46,3 +46,13 @@ streams:
   transactions:
     auto_subscribe: true
     query: SELECT * FROM transactions WHERE user_id = auth.user_id()
+
+  # docs/48 D175/D176 — small, low-churn reference tables, synced whole
+  # (no windowing concern like transactions above).
+  profiles:
+    auto_subscribe: true
+    query: SELECT * FROM profiles WHERE user_id = auth.user_id()
+
+  devices:
+    auto_subscribe: true
+    query: SELECT * FROM devices WHERE user_id = auth.user_id()

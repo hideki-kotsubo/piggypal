@@ -42,6 +42,11 @@ const TABLE_COLUMNS: Record<string, readonly string[]> = {
   ],
   budgets: ['category_id', 'month', 'currency', 'amount_cents'],
   category_keywords: ['category_id', 'keyword', 'hits'],
+  // docs/48 D175/D176 — profiles.id/devices.id are client-generated
+  // (getLocalUserId()/getDeviceId()), same upsert-by-id shape as every
+  // other table here.
+  profiles: ['display_name'],
+  devices: ['profile_id', 'label', 'last_seen_at'],
 };
 
 // SQLite stores booleans as 0/1 (schema.ts's own convention); Postgres
@@ -290,6 +295,14 @@ syncRouter.get('/snapshot', requireAccessToken, async (req: AuthedRequest, res) 
       'SELECT id, institution, name, kind, archived, owner_user_id, updated_at FROM accounts WHERE user_id = $1',
       [userId],
     );
+    // docs/48 D177 — the sign-in profile picker needs every existing
+    // profile *before* this device has ever connected/synced, same
+    // "read the true server state directly" reasoning as categories/
+    // accounts above — a brand-new device has no local PowerSync data
+    // to show a profile list from yet.
+    const profiles = await client.query('SELECT id, display_name, updated_at FROM profiles WHERE user_id = $1', [
+      userId,
+    ]);
     res.json({
       categories: categories.rows.map((c) => ({
         id: c.id,
@@ -307,6 +320,11 @@ syncRouter.get('/snapshot', requireAccessToken, async (req: AuthedRequest, res) 
         archived: a.archived,
         ownerUserId: a.owner_user_id,
         updatedAt: a.updated_at,
+      })),
+      profiles: profiles.rows.map((p) => ({
+        id: p.id,
+        displayName: p.display_name,
+        updatedAt: p.updated_at,
       })),
     });
   } finally {

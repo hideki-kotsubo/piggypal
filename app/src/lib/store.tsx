@@ -3,11 +3,12 @@ import type { ReactNode } from 'react';
 import type { Transaction as SqliteTransaction } from '@powersync/web';
 import { connectSync, db } from './db';
 import { clearAuthAccount, getAuthAccount } from './auth';
-import { clearDeviceRole, clearLocalUserId, getLocalUserId, setDeviceRole, setLocalUserId } from './identity';
+import { clearLocalUserId, getDeviceId, getLocalUserId, setLocalUserId } from './identity';
 import { clearPairedPeers } from './peers';
 import { nowUtc } from './format';
 import type { AccountRewrite, CategoryRewrite } from './mergeMatch';
-import type { Account, AccountKind, Budget, Category, CategoryKeyword, MergeSummary, PeerDataset, Transaction } from './types';
+import { effectiveDeviceLabel } from './settings';
+import type { Account, AccountKind, Budget, Category, CategoryKeyword, Device, MergeSummary, PeerDataset, Profile, Transaction } from './types';
 import { AppSkeleton } from '../components/AppSkeleton';
 import { seedCategories, seedCategoryKeywords } from './seed';
 
@@ -149,6 +150,25 @@ function rowToCategoryKeyword(r: CategoryKeywordRow): CategoryKeyword {
   return { id: r.id, categoryId: r.category_id, keyword: r.keyword, hits: r.hits };
 }
 
+interface ProfileRow {
+  id: string;
+  display_name: string;
+  updated_at: string | null;
+}
+function rowToProfile(r: ProfileRow): Profile {
+  return { id: r.id, displayName: r.display_name, updatedAt: r.updated_at ?? NEVER_UPDATED };
+}
+
+interface DeviceRow {
+  id: string;
+  profile_id: string;
+  label: string;
+  last_seen_at: string | null;
+}
+function rowToDevice(r: DeviceRow): Device {
+  return { id: r.id, profileId: r.profile_id, label: r.label, lastSeenAt: r.last_seen_at ?? NEVER_UPDATED };
+}
+
 const ACCOUNT_COLUMNS: Record<keyof Account, string> = {
   id: 'id',
   institution: 'institution',
@@ -191,6 +211,12 @@ const TRANSACTION_COLUMNS: Record<keyof Transaction, string> = {
   deletedAt: 'deleted_at',
   paidByUserId: 'paid_by_user_id',
   createdByUserId: 'created_by_user_id',
+  updatedAt: 'updated_at',
+};
+
+const PROFILE_COLUMNS: Record<keyof Profile, string> = {
+  id: 'id',
+  displayName: 'display_name',
   updatedAt: 'updated_at',
 };
 
@@ -243,6 +269,40 @@ async function insertAccountRow(a: Account): Promise<void> {
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [a.id, a.institution, a.name, a.kind, a.archived ? 1 : 0, a.ownerUserId, a.updatedAt],
   );
+}
+
+// docs/48 D176 — upserts this device's own row (id, current profile,
+// current label) whenever any of those might have changed: after
+// connecting sync, after the sign-in profile picker (D177) settles which
+// profile this device belongs to, and whenever the device's own label is
+// edited (Settings). Genuinely an upsert (unlike every other table's
+// separate addX/updateX pair, which trust the caller to know which
+// applies) since none of those call sites can cheaply know in advance
+// whether this device already has a row. Only meaningful once signed in
+// — profiles/devices don't exist locally at all before that (docs/48
+// stays entirely inside the paid/synced tier, never local-only mode).
+async function touchDevice(): Promise<void> {
+  if (!getAuthAccount()) return;
+  const id = getDeviceId();
+  const profileId = getLocalUserId();
+  const label = effectiveDeviceLabel();
+  const now = nowUtc();
+  const existing = await db.getAll<{ id: string }>('SELECT id FROM devices WHERE id = ?', [id]);
+  if (existing.length > 0) {
+    await db.execute('UPDATE devices SET profile_id = ?, label = ?, last_seen_at = ? WHERE id = ?', [
+      profileId,
+      label,
+      now,
+      id,
+    ]);
+  } else {
+    await db.execute('INSERT INTO devices (id, profile_id, label, last_seen_at) VALUES (?, ?, ?, ?)', [
+      id,
+      profileId,
+      label,
+      now,
+    ]);
+  }
 }
 
 // ---- one-time seed on an empty database ----
@@ -310,6 +370,8 @@ interface StoreState {
   transactions: Transaction[];
   budgets: Budget[];
   categoryKeywords: CategoryKeyword[];
+  profiles: Profile[];
+  devices: Device[];
 }
 
 interface StoreApi extends StoreState {
@@ -395,6 +457,20 @@ interface StoreApi extends StoreState {
   // manualMerge.ts) — these methods trust their input.
   mergeCategories: (survivorId: string, loserIds: string[]) => Promise<void>;
   mergeAccounts: (survivorId: string, loserIds: string[]) => Promise<void>;
+  // docs/48 D175/D177 — creates a brand-new household member's profile
+  // ("Someone new" in the sign-in picker). Does NOT adopt it as this
+  // device's own identity — the caller (AuthVerifyScreen) does that
+  // itself via setLocalUserId(), same as picking an existing profile.
+  addProfile: (profile: Profile) => void;
+  // Renaming a profile (e.g. the "Wife" placeholder from docs/48's
+  // production backfill) — not surfaced in any UI by this pass, but the
+  // same generic patch shape every other updateX method already has.
+  updateProfile: (profileId: string, patch: Partial<Profile>) => void;
+  // docs/48 D176 — upserts this device's own devices row. Exposed on the
+  // API (rather than only the module-level touchDevice()) so components
+  // can call it after whatever just changed: connecting sync, settling
+  // the sign-in profile picker, or editing this device's own label.
+  touchDevice: () => Promise<void>;
 }
 
 const StoreContext = createContext<StoreApi | null>(null);
@@ -407,6 +483,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     transactions: [],
     budgets: [],
     categoryKeywords: [],
+    profiles: [],
+    devices: [],
   });
 
   useEffect(() => {
@@ -427,7 +505,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         // yet"), a real bug found from a real report. `ready` now waits
         // for every table's first snapshot before showing real content —
         // AppSkeleton stays up for that whole window instead.
-        const pendingFirstLoad = new Set(['accounts', 'categories', 'transactions', 'budgets', 'categoryKeywords']);
+        const pendingFirstLoad = new Set([
+          'accounts',
+          'categories',
+          'transactions',
+          'budgets',
+          'categoryKeywords',
+          'profiles',
+          'devices',
+        ]);
         function markFirstLoad(table: string) {
           if (pendingFirstLoad.delete(table) && pendingFirstLoad.size === 0) setReady(true);
         }
@@ -531,6 +617,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           },
           { signal: controller.signal, triggerImmediate: true },
         );
+        db.watch(
+          'SELECT * FROM profiles',
+          [],
+          {
+            onResult: (r) => {
+              setState((s) => ({ ...s, profiles: r.rows?._array.map(rowToProfile) ?? [] }));
+              markFirstLoad('profiles');
+            },
+            onError: (err) => {
+              console.error('piggypal: profiles watch failed', err);
+              markFirstLoad('profiles');
+            },
+          },
+          { signal: controller.signal, triggerImmediate: true },
+        );
+        db.watch(
+          'SELECT * FROM devices',
+          [],
+          {
+            onResult: (r) => {
+              setState((s) => ({ ...s, devices: r.rows?._array.map(rowToDevice) ?? [] }));
+              markFirstLoad('devices');
+            },
+            onError: (err) => {
+              console.error('piggypal: devices watch failed', err);
+              markFirstLoad('devices');
+            },
+          },
+          { signal: controller.signal, triggerImmediate: true },
+        );
       });
 
     return () => controller.abort();
@@ -544,7 +660,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // fetchCredentials returning null (cookie expired/revoked) just leaves
   // the SDK disconnected; nothing here needs to distinguish why.
   useEffect(() => {
-    if (getAuthAccount()) void connectSync();
+    // docs/48 D176 — also refresh this device's own devices row on the
+    // same reconnect, so a stale label/profile from before a rename or a
+    // profile switch doesn't linger forever on other devices' view of it.
+    if (getAuthAccount()) void connectSync().then(() => touchDevice());
   }, []);
 
   const api = useMemo<StoreApi>(() => {
@@ -815,12 +934,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       async discardAndAdoptAccountId(newId) {
         await db.disconnectAndClear();
         setLocalUserId(newId);
-        // docs/46 D165/D166: discarding directly unifies this device's
+        // docs/48 D177 — discarding directly unifies this device's
         // identity with the account (setLocalUserId above) regardless of
         // who's physically using it — there's no pre-existing personal
-        // data left to misattribute. That's "own device" semantics, so a
-        // repeat sign-in on this same device shouldn't re-ask the fork.
-        setDeviceRole('own');
+        // data left to misattribute. A repeat sign-in on this same device
+        // won't re-ask the profile picker either, for free: getLocalUserId()
+        // now matches the account owner's own existing profile row.
       },
 
       async resetLocalData() {
@@ -849,10 +968,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         // state. A reset device is signed out, full stop; signing back in
         // mints a real new session same as any other fresh device would.
         clearAuthAccount();
-        // docs/46 D165/D166 — same reasoning as the two clears above: a
-        // reset device has no memory of anything, including which role
-        // (own device / someone else) it last answered at sign-in.
-        clearDeviceRole();
         // docs/46 — a real bug found testing this for real: a device that
         // had ever adopted a real account's id (any earlier "Merge into my
         // account") kept that id across every subsequent reset, so its
@@ -975,6 +1090,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
         return summary;
       },
+
+      addProfile(profile) {
+        void db.execute('INSERT INTO profiles (id, display_name, updated_at) VALUES (?, ?, ?)', [
+          profile.id,
+          profile.displayName,
+          profile.updatedAt,
+        ]);
+      },
+
+      updateProfile(profileId, patch) {
+        const entries = (Object.entries(patch) as [keyof Profile, unknown][]).filter(([k]) => k !== 'updatedAt');
+        if (entries.length === 0) return;
+        const setClause = entries.map(([k]) => `${PROFILE_COLUMNS[k]} = ?`).join(', ');
+        const params = entries.map(([, v]) => v);
+        void db.execute(`UPDATE profiles SET ${setClause}, updated_at = ? WHERE id = ?`, [
+          ...params,
+          nowUtc(),
+          profileId,
+        ]);
+      },
+
+      touchDevice,
     };
   }, [state]);
 
