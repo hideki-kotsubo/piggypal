@@ -1,6 +1,9 @@
 import { getLocalUserId } from './identity';
+import { usePairedPeers } from './peers';
 import { effectiveDeviceLabel } from './settings';
+import { useStore } from './store';
 import type { PairedPeer } from './peers';
+import type { Account, Transaction } from './types';
 
 export interface HouseholdMember {
   userId: string;
@@ -39,6 +42,49 @@ export function householdMembers(peers: PairedPeer[]): HouseholdMember[] {
 export function personLabel(userId: string, peers: PairedPeer[]): string {
   if (userId === getLocalUserId()) return effectiveDeviceLabel();
   return otherMembers(peers).find((p) => p.id === userId)?.label ?? 'Household member';
+}
+
+// docs/00-backlog 2026-08-29 — P2P pairing (docs/25) isn't the only way a
+// second household member's data reaches this device: magic-link sign-in
+// has its own "someone else" fork (AuthVerifyScreen.tsx, docs/46
+// D165/D166) that deliberately keeps identity and accounts unmerged for
+// that case, so a real second person's paid_by_user_id/created_by_user_id/
+// owner_user_id values sync down distinct from this device's own — with
+// no peers.ts row to name them, since that sign-in path never runs a P2P
+// handshake at all. Scanning the actual data for owner ids this device
+// didn't write covers that case too, using the same generic "Household
+// member" label personLabel() already falls back to for any id missing
+// from peers.ts. A real peers.ts entry for the same id still wins (it has
+// an actual name), synthesized entries only fill in ids nothing else
+// already names.
+function observedOtherUserIds(accounts: Account[], transactions: Transaction[]): string[] {
+  const localId = getLocalUserId();
+  const ids = new Set<string>();
+  for (const a of accounts) {
+    if (a.ownerUserId !== localId) ids.add(a.ownerUserId);
+  }
+  for (const t of transactions) {
+    if (t.paidByUserId !== localId) ids.add(t.paidByUserId);
+    if (t.createdByUserId !== localId) ids.add(t.createdByUserId);
+  }
+  return [...ids];
+}
+
+// The combined view every household.ts consumer should use in place of a
+// bare usePairedPeers() — real paired peers plus a synthesized entry for
+// any other owner id observed in synced data that no peers.ts row already
+// names. Deliberately NOT used by SettingsScreen's own "Paired devices"
+// list, which is P2P pairing management specifically (re-sync,
+// lastSyncedAt) — a synthesized entry has no real pairing session behind
+// it to manage.
+export function useHouseholdPeers(): PairedPeer[] {
+  const [peers] = usePairedPeers();
+  const store = useStore();
+  const known = new Set(peers.map((p) => p.id));
+  const synthesized: PairedPeer[] = observedOtherUserIds(store.accounts, store.transactions)
+    .filter((id) => !known.has(id))
+    .map((id) => ({ id, label: 'Household member', lastSyncedAt: '', identityMode: 'someone-else' }));
+  return synthesized.length > 0 ? [...peers, ...synthesized] : peers;
 }
 
 // D121's badge letter.

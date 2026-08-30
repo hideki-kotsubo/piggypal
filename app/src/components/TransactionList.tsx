@@ -12,8 +12,7 @@ import {
 } from '../lib/filterTransactions';
 import { CategoryPicker } from './CategoryPicker';
 import { getLocalUserId } from '../lib/identity';
-import { hasHousehold, personLabel } from '../lib/household';
-import { usePairedPeers } from '../lib/peers';
+import { hasHousehold, personLabel, useHouseholdPeers } from '../lib/household';
 import { PayerBadge } from './PayerBadge';
 
 const MERCHANT_CAP = 8;
@@ -27,7 +26,7 @@ type FilterKey = 'category' | 'account' | 'merchant' | 'date';
 
 export function TransactionList() {
   const store = useStore();
-  const [peers] = usePairedPeers();
+  const peers = useHouseholdPeers();
   const showPayerBadge = hasHousehold(peers);
   const [searchParams, setSearchParams] = useSearchParams();
   const [openFilter, setOpenFilter] = useState<FilterKey | null>(null);

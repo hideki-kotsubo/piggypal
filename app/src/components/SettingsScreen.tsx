@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { ACCOUNT_PICKER_SCALE_THRESHOLD, guessDeviceLabel, useAccountPickerMode, useDeviceLabel, useThemeMode } from '../lib/settings';
 import { usePairedPeers } from '../lib/peers';
-import { hasHousehold, householdMembers } from '../lib/household';
+import { hasHousehold, householdMembers, useHouseholdPeers } from '../lib/household';
 import { PayerBadge } from './PayerBadge';
 import { APP_VERSION } from '../lib/version';
 import { fetchPowerSyncCredentials, requestMagicLink, signOut, useAuthAccount } from '../lib/auth';
@@ -30,6 +30,7 @@ export function SettingsScreen() {
   const [themeMode, setThemeMode] = useThemeMode();
   const [deviceLabel, setDeviceLabel] = useDeviceLabel();
   const [peers] = usePairedPeers();
+  const householdPeers = useHouseholdPeers();
   const [authAccount, setAuthAccount] = useAuthAccount();
   const syncStatus = useSyncStatus();
   const skippedSyncOps = useSkippedSyncOps();
@@ -226,7 +227,7 @@ export function SettingsScreen() {
         </>
       )}
 
-      {hasHousehold(peers) && (
+      {hasHousehold(householdPeers) && (
         <>
           {/* docs/26 D124 — bare read-only members list, just enough to say
               who the payer/owner badges elsewhere refer to. No invite/
@@ -234,7 +235,7 @@ export function SettingsScreen() {
               pairing flow above, not this list. */}
           <div className="section-label">Household</div>
           <div className="accounts-list">
-            {householdMembers(peers).map((m) => (
+            {householdMembers(householdPeers).map((m) => (
               <div className="member-row" key={m.userId}>
                 <PayerBadge label={m.label} mine={m.isYou} className="member-badge" />
                 <span className="member-name">
