@@ -3,8 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { accountLabel, formatAmount, nowUtc } from '../lib/format';
 import { getLocalUserId } from '../lib/identity';
-import { hasHousehold, personLabel } from '../lib/household';
-import { usePairedPeers } from '../lib/peers';
+import { hasHousehold, personLabel, useHouseholdPeers } from '../lib/household';
 import { crossOwnerLosers } from '../lib/manualMerge';
 import type { Account, AccountKind } from '../lib/types';
 
@@ -47,7 +46,7 @@ export function AccountsScreen() {
   const [expandedGroups, setExpandedGroups] = useState<Set<string> | null>(null);
   const [archivedOpen, setArchivedOpen] = useState(false);
   const [mergeState, setMergeState] = useState<MergeState>({ step: 'off' });
-  const [peers] = usePairedPeers();
+  const peers = useHouseholdPeers();
   // docs/26 D123 — owner_user_id renders as a name prefix in the row's
   // existing name slot, but only once a household actually has 2+
   // members (D110); a solo household must render exactly as it always

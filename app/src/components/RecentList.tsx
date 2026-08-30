@@ -4,15 +4,14 @@ import { useStore } from '../lib/store';
 import { accountLabel, formatAmount, groupByDay, transactionTitle } from '../lib/format';
 import { totalsByCurrency } from '../lib/filterTransactions';
 import { getLocalUserId } from '../lib/identity';
-import { hasHousehold, personLabel } from '../lib/household';
-import { usePairedPeers } from '../lib/peers';
+import { hasHousehold, personLabel, useHouseholdPeers } from '../lib/household';
 import { PayerBadge } from './PayerBadge';
 
 const PREVIEW_COUNT = 5;
 
 export function RecentList() {
   const store = useStore();
-  const [peers] = usePairedPeers();
+  const peers = useHouseholdPeers();
   const showPayerBadge = hasHousehold(peers);
   const active = [...store.transactions]
     .filter((t) => !t.deletedAt)

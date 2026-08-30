@@ -4,8 +4,7 @@ import { AccountCurrencyPicker } from './AccountCurrencyPicker';
 import { AmountKeypad } from './AmountKeypad';
 import { CategoryPicker } from './CategoryPicker';
 import { PayerBadge } from './PayerBadge';
-import { hasHousehold, householdMembers, personLabel } from '../lib/household';
-import { usePairedPeers } from '../lib/peers';
+import { hasHousehold, householdMembers, personLabel, useHouseholdPeers } from '../lib/household';
 import type { Transaction } from '../lib/types';
 
 // occurredAt is "YYYY-MM-DDTHH:MM:SS" — split for the two native inputs,
@@ -24,7 +23,7 @@ function combine(date: string, time: string): string {
 // RecentList (Home's preview) — same expand-in-place edit panel either way.
 export function TransactionEditForm({ transaction, onDone }: { transaction: Transaction; onDone: () => void }) {
   const store = useStore();
-  const [peers] = usePairedPeers();
+  const peers = useHouseholdPeers();
   const showHousehold = hasHousehold(peers);
   const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
   // Local mirror of the Note field — `transaction.note` comes straight
