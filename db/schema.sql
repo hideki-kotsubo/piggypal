@@ -19,17 +19,25 @@ create table accounts (
   name               text not null,
   kind               text not null default 'checking',  -- checking | credit | cash | savings
   archived           boolean not null default false,  -- see docs/12; mirrors categories.archived
-  owner_user_id      uuid not null,  -- whose payment instrument this is —
-                               -- docs/24 D110. Not a sync-partition key
-                               -- like user_id (which stays as-is pending
-                               -- docs/24's broader household_id migration,
-                               -- not done here) — a real per-row fact,
-                               -- shown in the UI only once a household has
-                               -- 2+ members. No explicit `references
-                               -- users(id)`, matching user_id's own
-                               -- convention above — users is defined later
-                               -- in this file's server-only section, kept
-                               -- decoupled from the sync-domain tables.
+  owner_user_id      uuid,  -- whose payment instrument this is —
+                               -- docs/24 D110. Nullable as of docs/48's
+                               -- profile-linked-account feature: null
+                               -- means "shared/joint, no default payer,"
+                               -- a real deliberate state going forward,
+                               -- not a legacy gap (every row had a real
+                               -- value before this — see
+                               -- db/migrations/2026-08-30-accounts-
+                               -- owner-nullable.sql). Not a sync-partition
+                               -- key like user_id (which stays as-is
+                               -- pending docs/24's broader household_id
+                               -- migration, not done here) — a real
+                               -- per-row fact, shown in the UI only once a
+                               -- household has 2+ members. No explicit
+                               -- `references users(id)`, matching
+                               -- user_id's own convention above — users
+                               -- is defined later in this file's
+                               -- server-only section, kept decoupled from
+                               -- the sync-domain tables.
   created_at         timestamptz not null default now(),
   updated_at         timestamptz not null default now()
 );

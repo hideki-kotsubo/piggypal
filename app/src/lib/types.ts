@@ -14,9 +14,12 @@ export interface Account {
   archived: boolean;
   // Whose payment instrument this is — docs/24 D110. Real even in
   // today's single-device local-only mode (getLocalUserId()); only shown
-  // in the UI once a household has 2+ members, but every account needs a
-  // value from day one so there's nothing to backfill later.
-  ownerUserId: string;
+  // in the UI once a household has 2+ members, but every account gets a
+  // value at creation by default so there's nothing to backfill later.
+  // Nullable as of docs/48's profile-linked-account feature: null means
+  // "shared/joint, no default payer" — a deliberate choice, not a legacy
+  // gap (see db/migrations/2026-08-30-accounts-owner-nullable.sql).
+  ownerUserId: string | null;
   // docs/46 D170 — real local bookkeeping timestamp (UTC), added so the
   // sign-in merge redesign's manual-review UI can show real recency
   // ("local edited at ___ vs. server's copy edited at ___") instead of
