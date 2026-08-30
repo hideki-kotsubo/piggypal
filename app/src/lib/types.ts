@@ -112,6 +112,7 @@ export interface Device {
   profileId: string;
   label: string;
   lastSeenAt: string;
+  updatedAt: string;
 }
 
 export interface MergeSummary {

@@ -101,6 +101,7 @@ const devices = new Table({
   profile_id: column.text,
   label: column.text,
   last_seen_at: column.text,
+  updated_at: column.text,
 });
 
 export const AppSchema = new Schema({
