@@ -60,10 +60,18 @@ export function personLabel(userId: string, peers: PairedPeer[]): string {
 function observedOtherUserIds(accounts: Account[], transactions: Transaction[]): string[] {
   const localId = getLocalUserId();
   const ids = new Set<string>();
+  // store.transactions is `SELECT * FROM transactions` with no
+  // deleted_at filter (store.tsx's own watch query) — a real bug found
+  // testing this: an old, already-deleted duplicate transaction's payer/
+  // logger id kept showing up as a "Household member" forever, even
+  // after the account that created it was cleaned up. Archived accounts
+  // get the same treatment for the same reason — neither is "currently
+  // relevant," just still sitting in history.
   for (const a of accounts) {
-    if (a.ownerUserId !== localId) ids.add(a.ownerUserId);
+    if (!a.archived && a.ownerUserId !== localId) ids.add(a.ownerUserId);
   }
   for (const t of transactions) {
+    if (t.deletedAt) continue;
     if (t.paidByUserId !== localId) ids.add(t.paidByUserId);
     if (t.createdByUserId !== localId) ids.add(t.createdByUserId);
   }

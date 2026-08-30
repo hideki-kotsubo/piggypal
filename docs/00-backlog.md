@@ -14,6 +14,11 @@ it needs doing.
 
 ## ⚪ Next
 
+- [ ] Build docs/48's household profiles & devices design: a real
+      `profiles`/`devices` schema (reusing existing ids, no data rewrite),
+      the generalized "pick your profile" sign-in fork, QR device linking,
+      and a cross-device household devices list. Design-only as of
+      2026-08-30, pending review before implementation.
 - [ ] Generate + deploy a production JWT keypair, and decide/expose
       PowerSync Service's public subdomain (docs/39 open question #4).
       This is what's actually left before a real device can sync
