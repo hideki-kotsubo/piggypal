@@ -135,7 +135,7 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
         <div>
           <div className="field-label">Paid by</div>
           <div className="chip-row">
-            {householdMembers(peers).map((m) => (
+            {householdMembers(peers, store.profiles).map((m) => (
               <button
                 key={m.userId}
                 className={`chip chip-payer ${m.userId === transaction.paidByUserId ? 'picked' : ''}`}
@@ -153,7 +153,7 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
               user-editable transaction date, not a log-time), so this is
               deliberately narrower than docs/26's mockup rather than
               fabricating a time that isn't real. */}
-          <p className="provenance">Logged by {personLabel(transaction.createdByUserId, peers)}</p>
+          <p className="provenance">Logged by {personLabel(transaction.createdByUserId, peers, store.profiles)}</p>
         </div>
       )}
 

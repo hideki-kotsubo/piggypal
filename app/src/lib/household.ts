@@ -3,7 +3,7 @@ import { usePairedPeers } from './peers';
 import { effectiveDeviceLabel } from './settings';
 import { useStore } from './store';
 import type { PairedPeer } from './peers';
-import type { Account, Transaction } from './types';
+import type { Account, Profile, Transaction } from './types';
 
 export interface HouseholdMember {
   userId: string;
@@ -29,9 +29,9 @@ export function hasHousehold(peers: PairedPeer[]): boolean {
   return otherMembers(peers).length > 0;
 }
 
-export function householdMembers(peers: PairedPeer[]): HouseholdMember[] {
+export function householdMembers(peers: PairedPeer[], profiles: Profile[]): HouseholdMember[] {
   return [
-    { userId: getLocalUserId(), label: effectiveDeviceLabel(), isYou: true },
+    { userId: getLocalUserId(), label: personLabel(getLocalUserId(), peers, profiles), isYou: true },
     ...otherMembers(peers).map((p) => ({ userId: p.id, label: p.label, isYou: false })),
   ];
 }
@@ -39,9 +39,27 @@ export function householdMembers(peers: PairedPeer[]): HouseholdMember[] {
 // Falls back to a generic label rather than a raw id/blank — can only
 // happen for a user id that arrived via merge from a peer this device no
 // longer has a peers.ts row for (e.g. its own record got cleared).
-export function personLabel(userId: string, peers: PairedPeer[]): string {
-  if (userId === getLocalUserId()) return effectiveDeviceLabel();
-  return otherMembers(peers).find((p) => p.id === userId)?.label ?? 'Household member';
+//
+// A real bug found from a real report: this used to return
+// effectiveDeviceLabel() for "is this me," which is *this specific
+// device's* own label — since all of one person's own devices share the
+// same identity (docs/46 D165's own-device unification), that person's
+// own transactions showed a different payer badge on every one of their
+// own devices ("Hideki's PC" on the PC, "Hideki's iMac" on the iMac),
+// while a *different* household member correctly saw one consistent name
+// for them. Now resolves to the same profiles.display_name every other
+// person's own label already comes from (docs/48 D175) — falling back to
+// effectiveDeviceLabel() only when this device has no profile yet at all
+// (solo, local-only mode, never signed in).
+export function personLabel(userId: string, peers: PairedPeer[], profiles: Profile[]): string {
+  if (userId === getLocalUserId()) {
+    return profiles.find((p) => p.id === userId)?.displayName ?? effectiveDeviceLabel();
+  }
+  return (
+    otherMembers(peers).find((p) => p.id === userId)?.label ??
+    profiles.find((p) => p.id === userId)?.displayName ??
+    'Household member'
+  );
 }
 
 // docs/00-backlog 2026-08-29 — P2P pairing (docs/25) isn't the only way a

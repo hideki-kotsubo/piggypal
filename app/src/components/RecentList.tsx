@@ -58,7 +58,7 @@ export function RecentList() {
                   <Link key={t.id} to={`/transactions/${t.id}`} className="tx-row tx-row-tappable">
                     <div className="tx-left">
                       {showPayerBadge && (
-                        <PayerBadge label={personLabel(t.paidByUserId, peers)} mine={t.paidByUserId === getLocalUserId()} />
+                        <PayerBadge label={personLabel(t.paidByUserId, peers, store.profiles)} mine={t.paidByUserId === getLocalUserId()} />
                       )}
                       <div className="tx-main">
                         <span className="tx-note">{transactionTitle(t, category)}</span>

@@ -52,7 +52,7 @@ export function AccountsScreen() {
   // members (D110); a solo household must render exactly as it always
   // has, no layout change.
   const showOwner = hasHousehold(peers);
-  const ownerPrefix = (a: Account) => (showOwner ? personLabel(a.ownerUserId, peers) : null);
+  const ownerPrefix = (a: Account) => (showOwner ? personLabel(a.ownerUserId, peers, store.profiles) : null);
 
   const active = store.accounts.filter((a) => !a.archived);
   const archived = store.accounts.filter((a) => a.archived);
@@ -302,7 +302,7 @@ export function AccountsScreen() {
                       </p>
                       {flagged.has(loser.id) && (
                         <p className="merge-conflict-detail merge-conflict-warning">
-                          ⚠ Owned by {personLabel(loser.ownerUserId, peers)} — merging reassigns it to {personLabel(survivor.ownerUserId, peers)}.
+                          ⚠ Owned by {personLabel(loser.ownerUserId, peers, store.profiles)} — merging reassigns it to {personLabel(survivor.ownerUserId, peers, store.profiles)}.
                         </p>
                       )}
                     </div>
