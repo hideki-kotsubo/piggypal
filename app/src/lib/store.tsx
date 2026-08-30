@@ -164,9 +164,16 @@ interface DeviceRow {
   profile_id: string;
   label: string;
   last_seen_at: string | null;
+  updated_at: string | null;
 }
 function rowToDevice(r: DeviceRow): Device {
-  return { id: r.id, profileId: r.profile_id, label: r.label, lastSeenAt: r.last_seen_at ?? NEVER_UPDATED };
+  return {
+    id: r.id,
+    profileId: r.profile_id,
+    label: r.label,
+    lastSeenAt: r.last_seen_at ?? NEVER_UPDATED,
+    updatedAt: r.updated_at ?? NEVER_UPDATED,
+  };
 }
 
 const ACCOUNT_COLUMNS: Record<keyof Account, string> = {
@@ -289,17 +296,19 @@ async function touchDevice(): Promise<void> {
   const now = nowUtc();
   const existing = await db.getAll<{ id: string }>('SELECT id FROM devices WHERE id = ?', [id]);
   if (existing.length > 0) {
-    await db.execute('UPDATE devices SET profile_id = ?, label = ?, last_seen_at = ? WHERE id = ?', [
+    await db.execute('UPDATE devices SET profile_id = ?, label = ?, last_seen_at = ?, updated_at = ? WHERE id = ?', [
       profileId,
       label,
+      now,
       now,
       id,
     ]);
   } else {
-    await db.execute('INSERT INTO devices (id, profile_id, label, last_seen_at) VALUES (?, ?, ?, ?)', [
+    await db.execute('INSERT INTO devices (id, profile_id, label, last_seen_at, updated_at) VALUES (?, ?, ?, ?, ?)', [
       id,
       profileId,
       label,
+      now,
       now,
     ]);
   }

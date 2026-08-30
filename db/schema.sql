@@ -171,7 +171,13 @@ create table devices (
   profile_id   uuid not null references profiles(id),
   label        text not null,
   last_seen_at timestamptz not null default now(),
-  created_at   timestamptz not null default now()
+  created_at   timestamptz not null default now(),
+  -- Every other synced table has this — api/src/sync/routes.ts's generic
+  -- PUT/PATCH upsert unconditionally appends `updated_at = now()` for
+  -- any table, not just the ones that "need" it for a UI recency display
+  -- (docs/46 D170's original reason for adding it elsewhere). Missing
+  -- here at first — see db/migrations/2026-08-30-devices-add-updated-at.sql.
+  updated_at   timestamptz not null default now()
 );
 
 -- Indexes the sync + app queries will lean on
