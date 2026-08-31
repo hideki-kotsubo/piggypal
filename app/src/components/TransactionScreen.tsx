@@ -49,6 +49,9 @@ export function TransactionScreen() {
 
       {transaction ? (
         <div className="transaction-screen-content">
+          {/* docs/50 — a split purchase's account breakdown now renders
+              directly inside TransactionEditForm, not as a separate
+              read-only note here. */}
           <TransactionEditForm transaction={transaction} onDone={finish} />
         </div>
       ) : (

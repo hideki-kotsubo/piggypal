@@ -19,6 +19,12 @@ export interface DuplicateGroup {
 // IS part of the key: a same-amount-different-currency pair is
 // essentially never an accidental duplicate of the same real purchase,
 // so it's excluded from matching entirely rather than flagged.
+// docs/50: amountCents is always the total here, split or not — a split
+// transaction's own per-account legs (transaction_splits) are never their
+// own rows in the list this function receives, so there's nothing special
+// to account for re: splits in this key. Two unrelated purchases that
+// happen to total the same amount on the same day/category still bucket
+// together, same as any two ordinary transactions.
 function bucketKey(t: Transaction): string {
   return `${t.categoryId ?? 'uncategorized'}|${t.occurredAt.slice(0, 10)}|${t.amountCents}|${t.currency}`;
 }
@@ -39,7 +45,11 @@ export function findDuplicateGroups(transactions: Transaction[]): DuplicateGroup
     const sorted = [...members].sort(
       (a, b) => a.occurredAt.localeCompare(b.occurredAt) || a.id.localeCompare(b.id),
     );
-    const allSameAccount = sorted.every((t) => t.accountId === sorted[0].accountId);
+    // docs/50 — a split transaction's own accountId is null; two of them
+    // sharing a bucket should never read as "high confidence" just because
+    // null === null. Real per-account attribution for a split purchase
+    // lives in transaction_splits, out of scope for this tool.
+    const allSameAccount = sorted.every((t) => t.accountId !== null && t.accountId === sorted[0].accountId);
     groups.push({ key, confidence: allSameAccount ? 'high' : 'secondary', transactions: sorted });
   }
 

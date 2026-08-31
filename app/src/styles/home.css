@@ -959,6 +959,51 @@
   flex-direction: column;
   gap: 0.7rem;
 }
+/* docs/50 — the split-across-accounts editor inside TransactionEditForm.
+   Each leg row reuses AccountCurrencyPicker (account-only, showCurrency
+   false) + a tappable formatted amount that reveals the same AmountKeypad
+   inline beneath it — same "sunken zone" pattern as the entry-zone card,
+   at --radius-md since it's a nested sub-section, not a top-level zone. */
+.split-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+.split-leg-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.split-leg-amount {
+  align-self: flex-start;
+  background: none;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-sm);
+  padding: 0.3rem 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  cursor: pointer;
+}
+.split-leg-remove {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 0 0.3rem;
+  font-size: 0.9rem;
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+.split-remaining-note {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--warn);
+}
 .field-label {
   display: block;
   font-family: var(--mono);

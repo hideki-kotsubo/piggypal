@@ -6,9 +6,18 @@ import { personLabel, useHouseholdPeers } from '../lib/household';
 import type { Account } from '../lib/types';
 
 interface Props {
-  accountId: string;
+  accountId: string | null;
   currency: string;
   onChange: (accountId: string, currency: string) => void;
+  // docs/50 — reused for a split purchase's per-leg account picker
+  // (showCurrency: false, no per-leg currency — a split is one currency,
+  // by construction) and the top-level picker while split mode is active
+  // (showAccount: false — the account picker doesn't apply to the
+  // transaction as a whole once it has 2+ accounts; the currency picker
+  // still does). Both default true, unchanged from every existing call
+  // site's behavior.
+  showAccount?: boolean;
+  showCurrency?: boolean;
 }
 
 // A real report: two household members' accounts sharing the same
@@ -67,7 +76,7 @@ function countByInstitution(accounts: Account[]): Map<string, number> {
 // no currency of its own (see Account), so picking one only re-defaults
 // currency to whatever's typical for that account, never resolves or
 // creates anything.
-export function AccountCurrencyPicker({ accountId, currency, onChange }: Props) {
+export function AccountCurrencyPicker({ accountId, currency, onChange, showAccount = true, showCurrency = true }: Props) {
   const store = useStore();
   const peers = useHouseholdPeers();
   const [pickerOpen, setPickerOpen] = useState<'account' | 'currency' | null>(null);
@@ -77,7 +86,7 @@ export function AccountCurrencyPicker({ accountId, currency, onChange }: Props) 
 
   const account = store.accounts.find((a) => a.id === accountId);
   const ranked = store.rankedAccounts();
-  const currencyOptions = store.rankedCurrencies(accountId);
+  const currencyOptions = store.rankedCurrencies(accountId ?? '');
   const institutionCounts = countByInstitution(ranked);
   const needsOwnerLabel = accountsNeedingOwnerLabel(ranked);
   const ownerPrefixFor = (a: Account): string | null =>
@@ -141,23 +150,30 @@ export function AccountCurrencyPicker({ accountId, currency, onChange }: Props) 
   }
 
   function pickCurrency(newCurrency: string) {
-    if (!account) return;
-    onChange(account.id, newCurrency);
+    // docs/50: with showAccount false (the split top-bar's currency-only
+    // usage), accountId can legitimately be null here — pass it through
+    // as-is (the caller ignores it in that mode) rather than requiring a
+    // resolved Account first.
+    onChange(accountId ?? '', newCurrency);
     setPickerOpen(null);
   }
 
   return (
     <>
       <div className="pill-row">
-        <button className="pill-tap" onClick={() => setPickerOpen(pickerOpen === 'account' ? null : 'account')}>
-          {account ? (ownerPrefixFor(account) ? `${ownerPrefixFor(account)} — ` : '') + accountLabel(account) : '—'} ▾
-        </button>
-        <button className="pill-tap" onClick={() => setPickerOpen(pickerOpen === 'currency' ? null : 'currency')}>
-          {currency} ▾
-        </button>
+        {showAccount && (
+          <button className="pill-tap" onClick={() => setPickerOpen(pickerOpen === 'account' ? null : 'account')}>
+            {account ? (ownerPrefixFor(account) ? `${ownerPrefixFor(account)} — ` : '') + accountLabel(account) : '—'} ▾
+          </button>
+        )}
+        {showCurrency && (
+          <button className="pill-tap" onClick={() => setPickerOpen(pickerOpen === 'currency' ? null : 'currency')}>
+            {currency} ▾
+          </button>
+        )}
       </div>
 
-      {pickerOpen === 'account' && (
+      {showAccount && pickerOpen === 'account' && (
         <div className="chip-row">
           {grouped ? (
             <>
@@ -217,7 +233,7 @@ export function AccountCurrencyPicker({ accountId, currency, onChange }: Props) 
         </div>
       )}
 
-      {pickerOpen === 'currency' && (
+      {showCurrency && pickerOpen === 'currency' && (
         <div className="chip-row">
           {currencyOptions.map((c) => (
             <button

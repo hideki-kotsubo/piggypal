@@ -40,6 +40,13 @@ const TABLE_COLUMNS: Record<string, readonly string[]> = {
     'paid_by_user_id',
     'created_by_user_id',
   ],
+  // docs/50 — the per-account amount breakdown when a transaction is split
+  // across 2+ accounts (that transaction's own account_id is then NULL).
+  // Bare-id table like every other transaction-domain table here, not
+  // composite — its id is a real crypto.randomUUID(), not a cross-device
+  // fixed slug (see COMPOSITE_KEY_TABLES's own comment for why that
+  // distinction matters).
+  transaction_splits: ['transaction_id', 'account_id', 'amount_cents'],
   budgets: ['category_id', 'month', 'currency', 'amount_cents'],
   category_keywords: ['category_id', 'keyword', 'hits'],
   // docs/48 D175/D176 — profiles.id/devices.id are client-generated

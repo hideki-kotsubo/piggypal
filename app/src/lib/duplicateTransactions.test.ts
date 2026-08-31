@@ -130,4 +130,15 @@ describe('findDuplicateGroups', () => {
     const groups = findDuplicateGroups([a, b]);
     expect(groups[0].transactions.map((t) => t.id)).toEqual(['t-1', 't-2']);
   });
+
+  // docs/50 — a split transaction's own accountId is null; two of them
+  // sharing a bucket must never read as "high confidence" just because
+  // null === null (there's no real shared account to point to).
+  it('marks two split-transaction parents sharing a signature as secondary, not high', () => {
+    const a = tx({ id: 't-1', accountId: null });
+    const b = tx({ id: 't-2', accountId: null });
+    const groups = findDuplicateGroups([a, b]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].confidence).toBe('secondary');
+  });
 });

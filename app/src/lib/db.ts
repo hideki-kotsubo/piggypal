@@ -16,8 +16,16 @@ export const db = new PowerSyncDatabase({
     // column on budget inserts, fixed in store.tsx/seed.ts/types.ts. Seeding
     // never actually succeeded on the old file (rolled back atomically every
     // time), so this was just a clean-slate reset, not a data-recovery fix.
-    // No need to bump again now that the real cause is fixed.
-    dbFilename: 'piggypal-v2.db',
+    // Bumped again (v2 -> v3) for the same underlying reason, docs/50: an
+    // already-created local database file never gains a table added to
+    // AppSchema later (transaction_splits) — confirmed for real, not just
+    // suspected, since a genuinely fresh browser profile/instance built
+    // the new table correctly from the same code, only an existing v2 file
+    // didn't. Restarting the tab, closing every tab (killing the
+    // SharedWorker PowerSync's web SDK uses), and Settings' "Reset local
+    // data" were all tried first and none of them added the missing table
+    // to an already-existing file — only a new filename does.
+    dbFilename: 'piggypal-v3.db',
   },
   // Temporary — investigating a real report of sync not resuming on its
   // own after a phone regained connectivity, needing a manual reload

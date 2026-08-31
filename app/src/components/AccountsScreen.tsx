@@ -60,15 +60,27 @@ export function AccountsScreen() {
 
   // D59: list order is most-recently-used, derived from transaction history —
   // no stored sort_order. Same recency signal doc 07 derives for defaults.
+  // docs/50: a split transaction has no single accountId (null) — its
+  // legs (transaction_splits) count toward each of *their* accounts'
+  // recency instead, using the parent's own occurredAt.
   const recency = useMemo(() => {
     const map = new Map<string, string>();
+    const bump = (accountId: string, occurredAt: string) => {
+      const cur = map.get(accountId);
+      if (!cur || occurredAt > cur) map.set(accountId, occurredAt);
+    };
+    const activeById = new Map<string, string>();
     for (const t of store.transactions) {
       if (t.deletedAt) continue;
-      const cur = map.get(t.accountId);
-      if (!cur || t.occurredAt > cur) map.set(t.accountId, t.occurredAt);
+      activeById.set(t.id, t.occurredAt);
+      if (t.accountId !== null) bump(t.accountId, t.occurredAt);
+    }
+    for (const s of store.transactionSplits) {
+      const occurredAt = activeById.get(s.transactionId);
+      if (occurredAt) bump(s.accountId, occurredAt);
     }
     return map;
-  }, [store.transactions]);
+  }, [store.transactions, store.transactionSplits]);
 
   const byRecency = (list: Account[]) =>
     [...list].sort((a, b) => (recency.get(b.id) ?? '').localeCompare(recency.get(a.id) ?? ''));

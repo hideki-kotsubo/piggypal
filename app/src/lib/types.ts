@@ -45,7 +45,10 @@ export type TransactionSource = 'manual' | 'ai' | 'import';
 
 export interface Transaction {
   id: string;
-  accountId: string;
+  // docs/50 — nullable: NULL exactly when this purchase is split across
+  // 2+ accounts, its per-account amounts held in TransactionSplit rows
+  // instead. Populated for every ordinary transaction exactly as before.
+  accountId: string | null;
   categoryId: string | null;
   amountCents: number; // negative = expense, positive = income
   currency: string;
@@ -62,6 +65,18 @@ export interface Transaction {
   // Account.ownerUserId above.
   paidByUserId: string;
   createdByUserId: string;
+  updatedAt: string; // docs/46 D170 — see Account.updatedAt
+}
+
+// docs/50 — one row per account a split transaction's total is divided
+// across. The owning transaction's own accountId is null exactly when it
+// has 2+ of these. amountCents portions sum to the parent's amountCents
+// (enforced app-side, not by the DB — see db/schema.sql's comment).
+export interface TransactionSplit {
+  id: string;
+  transactionId: string;
+  accountId: string;
+  amountCents: number;
   updatedAt: string; // docs/46 D170 — see Account.updatedAt
 }
 
@@ -96,6 +111,7 @@ export interface PeerDataset {
   categories: Category[];
   accounts: Account[];
   transactions: Transaction[];
+  transactionSplits: TransactionSplit[];
   budgets: Budget[];
 }
 
@@ -122,6 +138,7 @@ export interface MergeSummary {
   categoriesAdded: number;
   accountsAdded: number;
   transactionsAdded: number;
+  transactionSplitsAdded: number;
   budgetsAdded: number;
   budgetsUpdated: number;
 }

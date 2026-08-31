@@ -6,9 +6,10 @@ import { clearAuthAccount, getAuthAccount } from './auth';
 import { clearLocalUserId, getDeviceId, getLocalUserId, setLocalUserId } from './identity';
 import { clearPairedPeers } from './peers';
 import { nowUtc } from './format';
+import { computeBalances } from './balances';
 import type { AccountRewrite, CategoryRewrite } from './mergeMatch';
 import { effectiveDeviceLabel } from './settings';
-import type { Account, AccountKind, Budget, Category, CategoryKeyword, Device, MergeSummary, PeerDataset, Profile, Transaction } from './types';
+import type { Account, AccountKind, Budget, Category, CategoryKeyword, Device, MergeSummary, PeerDataset, Profile, Transaction, TransactionSplit } from './types';
 import { AppSkeleton } from '../components/AppSkeleton';
 import { seedCategories, seedCategoryKeywords } from './seed';
 
@@ -76,7 +77,7 @@ function rowToCategory(r: CategoryRow): Category {
 
 interface TransactionRow {
   id: string;
-  account_id: string;
+  account_id: string | null; // docs/50 — null exactly when split across 2+ accounts
   category_id: string | null;
   amount_cents: number;
   currency: string;
@@ -117,6 +118,24 @@ function rowToTransaction(r: TransactionRow): Transaction {
     // today's single-user-per-device world, so that's the fallback here.
     paidByUserId: r.paid_by_user_id ?? getLocalUserId(),
     createdByUserId: r.created_by_user_id ?? getLocalUserId(),
+    updatedAt: r.updated_at ?? NEVER_UPDATED,
+  };
+}
+
+// docs/50 — the per-account amount breakdown when a transaction is split.
+interface TransactionSplitRow {
+  id: string;
+  transaction_id: string;
+  account_id: string;
+  amount_cents: number;
+  updated_at: string | null;
+}
+function rowToTransactionSplit(r: TransactionSplitRow): TransactionSplit {
+  return {
+    id: r.id,
+    transactionId: r.transaction_id,
+    accountId: r.account_id,
+    amountCents: r.amount_cents,
     updatedAt: r.updated_at ?? NEVER_UPDATED,
   };
 }
@@ -218,6 +237,14 @@ const TRANSACTION_COLUMNS: Record<keyof Transaction, string> = {
   deletedAt: 'deleted_at',
   paidByUserId: 'paid_by_user_id',
   createdByUserId: 'created_by_user_id',
+  updatedAt: 'updated_at',
+};
+
+const TRANSACTION_SPLIT_COLUMNS: Record<keyof TransactionSplit, string> = {
+  id: 'id',
+  transactionId: 'transaction_id',
+  accountId: 'account_id',
+  amountCents: 'amount_cents',
   updatedAt: 'updated_at',
 };
 
@@ -377,6 +404,7 @@ interface StoreState {
   accounts: Account[];
   categories: Category[];
   transactions: Transaction[];
+  transactionSplits: TransactionSplit[];
   budgets: Budget[];
   categoryKeywords: CategoryKeyword[];
   profiles: Profile[];
@@ -394,6 +422,25 @@ interface StoreApi extends StoreState {
   // deleteTransaction() calls, so a group's rows converge together.
   deleteTransactions: (transactionIds: string[]) => Promise<void>;
   categorizeTransaction: (transactionId: string, categoryId: string) => void;
+  // docs/50 — per-leg CRUD once a transaction is already split (see
+  // startSplit/endSplit below for entering/leaving split mode). No
+  // soft-delete on this table — same convention as budgets' own children.
+  addTransactionSplit: (split: TransactionSplit) => void;
+  updateTransactionSplit: (splitId: string, patch: Partial<Pick<TransactionSplit, 'accountId' | 'amountCents'>>) => void;
+  removeTransactionSplit: (splitId: string) => void;
+  // Converts an ordinary transaction into a split one: nulls its
+  // account_id and seeds `legs` (2+) as transaction_splits rows, in one
+  // db.writeTransaction. amountCents (the total) is untouched — the legs
+  // are independent facts about how that same fixed total was paid.
+  // Wrapped atomically because an interrupted transition (e.g. tab closed
+  // between nulling account_id and inserting the first leg) would leave a
+  // transaction excluded from every account's balance — worse than any
+  // bug the old split_group_id design had.
+  startSplit: (transactionId: string, legs: { id: string; accountId: string; amountCents: number }[]) => Promise<void>;
+  // Converts a split transaction back to ordinary: deletes every split
+  // row and restores a real account_id, atomically (same reasoning as
+  // startSplit above).
+  endSplit: (transactionId: string, accountId: string) => Promise<void>;
   addAccount: (account: Account) => void;
   updateAccount: (accountId: string, patch: Partial<Account>) => void;
   addCategory: (category: Category) => void;
@@ -497,6 +544,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     accounts: [],
     categories: [],
     transactions: [],
+    transactionSplits: [],
     budgets: [],
     categoryKeywords: [],
     profiles: [],
@@ -525,6 +573,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           'accounts',
           'categories',
           'transactions',
+          'transactionSplits',
           'budgets',
           'categoryKeywords',
           'profiles',
@@ -595,6 +644,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           // this silently starves every watch of its initial data (no
           // error, just an empty array forever, until something else
           // happens to write to the table).
+          { signal: controller.signal, triggerImmediate: true },
+        );
+        db.watch(
+          'SELECT * FROM transaction_splits',
+          [],
+          {
+            onResult: (r) => {
+              setState((s) => ({ ...s, transactionSplits: r.rows?._array.map(rowToTransactionSplit) ?? [] }));
+              markFirstLoad('transactionSplits');
+            },
+            onError: (err) => {
+              console.error('piggypal: transaction_splits watch failed', err);
+              markFirstLoad('transactionSplits');
+            },
+          },
           { signal: controller.signal, triggerImmediate: true },
         );
         db.watch(
@@ -744,6 +808,60 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ]);
       },
 
+      // docs/50 — no soft-delete on this table, same convention as
+      // removeBudget: a split leg has no reason to be kept around once
+      // removed (unlike transactions, which need deleted_at for the P2P
+      // merge's existence checks and sync's LWW).
+      addTransactionSplit(split) {
+        void db.execute(
+          'INSERT INTO transaction_splits (id, transaction_id, account_id, amount_cents, updated_at) VALUES (?, ?, ?, ?, ?)',
+          [split.id, split.transactionId, split.accountId, split.amountCents, split.updatedAt],
+        );
+      },
+
+      updateTransactionSplit(splitId, patch) {
+        const entries = Object.entries(patch) as [keyof TransactionSplit, unknown][];
+        if (entries.length === 0) return;
+        const setClause = entries.map(([k]) => `${TRANSACTION_SPLIT_COLUMNS[k]} = ?`).join(', ');
+        void db.execute(`UPDATE transaction_splits SET ${setClause}, updated_at = ? WHERE id = ?`, [
+          ...entries.map(([, v]) => v),
+          nowUtc(),
+          splitId,
+        ]);
+      },
+
+      removeTransactionSplit(splitId) {
+        void db.execute('DELETE FROM transaction_splits WHERE id = ?', [splitId]);
+      },
+
+      // Wrapped atomically — see StoreApi's own comment on why an
+      // interrupted transition here is worse than an interrupted ordinary
+      // edit (a transaction excluded from every account's balance).
+      startSplit(transactionId, legs) {
+        const now = nowUtc();
+        return db.writeTransaction(async (tx) => {
+          await tx.execute('UPDATE transactions SET account_id = NULL, updated_at = ? WHERE id = ?', [now, transactionId]);
+          for (const leg of legs) {
+            await tx.execute(
+              'INSERT INTO transaction_splits (id, transaction_id, account_id, amount_cents, updated_at) VALUES (?, ?, ?, ?, ?)',
+              [leg.id, transactionId, leg.accountId, leg.amountCents, now],
+            );
+          }
+        });
+      },
+
+      endSplit(transactionId, accountId) {
+        const now = nowUtc();
+        return db.writeTransaction(async (tx) => {
+          await tx.execute('DELETE FROM transaction_splits WHERE transaction_id = ?', [transactionId]);
+          await tx.execute('UPDATE transactions SET account_id = ?, updated_at = ? WHERE id = ?', [
+            accountId,
+            now,
+            transactionId,
+          ]);
+        });
+      },
+
       addAccount(account) {
         void insertAccountRow(account);
       },
@@ -797,19 +915,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         void db.execute('DELETE FROM budgets WHERE id = ?', [budgetId]);
       },
 
-      // docs/12 D58: one balance line per currency actually present, never merged.
+      // docs/12 D58: one balance line per currency actually present, never
+      // merged. docs/50: a split transaction's own row contributes nothing
+      // (its accountId is null) — computeBalances (lib/balances.ts, unit
+      // tested) adds its legs' contribution instead.
       balancesFor(accountId) {
-        const totals = new Map<string, number>();
-        for (const t of activeTx()) {
-          if (t.accountId !== accountId) continue;
-          totals.set(t.currency, (totals.get(t.currency) ?? 0) + t.amountCents);
-        }
-        return [...totals.entries()].map(([currency, cents]) => ({ currency, cents }));
+        return computeBalances(activeTx(), state.transactionSplits, accountId);
       },
 
       // D45/D46: defaults are derived from transaction history, not stored.
+      // docs/50: skip a split transaction (null accountId) when looking for
+      // "the most recent" — it has no single account to default to; the
+      // most recent *ordinary* transaction's account is still a better
+      // default than falling all the way to state.accounts[0].
       defaultAccountId() {
-        const recent = activeTx()[0];
+        const recent = activeTx().find((t) => t.accountId !== null);
         return recent?.accountId ?? state.accounts[0]?.id ?? '';
       },
 
@@ -827,9 +947,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return state.accounts.find((a) => a.id === accountId)?.ownerUserId ?? getLocalUserId();
       },
 
+      // docs/50: an account used only through split legs (never as a plain
+      // transaction's own accountId) still counts here — otherwise it'd
+      // never rank by frequency at all.
       rankedAccounts() {
         const counts = new Map<string, number>();
-        for (const t of activeTx()) counts.set(t.accountId, (counts.get(t.accountId) ?? 0) + 1);
+        for (const t of activeTx()) {
+          if (t.accountId !== null) counts.set(t.accountId, (counts.get(t.accountId) ?? 0) + 1);
+        }
+        const activeIds = new Set(activeTx().map((t) => t.id));
+        for (const s of state.transactionSplits) {
+          if (!activeIds.has(s.transactionId)) continue;
+          counts.set(s.accountId, (counts.get(s.accountId) ?? 0) + 1);
+        }
         return [...state.accounts]
           .filter((a) => !a.archived)
           .sort((a, b) => (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0));
@@ -1011,6 +1141,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           categoriesAdded: 0,
           accountsAdded: 0,
           transactionsAdded: 0,
+          transactionSplitsAdded: 0,
           budgetsAdded: 0,
           budgetsUpdated: 0,
         };
@@ -1081,6 +1212,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               ],
             );
             summary.transactionsAdded += 1;
+          }
+
+          // docs/50 — split legs, same defensive-only existence check.
+          // Runs after the transactions loop above so a leg's own
+          // transaction_id already exists locally by the time it's
+          // inserted (same assumption the budgets loop below makes about
+          // category_id).
+          for (const s of peer.transactionSplits) {
+            const existing = await tx.getAll<{ id: string }>('SELECT id FROM transaction_splits WHERE id = ?', [s.id]);
+            if (existing.length > 0) continue;
+            await tx.execute(
+              `INSERT INTO transaction_splits (id, transaction_id, account_id, amount_cents, updated_at) VALUES (?, ?, ?, ?, ?)`,
+              [s.id, s.transactionId, s.accountId, s.amountCents, s.updatedAt],
+            );
+            summary.transactionSplitsAdded += 1;
           }
 
           // Budgets — docs/24's one real collision case: two pre-existing

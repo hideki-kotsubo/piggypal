@@ -81,7 +81,12 @@ create table categories (
 create table transactions (
   id           uuid primary key,
   user_id      uuid not null,
-  account_id   uuid not null references accounts(id),
+  account_id   uuid references accounts(id),  -- nullable — docs/50: NULL exactly
+                                    -- when this purchase is split across 2+
+                                    -- accounts, its per-account amounts held
+                                    -- in transaction_splits below instead.
+                                    -- Populated for every ordinary
+                                    -- transaction exactly as before.
   category_id  text,   -- nullable: uncategorized inbox; text, not uuid — see categories.id above
   amount_cents bigint not null,                  -- negative = expense, positive = income
   currency     char(3) not null default 'CAD',   -- the purchase's own currency, chosen
@@ -111,6 +116,33 @@ create table transactions (
   -- above; see that table's comment for why a bare `references
   -- categories(id)` isn't correct.
   foreign key (user_id, category_id) references categories (user_id, id)
+);
+
+-- docs/50 — a purchase split across 2+ accounts: transactions.amount_cents
+-- stays the total unconditionally, and its account_id is NULL exactly when
+-- 2+ rows here reference it. Supersedes docs/49 D180's split_group_id
+-- (advisory, no FK, sibling transactions rows) — that design let a
+-- purchase's shared fields (category/date/note/merchant) silently diverge
+-- per-leg, confirmed as a real bug against real data, not just in theory.
+-- Here, shared fields exist exactly once (on the parent transactions row),
+-- so they can't diverge by construction; only the per-account amount
+-- breakdown lives here. A real FK to transactions(id), deliberately unlike
+-- split_group_id's advisory column — safe because a split row is only ever
+-- created by editing an already-uploaded transaction, never at initial
+-- insert (see docs/50), so the parent's own PUT is always queued, and
+-- eventually applied, before any child PUT referencing it — api/src/
+-- sync/routes.ts's existing PUT-before-DELETE ordering needs no changes.
+-- No deleted_at of its own — soft-delete stays on the parent only; a
+-- soft-deleted parent's split rows are simply excluded wherever balances
+-- are computed, same as any other soft-deleted transaction's data.
+create table transaction_splits (
+  id             uuid primary key,
+  user_id        uuid not null,
+  transaction_id uuid not null references transactions(id),
+  account_id     uuid not null references accounts(id),
+  amount_cents   bigint not null,
+  created_at     timestamptz not null default now(),
+  updated_at     timestamptz not null default now()
 );
 
 create table budgets (
@@ -191,6 +223,8 @@ create table devices (
 -- Indexes the sync + app queries will lean on
 create index on transactions (user_id, occurred_at desc);
 create index on transactions (user_id, category_id, occurred_at);
+create index on transaction_splits (user_id, transaction_id);
+create index on transaction_splits (user_id, account_id);
 create index on budgets      (user_id, month);
 create index on devices      (user_id, profile_id);
 
