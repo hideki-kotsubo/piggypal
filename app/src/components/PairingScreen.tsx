@@ -164,6 +164,7 @@ export function PairingScreen() {
         categories: store.categories,
         accounts: store.accounts,
         transactions: store.transactions,
+        transactionSplits: store.transactionSplits,
         budgets: store.budgets,
       };
       const peerDataset = await exchangeJson<PeerDataset>(pc, localDataset);

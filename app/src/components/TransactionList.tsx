@@ -269,6 +269,15 @@ export function TransactionList() {
                 {group.items.map((t) => {
                   const category = store.categories.find((c) => c.id === t.categoryId);
                   const account = store.accounts.find((a) => a.id === t.accountId);
+                  // docs/50 — a split transaction has no single account;
+                  // show how many legs it's split across instead of the
+                  // misleading '—' fallback (it has 2+ accounts, not zero).
+                  const accountSegment =
+                    t.accountId === null
+                      ? `Split · ${store.transactionSplits.filter((s) => s.transactionId === t.id).length}`
+                      : account
+                        ? accountLabel(account)
+                        : '—';
                   return (
                     <Link key={t.id} to={`/transactions/${t.id}`} className="tx-row tx-row-tappable">
                       <div className="tx-left">
@@ -279,7 +288,7 @@ export function TransactionList() {
                           <span className="tx-note">{transactionTitle(t, category)}</span>
                           {/* day-label above already carries the date — just time here, still genuinely new info */}
                           <span className="tx-meta">
-                            {category?.name ?? 'Uncategorized'} · {formatTime(t.occurredAt)} · {account ? accountLabel(account) : '—'}
+                            {category?.name ?? 'Uncategorized'} · {formatTime(t.occurredAt)} · {accountSegment}
                           </span>
                         </div>
                       </div>

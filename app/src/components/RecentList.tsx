@@ -54,6 +54,15 @@ export function RecentList() {
               {group.items.map((t) => {
                 const account = store.accounts.find((a) => a.id === t.accountId);
                 const category = store.categories.find((c) => c.id === t.categoryId);
+                // docs/50 — a split transaction has no single account; show
+                // how many legs it's split across instead of the
+                // misleading '—' fallback (it has 2+ accounts, not zero).
+                const accountSegment =
+                  t.accountId === null
+                    ? `Split · ${store.transactionSplits.filter((s) => s.transactionId === t.id).length}`
+                    : account
+                      ? accountLabel(account)
+                      : '—';
                 return (
                   <Link key={t.id} to={`/transactions/${t.id}`} className="tx-row tx-row-tappable">
                     <div className="tx-left">
@@ -63,7 +72,7 @@ export function RecentList() {
                       <div className="tx-main">
                         <span className="tx-note">{transactionTitle(t, category)}</span>
                         {/* day-label above already carries the date — just the account here */}
-                        <span className="tx-meta">{account ? accountLabel(account) : '—'}</span>
+                        <span className="tx-meta">{accountSegment}</span>
                       </div>
                     </div>
                     <span className={`tx-amt ${t.amountCents < 0 ? 'out' : 'in'}`}>

@@ -68,6 +68,21 @@ const transactions = new Table(
   { indexes: { by_account: ['account_id'], by_category: ['category_id'] } },
 );
 
+// docs/50 — the per-account amount breakdown when a transaction is split
+// across 2+ accounts (that transaction's own account_id is then NULL, see
+// the transactions Table's account_id comment in db/schema.sql). Real FK
+// to transactions(id) server-side; locally just a plain column like every
+// other id reference in this file.
+const transaction_splits = new Table(
+  {
+    transaction_id: column.text,
+    account_id: column.text,
+    amount_cents: column.integer,
+    updated_at: column.text,
+  },
+  { indexes: { by_transaction: ['transaction_id'], by_account: ['account_id'] } },
+);
+
 const budgets = new Table(
   {
     category_id: column.text,
@@ -108,6 +123,7 @@ export const AppSchema = new Schema({
   accounts,
   categories,
   transactions,
+  transaction_splits,
   budgets,
   category_keywords,
   profiles,

@@ -47,6 +47,19 @@ streams:
     auto_subscribe: true
     query: SELECT * FROM transactions WHERE user_id = auth.user_id()
 
+  # docs/50 — the per-account amount breakdown for a split transaction.
+  # Missing this stream was a real bug, not theoretical: PowerSync Service
+  # only persists/replicates rows that belong to a subscribed bucket, so
+  # without this, a device's own locally-inserted transaction_splits rows
+  # (still uploaded fine via the separate hand-rolled /api/sync/upload
+  # path) had nothing covering them on the download/bucket side — they got
+  # cleared back out on the next sync reconciliation, confirmed against a
+  # real signed-in device where "Split across accounts" appeared to insert
+  # legs, then immediately lost them again.
+  transaction_splits:
+    auto_subscribe: true
+    query: SELECT * FROM transaction_splits WHERE user_id = auth.user_id()
+
   # docs/48 D175/D176 — small, low-churn reference tables, synced whole
   # (no windowing concern like transactions above).
   profiles:
