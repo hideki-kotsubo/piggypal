@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { EntryZone } from './components/EntryZone';
 import { InboxBanner } from './components/InboxBanner';
 import { RecentList } from './components/RecentList';
+import { hasHousehold, useHouseholdPeers } from './lib/household';
+import { pickWordmarkPhrase } from './lib/wordmarkPhrases';
 
 interface ToastState {
   message: string;
@@ -11,6 +13,12 @@ interface ToastState {
 
 export default function App() {
   const [toast, setToast] = useState<ToastState | null>(null);
+  const household = hasHousehold(useHouseholdPeers());
+  // Re-picked each time Home mounts (a fresh app open, or navigating back
+  // to "/"), not on a timer — a finance app's header shouldn't be visibly
+  // ticking. Only re-rolls again if `household` itself flips (e.g. store
+  // data finishes loading after first paint), not on every render.
+  const wordmark = useMemo(() => pickWordmarkPhrase(household), [household]);
 
   useEffect(() => {
     if (!toast) return;
@@ -25,7 +33,7 @@ export default function App() {
   return (
     <main className="home home-with-dock">
       <div className="app-bar">
-        <span className="wordmark">piggypal</span>
+        <span className="wordmark">{wordmark}</span>
         <div className="app-bar-actions">
           <Link to="/insights" className="icon-btn" aria-label="Insights">▤</Link>
           <Link to="/settings" className="kebab" aria-label="Settings">

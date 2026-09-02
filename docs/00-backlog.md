@@ -839,6 +839,18 @@ it needs doing.
       Deferred — parked per user 2026-08-11, revisit later.
 ## ✅ Done
 
+- [x] Dynamic Home header wordmark (docs/51) — `App.tsx`'s app-bar
+      `<span className="wordmark">` now rotates through a 64-line
+      English phrase pool (`lib/wordmarkPhrases.ts`) instead of the
+      static "piggypal," picked once per Home mount (not a timer);
+      household-flavored lines only enter the pool once
+      `hasHousehold()` is real (docs/38's existing hook, reused as-is).
+      pt-BR translation explicitly deferred (D190), flagged against
+      docs/09 D31. Six lines that overclaimed local-only/no-one-sees-it
+      privacy once sync/auth is real (docs/41-43) were found in review
+      and removed same day — see docs/51's revision note. Implemented
+      2026-09-01.
+
 - [x] 🐛 Household display (payer badge, "Paid by"/"Logged by", owner-name
       prefix on Accounts, Settings' member list — docs/38) never appeared
       for a household set up via magic-link sign-in's own "someone else
