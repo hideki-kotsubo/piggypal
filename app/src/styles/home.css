@@ -18,11 +18,20 @@
   font-weight: 600;
   font-size: 1.1rem;
   color: var(--ink);
+  /* Rotating phrases (lib/wordmarkPhrases.ts) run much longer than the
+     static "piggypal" this replaced — min-width: 0 lets this flex item
+     actually shrink instead of forcing app-bar-actions off-screen, and
+     the overflow rule truncates rather than wrapping into a second line. */
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .app-bar-actions {
   display: flex;
   align-items: center;
   gap: 0.2rem;
+  flex-shrink: 0;
 }
 .kebab {
   display: flex;
