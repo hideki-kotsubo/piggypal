@@ -345,7 +345,7 @@ export function SettingsScreen() {
 
       <div className="accounts-list">
         <Link to="/about" className="settings-row">
-          <span>About piggypal</span>
+          <span>About Flowtab</span>
           <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>v{APP_VERSION}</span>
         </Link>
       </div>

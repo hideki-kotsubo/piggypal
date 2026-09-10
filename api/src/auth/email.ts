@@ -37,9 +37,9 @@ export async function sendMagicLinkEmail(email: string, verifyUrl: string): Prom
   const { error } = await client(apiKey).emails.send({
     from,
     to: email,
-    subject: 'Sign in to piggypal',
-    text: `Tap the link below to sign in to piggypal:\n\n${verifyUrl}\n\nThis link expires in 15 minutes. If you didn't request this, you can ignore it.`,
-    html: `<p>Tap the link below to sign in to piggypal:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p><p>This link expires in 15 minutes. If you didn't request this, you can ignore it.</p>`,
+    subject: 'Sign in to Flowtab',
+    text: `Tap the link below to sign in to Flowtab:\n\n${verifyUrl}\n\nThis link expires in 15 minutes. If you didn't request this, you can ignore it.`,
+    html: `<p>Tap the link below to sign in to Flowtab:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p><p>This link expires in 15 minutes. If you didn't request this, you can ignore it.</p>`,
   });
 
   // Resend's send() resolves with { data, error } rather than throwing on

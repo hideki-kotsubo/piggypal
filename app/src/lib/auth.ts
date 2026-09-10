@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { getDeviceId, getLocalUserId } from './identity';
+import { migrateStorageKey } from './storageMigration';
 import type { Account, Category, Profile } from './types';
 
 // docs/05's magic-link flow, client side — talks to docs/41's real
@@ -12,7 +13,8 @@ export interface AuthAccount {
   email: string;
 }
 
-const AUTH_ACCOUNT_KEY = 'piggypal:auth-account';
+const AUTH_ACCOUNT_KEY = 'flowtab:auth-account';
+migrateStorageKey('piggypal:auth-account', AUTH_ACCOUNT_KEY);
 
 // Non-secret UI marker only — "who am I signed in as," never a token
 // (docs/05 D13: the access JWT is memory-only below; the refresh token is
@@ -63,7 +65,8 @@ function apiFetch(path: string, init?: RequestInit): Promise<Response> {
   return fetch(`${API_BASE_URL}${path}`, { credentials: 'include', ...init });
 }
 
-const PENDING_EMAIL_KEY = 'piggypal:pending-auth-email';
+const PENDING_EMAIL_KEY = 'flowtab:pending-auth-email';
+migrateStorageKey('piggypal:pending-auth-email', PENDING_EMAIL_KEY);
 
 // docs/41's `/api/auth/verify` response has no email in it (userId only —
 // the server has no reason to echo back what the client already sent at

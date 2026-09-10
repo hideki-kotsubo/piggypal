@@ -1,4 +1,7 @@
-const LOCAL_USER_ID_KEY = 'piggypal:local-user-id';
+import { migrateStorageKey } from './storageMigration';
+
+const LOCAL_USER_ID_KEY = 'flowtab:local-user-id';
+migrateStorageKey('piggypal:local-user-id', LOCAL_USER_ID_KEY);
 
 // docs/05 D11: a client-generated user_id, created once on first launch and
 // persisted locally — the identity that later doubles as the Postgres
@@ -45,7 +48,8 @@ export function clearLocalUserId(): void {
   localStorage.removeItem(LOCAL_USER_ID_KEY);
 }
 
-const DEVICE_ID_KEY = 'piggypal:device-id';
+const DEVICE_ID_KEY = 'flowtab:device-id';
+migrateStorageKey('piggypal:device-id', DEVICE_ID_KEY);
 
 // docs/05 D12/D13: refresh tokens are tracked per (user, device), keyed by
 // a client-generated device_id — a separate identity from the user id

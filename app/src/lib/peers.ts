@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { migrateStorageKey } from './storageMigration';
 
 // docs/25: "remembering/managing paired peers... needed for a real UI but
 // not designed here" — extended (still not the fully-designed feature
@@ -15,7 +16,8 @@ export interface PairedPeer {
   identityMode: 'own-device' | 'someone-else';
 }
 
-const PEERS_KEY = 'piggypal:paired-peers';
+const PEERS_KEY = 'flowtab:paired-peers';
+migrateStorageKey('piggypal:paired-peers', PEERS_KEY);
 
 // Local-device-only, same "pure client concern" reasoning as settings.ts —
 // who this device has paired with is itself device-local bookkeeping, not

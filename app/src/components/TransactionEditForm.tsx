@@ -142,7 +142,7 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
       { id: crypto.randomUUID(), accountId: currentAccountId, amountCents: transaction.amountCents },
       { id: crypto.randomUUID(), accountId: alternative?.id ?? currentAccountId, amountCents: 0 },
     ]).catch((err) => {
-      console.error('piggypal: startSplit failed', err);
+      console.error('flowtab: startSplit failed', err);
       window.alert('Could not start the split. If this app was already open before today, try reloading the page — see console for details.');
     });
   }
@@ -160,7 +160,7 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
     // mode hid it, which could be stale if legs were edited in between.
     setAmountCentsLocal(legsTotal);
     store.endSplit(transaction.id, largest?.accountId ?? store.rankedAccounts()[0]?.id ?? '').catch((err) => {
-      console.error('piggypal: endSplit failed', err);
+      console.error('flowtab: endSplit failed', err);
       window.alert('Could not cancel the split — see console for details.');
     });
   }
@@ -268,7 +268,7 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
             onChange={(accountId) => {
               setAmountCentsLocal(legsTotal);
               store.endSplit(transaction.id, accountId).catch((err) => {
-                console.error('piggypal: endSplit (recovery) failed', err);
+                console.error('flowtab: endSplit (recovery) failed', err);
               });
             }}
           />

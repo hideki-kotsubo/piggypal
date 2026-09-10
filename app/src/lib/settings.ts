@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { migrateStorageKey } from './storageMigration';
 
 export type AccountPickerMode = 'grouped' | 'capped';
 
@@ -7,7 +8,8 @@ export type AccountPickerMode = 'grouped' | 'capped';
 // shows in Settings once the user is actually above it (D69).
 export const ACCOUNT_PICKER_SCALE_THRESHOLD = 6;
 
-const ACCOUNT_PICKER_MODE_KEY = 'piggypal:account-picker-mode';
+const ACCOUNT_PICKER_MODE_KEY = 'flowtab:account-picker-mode';
+migrateStorageKey('piggypal:account-picker-mode', ACCOUNT_PICKER_MODE_KEY);
 
 function readAccountPickerMode(): AccountPickerMode {
   return localStorage.getItem(ACCOUNT_PICKER_MODE_KEY) === 'capped' ? 'capped' : 'grouped'; // D66 default: grouped
@@ -29,7 +31,8 @@ export function useAccountPickerMode(): [AccountPickerMode, (mode: AccountPicker
 
 export type ThemeMode = 'system' | 'light' | 'dark';
 
-const THEME_MODE_KEY = 'piggypal:theme-mode';
+const THEME_MODE_KEY = 'flowtab:theme-mode';
+migrateStorageKey('piggypal:theme-mode', THEME_MODE_KEY);
 
 function readThemeMode(): ThemeMode {
   const stored = localStorage.getItem(THEME_MODE_KEY);
@@ -78,7 +81,8 @@ export function guessDeviceLabel(): string {
   return 'This device';
 }
 
-const DEVICE_LABEL_KEY = 'piggypal:device-label';
+const DEVICE_LABEL_KEY = 'flowtab:device-label';
+migrateStorageKey('piggypal:device-label', DEVICE_LABEL_KEY);
 
 // The stored custom label, if any — deliberately *not* falling back to
 // the UA guess here (unlike effectiveDeviceLabel below). useDeviceLabel

@@ -1,7 +1,7 @@
 import { LogLevels, PowerSyncDatabase, type SyncStatus } from '@powersync/web';
 import { useEffect, useState } from 'react';
 import { AppSchema } from './schema';
-import { PiggypalConnector } from './connector';
+import { FlowtabConnector } from './connector';
 
 // Constructed without a connector — every read/write always goes straight
 // to local SQLite regardless of sync state (docs/01 D1's "UI never awaits
@@ -42,9 +42,9 @@ export const db = new PowerSyncDatabase({
 // cookie expired) leaves the SDK simply not connected, rather than
 // throwing — matches docs/05's "non-blocking sign in to sync" reconnect
 // behavior without this file needing to know why credentials failed.
-let connector: PiggypalConnector | null = null;
+let connector: FlowtabConnector | null = null;
 export function connectSync(): Promise<void> {
-  connector ??= new PiggypalConnector();
+  connector ??= new FlowtabConnector();
   return db.connect(connector);
 }
 

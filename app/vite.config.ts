@@ -26,10 +26,10 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
       manifest: {
-        // Name/colors are placeholders — branding is explicitly parked
-        // (docs/01, item 5). Real icons + name land once that's resolved.
-        name: 'piggypal',
-        short_name: 'piggypal',
+        // Colors are still placeholders (docs/01 item 5, docs/52) — the
+        // name itself is real now, icons still pending.
+        name: 'Flowtab',
+        short_name: 'Flowtab',
         description: 'Simple, light, private budgeting — type or say what you spent.',
         theme_color: '#3f7d69',
         background_color: '#eef0ea',
@@ -44,7 +44,12 @@ export default defineConfig({
   server: {
     port: 3001, // Set the development server port to 3000
     host: "0.0.0.0",
-    allowedHosts: ["app.piggypal.codexbase.dev","app-beta.piggypal.codexbase.dev"],
+    // Both piggypal.* (still live) and flowtab.* (new) kept during the
+    // rebrand transition (docs/52) — additive, not a hard cutover.
+    allowedHosts: [
+      "app.piggypal.codexbase.dev","app-beta.piggypal.codexbase.dev",
+      "app.flowtab.codexbase.dev","app-beta.flowtab.codexbase.dev",
+    ],
   },
   // @powersync/web ships web workers + WASM (wa-sqlite) — must be excluded
   // from pre-bundling and workers built as ES modules, or the WASM/worker

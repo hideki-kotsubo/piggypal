@@ -68,7 +68,7 @@ export interface OfferSession {
 // answerOffer() below.
 export async function startOffer(): Promise<OfferSession> {
   const pc = newPeerConnection();
-  const channel = pc.createDataChannel('piggypal-sync');
+  const channel = pc.createDataChannel('flowtab-sync');
   const channelPromise = waitForChannelOpen(channel);
 
   const offer = await pc.createOffer();

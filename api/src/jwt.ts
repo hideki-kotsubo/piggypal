@@ -13,7 +13,7 @@ const ALG = 'RS256';
 // sub=user_id)" line.
 const ACCESS_TOKEN_TTL = '15m';
 // docs/39's client_auth.audience in deploy/powersync/service.yaml.
-const AUDIENCE = 'piggypal';
+const AUDIENCE = 'flowtab';
 
 function readPem(envVar: string): string {
   const raw = process.env[envVar];

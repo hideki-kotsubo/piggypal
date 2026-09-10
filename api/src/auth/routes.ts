@@ -7,7 +7,7 @@ import { requireAccessToken, type AuthedRequest } from './middleware.js';
 
 export const authRouter = Router();
 
-const REFRESH_COOKIE = 'piggypal_refresh';
+const REFRESH_COOKIE = 'flowtab_refresh';
 const REFRESH_TTL_DAYS = 60;
 // docs/05 D13's rotation/reuse-detection is otherwise correct but has no
 // tolerance for two *legitimate* concurrent requests from the same

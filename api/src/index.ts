@@ -33,10 +33,17 @@ const port = process.env.PORT ?? 3000;
 // comma-separated list; unset falls back to every origin vite.config.ts's
 // own allowedHosts already anticipates (both app subdomains) plus the
 // dev server's own origin, instead of hard-coding just one.
+// Both piggypal.* (still live) and flowtab.* (new) kept during the rebrand
+// transition (docs/52) — additive, not a hard cutover. Note this default
+// array only matters if CORS_ORIGIN is unset; the real deployed server
+// likely already has it set (see this file's own history above), so the
+// flowtab origins need adding there too, manually, not just here.
 const DEFAULT_CORS_ORIGINS = [
   'http://localhost:3001',
   'https://app.piggypal.codexbase.dev',
   'https://app-beta.piggypal.codexbase.dev',
+  'https://app.flowtab.codexbase.dev',
+  'https://app-beta.flowtab.codexbase.dev',
 ];
 const corsOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())

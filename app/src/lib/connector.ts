@@ -52,7 +52,7 @@ const POWERSYNC_URL = import.meta.env.VITE_POWERSYNC_URL ?? 'http://localhost:80
 // (docs/03, api/src/sync/routes.ts). db.ts only calls db.connect(this)
 // once a signed-in account exists — this class is never even constructed
 // in local-only mode.
-export class PiggypalConnector implements PowerSyncBackendConnector {
+export class FlowtabConnector implements PowerSyncBackendConnector {
   async fetchCredentials() {
     const creds = await fetchPowerSyncCredentials();
     if (!creds) return null;

@@ -11,7 +11,7 @@ export function AboutScreen() {
       </div>
 
       <p className="about-text">
-        piggypal is a simple, light, private budgeting app — you just type or
+        Flowtab is a simple, light, private budgeting app — you just type or
         say what you spent.
       </p>
       <p className="about-text">

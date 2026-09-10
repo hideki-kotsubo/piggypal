@@ -393,7 +393,7 @@ async function seedIfEmpty() {
       }
     });
   } catch (err) {
-    console.error('piggypal: seed transaction FAILED, rolled back', err);
+    console.error('flowtab: seed transaction FAILED, rolled back', err);
     throw err;
   }
 }
@@ -555,7 +555,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const controller = new AbortController();
 
     seedIfEmpty()
-      .catch((err) => console.error('piggypal: seed failed', err))
+      .catch((err) => console.error('flowtab: seed failed', err))
       .finally(() => {
         if (controller.signal.aborted) return;
 
@@ -592,7 +592,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               markFirstLoad('accounts');
             },
             onError: (err) => {
-              console.error('piggypal: accounts watch failed', err);
+              console.error('flowtab: accounts watch failed', err);
               markFirstLoad('accounts');
             },
           },
@@ -613,7 +613,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               markFirstLoad('categories');
             },
             onError: (err) => {
-              console.error('piggypal: categories watch failed', err);
+              console.error('flowtab: categories watch failed', err);
               markFirstLoad('categories');
             },
           },
@@ -634,7 +634,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               markFirstLoad('transactions');
             },
             onError: (err) => {
-              console.error('piggypal: transactions watch failed', err);
+              console.error('flowtab: transactions watch failed', err);
               markFirstLoad('transactions');
             },
           },
@@ -655,7 +655,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               markFirstLoad('transactionSplits');
             },
             onError: (err) => {
-              console.error('piggypal: transaction_splits watch failed', err);
+              console.error('flowtab: transaction_splits watch failed', err);
               markFirstLoad('transactionSplits');
             },
           },
@@ -670,7 +670,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               markFirstLoad('budgets');
             },
             onError: (err) => {
-              console.error('piggypal: budgets watch failed', err);
+              console.error('flowtab: budgets watch failed', err);
               markFirstLoad('budgets');
             },
           },
@@ -691,7 +691,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               markFirstLoad('categoryKeywords');
             },
             onError: (err) => {
-              console.error('piggypal: category_keywords watch failed', err);
+              console.error('flowtab: category_keywords watch failed', err);
               markFirstLoad('categoryKeywords');
             },
           },
@@ -706,7 +706,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               markFirstLoad('profiles');
             },
             onError: (err) => {
-              console.error('piggypal: profiles watch failed', err);
+              console.error('flowtab: profiles watch failed', err);
               markFirstLoad('profiles');
             },
           },
@@ -721,7 +721,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               markFirstLoad('devices');
             },
             onError: (err) => {
-              console.error('piggypal: devices watch failed', err);
+              console.error('flowtab: devices watch failed', err);
               markFirstLoad('devices');
             },
           },

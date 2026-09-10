@@ -9,7 +9,7 @@ export function AppSkeleton() {
   return (
     <div className="home" aria-busy="true" aria-label="Loading your data">
       <div className="app-bar">
-        <span className="wordmark">piggypal</span>
+        <span className="wordmark">Flowtab</span>
       </div>
       <div className="section-label">Recent</div>
       <div className="recent">

@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Flowtab — every expense, the moment it happens</title>
+<meta name="description" content="Flowtab catches every expense, from a coffee to a mortgage payment, spoken or typed in English or Português — then shows you how this month compares, what a few months suggest for a budget, and whether that subscription is still worth it. Local-first, real multi-currency, no account required.">
+<meta name="robots" content="noindex, nofollow">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Flowtab">
+<meta property="og:url" content="https://flowtab.piggypal.codexbase.dev/">
+<meta property="og:title" content="Flowtab — every expense, the moment it happens">
+<meta property="og:description" content="Type it or say it, in English or Português — it's on the tab instantly. Real multi-currency, local-first, no account required.">
+<meta property="og:image" content="https://flowtab.piggypal.codexbase.dev/og-image.png">
+<meta property="og:image:width" content="2400">
+<meta property="og:image:height" content="1260">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Flowtab — every expense, the moment it happens">
+<meta name="twitter:description" content="Type it or say it, in English or Português — it's on the tab instantly. Real multi-currency, local-first, no account required.">
+<meta name="twitter:image" content="https://flowtab.piggypal.codexbase.dev/og-image.png">
+
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#F4F7F7">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#10151C">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2310151C'/%3E%3Cpath d='M12 40 Q22 24 32 32 T52 24' stroke='%232FD4C8' stroke-width='6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F4F7F7;
+    --surface: #FFFFFF;
+    --ink: #10151C;
+    --ink-soft: #4B5E63;
+    --line: #DCE6E6;
+    --flow: #0E9C90;
+    --flow-soft: #D9F3F0;
+    --good: #2F8F4E;
+    --warn: #A6791E;
+    --shadow: 0 1px 2px rgba(16,21,28,0.05), 0 10px 28px rgba(16,21,28,0.06);
+
+    --font-display: 'Space Grotesk', -apple-system, sans-serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #10151C;
+      --surface: #171E27;
+      --ink: #E7EEF0;
+      --ink-soft: #8CA0A8;
+      --line: #26313A;
+      --flow: #2FD4C8;
+      --flow-soft: #1B3A38;
+      --good: #5FBF7A;
+      --warn: #E0B34D;
+      --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 10px 28px rgba(0,0,0,0.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #10151C;
+    --surface: #171E27;
+    --ink: #E7EEF0;
+    --ink-soft: #8CA0A8;
+    --line: #26313A;
+    --flow: #2FD4C8;
+    --flow-soft: #1B3A38;
+    --good: #5FBF7A;
+    --warn: #E0B34D;
+    --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 10px 28px rgba(0,0,0,0.4);
+  }
+
+  * { box-sizing: border-box; }
+  html { background: var(--paper); }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+  ::selection { background: var(--flow-soft); }
+
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 clamp(20px, 5vw, 48px); }
+
+  /* ---------- Nav ---------- */
+  nav.wrap {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-top: 26px; padding-bottom: 26px;
+  }
+  .wordmark {
+    font-family: var(--font-display); font-weight: 700; font-size: 1.3rem;
+    letter-spacing: -0.01em;
+  }
+  .wordmark .tab { color: var(--flow); }
+  .nav-tag {
+    font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink-soft);
+    border: 1px solid var(--line); border-radius: 100px; padding: 6px 14px;
+  }
+
+  /* ---------- Hero ---------- */
+  header.hero { padding: clamp(20px, 5vw, 44px) 0 clamp(36px, 6vw, 64px); }
+  .hero-grid {
+    display: grid; grid-template-columns: 1.05fr 0.95fr;
+    gap: clamp(32px, 5vw, 60px); align-items: center;
+  }
+  @media (max-width: 860px) { .hero-grid { grid-template-columns: 1fr; } }
+  .eyebrow {
+    font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--flow); font-weight: 600; margin: 0 0 16px;
+  }
+  h1 {
+    font-family: var(--font-display); font-weight: 700;
+    font-size: clamp(2.1rem, 4.6vw, 3.2rem); line-height: 1.08;
+    letter-spacing: -0.02em; margin: 0 0 20px; text-wrap: balance;
+  }
+  .lede { font-size: 1.08rem; color: var(--ink-soft); max-width: 44ch; margin: 0 0 22px; }
+
+  /* flow-strip motif */
+  .flow-strip {
+    position: relative; height: 3px; border-radius: 3px;
+    background: var(--line); overflow: hidden; margin: 0 0 26px; max-width: 320px;
+  }
+  .flow-strip::after {
+    content: ""; position: absolute; inset: 0; width: 40%;
+    background: linear-gradient(90deg, transparent, var(--flow), transparent);
+    animation: flow-sweep 2.6s ease-in-out infinite;
+  }
+  @keyframes flow-sweep {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(350%); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .flow-strip::after { animation: none; width: 100%; transform: none; background: var(--flow); opacity: 0.6; }
+  }
+
+  .cta-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .btn {
+    font-family: var(--font-body); font-weight: 600; font-size: 0.95rem;
+    padding: 13px 22px; border-radius: 10px; border: none; cursor: pointer;
+    background: var(--ink); color: var(--paper);
+  }
+  .btn:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; }
+  .btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .btn-flow { background: var(--flow); color: #06201D; }
+
+  /* ---------- Live demo panel ---------- */
+  .demo-panel {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+    box-shadow: var(--shadow); overflow: hidden;
+  }
+  .demo-top {
+    display: flex; align-items: center; gap: 10px; padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .mic {
+    width: 30px; height: 30px; border-radius: 50%; flex: none;
+    background: var(--flow-soft); display: grid; place-items: center; position: relative;
+  }
+  .mic svg { width: 14px; height: 14px; fill: var(--flow); }
+  .mic::after {
+    content: ""; position: absolute; inset: -5px; border-radius: 50%;
+    border: 2px solid var(--flow); opacity: 0;
+  }
+  .mic.listening::after { animation: pulse 1.4s ease-out infinite; }
+  @keyframes pulse { 0% { transform: scale(.8); opacity: .7; } 100% { transform: scale(1.3); opacity: 0; } }
+  .speech {
+    font-family: var(--font-mono); font-size: 0.88rem; color: var(--ink);
+    min-height: 1.4em; flex: 1;
+  }
+  .speech .caret {
+    display: inline-block; width: 2px; height: 1em; background: var(--flow);
+    vertical-align: -2px; margin-left: 1px; animation: blink 1s steps(1) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+  .demo-rows { padding: 4px 0 8px; }
+  .drow {
+    display: grid; grid-template-columns: 1fr auto; gap: 3px 14px;
+    padding: 11px 18px; border-bottom: 1px dashed var(--line);
+  }
+  .drow:last-child { border-bottom: none; }
+  .drow.enter { animation: slidein .4s ease both; }
+  @keyframes slidein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .drow .cat { font-weight: 600; font-size: 0.95rem; }
+  .drow .meta { font-family: var(--font-mono); font-size: 0.75rem; color: var(--ink-soft); grid-column: 1; }
+  .drow .amt {
+    font-family: var(--font-mono); font-weight: 600; font-size: 0.98rem;
+    grid-row: 1 / span 2; align-self: center; text-align: right; white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .demo-foot {
+    padding: 10px 18px; border-top: 1px solid var(--line);
+    font-family: var(--font-mono); font-size: 0.74rem; color: var(--ink-soft);
+    display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  }
+
+  /* ---------- Section shared ---------- */
+  section { padding: clamp(44px, 6vw, 76px) 0; border-top: 1px solid var(--line); }
+  .section-head { max-width: 60ch; margin-bottom: clamp(26px, 4vw, 40px); }
+  .sec-eyebrow {
+    font-family: var(--font-mono); font-size: 0.76rem; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--flow); font-weight: 600; margin: 0 0 12px;
+  }
+  h2 {
+    font-family: var(--font-display); font-weight: 700;
+    font-size: clamp(1.5rem, 3vw, 2.1rem); line-height: 1.18;
+    letter-spacing: -0.015em; margin: 0 0 14px; text-wrap: balance;
+  }
+  .section-head p { color: var(--ink-soft); margin: 0; font-size: 1.01rem; }
+
+  /* ---------- Scale chart ---------- */
+  .scale-fig { width: 100%; }
+  .scale-fig svg { width: 100%; height: auto; display: block; }
+  .scale-caption { font-family: var(--font-mono); font-size: 0.76rem; color: var(--ink-soft); margin-top: 10px; }
+
+  /* ---------- Insight cards ---------- */
+  .insight-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 860px) { .insight-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .insight-grid { grid-template-columns: 1fr; } }
+  .insight-card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    padding: 20px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .insight-card.wide { grid-column: span 2; }
+  @media (max-width: 560px) { .insight-card.wide { grid-column: span 1; } }
+  .insight-label {
+    font-family: var(--font-mono); font-size: 0.71rem; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--ink-soft);
+  }
+  .insight-stat {
+    font-family: var(--font-mono); font-size: 1.65rem; font-weight: 600;
+    font-variant-numeric: tabular-nums; line-height: 1.1;
+  }
+  .insight-stat.good { color: var(--good); }
+  .insight-stat.warn { color: var(--warn); }
+  .insight-note { color: var(--ink-soft); font-size: 0.9rem; margin: 0; }
+
+  /* ---------- Feature grid ---------- */
+  .feat-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5px;
+    background: var(--line); border: 1px solid var(--line); border-radius: 14px;
+    overflow: hidden; margin-top: 8px;
+  }
+  @media (max-width: 860px) { .feat-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .feat-grid { grid-template-columns: 1fr; } }
+  .feat { background: var(--surface); padding: 26px 24px; }
+  .feat.headline { background: var(--flow-soft); }
+  .feat .glyph {
+    font-family: var(--font-mono); color: var(--flow); font-size: 0.76rem;
+    letter-spacing: 0.05em; display: block; margin-bottom: 12px; font-weight: 600;
+  }
+  .feat h3 { font-family: var(--font-display); font-weight: 600; font-size: 1.08rem; margin: 0 0 8px; }
+  .feat p { color: var(--ink-soft); font-size: 0.93rem; margin: 0; }
+
+  /* ---------- Pricing ---------- */
+  .price-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 8px; }
+  @media (max-width: 760px) { .price-grid { grid-template-columns: 1fr; } }
+  .plan { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 30px 28px; }
+  .plan.synced { border-color: var(--flow); box-shadow: 0 10px 26px rgba(47,212,200,0.08); }
+  .plan-name { font-family: var(--font-display); font-weight: 700; font-size: 1.3rem; margin-bottom: 4px; }
+  .plan-tag {
+    font-family: var(--font-mono); font-size: 0.76rem; color: var(--flow);
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 16px;
+  }
+  .plan .price { font-family: var(--font-mono); font-size: 0.98rem; margin-bottom: 6px; }
+  .plan .price b { font-size: 1.45rem; font-weight: 600; }
+  .plan ul { list-style: none; margin: 16px 0 24px; padding: 0; }
+  .plan li {
+    padding: 9px 0; border-bottom: 1px dashed var(--line);
+    font-size: 0.94rem; color: var(--ink-soft); display: flex; gap: 10px;
+  }
+  .plan li::before { content: "—"; color: var(--flow); flex: none; font-family: var(--font-mono); }
+  .plan li:last-child { border-bottom: none; }
+  .plan li.coming { font-style: italic; }
+  .plan li.coming::after {
+    content: "coming"; margin-left: auto; font-family: var(--font-mono); font-size: 0.7rem;
+    color: var(--warn); text-transform: uppercase; letter-spacing: 0.04em; font-style: normal;
+  }
+
+  /* ---------- Footer / signup ---------- */
+  footer { padding: clamp(44px, 6vw, 76px) 0 clamp(30px, 5vw, 52px); border-top: 1px solid var(--line); }
+  .signup-card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 18px;
+    padding: clamp(26px, 5vw, 42px); display: grid; grid-template-columns: 1.2fr 1fr;
+    gap: 30px; align-items: center;
+  }
+  @media (max-width: 760px) { .signup-card { grid-template-columns: 1fr; } }
+  .signup-form { display: flex; gap: 10px; flex-wrap: wrap; }
+  .signup-form input[type="email"] {
+    flex: 1 1 220px; min-width: 0; font-family: var(--font-body); font-size: 0.95rem;
+    padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--paper); color: var(--ink);
+  }
+  .signup-form input[type="email"]:focus-visible { outline: 2px solid var(--flow); outline-offset: 1px; }
+  .signup-note {
+    font-family: var(--font-mono); font-size: 0.77rem; color: var(--ink-soft);
+    margin: 10px 0 0; min-height: 1.2em;
+  }
+  .foot-bottom {
+    display: flex; justify-content: space-between; align-items: center; margin-top: 38px;
+    padding-top: 22px; border-top: 1px solid var(--line); color: var(--ink-soft);
+    font-size: 0.81rem; flex-wrap: wrap; gap: 10px;
+  }
+  .foot-bottom .wordmark { font-size: 0.98rem; }
+</style>
+</head>
+<body>
+
+<nav class="wrap">
+  <div class="wordmark">Flow<span class="tab">tab</span></div>
+  <div class="nav-tag">coming soon</div>
+</nav>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <p class="eyebrow">every expense, the moment it happens</p>
+      <h1>Type it or say it.<br>It's on the tab.</h1>
+      <div class="flow-strip" aria-hidden="true"></div>
+      <p class="lede">In English or Português — a coffee or a mortgage payment,
+      it lands the same simple way. Real multi-currency, fully offline,
+      nothing to sign up for until you actually want sync.</p>
+      <div class="cta-row">
+        <button class="btn btn-flow" type="button" onclick="goToSignup()">Get early access</button>
+        <a class="btn btn-ghost" href="#demo">See it work →</a>
+      </div>
+    </div>
+
+    <div class="demo-panel" id="demo" aria-label="Demo: spoken or typed phrases become entries">
+      <div class="demo-top">
+        <div class="mic listening" id="mic" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 15a4 4 0 0 0 4-4V6a4 4 0 1 0-8 0v5a4 4 0 0 0 4 4Zm6-4a6 6 0 0 1-12 0H4a8 8 0 0 0 7 7.94V22h2v-3.06A8 8 0 0 0 20 11h-2Z"/></svg>
+        </div>
+        <div class="speech" id="speech" aria-live="polite">&nbsp;</div>
+      </div>
+      <div class="demo-rows" id="rows"></div>
+      <div class="demo-foot">
+        <span>Local ledger</span>
+        <span>2 currencies this week</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="scale">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="sec-eyebrow">the range that matters</p>
+      <h2>From a $4.25 coffee to a $9,800 tuition bill</h2>
+      <p>Most budgeting apps are tuned for one end of this range or the
+      other. Flowtab plots the whole thing on one line, in one ledger —
+      a gas fill-up and a semester payment are the same kind of entry,
+      just different sizes.</p>
+    </div>
+
+    <figure class="scale-fig">
+      <svg viewBox="0 0 900 170" role="img" aria-label="Logarithmic scale from $4.25 to $9,800 showing six example expenses">
+        <line x1="40" y1="90" x2="860" y2="90" stroke="var(--line)" stroke-width="1.5"/>
+        <g>
+          <line x1="40" y1="82" x2="40" y2="98" stroke="var(--ink-soft)" stroke-width="1.5"/>
+          <circle cx="40" cy="90" r="5" fill="var(--flow)"/>
+          <text x="40" y="66" text-anchor="middle" font-family="var(--font-mono)" font-size="12" fill="var(--ink)">$4.25</text>
+          <text x="40" y="116" text-anchor="middle" font-family="var(--font-body)" font-size="12" fill="var(--ink-soft)">Coffee</text>
+        </g>
+        <g>
+          <line x1="180" y1="82" x2="180" y2="98" stroke="var(--ink-soft)" stroke-width="1.5"/>
+          <circle cx="180" cy="90" r="5" fill="var(--ink-soft)"/>
+          <text x="180" y="66" text-anchor="middle" font-family="var(--font-mono)" font-size="12" fill="var(--ink)">$15.99</text>
+          <text x="180" y="116" text-anchor="middle" font-family="var(--font-body)" font-size="12" fill="var(--ink-soft)">Streaming</text>
+        </g>
+        <g>
+          <line x1="393" y1="82" x2="393" y2="98" stroke="var(--ink-soft)" stroke-width="1.5"/>
+          <circle cx="393" cy="90" r="5" fill="var(--ink-soft)"/>
+          <text x="393" y="66" text-anchor="middle" font-family="var(--font-mono)" font-size="12" fill="var(--ink)">$120</text>
+          <text x="393" y="116" text-anchor="middle" font-family="var(--font-body)" font-size="12" fill="var(--ink-soft)">Gas fill-up</text>
+        </g>
+        <g>
+          <line x1="707" y1="98" x2="707" y2="82" stroke="var(--ink-soft)" stroke-width="1.5"/>
+          <circle cx="707" cy="90" r="5" fill="var(--ink-soft)"/>
+          <text x="707" y="66" text-anchor="middle" font-family="var(--font-mono)" font-size="12" fill="var(--ink)">$2,300</text>
+          <text x="707" y="116" text-anchor="middle" font-family="var(--font-body)" font-size="12" fill="var(--ink-soft)">Rent</text>
+        </g>
+        <g>
+          <line x1="792" y1="82" x2="792" y2="98" stroke="var(--ink-soft)" stroke-width="1.5"/>
+          <circle cx="792" cy="90" r="5" fill="var(--ink-soft)"/>
+          <text x="792" y="140" text-anchor="middle" font-family="var(--font-mono)" font-size="12" fill="var(--ink)">$5,400</text>
+          <text x="792" y="156" text-anchor="middle" font-family="var(--font-body)" font-size="12" fill="var(--ink-soft)">Flights</text>
+        </g>
+        <g>
+          <line x1="860" y1="82" x2="860" y2="98" stroke="var(--ink-soft)" stroke-width="1.5"/>
+          <circle cx="860" cy="90" r="5" fill="var(--flow)"/>
+          <text x="822" y="66" text-anchor="middle" font-family="var(--font-mono)" font-size="12" fill="var(--ink)">$9,800</text>
+          <text x="822" y="116" text-anchor="middle" font-family="var(--font-body)" font-size="12" fill="var(--ink-soft)">Tuition / year</text>
+        </g>
+      </svg>
+    </figure>
+    <p class="scale-caption">log scale — six real category sizes, one household, one year</p>
+  </div>
+</section>
+
+<section id="insights">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="sec-eyebrow">what a few months start to show you</p>
+      <h2>Not just what you spent — what it means</h2>
+      <p>Simple arithmetic over your own real entries, nothing more exotic
+      than that — a sample two months from a real-shaped household.</p>
+    </div>
+
+    <div class="insight-grid">
+      <div class="insight-card">
+        <span class="insight-label">This month vs. last</span>
+        <span class="insight-stat good">−9%</span>
+        <p class="insight-note">Less on dining out and rideshares.</p>
+      </div>
+      <div class="insight-card">
+        <span class="insight-label">Next 3 months, estimated</span>
+        <span class="insight-stat">$2,860<span style="font-size:1rem;color:var(--ink-soft);">/mo</span></span>
+        <p class="insight-note">Averaged from your last two months of real entries.</p>
+      </div>
+      <div class="insight-card">
+        <span class="insight-label">Weekday vs. weekend</span>
+        <span class="insight-stat warn">1.8×</span>
+        <p class="insight-note">Most weekend spend lands Friday night through Sunday.</p>
+      </div>
+      <div class="insight-card wide">
+        <span class="insight-label">Most frequent category</span>
+        <span class="insight-stat">Coffee &amp; Snacks · 21<span style="font-size:1rem;color:var(--ink-soft);"> entries this quarter</span></span>
+        <p class="insight-note">Not your biggest line item — your most repeated one. Different problem, different fix.</p>
+      </div>
+      <div class="insight-card">
+        <span class="insight-label">Worth keeping?</span>
+        <span class="insight-stat warn">2×</span>
+        <p class="insight-note">A streaming plan used twice in 90 days — barely touched this quarter.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="sec-eyebrow">what's actually real today</p>
+      <h2>Built for exactly this household</h2>
+    </div>
+    <div class="feat-grid">
+      <div class="feat headline">
+        <span class="glyph">P2P · no server</span>
+        <h3>Pair two devices, no server</h3>
+        <p>Scan a QR code and two phones sync directly over WebRTC — no
+        account, nothing in the middle, works in a room with no signal
+        at all.</p>
+      </div>
+      <div class="feat">
+        <span class="glyph">PT · EN</span>
+        <h3>Bilingual, for real</h3>
+        <p>Say or type an expense in Portuguese or English — the on-device
+        parser understands both, offline.</p>
+      </div>
+      <div class="feat">
+        <span class="glyph">¤ side by side</span>
+        <h3>True multi-currency</h3>
+        <p>CAD, BRL, whatever you're actually holding — kept side by side,
+        never silently converted or blended into one number.</p>
+      </div>
+      <div class="feat">
+        <span class="glyph">offline-first</span>
+        <h3>Local-first, always</h3>
+        <p>Every entry writes to your device first. The app never waits on
+        a network to show you your own data.</p>
+      </div>
+      <div class="feat">
+        <span class="glyph">small → big</span>
+        <h3>Every size of expense</h3>
+        <p>From a coffee to a mortgage payment, tracked the same simple
+        way — no separate "big purchase" mode.</p>
+      </div>
+      <div class="feat">
+        <span class="glyph">opt-in</span>
+        <h3>Sync when you want it</h3>
+        <p>The free tier never touches a server at all. Sign in only once
+        you actually want sync across your own devices.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="pricing">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="sec-eyebrow">plain pricing</p>
+      <h2>Free where it's yours.<br>Paid where we do work.</h2>
+      <p>The free plan isn't a crippled trial — it's the full local ledger.
+      You pay only for the parts that run on our side.</p>
+    </div>
+    <div class="price-grid">
+      <div class="plan">
+        <div class="plan-name">Local</div>
+        <div class="plan-tag">Free · no account</div>
+        <p class="price"><b>$0</b> forever</p>
+        <ul>
+          <li>Full ledger on your device</li>
+          <li>Every currency, every account</li>
+          <li>Manual and on-device parsed entry</li>
+          <li>P2P device sync via QR — no server</li>
+          <li>Export your data anytime</li>
+        </ul>
+        <a class="btn btn-ghost" href="#signup-email" onclick="goToSignup(); return false;">Join the waitlist</a>
+      </div>
+      <div class="plan synced">
+        <div class="plan-name">Synced</div>
+        <div class="plan-tag">14-day trial</div>
+        <p class="price"><b>Early-bird pricing</b> — to be announced</p>
+        <ul>
+          <li>Everything in Local</li>
+          <li>Sync across your own devices</li>
+          <li class="coming">Online AI entry</li>
+        </ul>
+        <a class="btn btn-flow" href="#signup-email" onclick="goToSignup(); return false;">Join the waitlist</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="signup-card">
+      <div>
+        <h2 style="margin-bottom:8px;">Be first to try it</h2>
+        <p style="color:var(--ink-soft); margin:0;">Flowtab isn't open yet. Leave your email and
+        we'll let you know the moment early access starts — no spam, just the one message.</p>
+      </div>
+      <div>
+        <form class="signup-form" onsubmit="return handleSignup(event)">
+          <input id="signup-email" type="email" placeholder="you@example.com" required aria-label="Email address">
+          <button class="btn btn-flow" type="submit">Notify me</button>
+        </form>
+        <p class="signup-note" id="signup-note"></p>
+      </div>
+    </div>
+
+    <div class="foot-bottom">
+      <div class="wordmark">Flow<span class="tab">tab</span></div>
+      <div>&copy; 2026 Flowtab</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  function goToSignup() {
+    var field = document.getElementById('signup-email');
+    field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    field.focus({ preventScroll: true });
+  }
+
+  function handleSignup(e) {
+    e.preventDefault();
+    var note = document.getElementById('signup-note');
+    var email = document.getElementById('signup-email').value;
+    note.textContent = "Thanks — you'll be the first to know (" + email + ").";
+    document.getElementById('signup-email').value = '';
+    return false;
+  }
+
+  (function () {
+    var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var speechEl = document.getElementById('speech');
+    var rowsEl = document.getElementById('rows');
+    var mic = document.getElementById('mic');
+
+    var entries = [
+      { phrase: 'coffee, four twenty five', cat: 'Coffee & Snacks', mode: '🎙',
+        meta: 'today 08:12 · Coffee & Snacks', amt: '$4.25 CAD' },
+      { phrase: 'aluguel, dois mil e trezentos reais', cat: 'Rent', mode: '🎙',
+        meta: 'hoje 08:00 · Rent', amt: 'R$2.300,00' },
+      { phrase: 'uber home eighteen forty', cat: 'Transport', mode: '⌨',
+        meta: 'today 22:40 · Transport', amt: '$18.40 CAD' },
+      { phrase: 'gasolina cento e vinte reais', cat: 'Transport', mode: '🎙',
+        meta: 'hoje 17:05 · Transport', amt: 'R$120,00' },
+    ];
+
+    function makeRow(e, animate) {
+      var div = document.createElement('div');
+      div.className = 'drow' + (animate ? ' enter' : '');
+      div.innerHTML =
+        '<div class="cat">' + e.mode + ' ' + e.cat + '</div>' +
+        '<div class="amt">' + e.amt + '</div>' +
+        '<div class="meta">' + e.meta + '</div>';
+      return div;
+    }
+
+    if (reduced) {
+      speechEl.textContent = '"coffee, four twenty five"';
+      mic.classList.remove('listening');
+      entries.forEach(function (e) { rowsEl.appendChild(makeRow(e, false)); });
+      return;
+    }
+
+    var idx = 0;
+    var MAX_ROWS = 3;
+
+    for (var k = 1; k <= MAX_ROWS && k < entries.length; k++) {
+      rowsEl.appendChild(makeRow(entries[k], false));
+    }
+
+    function typePhrase(text, done) {
+      var i = 0;
+      speechEl.innerHTML = '<span class="caret"></span>';
+      var t = setInterval(function () {
+        i++;
+        speechEl.innerHTML = text.slice(0, i).replace(/&/g, '&amp;').replace(/</g, '&lt;') +
+          '<span class="caret"></span>';
+        if (i >= text.length) {
+          clearInterval(t);
+          setTimeout(done, 500);
+        }
+      }, 32);
+    }
+
+    function cycle() {
+      var e = entries[idx % entries.length];
+      idx++;
+      mic.classList.add('listening');
+      typePhrase('"' + e.phrase + '"', function () {
+        mic.classList.remove('listening');
+        rowsEl.insertBefore(makeRow(e, true), rowsEl.firstChild);
+        while (rowsEl.children.length > MAX_ROWS) {
+          rowsEl.removeChild(rowsEl.lastChild);
+        }
+        setTimeout(function () {
+          speechEl.innerHTML = '&nbsp;';
+          setTimeout(cycle, 650);
+        }, 1500);
+      });
+    }
+
+    setTimeout(cycle, 600);
+  })();
+</script>
+</body>
+</html>
