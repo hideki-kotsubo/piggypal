@@ -34,7 +34,7 @@ const port = process.env.PORT ?? 3000;
 // own allowedHosts already anticipates (both app subdomains) plus the
 // dev server's own origin, instead of hard-coding just one.
 // Both piggypal.* (still live) and flowtab.* (new) kept during the rebrand
-// transition (docs/52) — additive, not a hard cutover. Note this default
+// transition (docs/53) — additive, not a hard cutover. Note this default
 // array only matters if CORS_ORIGIN is unset; the real deployed server
 // likely already has it set (see this file's own history above), so the
 // flowtab origins need adding there too, manually, not just here.

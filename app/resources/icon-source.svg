@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0F766E"/>
+      <stop offset="1" stop-color="#312E81"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Full-bleed background; platform masks (rounded square / adaptive
+       circle) crop this, so it deliberately has no rounded corners of its
+       own. Teal-to-indigo evokes "flow"/water, distinct from piggypal's
+       purple so it doesn't read as a leftover of the parked brand. -->
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+
+  <!-- The mark: a single continuous flowing line (cash "flow") rising to
+       a point-in-time dot (the running "tab" — today's balance). Kept as
+       one smooth stroked path, not a letterform, so it rasterizes
+       identically everywhere and reads as a clean silhouette at 16px. -->
+  <path d="M 232 616
+           C 340 616, 340 480, 428 480
+           C 516 480, 516 616, 604 616
+           C 668 616, 700 552, 744 460"
+        fill="none"
+        stroke="#F8FAFC"
+        stroke-width="56"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+
+  <circle cx="772" cy="404" r="46" fill="#F8FAFC"/>
+</svg>

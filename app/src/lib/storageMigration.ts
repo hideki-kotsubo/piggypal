@@ -1,5 +1,5 @@
 // One-time read-through migration for the piggypal: -> flowtab: localStorage
-// prefix rename (docs/52). Never deletes the old key — the leftover is
+// prefix rename (docs/53). Never deletes the old key — the leftover is
 // harmless, and not deleting avoids any edge case with a second already-open
 // tab still reading/writing the old key concurrently before it reloads.
 // Idempotent: a no-op once the new key exists, whether from a real migration

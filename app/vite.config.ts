@@ -26,8 +26,10 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
       manifest: {
-        // Colors are still placeholders (docs/01 item 5, docs/52) — the
-        // name itself is real now, icons still pending.
+        // Name and icons are both real now (docs/53's rename, docs/52's
+        // Flowtab wave-mark icon set below) — theme_color/background_color
+        // are the only pieces still the old piggypal placeholders
+        // (docs/01 item 5), pending real brand colors.
         name: 'Flowtab',
         short_name: 'Flowtab',
         description: 'Simple, light, private budgeting — type or say what you spent.',
@@ -35,8 +37,17 @@ export default defineConfig({
         background_color: '#eef0ea',
         display: 'standalone',
         icons: [
-          // TODO: replace with real PNG icons once branding is decided.
           { src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml' },
+          { src: 'icons/icon-48.webp', sizes: '48x48', type: 'image/webp' },
+          { src: 'icons/icon-72.webp', sizes: '72x72', type: 'image/webp' },
+          { src: 'icons/icon-96.webp', sizes: '96x96', type: 'image/webp' },
+          { src: 'icons/icon-128.webp', sizes: '128x128', type: 'image/webp' },
+          // 192/512 are the two sizes install prompts actually use, and the
+          // icon's design was verified to survive a circular safe-zone crop
+          // (docs/52), so "maskable" is genuinely safe here, not just copied.
+          { src: 'icons/icon-192.webp', sizes: '192x192', type: 'image/webp', purpose: 'any maskable' },
+          { src: 'icons/icon-256.webp', sizes: '256x256', type: 'image/webp' },
+          { src: 'icons/icon-512.webp', sizes: '512x512', type: 'image/webp', purpose: 'any maskable' },
         ],
       },
     }),
@@ -45,7 +56,7 @@ export default defineConfig({
     port: 3001, // Set the development server port to 3000
     host: "0.0.0.0",
     // Both piggypal.* (still live) and flowtab.* (new) kept during the
-    // rebrand transition (docs/52) — additive, not a hard cutover.
+    // rebrand transition (docs/53) — additive, not a hard cutover.
     allowedHosts: [
       "app.piggypal.codexbase.dev","app-beta.piggypal.codexbase.dev",
       "app.flowtab.codexbase.dev","app-beta.flowtab.codexbase.dev",
