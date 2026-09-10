@@ -26,8 +26,11 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
       manifest: {
-        // Name/colors are placeholders — branding is explicitly parked
-        // (docs/01, item 5). Real icons + name land once that's resolved.
+        // name/short_name/theme_color/background_color are still the old
+        // piggypal placeholders — docs/52 only settled the icon (Flowtab's
+        // wave mark), not the rest of branding/naming, which docs/00
+        // backlog now flags as more unresolved than docs/01 item 5's
+        // "parked" call suggested.
         name: 'piggypal',
         short_name: 'piggypal',
         description: 'Simple, light, private budgeting — type or say what you spent.',
@@ -35,8 +38,17 @@ export default defineConfig({
         background_color: '#eef0ea',
         display: 'standalone',
         icons: [
-          // TODO: replace with real PNG icons once branding is decided.
           { src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml' },
+          { src: 'icons/icon-48.webp', sizes: '48x48', type: 'image/webp' },
+          { src: 'icons/icon-72.webp', sizes: '72x72', type: 'image/webp' },
+          { src: 'icons/icon-96.webp', sizes: '96x96', type: 'image/webp' },
+          { src: 'icons/icon-128.webp', sizes: '128x128', type: 'image/webp' },
+          // 192/512 are the two sizes install prompts actually use, and the
+          // icon's design was verified to survive a circular safe-zone crop
+          // (docs/52), so "maskable" is genuinely safe here, not just copied.
+          { src: 'icons/icon-192.webp', sizes: '192x192', type: 'image/webp', purpose: 'any maskable' },
+          { src: 'icons/icon-256.webp', sizes: '256x256', type: 'image/webp' },
+          { src: 'icons/icon-512.webp', sizes: '512x512', type: 'image/webp', purpose: 'any maskable' },
         ],
       },
     }),

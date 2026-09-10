@@ -14,6 +14,28 @@ it needs doing.
 
 ## ⚪ Next
 
+- [ ] Native mobile shell (docs/52, 2026-09-10): `app/android/` and
+      `app/ios/` are scaffolded (Capacitor + `@powersync/capacitor`), but
+      nothing native has actually been built or run — this sandbox has no
+      Java/Android SDK/Xcode/CocoaPods at all. Real next steps, on the
+      user's own machine: open `android/` in Android Studio and
+      `ios/App/App.xcworkspace` in Xcode, build/run on a simulator or real
+      device, and specifically re-verify local read/write, background/
+      foreground behavior, and the P2P QR-pairing camera flow inside the
+      actual native WebView (none of that is provably working yet, just
+      configured correctly on paper).
+- [ ] Finish the Flowtab rename (docs/52 D195, 2026-09-10): the user
+      confirmed the app's real name is Flowtab and a real icon is now
+      built and wired in everywhere (native launcher icons, PWA manifest,
+      favicon, apple-touch-icon), but `vite.config.ts`'s manifest
+      `name`/`short_name`, `theme_color`/`background_color`,
+      `capacitor.config.ts`'s `appName`, and docs/51's Home wordmark
+      phrase pool all still say/reference "piggypal." The two untracked
+      landing-page explorations in the repo root (`sayslate-site/`,
+      `wealthkin-site/`) predate this confirmation and don't match it —
+      worth a look, but Flowtab is the confirmed name going forward, not
+      a third option to weigh.
+
 - [ ] Build docs/48's household profiles & devices design: a real
       `profiles`/`devices` schema (reusing existing ids, no data rewrite),
       the generalized "pick your profile" sign-in fork, QR device linking,

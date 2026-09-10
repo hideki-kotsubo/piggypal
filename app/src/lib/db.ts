@@ -1,4 +1,11 @@
-import { LogLevels, PowerSyncDatabase, type SyncStatus } from '@powersync/web';
+import { LogLevels, type SyncStatus } from '@powersync/web';
+// @powersync/capacitor (beta) auto-detects the runtime: native SQLite via
+// @capacitor-community/sqlite inside an actual Capacitor iOS/Android shell,
+// falling back to the same WA-SQLite path as @powersync/web in a plain
+// browser. Swapped in for docs/52 specifically to avoid a known bug where
+// OPFS access handles get closed when a Capacitor WebView is backgrounded —
+// the plain web SDK's storage isn't safe to use inside that shell.
+import { PowerSyncDatabase } from '@powersync/capacitor';
 import { useEffect, useState } from 'react';
 import { AppSchema } from './schema';
 import { PiggypalConnector } from './connector';
