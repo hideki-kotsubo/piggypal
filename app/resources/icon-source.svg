@@ -1,3 +1,8 @@
+<!-- Superseded 2026-09-14: the live app icon is now the "F" mark from
+     docs/logo/icon-suggestion-1.jpeg, rasterized into ../resources/icon.png
+     (no vector source exists for it — it's a raster suggestion, cropped/
+     padded, not hand-authored paths). Kept here for history; this file is
+     no longer what `capacitor-assets generate` reads. -->
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
