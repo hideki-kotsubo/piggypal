@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SaySlate — say it, it's on the slate</title>
+<meta name="description" content="SaySlate catches every expense, from a $4 coffee to a mortgage payment, spoken or typed in English or Portuguese — then shows you what it actually means: how this month compares, where you overspend, and whether that membership is still worth it.">
+<meta name="robots" content="noindex, nofollow">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SaySlate">
+<meta property="og:url" content="https://sayslate.piggypal.codexbase.dev/">
+<meta property="og:title" content="SaySlate — say it, it's on the slate">
+<meta property="og:description" content="Every expense, big or small, spoken or typed — then compared, forecast, and checked against what it's actually worth.">
+<meta property="og:image" content="https://sayslate.piggypal.codexbase.dev/og-image.png">
+<meta property="og:image:width" content="2400">
+<meta property="og:image:height" content="1260">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="SaySlate — say it, it's on the slate">
+<meta name="twitter:description" content="Every expense, big or small, spoken or typed — then compared, forecast, and checked against what it's actually worth.">
+<meta name="twitter:image" content="https://sayslate.piggypal.codexbase.dev/og-image.png">
+
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#E9EEF0">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#131A20">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231E2A33'/%3E%3Cpath d='M18 40 L34 20' stroke='%23C15B3A' stroke-width='7' stroke-linecap='round'/%3E%3Ccircle cx='44' cy='24' r='4' fill='%23F7F4EE'/%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #E9EEF0;
+    --surface: #F7F4EE;
+    --surface-2: #EFE9DD;
+    --ink: #1E2A33;
+    --ink-soft: #4F626F;
+    --line: #C9D2D6;
+    --accent: #C15B3A;
+    --accent-strong: #9B4630;
+    --accent-soft: #E7C4B6;
+    --good: #3F7A63;
+    --warn: #A8791F;
+    --shadow: 0 1px 2px rgba(30,42,51,0.06), 0 8px 24px rgba(30,42,51,0.06);
+
+    --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #131A20;
+      --surface: #1D262D;
+      --surface-2: #212C33;
+      --ink: #E9E4D8;
+      --ink-soft: #9FB0B8;
+      --line: #2E3940;
+      --accent: #E38257;
+      --accent-strong: #F3A47D;
+      --accent-soft: #4A362E;
+      --good: #6FBF9E;
+      --warn: #D9A94A;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #131A20;
+    --surface: #1D262D;
+    --surface-2: #212C33;
+    --ink: #E9E4D8;
+    --ink-soft: #9FB0B8;
+    --line: #2E3940;
+    --accent: #E38257;
+    --accent-strong: #F3A47D;
+    --accent-soft: #4A362E;
+    --good: #6FBF9E;
+    --warn: #D9A94A;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+  }
+
+  * { box-sizing: border-box; }
+  html { background: var(--paper); }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+  ::selection { background: var(--accent-soft); }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 clamp(20px, 5vw, 48px);
+  }
+
+  /* ---------- Nav ---------- */
+  nav.wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 28px;
+    padding-bottom: 28px;
+  }
+  .wordmark {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.35rem;
+    letter-spacing: -0.01em;
+  }
+  .wordmark em {
+    font-style: normal;
+    color: var(--accent-strong);
+  }
+  .nav-tag {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    border: 1px solid var(--line);
+    border-radius: 100px;
+    padding: 6px 14px;
+  }
+
+  /* ---------- Hero ---------- */
+  header.hero {
+    padding: clamp(24px, 6vw, 56px) 0 clamp(40px, 6vw, 72px);
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: clamp(32px, 5vw, 64px);
+    align-items: center;
+  }
+  @media (max-width: 860px) {
+    .hero-grid { grid-template-columns: 1fr; }
+  }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 14px;
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
+    line-height: 1.06;
+    letter-spacing: -0.015em;
+    margin: 0 0 20px;
+    text-wrap: balance;
+  }
+  h1 .accent { color: var(--accent-strong); }
+  .lede {
+    font-size: 1.09rem;
+    color: var(--ink-soft);
+    max-width: 46ch;
+    margin: 0 0 28px;
+  }
+  .cta-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .btn {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 13px 22px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--line);
+  }
+
+  /* ---------- Slate demo panel ---------- */
+  .slate-panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 20px 20px 16px;
+  }
+  .slate-panel-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 14px;
+    margin-bottom: 14px;
+    border-bottom: 1px dashed var(--line);
+  }
+  .mic-dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .mic-dot { animation: pulse 2.4s ease-in-out infinite; }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.55; transform: scale(0.82); }
+  }
+  .slate-panel-head span {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--ink-soft);
+    letter-spacing: 0.03em;
+  }
+  .entry {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 4px 12px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--line);
+    align-items: baseline;
+  }
+  .entry:last-child { border-bottom: none; }
+  .entry-mode {
+    font-size: 0.95rem;
+    line-height: 1;
+    padding-top: 2px;
+  }
+  .entry-said {
+    grid-column: 2;
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+    font-style: italic;
+  }
+  .entry-parsed {
+    grid-column: 2;
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    flex-wrap: wrap;
+    font-size: 0.92rem;
+  }
+  .entry-cat { color: var(--ink); font-weight: 500; }
+  .entry-amt {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    align-self: center;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- Section shared ---------- */
+  section { padding: clamp(48px, 7vw, 88px) 0; }
+  section + section { border-top: 1px solid var(--line); }
+  .section-head { max-width: 62ch; margin-bottom: clamp(28px, 4vw, 44px); }
+  h2 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(1.6rem, 3.2vw, 2.3rem);
+    line-height: 1.15;
+    margin: 0 0 14px;
+    text-wrap: balance;
+  }
+  .section-head p { color: var(--ink-soft); margin: 0; font-size: 1.02rem; }
+
+  /* ---------- Scale chart ---------- */
+  .scale-fig { width: 100%; }
+  .scale-fig svg { width: 100%; height: auto; display: block; }
+  .scale-caption {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+    margin-top: 10px;
+  }
+
+  /* ---------- Insight cards ---------- */
+  .insight-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 860px) { .insight-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .insight-grid { grid-template-columns: 1fr; } }
+  .insight-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .insight-card.wide { grid-column: span 2; }
+  @media (max-width: 560px) { .insight-card.wide { grid-column: span 1; } }
+  .insight-label {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .insight-stat {
+    font-family: var(--font-mono);
+    font-size: 1.7rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+  }
+  .insight-stat.good { color: var(--good); }
+  .insight-stat.warn { color: var(--warn); }
+  .insight-note { color: var(--ink-soft); font-size: 0.9rem; margin: 0; }
+
+  /* ---------- Facts row ---------- */
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+  @media (max-width: 760px) { .facts { grid-template-columns: 1fr; } }
+  .fact { padding-top: 4px; }
+  .fact .mark {
+    display: inline-block;
+    width: 22px; height: 2px;
+    background: var(--accent);
+    margin-bottom: 14px;
+  }
+  .fact h3 {
+    font-family: var(--font-body);
+    font-size: 1.02rem;
+    font-weight: 600;
+    margin: 0 0 8px;
+  }
+  .fact p { color: var(--ink-soft); font-size: 0.94rem; margin: 0; }
+
+  /* ---------- Footer / signup ---------- */
+  footer { padding: clamp(48px, 7vw, 88px) 0 clamp(32px, 5vw, 56px); }
+  .signup-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: clamp(28px, 5vw, 44px);
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 32px;
+    align-items: center;
+  }
+  @media (max-width: 760px) { .signup-card { grid-template-columns: 1fr; } }
+  .signup-form { display: flex; gap: 10px; flex-wrap: wrap; }
+  .signup-form input[type="email"] {
+    flex: 1 1 220px;
+    min-width: 0;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--ink);
+  }
+  .signup-form input[type="email"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .signup-note {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+    margin: 10px 0 0;
+    min-height: 1.2em;
+  }
+  .foot-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 40px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    color: var(--ink-soft);
+    font-size: 0.82rem;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .foot-bottom .wordmark { font-size: 1rem; }
+</style>
+</head>
+<body>
+
+<nav class="wrap">
+  <div class="wordmark">Say<em>Slate</em></div>
+  <div class="nav-tag">coming soon</div>
+</nav>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <p class="eyebrow">for households who actually want to know where it goes</p>
+      <h1>Say it. It lands<br>on the <span class="accent">slate</span>.</h1>
+      <p class="lede">Income's the easy part — a handful of lines a month. SaySlate is
+      built for the other side of the ledger: every rent payment, flight, and
+      tuition installment, right down to the coffee you forgot you bought Tuesday.</p>
+      <div class="cta-row">
+        <button class="btn" type="button" onclick="goToSignup()">Get early access</button>
+        <a class="btn btn-ghost" href="#insights">See what it tells you →</a>
+      </div>
+    </div>
+
+    <div class="slate-panel" aria-label="Example entry log">
+      <div class="slate-panel-head">
+        <span class="mic-dot" aria-hidden="true"></span>
+        <span>THE SLATE — LAST FEW ENTRIES</span>
+      </div>
+
+      <div class="entry">
+        <span class="entry-mode" title="spoken">🎙</span>
+        <span class="entry-said">&ldquo;coffee, four seventy five&rdquo;</span>
+        <span class="entry-amt">$4.75 CAD</span>
+      </div>
+      <div class="entry">
+        <span></span>
+        <span class="entry-parsed"><span class="entry-cat">Coffee &amp; Snacks</span></span>
+      </div>
+
+      <div class="entry">
+        <span class="entry-mode" title="spoken">🎙</span>
+        <span class="entry-said">&ldquo;aluguel, dois mil e trezentos reais&rdquo;</span>
+        <span class="entry-amt">R$2.300,00</span>
+      </div>
+      <div class="entry">
+        <span></span>
+        <span class="entry-parsed"><span class="entry-cat">Rent</span></span>
+      </div>
+
+      <div class="entry">
+        <span class="entry-mode" title="typed">⌨</span>
+        <span class="entry-said">&ldquo;uber home 22.50&rdquo;</span>
+        <span class="entry-amt">$22.50 CAD</span>
+      </div>
+      <div class="entry">
+        <span></span>
+        <span class="entry-parsed"><span class="entry-cat">Transport</span></span>
+      </div>
+
+      <div class="entry">
+        <span class="entry-mode" title="spoken">🎙</span>
+        <span class="entry-said">&ldquo;tuition installment eighteen forty&rdquo;</span>
+        <span class="entry-amt">$1,840.00 CAD</span>
+      </div>
+      <div class="entry">
+        <span></span>
+        <span class="entry-parsed"><span class="entry-cat">Tuition</span></span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="scale">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>From a $4 coffee to an $18,400 tuition bill</h2>
+      <p>Most budgeting apps are built for one or the other. The gap between
+      an everyday purchase and a semester payment is enormous — SaySlate
+      plots your whole range on one line, not two separate mental categories.</p>
+    </div>
+
+    <figure class="scale-fig">
+      <svg viewBox="0 0 900 170" role="img" aria-label="Logarithmic scale from $4.75 to $18,400 showing six example expenses">
+        <line x1="40" y1="90" x2="860" y2="90" stroke="var(--line)" stroke-width="1.5"/>
+        <!-- t positions computed on a log10 scale from 4 to 18400 -->
+        <!-- Coffee t=0.000 -->
+        <g>
+          <line x1="40" y1="82" x2="40" y2="98" stroke="var(--ink-soft)" stroke-width="1.5"/>
+          <circle cx="40" cy="90" r="5" fill="var(--accent)"/>
+          <text x="40" y="66" text-anchor="middle" font-family="var(--font-mono)" font-size="12" fill="var(--ink)">$4.75</text>
+          <text x="40" y="116" text-anchor="middle" font-family="var(--font-body)" font-size="12" fill="var(--ink-soft)">Coffee</text>
+        </g>
+        <!-- Streaming t=0.164 -->
+        <g>
+          <line x1="175" y1="82" x2="175" y2="98" stroke="var(--ink-soft)" stroke-width="1.5"/>
+          <circle cx="175" cy="90" r="5" fill="var(--ink-soft)"/>
+          <text x="175" y="66" text-anchor="middle" font-family="var(--font-mono)" font-size="12" fill="var(--ink)">$15.99</text>
+          <text x="175" y="116" text-anchor="middle" font-family="var(--font-body)" font-size="12" fill="var(--ink-soft)">Streaming</text>
+        </g>
+        <!-- Dining t=0.325 -->
+        <g>
+          <line x1="308" y1="82" x2="308" y2="98" stroke="var(--ink-soft)" stroke-width="1.5"/>
+          <circle cx="308" cy="90" r="5" fill="var(--ink-soft)"/>
+          <text x="308" y="66" text-anchor="middle" font-family="var(--font-mono)" font-size="12" fill="var(--ink)">$62</text>
+          <text x="308" y="116" text-anchor="middle" font-family="var(--font-body)" font-size="12" fill="var(--ink-soft)">Dining out</text>
+        </g>
+        <!-- Flights t=0.671 -->
+        <g>
+          <line x1="590" y1="98" x2="590" y2="82" stroke="var(--ink-soft)" stroke-width="1.5"/>
+          <circle cx="590" cy="90" r="5" fill="var(--ink-soft)"/>
+          <text x="590" y="66" text-anchor="middle" font-family="var(--font-mono)" font-size="12" fill="var(--ink)">$1,150</text>
+          <text x="590" y="116" text-anchor="middle" font-family="var(--font-body)" font-size="12" fill="var(--ink-soft)">Flights</text>
+        </g>
+        <!-- Rent t=0.754 -->
+        <g>
+          <line x1="658" y1="82" x2="658" y2="98" stroke="var(--ink-soft)" stroke-width="1.5"/>
+          <circle cx="658" cy="90" r="5" fill="var(--ink-soft)"/>
+          <text x="658" y="140" text-anchor="middle" font-family="var(--font-mono)" font-size="12" fill="var(--ink)">$2,300</text>
+          <text x="658" y="156" text-anchor="middle" font-family="var(--font-body)" font-size="12" fill="var(--ink-soft)">Rent</text>
+        </g>
+        <!-- Tuition t=1.000 -->
+        <g>
+          <line x1="860" y1="82" x2="860" y2="98" stroke="var(--ink-soft)" stroke-width="1.5"/>
+          <circle cx="860" cy="90" r="5" fill="var(--accent)"/>
+          <text x="822" y="66" text-anchor="middle" font-family="var(--font-mono)" font-size="12" fill="var(--ink)">$18,400</text>
+          <text x="822" y="116" text-anchor="middle" font-family="var(--font-body)" font-size="12" fill="var(--ink-soft)">Tuition / semester</text>
+        </g>
+      </svg>
+    </figure>
+    <p class="scale-caption">log scale — six real category sizes, one household, one year</p>
+  </div>
+</section>
+
+<section id="insights">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Not just what you spent — what it means</h2>
+      <p>A sample week from a real-shaped household. This is what the same
+      six numbers look like once SaySlate has a few months of entries to
+      compare against.</p>
+    </div>
+
+    <div class="insight-grid">
+      <div class="insight-card">
+        <span class="insight-label">Aug vs. Jul</span>
+        <span class="insight-stat good">−12%</span>
+        <p class="insight-note">Less on dining out, about the same on transport.</p>
+      </div>
+      <div class="insight-card">
+        <span class="insight-label">Suggested budget · next 6 months</span>
+        <span class="insight-stat">$3,150<span style="font-size:1rem;color:var(--ink-soft);">/mo</span></span>
+        <p class="insight-note">Weighted against your last two tuition cycles, not just last month.</p>
+      </div>
+      <div class="insight-card">
+        <span class="insight-label">Weekend pattern</span>
+        <span class="insight-stat warn">2.3×</span>
+        <p class="insight-note">Weekend spend vs. an average weekday — mostly Friday night through Sunday brunch.</p>
+      </div>
+      <div class="insight-card wide">
+        <span class="insight-label">Most frequent category</span>
+        <span class="insight-stat">Coffee &amp; Snacks · 34<span style="font-size:1rem;color:var(--ink-soft);"> purchases this quarter</span></span>
+        <p class="insight-note">Not your largest line item — your most frequent one. Different problem, different fix.</p>
+      </div>
+      <div class="insight-card">
+        <span class="insight-label">Worth keeping?</span>
+        <span class="insight-stat warn">2×</span>
+        <p class="insight-note">Peloton membership, $44/mo, used twice in 90 days — cheaper to cancel and pay per class.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="built-for">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Built for exactly this household</h2>
+    </div>
+    <div class="facts">
+      <div class="fact">
+        <span class="mark"></span>
+        <h3>Speaks both languages</h3>
+        <p>Português ou inglês — say it however it comes out. Rent, aluguel,
+        it lands in the same place.</p>
+      </div>
+      <div class="fact">
+        <span class="mark"></span>
+        <h3>Real multi-currency</h3>
+        <p>CAD, BRL, whatever you're actually holding — kept side by side,
+        never quietly blended into one converted number.</p>
+      </div>
+      <div class="fact">
+        <span class="mark"></span>
+        <h3>Lives on your device first</h3>
+        <p>Every entry is written locally before anything else happens.
+        Sync is something you opt into, not something the app assumes.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="signup-card">
+      <div>
+        <h2 style="margin-bottom:8px;">Be first to try it</h2>
+        <p style="color:var(--ink-soft); margin:0;">SaySlate isn't open yet. Leave your email and
+        we'll let you know the moment early access starts — no spam, just the one message.</p>
+      </div>
+      <div>
+        <form class="signup-form" onsubmit="return handleSignup(event)">
+          <input id="signup-email" type="email" placeholder="you@example.com" required aria-label="Email address">
+          <button class="btn" type="submit">Notify me</button>
+        </form>
+        <p class="signup-note" id="signup-note"></p>
+      </div>
+    </div>
+
+    <div class="foot-bottom">
+      <div class="wordmark">Say<em>Slate</em></div>
+      <div>&copy; 2026 SaySlate</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  function goToSignup() {
+    var field = document.getElementById('signup-email');
+    field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    field.focus({ preventScroll: true });
+  }
+
+  function handleSignup(e) {
+    e.preventDefault();
+    var note = document.getElementById('signup-note');
+    var email = document.getElementById('signup-email').value;
+    note.textContent = "Thanks — you'll be the first to know (" + email + ").";
+    document.getElementById('signup-email').value = '';
+    return false;
+  }
+</script>
+</body>
+</html>
