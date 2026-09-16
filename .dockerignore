@@ -1,0 +1,27 @@
+# Keeps the api/ image build context small — the compose build context
+# is the repo root (npm workspaces need root package.json/package-lock.json
+# to resolve correctly), so without this every native mobile build tree,
+# every node_modules, and the whole git history would get sent to the
+# Docker daemon on every build.
+
+node_modules
+**/node_modules
+
+dist
+dist-ssr
+**/dist
+
+.git
+
+# Native mobile shells (docs/52) — irrelevant to the api/ image
+app/android
+app/ios
+
+# Docs/design assets — large, irrelevant to the api/ image
+docs/artifacts
+docs/logo
+docs/prototypes
+
+*.log
+.DS_Store
+.claude
