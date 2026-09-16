@@ -1,0 +1,138 @@
+# All-in-one self-hosted stack: Postgres + api (Node/Express backend) +
+# PowerSync Service, on one shared internal Docker network — for standing
+# up the whole backend fresh on a single machine with one command.
+#
+# Distinct from deploy/powersync/docker-compose.yaml, which assumes an
+# already-existing Postgres on an external `docker-stack_backend` network
+# (the current live production setup, docs/39) — that file is untouched.
+# This one is a self-contained alternative for a fresh deploy. See
+# README.md for when to use which.
+#
+# Usage:
+#   cd deploy
+#   cp .env.example .env
+#   # fill in .env — see its own comments, especially the JWT keypair
+#   docker compose up -d --build
+#   docker compose logs -f
+
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    # wal_level=logical is required for PowerSync's replication and is a
+    # restart-required setting on the stock image's default (`replica`) —
+    # set here so a fresh stack never hits that pitfall on first boot.
+    command: ["postgres", "-c", "wal_level=logical"]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-flowtab}
+      POSTGRES_USER: ${POSTGRES_USER:-flowtab}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set a real password in .env}
+      # The stock image defaults to scram-sha-256 on 14+, which PowerSync's
+      # Postgres client (pgwire) failed to authenticate against on the
+      # existing production deploy — a real client-library incompatibility,
+      # not a config mistake (see deploy/powersync/README.md's "Real
+      # problems hit and fixed" #1). Set to md5 here so a fresh stack
+      # doesn't hit the exact same already-diagnosed bug.
+      POSTGRES_HOST_AUTH_METHOD: md5
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./postgres-init/02-create-publication.sql:/docker-entrypoint-initdb.d/02-create-publication.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-flowtab}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # No published host port by default — only api/ and powersync need to
+    # reach it, both already on this compose's own network. Uncomment to
+    # reach it directly from the host (e.g. one-off psql access):
+    # ports:
+    #   - "5432:5432"
+
+  api:
+    build:
+      context: ..
+      dockerfile: api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: ${API_PORT:-3002}
+      DATABASE_URL: postgres://${POSTGRES_USER:-flowtab}:${POSTGRES_PASSWORD:?set a real password in .env}@postgres:5432/${POSTGRES_DB:-flowtab}
+      # RS256 keypair for signAccessToken/getJwks (docs/05 D13, api/jwt.ts).
+      # Generate with: npm run -w api generate-jwt-keys
+      JWT_PRIVATE_KEY: "${JWT_PRIVATE_KEY:?generate with: npm run -w api generate-jwt-keys}"
+      JWT_PUBLIC_KEY: "${JWT_PUBLIC_KEY:?generate with: npm run -w api generate-jwt-keys}"
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3001}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3001}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      # Unset here — sendMagicLinkEmail logs the link to the console
+      # instead of sending real email, same safe fallback as local dev.
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM_ADDRESS: ${RESEND_FROM_ADDRESS:-}
+    ports:
+      - "${API_PORT:-3002}:${API_PORT:-3002}"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:' + (process.env.PORT || 3002) + '/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  powersync:
+    image: journeyapps/powersync-service:latest
+    restart: unless-stopped
+    command: ["start", "-r", "unified"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    environment:
+      POWERSYNC_CONFIG_PATH: /config/service.yaml
+      # ~80% of the container's memory limit — adjust to match whatever
+      # this host actually gives the container.
+      NODE_OPTIONS: --max-old-space-size=1000
+      PS_DATA_SOURCE_URI: postgres://${POSTGRES_USER:-flowtab}:${POSTGRES_PASSWORD:?set a real password in .env}@postgres:5432/${POSTGRES_DB:-flowtab}
+      PS_STORAGE_SOURCE_URI: postgres://${POSTGRES_USER:-flowtab}:${POSTGRES_PASSWORD:?set a real password in .env}@postgres:5432/${POSTGRES_DB:-flowtab}
+      PS_DB_SSLMODE: disable
+      # Internal container-to-container URL by default — api and powersync
+      # share this compose's own network, so no public domain/DNS record
+      # is needed just for PowerSync to fetch the JWKS and verify client
+      # JWTs (the exact DNS dependency that broke the piggypal->flowtab
+      # rebrand's separately-hosted setup). Only point this at a public
+      # HTTPS URL if PowerSync can't reach the api container directly —
+      # e.g. running this compose's services split across hosts. Hardcodes
+      # port 3002 in the default (not ${API_PORT}, to avoid relying on
+      # nested variable interpolation) — if you change API_PORT, set
+      # PS_JWKS_URL explicitly in .env to match.
+      PS_JWKS_URL: ${PS_JWKS_URL:-http://api:3002/.well-known/jwks.json}
+      # PowerSync's own admin/management API auth — distinct from the
+      # client_auth above, unrelated to end-user JWTs.
+      PS_ADMIN_API_TOKEN: "${PS_ADMIN_API_TOKEN:?generate with: openssl rand -hex 32}"
+      PS_PORT: ${PS_PORT:-8090}
+    volumes:
+      - ./powersync/service.yaml:/config/service.yaml:ro
+      - ./powersync/sync-config.yaml:/config/sync-config.yaml:ro
+    ports:
+      - "${PS_PORT:-8090}:${PS_PORT:-8090}"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:${PS_PORT:-8090}/probes/liveness').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 1s
+      retries: 15
+
+volumes:
+  pgdata:
