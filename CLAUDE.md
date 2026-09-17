@@ -12,9 +12,8 @@ that discussion lives in `docs/` — read `docs/01-scope-and-decisions.md` first
 The local-only vertical slice is real and working, not just scaffolded.
 `app/` (React/Vite PWA) and `api/` (Node/TS/Express) are npm workspaces at
 the root; git has real commit history now (not just an initial commit).
-`db/schema.sql` has the current Postgres schema — still only exercised via
-`docker compose up` for local dev, not yet verified against a real synced
-deployment.
+`db/schema.sql` has the current Postgres schema — for local dev, spin it up
+via `deploy/docker-compose.yaml` (see `deploy/README.md`).
 
 `app/` runs on real local SQLite (PowerSync web SDK / wa-sqlite over OPFS,
 `app/src/lib/db.ts`) in **local-only mode** — no connector is passed to
@@ -60,7 +59,7 @@ npm install        # from repo root — workspaces handle both app/ and api/
 npm run dev:app     # Vite dev server — :3001, exposed via nginx-proxy-manager
                      # at app.piggypal.codexbase.dev (allowedHosts set accordingly)
 npm run dev:api      # API with hot reload (tsx watch) — :3000
-docker compose up    # local Postgres, schema auto-loaded from db/schema.sql
+cd deploy && docker compose up   # local Postgres+api+PowerSync stack, see deploy/README.md
 ```
 
 ## Owner context
