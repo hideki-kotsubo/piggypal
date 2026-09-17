@@ -1,12 +1,13 @@
 # All-in-one self-hosted stack: Postgres + api (Node/Express backend) +
-# PowerSync Service, on one shared internal Docker network — for standing
-# up the whole backend fresh on a single machine with one command.
+# PowerSync Service — for standing up the whole backend fresh on a single
+# machine with one command.
 #
 # Distinct from deploy/powersync/docker-compose.yaml, which assumes an
-# already-existing Postgres on an external `docker-stack_backend` network
-# (the current live production setup, docs/39) — that file is untouched.
-# This one is a self-contained alternative for a fresh deploy. See
-# README.md for when to use which.
+# already-existing Postgres (the current live production setup, docs/39) —
+# that file is untouched. This one is a self-contained alternative for a
+# fresh deploy: it creates its own Postgres, but joins the same host-level
+# docker-stack frontend/backend networks (below) so nginx-proxy-manager can
+# still reach api/powersync directly. See README.md for when to use which.
 #
 # Usage:
 #   cd deploy
@@ -15,10 +16,26 @@
 #   docker compose up -d --build
 #   docker compose logs -f
 
+# Joins the host's existing docker-stack frontend/backend networks (the same
+# stack deploy/powersync/docker-compose.yaml already joins as
+# docker-stack_backend) instead of an isolated one: api/powersync need
+# `frontend` so nginx-proxy-manager can reach them by container name and
+# proxy a custom domain to each; postgres deliberately stays backend-only,
+# never reachable from the frontend network.
+networks:
+  frontend:
+    name: docker-stack_frontend
+    external: true
+  backend:
+    name: docker-stack_backend
+    external: true
+
 services:
   postgres:
     image: postgres:17
     restart: unless-stopped
+    networks:
+      - backend
     # wal_level=logical is required for PowerSync's replication and is a
     # restart-required setting on the stock image's default (`replica`) —
     # set here so a fresh stack never hits that pitfall on first boot.
@@ -71,8 +88,11 @@ services:
       # instead of sending real email, same safe fallback as local dev.
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       RESEND_FROM_ADDRESS: ${RESEND_FROM_ADDRESS:-}
-    ports:
-      - "${API_PORT:-3002}:${API_PORT:-3002}"
+    # No published host port — reachable only via nginx-proxy-manager over
+    # the `frontend` network (same reasoning as postgres's comment above).
+    networks:
+      - frontend
+      - backend
     healthcheck:
       test:
         [
@@ -120,8 +140,11 @@ services:
     volumes:
       - ./powersync/service.yaml:/config/service.yaml:ro
       - ./powersync/sync-config.yaml:/config/sync-config.yaml:ro
-    ports:
-      - "${PS_PORT:-8090}:${PS_PORT:-8090}"
+    # No published host port — reachable only via nginx-proxy-manager over
+    # the `frontend` network (same reasoning as postgres's comment above).
+    networks:
+      - frontend
+      - backend
     healthcheck:
       test:
         [

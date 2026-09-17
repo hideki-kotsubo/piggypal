@@ -2,10 +2,16 @@
 
 ## Option A: `docker-compose.yaml` (this directory) — fresh, self-contained stack
 
-Postgres + `api` (built from source) + PowerSync Service, all in one file,
-on one shared internal network. Use this to stand up the whole backend on
-a clean machine with one command. Nothing here talks to any pre-existing
-container — it creates its own Postgres with its own named volume.
+Postgres + `api` (built from source) + PowerSync Service, all in one file.
+Use this to stand up the whole backend on a clean machine with one command.
+It creates its own Postgres with its own named volume — the one thing it
+does expect to already exist is the host's `docker-stack_frontend` /
+`docker-stack_backend` Docker networks (same ones `powersync/docker-compose.yaml`
+already joins as `docker-stack_backend`, below): `api` and `powersync` join
+both so nginx-proxy-manager, running on `docker-stack_frontend`, can reach
+them directly by container name; `postgres` joins `backend` only. If your
+host's networks are named differently, update the `networks:` block at the
+top of `docker-compose.yaml` to match (`docker network ls` to check).
 
 ```bash
 cd deploy
@@ -48,12 +54,14 @@ problems hit and fixed"):
 Still manual, same as any fresh deploy:
 - A real JWT keypair (never generated at container boot, deliberately —
   see `api/src/jwt.ts`'s comment on why).
-- Whatever reverse proxy exposes `api` (port 3002) and `powersync` (port
-  8090) publicly, if you need that — see the root `website`/`app` nginx
-  configs for the existing pattern. Not needed at all if `app/` is
+- `api`/`powersync` publish no host port by design (only reachable over
+  `docker-stack_frontend`) — in nginx-proxy-manager's UI, add a proxy host
+  per public domain pointing at the container name/port directly (e.g.
+  `http://api:3002`, `http://powersync:8090`), same as any other container
+  already proxied on that network. Not needed at all if `app/` is
   configured to reach them by internal container address instead.
 - `app/`'s own `VITE_API_BASE_URL` / `VITE_POWERSYNC_URL` build-time env
-  vars, pointed at wherever you expose these two services.
+  vars, pointed at whichever public domains you give them above.
 
 ## Option B: `powersync/` — PowerSync only, against an existing Postgres
 
