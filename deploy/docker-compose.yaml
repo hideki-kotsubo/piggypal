@@ -1,13 +1,7 @@
-# All-in-one self-hosted stack: Postgres + api (Node/Express backend) +
-# PowerSync Service — for standing up the whole backend fresh on a single
-# machine with one command.
-#
-# Distinct from deploy/powersync/docker-compose.yaml, which assumes an
-# already-existing Postgres (the current live production setup, docs/39) —
-# that file is untouched. This one is a self-contained alternative for a
-# fresh deploy: it creates its own Postgres, but joins the same host-level
-# docker-stack frontend/backend networks (below) so nginx-proxy-manager can
-# still reach api/powersync directly. See README.md for when to use which.
+# The one deployment for the whole backend: Postgres + api (Node/Express
+# backend) + PowerSync Service, standing up fresh on a single machine with
+# one command. `service.yaml`/`sync-config.yaml` in this directory are
+# PowerSync's own config, mounted read-only below.
 #
 # Usage:
 #   cd deploy
@@ -16,12 +10,11 @@
 #   docker compose up -d --build
 #   docker compose logs -f
 
-# Joins the host's existing docker-stack frontend/backend networks (the same
-# stack deploy/powersync/docker-compose.yaml already joins as
-# docker-stack_backend) instead of an isolated one: api/powersync need
-# `frontend` so nginx-proxy-manager can reach them by container name and
-# proxy a custom domain to each; postgres deliberately stays backend-only,
-# never reachable from the frontend network.
+# Joins the host's existing docker-stack frontend/backend networks instead
+# of an isolated one: api/powersync need `frontend` so nginx-proxy-manager
+# can reach them by container name and proxy a custom domain to each;
+# postgres deliberately stays backend-only, never reachable from the
+# frontend network.
 networks:
   frontend:
     name: docker-stack_frontend
@@ -46,11 +39,10 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-flowtab}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set a real password in .env}
       # The stock image defaults to scram-sha-256 on 14+, which PowerSync's
-      # Postgres client (pgwire) failed to authenticate against on the
-      # existing production deploy — a real client-library incompatibility,
-      # not a config mistake (see deploy/powersync/README.md's "Real
-      # problems hit and fixed" #1). Set to md5 here so a fresh stack
-      # doesn't hit the exact same already-diagnosed bug.
+      # Postgres client (pgwire) failed to authenticate against when this
+      # was first deployed as a separate standalone stack — a real
+      # client-library incompatibility, not a config mistake. Set to md5
+      # here so this consolidated stack doesn't hit the same bug again.
       POSTGRES_HOST_AUTH_METHOD: md5
     volumes:
       - pgdata:/var/lib/postgresql/data
