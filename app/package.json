@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "sync:android": "node scripts/sync-native-version.mjs android && npx cap sync android",
+    "sync:ios": "node scripts/sync-native-version.mjs ios && npx cap sync ios"
   },
   "dependencies": {
     "@capacitor-community/sqlite": "^8.1.1",
