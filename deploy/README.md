@@ -145,7 +145,7 @@ Point `A` records for every domain used above (`api.*`, `powersync.*`,
 ### 7. Smoke test
 
 Sign in through the real UI, confirm a magic-link log appears in
-`docker compose logs api` (or a real email if `RESEND_API_KEY` is set in
+`docker compose logs api` (or a real email if `SMTP2GO_API_KEY` is set in
 `deploy/.env`), click through, and confirm PowerSync sync connects with
 no 401s in `docker compose logs powersync`.
 
@@ -176,7 +176,7 @@ npm run -w api generate-jwt-keys
 #    paste the two printed lines into .env as-is (already \n-escaped)
 #  - APP_BASE_URL / CORS_ORIGIN — wherever app/'s built static files
 #    (app/dist) end up served from
-#  - RESEND_API_KEY — optional; unset just logs magic links instead of
+#  - SMTP2GO_API_KEY — optional; unset just logs magic links instead of
 #    emailing them, fine for a first smoke test
 
 docker compose up -d --build

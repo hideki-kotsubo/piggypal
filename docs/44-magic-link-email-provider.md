@@ -1,4 +1,4 @@
-# 44 — Magic-Link Email Provider: ACS Implemented, Then Swapped to Resend
+# 44 — Magic-Link Email Provider: ACS → Resend → SMTP2GO
 
 ## What this closes
 
@@ -79,3 +79,41 @@ whenever the user creates a Resend account and sets `RESEND_API_KEY`/
   standing constraint).
 
 **2026-08-22.**
+
+## Revised 2026-09-21: swapped to SMTP2GO
+
+At the user's request, `resend` (npm) removed, `sendMagicLinkEmail`
+rewritten against SMTP2GO's HTTP API (`POST
+https://api.smtp2go.com/v3/email/send`, plain `fetch`, no new
+dependency — chosen over SMTP2GO's SMTP-relay option specifically to
+avoid pulling in `nodemailer` for a single call site). Same
+adapter-boundary claim proven a second time: no changes to
+`routes.ts`'s call site, only `email.ts`'s body and the two env var
+names.
+
+- `RESEND_API_KEY`/`RESEND_FROM_ADDRESS` → `SMTP2GO_API_KEY`/
+  `SMTP2GO_FROM_ADDRESS` across `api/.env.example`, `deploy/.env.example`,
+  `deploy/docker-compose.yaml`, and `deploy/README.md`. Unset-key →
+  logs-the-link fallback is unchanged.
+- SMTP2GO's send response is HTTP 200 with a `data.error` field (or
+  `data.failed > 0`) on a rejected send, not a non-2xx status or a
+  Resend-style `{ error }` object — `sendMagicLinkEmail` checks
+  `result.data?.error`/`succeeded` explicitly and throws, same
+  don't-swallow-a-failed-send reasoning as the Resend/ACS versions.
+- One real difference from Resend worth flagging: SMTP2GO has no
+  zero-setup onboarding sender like `onboarding@resend.dev` — a verified
+  sender/domain has to exist under smtp2go.com before
+  `SMTP2GO_FROM_ADDRESS` will work, even for a first test send.
+- docs/45's click-tracking lesson (Resend's Amazon SES routing
+  auto-consumed the single-use magic-link token) isn't SMTP2GO-specific,
+  but the same hazard applies to any provider with link/click tracking on
+  by default — worth checking SMTP2GO's dashboard settings for this
+  address once a real send is attempted, not yet verified either way.
+
+**Not verified: an actual real send through SMTP2GO.** No real
+`SMTP2GO_API_KEY` exists in this session — `api/.env`'s key was left
+blank (same safe fallback as before), so only the logs-the-link path has
+been exercised. Next real step is the user creating a SMTP2GO account,
+verifying a sender/domain, and setting `SMTP2GO_API_KEY`/
+`SMTP2GO_FROM_ADDRESS` for real (locally in `api/.env`, and eventually on
+the real `api-beta` host per docs/39).
