@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 import { connectSync, db } from '../lib/db';
 import { formatDateTime, nowUtc } from '../lib/format';
 import { getLocalUserId } from '../lib/identity';
@@ -315,6 +316,20 @@ export function AuthVerifyScreen() {
         <div className="qr-stage">
           <div className="confirm-check">✓</div>
           <p className="qr-caption">Signed in. Sync will continue in the background.</p>
+          {/* Only a plain browser tab can land here — the native app
+              intercepts the magic link before this screen ever loads in a
+              browser (main.tsx's appUrlOpen listener), and there's no
+              equivalent interception on iOS for a home-screen-installed
+              PWA (Apple doesn't extend Universal Links to those) — so a
+              tab is exactly the case where this device might have a
+              separate home-screen icon it should switch back to. Sign-in
+              still applies there regardless, since the icon and this tab
+              share the same origin storage. */}
+          {!Capacitor.isNativePlatform() && !window.matchMedia('(display-mode: standalone)').matches && (
+            <p className="qr-caption">
+              If you've added Flowtab to your home screen, you can close this tab and open it from there.
+            </p>
+          )}
           <button className="save-btn" onClick={() => navigate('/settings')}>
             Done
           </button>
