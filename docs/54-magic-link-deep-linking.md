@@ -82,25 +82,70 @@ constraint docs/39 already flagged for Stripe/email-provider accounts):
   (`android:autoVerify="true"`, `<data android:scheme="https"
   android:host="<app-domain>" android:pathPrefix="/auth/verify"/>`) —
   not added yet. Only a bare `MAIN`/`LAUNCHER` intent-filter exists today.
-- **The production app domain itself** — still undecided (docs/39's own
-  open question). Every value above (`appID`'s domain half, the
-  intent-filter's `android:host`, and where the two `.well-known` files
-  actually need to be hosted) depends on it.
-- **Confirming `.well-known/*` actually reaches the browser as static
-  files** on whatever host ends up serving `app.*` — a common footgun is
-  an SPA catch-all rewrite rule in nginx-proxy-manager sending
-  `/.well-known/apple-app-site-association` to `index.html` instead of
-  serving the real file. Not checked against the real host config yet.
+- ~~The production app domain itself~~ — **resolved, 2026-09-22**:
+  `app.myflowtab.com` is live (docs/39's open question, at least for this
+  purpose), fronted by Cloudflare in front of the host-level nginx above.
+  This is the domain every value above (`appID`'s domain half, the
+  intent-filter's `android:host`) needs to reference. One thing to watch
+  once real Universal/App Link testing starts: Cloudflare's own
+  protections (Bot Fight Mode, WAF rules) sit in front of Apple's/
+  Google's AASA-fetching crawlers too — not expected to be a problem
+  (both `.well-known` files already fetch cleanly via plain `curl`), but
+  unverified against Apple's/Google's actual verification fetchers
+  specifically, which is a separate thing from a browser or curl request
+  succeeding.
+- ~~Confirming `.well-known/*` actually reaches the browser as static
+  files~~ — **done, 2026-09-22**: `app.myflowtab.com` turned out to be a
+  host-level nginx config (not proxied through nginx-proxy-manager,
+  fronted by Cloudflare), serving `app/dist` directly. Its `location /`'s
+  `try_files $uri $uri/ /index.html;` was indeed swallowing
+  `/.well-known/*` into the SPA fallback at first — fixed with an
+  explicit `location ^~ /.well-known/ { default_type application/json;
+  try_files $uri =404; }` block, high-priority-matched ahead of the
+  catch-all. A second real issue surfaced once that was in place: the
+  location block started returning a clean `404` instead of falling back
+  to `index.html`, revealing that the deployed `dist/` on the host
+  predated these two files (a stale build, not a config bug) — rebuilding
+  and redeploying fixed it. Both files now confirmed live with `curl -I`:
+  `200`, `content-type: application/json`, non-zero `content-length`, for
+  both `apple-app-site-association` and `assetlinks.json`.
+
+## A real gotcha hit deploying this: stale OPFS lock after a redeploy
+
+Right after the nginx fix and redeploy above, the app got stuck showing
+loading skeletons forever in one already-open Chrome profile — full
+`index.html`/JS/CSS loaded fine (confirmed in Network tab: `200` on all
+8 shell requests), but **zero requests for the SQLite WASM engine, its
+worker, or any VFS chunk** ever fired, and the Console stayed completely
+empty. Not a server or deploy bug: an already-open tab/window from
+before the redeploy was still holding an exclusive OPFS lock on the
+local SQLite file (docs/01 D1's on-device storage) — OPFS access
+handles are exclusive per origin, so a new tab's attempt to open the
+same file just hangs with no error and no timeout, since "Clear site
+data" wipes storage but can't force-close another tab's already-open
+in-memory handle. Confirmed by elimination: an incognito window (fresh
+storage partition, no lock contention) loaded fine the whole time.
+**Fixed by fully quitting Chrome** (not just closing the tab/window —
+a lingering service worker/background process can keep the handle
+alive) and reopening fresh.
+
+Worth knowing for any future redeploy during active testing: if the app
+gets stuck on loading skeletons with a clean Network tab and empty
+Console, check for other open tabs/windows on the same origin before
+assuming the deploy broke something.
 
 ## Next steps, in order
 
-1. Decide the production app domain (docs/39).
+1. ~~Decide the production app domain~~ — done, `app.myflowtab.com`.
 2. User creates the Apple Developer (and, if needed, Google Play)
    accounts.
 3. Replace both `.well-known` placeholder files with real values (Team
-   ID; real release cert's SHA256 fingerprint).
+   ID; real release cert's SHA256 fingerprint) and redeploy — same
+   rebuild-and-redeploy step already exercised for real getting the
+   placeholder files live.
 4. Add the Associated Domains entitlement (iOS, in Xcode) and the App
-   Links intent-filter (Android, `AndroidManifest.xml`).
+   Links intent-filter (Android, `AndroidManifest.xml`), both pointed at
+   `app.myflowtab.com`.
 5. Build and install a real signed app on each platform (TestFlight for
    iOS; a signed APK/AAB, or Play Store, for Android) and verify a real
    magic-link tap actually opens it — nothing above has been exercised
@@ -111,9 +156,16 @@ constraint docs/39 already flagged for Stripe/email-provider accounts):
 `tsc -b`/`vite build` clean, `vitest run` 63/63 passed, `oxlint` clean
 (one pre-existing warning in `store.tsx`, unrelated to this change). The
 built `manifest.webmanifest` and `dist/.well-known/*` were both checked
-directly against the build output. **Not verified**: an actual Universal
-Link or App Link opening a real installed app — no native build has ever
-been produced in this sandbox (docs/52's own standing note: no Xcode/
-Android SDK available here).
+directly against the build output. **2026-09-22, against the real
+production host**: both `.well-known` files confirmed live at
+`https://app.myflowtab.com/.well-known/{apple-app-site-association,assetlinks.json}`
+via `curl -I` — `200`, `content-type: application/json`, non-zero
+`content-length` for both, through Cloudflare, after fixing the host
+nginx's SPA-catch-all swallowing them and redeploying a `dist/` that
+actually included the two files. **Still not verified**: an actual
+Universal Link or App Link opening a real installed app — no native
+build has ever been produced in this sandbox (docs/52's own standing
+note: no Xcode/Android SDK available here), and the two files still hold
+placeholder values, not a real Team ID or cert fingerprint.
 
-**2026-09-21.**
+**2026-09-21, revised 2026-09-22.**
