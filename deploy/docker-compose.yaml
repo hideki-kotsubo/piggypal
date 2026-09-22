@@ -33,6 +33,7 @@ networks:
 services:
   postgres:
     image: postgres:17
+    container_name: flowtab-postgres
     restart: unless-stopped
     networks:
       - backend
@@ -70,6 +71,7 @@ services:
     build:
       context: ..
       dockerfile: api/Dockerfile
+    container_name: flowtab-api
     restart: unless-stopped
     depends_on:
       postgres:
@@ -107,6 +109,7 @@ services:
 
   powersync:
     image: journeyapps/powersync-service:latest
+    container_name: flowtab-powersync
     restart: unless-stopped
     command: ["start", "-r", "unified"]
     depends_on:
