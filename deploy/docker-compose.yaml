@@ -88,8 +88,8 @@ services:
       COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
       # Unset here — sendMagicLinkEmail logs the link to the console
       # instead of sending real email, same safe fallback as local dev.
-      RESEND_API_KEY: ${RESEND_API_KEY:-}
-      RESEND_FROM_ADDRESS: ${RESEND_FROM_ADDRESS:-}
+      SMTP2GO_API_KEY: ${SMTP2GO_API_KEY:-}
+      SMTP2GO_FROM_ADDRESS: ${SMTP2GO_FROM_ADDRESS:-}
     # No published host port — reachable only via nginx-proxy-manager over
     # the `frontend` network (same reasoning as postgres's comment above).
     networks:
