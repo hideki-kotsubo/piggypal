@@ -36,6 +36,13 @@ export default defineConfig({
         theme_color: '#3f7d69',
         background_color: '#eef0ea',
         display: 'standalone',
+        // Explicit rather than left to VitePWA's defaults — an unambiguous
+        // scope/start_url/id is what Android's link-capturing (opening a
+        // magic-link URL into the installed PWA instead of a bare Chrome
+        // tab) keys off of.
+        id: '/',
+        start_url: '/',
+        scope: '/',
         icons: [
           { src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml' },
           { src: 'icons/icon-48.webp', sizes: '48x48', type: 'image/webp' },

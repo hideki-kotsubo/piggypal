@@ -1,6 +1,8 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { App as CapacitorApp } from '@capacitor/app'
+import { Capacitor } from '@capacitor/core'
 import './styles/tokens.css'
 import './index.css'
 import './styles/home.css'
@@ -19,6 +21,21 @@ import { PairingScreen } from './components/PairingScreen'
 import { ProfilesScreen } from './components/ProfilesScreen'
 import { AboutScreen } from './components/AboutScreen'
 import { AuthVerifyScreen } from './components/AuthVerifyScreen'
+
+// Universal Links (iOS) / App Links (Android) hand the tapped magic-link's
+// full https://<app-domain>/... URL to the native shell here — this app
+// always runs from its own bundled webDir (capacitor:// on iOS,
+// https://localhost on Android), never that host, so only the path+query
+// are meaningful. A full reassignment (not react-router's navigate) is
+// deliberate: this fires before React has necessarily mounted anything
+// meaningful yet on a cold app-open via link, and the app's local-first
+// SQLite (db.ts) makes a fresh load cheap and safe either way.
+if (Capacitor.isNativePlatform()) {
+  void CapacitorApp.addListener('appUrlOpen', ({ url }) => {
+    const { pathname, search } = new URL(url)
+    window.location.href = pathname + search
+  })
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
