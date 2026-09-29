@@ -1,12 +1,20 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { ACCOUNT_PICKER_SCALE_THRESHOLD, guessDeviceLabel, useAccountPickerMode, useDeviceLabel, useThemeMode } from '../lib/settings';
 import { usePairedPeers } from '../lib/peers';
 import { hasHousehold, householdMembers, useHouseholdPeers } from '../lib/household';
 import { PayerBadge } from './PayerBadge';
 import { APP_VERSION } from '../lib/version';
-import { fetchPowerSyncCredentials, requestMagicLink, signOut, useAuthAccount } from '../lib/auth';
+import {
+  clearPendingEmail,
+  fetchPowerSyncCredentials,
+  getRecentPendingEmail,
+  requestMagicLink,
+  signOut,
+  useAuthAccount,
+} from '../lib/auth';
+import { useInstallPrompt } from '../lib/installPrompt';
 import { connectSync, disconnectSync, useSyncStatus } from '../lib/db';
 import { useSkippedSyncOps } from '../lib/connector';
 
@@ -34,9 +42,19 @@ export function SettingsScreen() {
   const [authAccount, setAuthAccount] = useAuthAccount();
   const syncStatus = useSyncStatus();
   const skippedSyncOps = useSkippedSyncOps();
-  const [emailInput, setEmailInput] = useState('');
-  const [linkState, setLinkState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const navigate = useNavigate();
+  const install = useInstallPrompt();
+  const [showIosInstallSteps, setShowIosInstallSteps] = useState(false);
+  // docs/56 D204: a link sent in the last 15 minutes resumes straight into
+  // the code field — an iOS home-screen PWA often reloads from scratch
+  // after the user switches to Mail and back.
+  const [emailInput, setEmailInput] = useState(() => getRecentPendingEmail() ?? '');
+  const [linkState, setLinkState] = useState<'idle' | 'sending' | 'sent' | 'error'>(() =>
+    getRecentPendingEmail() ? 'sent' : 'idle',
+  );
   const [linkError, setLinkError] = useState('');
+  const [codeInput, setCodeInput] = useState('');
+  const codeDigits = codeInput.replace(/\D/g, '');
   const [reconnecting, setReconnecting] = useState(false);
 
   // A real gap found from a real stuck device: its refresh chain had been
@@ -92,6 +110,20 @@ export function SettingsScreen() {
       setLinkState('error');
       setLinkError(err instanceof Error ? err.message : 'Could not send the link.');
     }
+  }
+
+  // docs/56 D204: finish sign-in with the emailed code, right here in the
+  // context that asked for it. The code rides in router state, never the
+  // URL, so it doesn't land in history; AuthVerifyScreen runs the same
+  // post-verify profile/merge flow either way.
+  function submitCode() {
+    navigate('/auth/verify', { state: { email: emailInput.trim(), code: codeDigits } });
+  }
+
+  function useDifferentEmail() {
+    clearPendingEmail();
+    setCodeInput('');
+    setLinkState('idle');
   }
 
   function resetData() {
@@ -164,8 +196,33 @@ export function SettingsScreen() {
           </button>
         </div>
       ) : linkState === 'sent' ? (
-        <div className="settings-row settings-row-static">
-          <span>Check your email for a sign-in link.</span>
+        <div className="settings-field signin-code">
+          <p className="qr-caption">
+            We sent a sign-in link and a 6-digit code to {emailInput.trim()}. Tap the link, or enter the code here.
+          </p>
+          <label className="field-label">
+            Code from the email
+            <input
+              className="text-input"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="123 456"
+              maxLength={7}
+              value={codeInput}
+              onChange={(e) => setCodeInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && codeDigits.length === 6) submitCode();
+              }}
+            />
+          </label>
+          <div className="signin-code-actions">
+            <button className="save-btn" onClick={submitCode} disabled={codeDigits.length !== 6}>
+              Sign in
+            </button>
+            <button type="button" className="chip ghost" onClick={useDifferentEmail}>
+              Use a different email
+            </button>
+          </div>
         </div>
       ) : (
         <div className="settings-field">
@@ -342,6 +399,33 @@ export function SettingsScreen() {
           <span>Reset local data</span>
         </button>
       </div>
+
+      {/* docs/56 D201 — only when there's something to do: hidden inside
+          the installed app itself and on browsers with no install path. */}
+      {(install.mode === 'prompt' || install.mode === 'ios-instructions') && (
+        <>
+          <div className="section-label">App</div>
+          <div className="accounts-list">
+            {install.mode === 'prompt' ? (
+              <button className="settings-row" onClick={() => void install.install()}>
+                <span>Install Flowtab</span>
+                <span className="settings-row-arrow">›</span>
+              </button>
+            ) : (
+              <button className="settings-row" onClick={() => setShowIosInstallSteps((v) => !v)}>
+                <span>Add Flowtab to your Home Screen</span>
+                <span className="settings-row-arrow">{showIosInstallSteps ? '⌄' : '›'}</span>
+              </button>
+            )}
+          </div>
+          {install.mode === 'ios-instructions' && showIosInstallSteps && (
+            <p className="qr-caption install-steps">
+              In Safari, tap the Share button <span aria-hidden="true">(□↑)</span>, then choose{' '}
+              <strong>Add to Home Screen</strong>. Flowtab will open from its own icon, full screen and offline.
+            </p>
+          )}
+        </>
+      )}
 
       <div className="accounts-list">
         <Link to="/about" className="settings-row">

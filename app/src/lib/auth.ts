@@ -67,6 +67,8 @@ function apiFetch(path: string, init?: RequestInit): Promise<Response> {
 
 const PENDING_EMAIL_KEY = 'flowtab:pending-auth-email';
 migrateStorageKey('piggypal:pending-auth-email', PENDING_EMAIL_KEY);
+const PENDING_SENT_AT_KEY = 'flowtab:pending-auth-sent-at';
+const CODE_TTL_MS = 15 * 60 * 1000;
 
 // docs/41's `/api/auth/verify` response has no email in it (userId only —
 // the server has no reason to echo back what the client already sent at
@@ -83,12 +85,31 @@ export async function requestMagicLink(email: string): Promise<void> {
     body: JSON.stringify({ email }),
   });
   if (!res.ok) throw new Error('Could not send the sign-in link — check the email address and try again.');
+  localStorage.setItem(PENDING_SENT_AT_KEY, String(Date.now()));
 }
 
 export function takePendingEmail(): string {
   const email = localStorage.getItem(PENDING_EMAIL_KEY) ?? '';
   localStorage.removeItem(PENDING_EMAIL_KEY);
+  localStorage.removeItem(PENDING_SENT_AT_KEY);
   return email;
+}
+
+// docs/56 D204: when a link was sent recently enough that its code could
+// still be valid (api's 15-minute TTL), the email it went to — so Settings
+// can keep showing the code field across a reload. On iOS, switching to
+// Mail and back often reloads a home-screen PWA from scratch, which would
+// otherwise drop the user back to a blank email form mid-sign-in.
+export function getRecentPendingEmail(): string | null {
+  const email = localStorage.getItem(PENDING_EMAIL_KEY);
+  const sentAt = Number(localStorage.getItem(PENDING_SENT_AT_KEY));
+  if (!email || !sentAt || Date.now() - sentAt > CODE_TTL_MS) return null;
+  return email;
+}
+
+export function clearPendingEmail(): void {
+  localStorage.removeItem(PENDING_EMAIL_KEY);
+  localStorage.removeItem(PENDING_SENT_AT_KEY);
 }
 
 export interface VerifyResult {
@@ -107,6 +128,25 @@ export async function verifyMagicLink(token: string): Promise<VerifyResult> {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}) as { error?: string });
     throw new Error(body.error ?? 'That sign-in link is invalid or has expired.');
+  }
+  const result = (await res.json()) as VerifyResult;
+  accessToken = result.accessToken;
+  return result;
+}
+
+// docs/56 D204: the same sign-in as verifyMagicLink, proven by the
+// 6-digit code from the email instead of the link's token — so it lands
+// in whichever context typed it (an iOS home-screen PWA included), not
+// whichever browser the link would have opened.
+export async function verifyMagicCode(email: string, code: string): Promise<VerifyResult> {
+  const res = await apiFetch('/api/auth/verify-code', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, code, localUserId: getLocalUserId(), deviceId: getDeviceId() }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}) as { error?: string });
+    throw new Error(body.error ?? 'That code is invalid or has expired.');
   }
   const result = (await res.json()) as VerifyResult;
   accessToken = result.accessToken;

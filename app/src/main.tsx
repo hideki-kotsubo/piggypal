@@ -7,6 +7,7 @@ import './styles/tokens.css'
 import './index.css'
 import './styles/home.css'
 import './lib/settings' // applies stored theme-mode before first paint
+import './lib/installPrompt' // captures beforeinstallprompt before React mounts (docs/56 D201)
 import App from './App.tsx'
 import { StoreProvider } from './lib/store'
 import { TransactionList } from './components/TransactionList'
