@@ -11,7 +11,7 @@ import type { AccountRewrite, CategoryRewrite } from './mergeMatch';
 import { effectiveDeviceLabel } from './settings';
 import type { Account, AccountKind, Budget, Category, CategoryKeyword, Device, MergeSummary, PeerDataset, Profile, Transaction, TransactionSplit } from './types';
 import { AppSkeleton } from '../components/AppSkeleton';
-import { seedCategories, seedCategoryKeywords } from './seed';
+import { isUntouchedSeedAccount, referencedAccountIds, seedAccounts, seedCategories, seedCategoryKeywords } from './seed';
 
 // Real local data layer — docs/01 D1 (on-device SQLite via wa-sqlite/
 // PowerSync web SDK), running in local-only mode (no connector passed to
@@ -344,13 +344,18 @@ async function touchDevice(): Promise<void> {
 // ---- one-time seed on an empty database ----
 
 async function seedIfEmpty() {
-  // Only categories/category_keywords are seeded here — real starter
-  // defaults every install needs (the Tier 1 parser has nothing to match
-  // against without the keyword vocabulary), not demo data. Accounts/
-  // transactions/budgets used to be seeded too as fake UI-dev fixtures
-  // (Visa/Costco/Uber/...), which meant every real new user's first
-  // launch silently mixed fictional financial data into their own store.
-  // Removed — a real user's Home starts genuinely empty.
+  // Categories/category_keywords plus two starter accounts (Cash,
+  // Checking — seed.ts's seedAccounts) — real starter defaults every
+  // install needs (the Tier 1 parser has nothing to match against without
+  // the keyword vocabulary; EntryZone can't log anything without an
+  // account), not demo data. Transactions/budgets used to be seeded too
+  // as fake UI-dev fixtures (Visa/Costco/Uber/...), which meant every real
+  // new user's first launch silently mixed fictional financial data into
+  // their own store. Still removed — no transactions or balances here.
+  //
+  // Starter accounts ride the same one-time "categories is empty" gate
+  // rather than their own "accounts is empty" check on purpose: a user
+  // who deletes both must not see them reappear on the next launch.
   //
   // Still skipped entirely once signed in (docs/45's discardAndAdopt-
   // AccountId bug): a signed-in device belongs to a real account and
@@ -389,6 +394,12 @@ async function seedIfEmpty() {
         await tx.execute(
           `INSERT INTO category_keywords (id, category_id, keyword, hits) VALUES (?, ?, ?, ?)`,
           [k.id, k.categoryId, k.keyword, k.hits],
+        );
+      }
+      for (const a of seedAccounts) {
+        await tx.execute(
+          `INSERT INTO accounts (id, institution, name, kind, archived, owner_user_id, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [crypto.randomUUID(), a.institution, a.name, a.kind, 0, getLocalUserId(), seededAt],
         );
       }
     });
@@ -495,9 +506,16 @@ interface StoreApi extends StoreState {
   // creator via the same rewriteOwnerIdentity() applyPeerDataset already
   // uses. One atomic transaction: a partial rewrite would leave
   // references pointing at ids that no longer exist.
+  //
+  // discardAccountIds: untouched starter accounts (seed.ts's
+  // isUntouchedSeedAccount) dropped outright instead of matched — the
+  // existing profile already has its own real accounts coming down via
+  // sync. Plain deletes, no cascade needed: untouched means nothing
+  // references them.
   applySignInMergePlan: (plan: {
     categoryRewrites: CategoryRewrite[];
     accountRewrites: AccountRewrite[];
+    discardAccountIds: string[];
     identity: { newId: string } | null;
   }) => Promise<void>;
   // docs/05 D14's third option, added after real use surfaced the gap:
@@ -1054,6 +1072,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             await cascadeAccountReferences(tx, r.oldId, r.newId);
           }
 
+          for (const id of plan.discardAccountIds) {
+            await tx.execute('DELETE FROM accounts WHERE id = ?', [id]);
+          }
+
           // D165: identity is only ever rewritten for "my own device" —
           // never for "someone else," where this device's own local
           // identity staying distinct is the entire point.
@@ -1170,6 +1192,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               [c.id, c.name, c.kind, c.parentId, c.archived ? 1 : 0, c.updatedAt],
             );
             summary.categoriesAdded += 1;
+          }
+
+          // The one exception to D112's "always moved" below: joining my
+          // own other device, this device's untouched starter accounts
+          // (seed.ts's isUntouchedSeedAccount) would just duplicate the
+          // canonical device's own Cash/Checking — drop them. Only when
+          // the peer actually brings accounts, so this device is never
+          // left with none. Never in "someone else" mode, where the
+          // other person's Cash is genuinely a different account.
+          if (adoptPeerIdentity && peer.accounts.length > 0) {
+            const localAccounts = await tx.getAll<{ id: string; institution: string | null; name: string; kind: AccountKind }>(
+              'SELECT id, institution, name, kind FROM accounts',
+            );
+            const txRefs = await tx.getAll<{ accountId: string | null }>('SELECT account_id AS accountId FROM transactions');
+            const splitRefs = await tx.getAll<{ accountId: string }>('SELECT account_id AS accountId FROM transaction_splits');
+            const referenced = referencedAccountIds(txRefs, splitRefs);
+            for (const a of localAccounts) {
+              if (isUntouchedSeedAccount(a, referenced)) {
+                await tx.execute('DELETE FROM accounts WHERE id = ?', [a.id]);
+              }
+            }
           }
 
           // Accounts — never merged, always moved (docs/24 D112): each is
