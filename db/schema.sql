@@ -241,7 +241,9 @@ create table magic_links (
   email        text not null,
   token_hash   text not null,             -- sha256(token); the token itself is never stored
   expires_at   timestamptz not null,       -- issued_at + 15 min
-  consumed_at  timestamptz
+  consumed_at  timestamptz,
+  code_hash    text,                      -- sha256(6-digit code), docs/56 D204; null on pre-D204 rows
+  code_attempts int not null default 0    -- wrong-code tries; the row is consumed at 5
 );
 
 create table refresh_tokens (

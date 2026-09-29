@@ -5,7 +5,14 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>app</title>
+    <!-- docs/56 D202: same placeholder theme color as the manifest (docs/01 item 5);
+         the apple-* tags give iOS's Add to Home Screen a proper name and chrome. -->
+    <meta name="theme-color" content="#3f7d69" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Flowtab" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <title>Flowtab</title>
   </head>
   <body>
     <div id="root"></div>

@@ -1,11 +1,11 @@
-import { useState, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Capacitor } from '@capacitor/core';
+import { useEffect, useState, useRef } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { connectSync, db } from '../lib/db';
 import { formatDateTime, nowUtc } from '../lib/format';
 import { getLocalUserId } from '../lib/identity';
 import { isUntouchedSeedAccount, referencedAccountIds } from '../lib/seed';
-import { fetchServerSnapshot, takePendingEmail, useAuthAccount, verifyMagicLink } from '../lib/auth';
+import { fetchServerSnapshot, takePendingEmail, useAuthAccount, verifyMagicCode, verifyMagicLink } from '../lib/auth';
+import { isIosDevice, isRunningInstalled } from '../lib/installPrompt';
 import { useStore } from '../lib/store';
 import { matchAccounts, matchCategories, resolveAccountRewrites, resolveCategoryRewrites } from '../lib/mergeMatch';
 import type {
@@ -40,8 +40,13 @@ import type { AccountKind, Profile } from '../lib/types';
 // owner's very first profile already uses).
 type PickedIdentity = { kind: 'existing'; profile: Profile } | { kind: 'new'; displayName: string };
 
+// docs/56 D204: two ways to prove the email — the link's token (opened
+// from the email) or the 6-digit code (typed into Settings, arriving here
+// via router state). Everything after verification is identical.
+type Credential = { via: 'link'; token: string } | { via: 'code'; email: string; code: string };
+
 type Step =
-  | { kind: 'confirm'; token: string }
+  | { kind: 'confirm'; credential: Credential }
   | { kind: 'verifying' }
   | { kind: 'profile-picker'; userId: string; profiles: Profile[]; existingAccounts: number; existingTransactions: number }
   | { kind: 'syncing' }
@@ -56,17 +61,22 @@ type Step =
   | { kind: 'done' }
   | { kind: 'error'; message: string };
 
-function initialStep(token: string | null): Step {
+function initialStep(token: string | null, state: unknown): Step {
+  const codeState = state as { email?: unknown; code?: unknown } | null;
+  if (typeof codeState?.email === 'string' && typeof codeState?.code === 'string') {
+    return { kind: 'confirm', credential: { via: 'code', email: codeState.email, code: codeState.code } };
+  }
   if (!token) return { kind: 'error', message: 'This link is missing its sign-in token.' };
-  return { kind: 'confirm', token };
+  return { kind: 'confirm', credential: { via: 'link', token } };
 }
 
 export function AuthVerifyScreen() {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const store = useStore();
   const [, setAuthAccount] = useAuthAccount();
-  const [step, setStep] = useState<Step>(() => initialStep(searchParams.get('token')));
+  const [step, setStep] = useState<Step>(() => initialStep(searchParams.get('token'), location.state));
   const [resolutions, setResolutions] = useState<Record<string, ManualResolution>>({});
   // A real bug, found testing this against a real Resend send: the token
   // was already consumed 26 seconds after sending, well before a human
@@ -82,13 +92,36 @@ export function AuthVerifyScreen() {
   // against a single-use token either.
   const verifiedRef = useRef(false);
 
-  async function confirmSignIn(token: string) {
+  // docs/56 D204: a code was typed by a real person in Settings, so there's
+  // no link-scanner risk to guard against — verify immediately instead of
+  // asking for a second tap. The router state is dropped right away so a
+  // reload doesn't resubmit an already-consumed code. verifiedRef also
+  // absorbs StrictMode's dev-mode double effect. Only the initial step can
+  // carry a code, and confirmSignIn moves off it synchronously, so re-runs
+  // on later renders fall straight through. confirmSignIn is read through
+  // a ref (kept current by the effect just above) since it's a fresh
+  // closure every render.
+  const confirmSignInRef = useRef<(credential: Credential) => Promise<void>>(async () => {});
+  useEffect(() => {
+    confirmSignInRef.current = confirmSignIn;
+  });
+  useEffect(() => {
+    if (step.kind === 'confirm' && step.credential.via === 'code') {
+      navigate('/auth/verify', { replace: true, state: null });
+      void confirmSignInRef.current(step.credential);
+    }
+  }, [step, navigate]);
+
+  async function confirmSignIn(credential: Credential) {
     if (verifiedRef.current) return;
     verifiedRef.current = true;
     setStep({ kind: 'verifying' });
 
     try {
-      const result = await verifyMagicLink(token);
+      const result =
+        credential.via === 'link'
+          ? await verifyMagicLink(credential.token)
+          : await verifyMagicCode(credential.email, credential.code);
 
       // docs/05 D14: only the second-device-joins-an-existing-account
       // case can possibly need the picker/merge sequence below — a
@@ -280,8 +313,19 @@ export function AuthVerifyScreen() {
 
       {step.kind === 'confirm' && (
         <div className="qr-stage">
-          <p className="qr-caption">Tap below to finish signing in.</p>
-          <button className="save-btn" onClick={() => void confirmSignIn(step.token)}>
+          {/* docs/56: on iOS a tapped link always opens a browser, and a
+              home-screen Flowtab has its own separate storage and cookies —
+              signing in here would sign in this browser, not the app. The
+              tap-to-confirm step (docs/45) means nothing is consumed yet, so
+              the code from the same email still works in the app. */}
+          {step.credential.via === 'link' && isIosDevice() && !isRunningInstalled() && (
+            <p className="qr-caption">
+              Using Flowtab from your home screen? Don't sign in here — open the app and enter the 6-digit code from
+              the email instead.
+            </p>
+          )}
+          <p className="qr-caption">Tap below to finish signing in{isIosDevice() && !isRunningInstalled() ? ' in this browser' : ''}.</p>
+          <button className="save-btn" onClick={() => void confirmSignIn(step.credential)}>
             Sign in
           </button>
         </div>
@@ -342,20 +386,23 @@ export function AuthVerifyScreen() {
         <div className="qr-stage">
           <div className="confirm-check">✓</div>
           <p className="qr-caption">Signed in. Sync will continue in the background.</p>
-          {/* Only a plain browser tab can land here — the native app
-              intercepts the magic link before this screen ever loads in a
-              browser (main.tsx's appUrlOpen listener), and there's no
-              equivalent interception on iOS for a home-screen-installed
-              PWA (Apple doesn't extend Universal Links to those) — so a
-              tab is exactly the case where this device might have a
-              separate home-screen icon it should switch back to. Sign-in
-              still applies there regardless, since the icon and this tab
-              share the same origin storage. */}
-          {!Capacitor.isNativePlatform() && !window.matchMedia('(display-mode: standalone)').matches && (
-            <p className="qr-caption">
-              If you've added Flowtab to your home screen, you can close this tab and open it from there.
-            </p>
-          )}
+          {/* A plain browser tab is the case where this device might also
+              have a separate home-screen icon. docs/56 corrects docs/54 on
+              what that means: on Android/desktop Chrome the installed app
+              shares this tab's storage, so it's signed in too; on iOS a
+              home-screen app has its own isolated storage and cookies, so
+              only this browser is signed in. */}
+          {!isRunningInstalled() &&
+            (isIosDevice() ? (
+              <p className="qr-caption">
+                This signed in this browser only. If you use Flowtab from your home screen, sign in there too — it
+                keeps its own separate sign-in on iPhone and iPad.
+              </p>
+            ) : (
+              <p className="qr-caption">
+                If you've added Flowtab to your home screen, you can close this tab and open it from there.
+              </p>
+            ))}
           <button className="save-btn" onClick={() => navigate('/settings')}>
             Done
           </button>

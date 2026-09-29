@@ -56,6 +56,14 @@ claim that URL when its own app is installed:
 
 ## Why iOS's PWA path can't be fixed in code
 
+> **Correction, 2026-09-29 (docs/56):** the `AuthVerifyScreen.tsx` bullet
+> above says a browser tab and a home-screen PWA share storage. That's
+> true on Android and desktop Chrome but **not on iOS**. A home-screen web
+> app there has its own isolated storage and cookie jar, so a link opened
+> in Safari signs in Safari, not the installed app. docs/56 D204 fixes the
+> iOS case with a 6-digit code in the same email, typed into the app that
+> asked for it.
+
 Apple doesn't extend Universal Links to home-screen-installed web apps —
 only to a real native app installed via TestFlight/App Store with its
 own Associated Domains entitlement. A magic link tapped in Mail on iOS

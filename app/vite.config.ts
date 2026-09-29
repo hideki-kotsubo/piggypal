@@ -43,6 +43,17 @@ export default defineConfig({
         id: '/',
         start_url: '/',
         scope: '/',
+        // docs/56 D203 — Chromium link capturing: an in-scope link (the
+        // magic link) reuses an already-open Flowtab window instead of a
+        // second one, which would contend for the exclusive OPFS lock
+        // (docs/54's stuck-on-skeletons gotcha). handle_links opts into
+        // desktop Chrome's "open supported links" in the installed app.
+        // Neither field is in vite-plugin-pwa's manifest type yet, and
+        // both are ignored by browsers that don't know them.
+        ...({
+          launch_handler: { client_mode: ['navigate-existing', 'auto'] },
+          handle_links: 'preferred',
+        } as Record<string, unknown>),
         icons: [
           { src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml' },
           { src: 'icons/icon-48.webp', sizes: '48x48', type: 'image/webp' },

@@ -1107,6 +1107,23 @@
 .settings-field {
   margin: 0 1.1rem 1.1rem;
 }
+/* docs/56 D204 — "check your email" state: caption, code field, actions. */
+.signin-code .qr-caption {
+  max-width: none;
+  margin: 0 0 0.75rem;
+}
+.signin-code-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+/* docs/56 D201 — iOS "Add to Home Screen" steps under Settings' App row. */
+.install-steps {
+  max-width: none;
+  margin: 0.25rem 1.1rem 1.1rem;
+}
 .text-link {
   align-self: flex-start;
   background: none;

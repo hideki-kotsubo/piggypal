@@ -1,7 +1,8 @@
-import { Router } from 'express';
+import { Router, type Response } from 'express';
+import type { PoolClient } from 'pg';
 import { pool } from '../db.js';
 import { signAccessToken } from '../jwt.js';
-import { generateOpaqueToken, hashToken } from './crypto.js';
+import { generateOpaqueToken, generateSignInCode, hashToken, hashesMatch } from './crypto.js';
 import { sendMagicLinkEmail } from './email.js';
 import { requireAccessToken, type AuthedRequest } from './middleware.js';
 
@@ -23,6 +24,10 @@ const REFRESH_TTL_DAYS = 60;
 // on the client's own race.
 const REUSE_GRACE_MS = 10_000;
 const MAGIC_LINK_TTL_MINUTES = 15;
+// docs/56 D204: 5 guesses against 10^6 codes per issued link — the row is
+// consumed (dead) on the 5th wrong one.
+const MAX_CODE_ATTEMPTS = 5;
+const CODE_RE = /^\d{6}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -55,26 +60,66 @@ authRouter.post('/request-link', async (req, res) => {
   }
 
   const token = generateOpaqueToken();
+  const code = generateSignInCode();
   await pool().query(
-    `INSERT INTO magic_links (email, token_hash, expires_at) VALUES ($1, $2, now() + interval '${MAGIC_LINK_TTL_MINUTES} minutes')`,
-    [email, hashToken(token)],
+    `INSERT INTO magic_links (email, token_hash, code_hash, expires_at) VALUES ($1, $2, $3, now() + interval '${MAGIC_LINK_TTL_MINUTES} minutes')`,
+    [email, hashToken(token), hashToken(code)],
   );
 
   const appBaseUrl = process.env.APP_BASE_URL || 'http://localhost:3001';
   const verifyUrl = `${appBaseUrl}/auth/verify?token=${encodeURIComponent(token)}`;
-  await sendMagicLinkEmail(email, verifyUrl);
+  await sendMagicLinkEmail(email, verifyUrl, code);
 
   res.json({ ok: true });
 });
 
-// docs/05 flow, step 3-4. Called by the app's own client-side JS (not a
-// raw browser navigation) once it's loaded the /auth/verify page from the
-// emailed link — that's the only way this endpoint can ever learn the
-// clicking device's local user_id and device_id, both purely client-side
-// values (docs/05 D11, D12). The app-side route that does this call isn't
-// built yet (separate piece from "build /api/auth/*") — this endpoint is
-// independently testable via a direct request with those two values
-// supplied manually.
+// docs/05 flow, step 3-4, shared by both ways of proving the email
+// (docs/56 D204): the link's token (/verify) and the emailed code
+// (/verify-code) each pick their own magic_links row, then land here —
+// one path, so the two can't drift apart on user creation or session
+// issuance. Runs inside the caller's transaction; the caller commits.
+async function completeSignIn(
+  client: PoolClient,
+  res: Response,
+  link: { id: string; email: string },
+  localUserId: string,
+  deviceId: string,
+): Promise<void> {
+  await client.query('UPDATE magic_links SET consumed_at = now() WHERE id = $1', [link.id]);
+
+  // docs/05 D11: existing account wins outright (second-device-joins
+  // flow); a brand-new email adopts the *client's* local_user_id as
+  // users.id rather than generating a server-side one, so the device
+  // that just signed up never needs a local rekey.
+  const existing = await client.query<{ id: string }>('SELECT id FROM users WHERE email = $1', [link.email]);
+  let userId: string;
+  let isNewUser: boolean;
+  if (existing.rows[0]) {
+    userId = existing.rows[0].id;
+    isNewUser = false;
+  } else {
+    userId = localUserId;
+    isNewUser = true;
+    await client.query('INSERT INTO users (id, email) VALUES ($1, $2)', [userId, link.email]);
+  }
+
+  const refreshToken = generateOpaqueToken();
+  await client.query(
+    `INSERT INTO refresh_tokens (user_id, device_id, token_hash, expires_at) VALUES ($1, $2, $3, now() + interval '${REFRESH_TTL_DAYS} days')`,
+    [userId, deviceId, hashToken(refreshToken)],
+  );
+
+  await client.query('COMMIT');
+
+  res.cookie(REFRESH_COOKIE, refreshToken, refreshCookieOptions());
+  res.json({ accessToken: await signAccessToken(userId), userId, isNewUser });
+}
+
+// Called by the app's own client-side JS (not a raw browser navigation)
+// once it's loaded the /auth/verify page from the emailed link — that's
+// the only way this endpoint can ever learn the clicking device's local
+// user_id and device_id, both purely client-side values (docs/05 D11,
+// D12).
 authRouter.get('/verify', async (req, res) => {
   const token = typeof req.query.token === 'string' ? req.query.token : '';
   const localUserId = typeof req.query.localUserId === 'string' ? req.query.localUserId : '';
@@ -89,7 +134,7 @@ authRouter.get('/verify', async (req, res) => {
     await client.query('BEGIN');
 
     const linkResult = await client.query<{ id: string; email: string }>(
-      `SELECT id, email FROM magic_links WHERE token_hash = $1 AND consumed_at IS NULL AND expires_at > now()`,
+      `SELECT id, email FROM magic_links WHERE token_hash = $1 AND consumed_at IS NULL AND expires_at > now() FOR UPDATE`,
       [hashToken(token)],
     );
     const link = linkResult.rows[0];
@@ -98,34 +143,59 @@ authRouter.get('/verify', async (req, res) => {
       res.status(400).json({ error: 'Invalid or expired link' });
       return;
     }
-    await client.query('UPDATE magic_links SET consumed_at = now() WHERE id = $1', [link.id]);
+    await completeSignIn(client, res, link, localUserId, deviceId);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+});
 
-    // docs/05 D11: existing account wins outright (second-device-joins
-    // flow); a brand-new email adopts the *client's* local_user_id as
-    // users.id rather than generating a server-side one, so the device
-    // that just signed up never needs a local rekey.
-    const existing = await client.query<{ id: string }>('SELECT id FROM users WHERE email = $1', [link.email]);
-    let userId: string;
-    let isNewUser: boolean;
-    if (existing.rows[0]) {
-      userId = existing.rows[0].id;
-      isNewUser = false;
-    } else {
-      userId = localUserId;
-      isNewUser = true;
-      await client.query('INSERT INTO users (id, email) VALUES ($1, $2)', [userId, link.email]);
-    }
+// docs/56 D204: the same sign-in, proven by the 6-digit code from the
+// email instead of the link — typed into the app that requested it, so
+// the session lands there even when the link can't (an iOS home-screen
+// PWA never receives links; its storage and cookies are separate from
+// Safari's). Only the newest live row for the email is checked, so
+// requesting a new link retires the previous code. One generic error for
+// unknown email / wrong code / dead row — no enumeration (docs/05).
+authRouter.post('/verify-code', async (req, res) => {
+  const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+  const code = typeof req.body?.code === 'string' ? req.body.code.replace(/\s/g, '') : '';
+  const localUserId = typeof req.body?.localUserId === 'string' ? req.body.localUserId : '';
+  const deviceId = typeof req.body?.deviceId === 'string' ? req.body.deviceId : '';
+  if (!EMAIL_RE.test(email) || !CODE_RE.test(code) || !UUID_RE.test(localUserId) || !UUID_RE.test(deviceId)) {
+    res.status(400).json({ error: 'email, a 6-digit code, localUserId, and deviceId are all required' });
+    return;
+  }
 
-    const refreshToken = generateOpaqueToken();
-    await client.query(
-      `INSERT INTO refresh_tokens (user_id, device_id, token_hash, expires_at) VALUES ($1, $2, $3, now() + interval '${REFRESH_TTL_DAYS} days')`,
-      [userId, deviceId, hashToken(refreshToken)],
+  const client = await pool().connect();
+  try {
+    await client.query('BEGIN');
+
+    // FOR UPDATE serializes concurrent guesses against the same row, so
+    // the attempt counter can't be raced past MAX_CODE_ATTEMPTS.
+    const linkResult = await client.query<{ id: string; email: string; code_hash: string | null; code_attempts: number }>(
+      `SELECT id, email, code_hash, code_attempts FROM magic_links
+       WHERE email = $1 AND consumed_at IS NULL AND expires_at > now()
+       ORDER BY expires_at DESC LIMIT 1 FOR UPDATE`,
+      [email],
     );
-
-    await client.query('COMMIT');
-
-    res.cookie(REFRESH_COOKIE, refreshToken, refreshCookieOptions());
-    res.json({ accessToken: await signAccessToken(userId), userId, isNewUser });
+    const link = linkResult.rows[0];
+    if (!link || !link.code_hash || !hashesMatch(hashToken(code), link.code_hash)) {
+      if (link) {
+        await client.query(
+          `UPDATE magic_links SET code_attempts = code_attempts + 1,
+             consumed_at = CASE WHEN code_attempts + 1 >= $2 THEN now() ELSE consumed_at END
+           WHERE id = $1`,
+          [link.id, MAX_CODE_ATTEMPTS],
+        );
+      }
+      await client.query('COMMIT');
+      res.status(400).json({ error: 'Invalid or expired code' });
+      return;
+    }
+    await completeSignIn(client, res, link, localUserId, deviceId);
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
