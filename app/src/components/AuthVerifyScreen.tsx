@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import { connectSync, db } from '../lib/db';
 import { formatDateTime, nowUtc } from '../lib/format';
 import { getLocalUserId } from '../lib/identity';
+import { isUntouchedSeedAccount, referencedAccountIds } from '../lib/seed';
 import { fetchServerSnapshot, takePendingEmail, useAuthAccount, verifyMagicLink } from '../lib/auth';
 import { useStore } from '../lib/store';
 import { matchAccounts, matchCategories, resolveAccountRewrites, resolveCategoryRewrites } from '../lib/mergeMatch';
@@ -14,7 +15,7 @@ import type {
   CategoryMatchResult,
   ManualResolution,
 } from '../lib/mergeMatch';
-import type { Profile } from '../lib/types';
+import type { AccountKind, Profile } from '../lib/types';
 
 // docs/41's flagged followup: the app-side half of docs/05's sign-up/
 // second-device flow. GET /api/auth/verify itself is real (docs/41); this
@@ -50,6 +51,7 @@ type Step =
       picked: PickedIdentity;
       categoryMatch: CategoryMatchResult;
       accountMatch: AccountMatchResult | null;
+      discardAccountIds: string[];
     }
   | { kind: 'done' }
   | { kind: 'error'; message: string };
@@ -101,7 +103,15 @@ export function AuthVerifyScreen() {
         // run while React's store state is still the empty initial
         // array even though real seeded data already exists in SQLite.
         // A direct await here can't be fooled by that timing gap.
-        const [{ count: existingAccounts }] = await db.getAll<{ count: number }>('SELECT COUNT(*) as count FROM accounts');
+        // Untouched starter accounts (seed.ts) aren't "existing data" —
+        // they're discarded for an existing profile anyway (below).
+        const localAccounts = await db.getAll<{ id: string; institution: string | null; name: string; kind: AccountKind }>(
+          'SELECT id, institution, name, kind FROM accounts',
+        );
+        const txRefs = await db.getAll<{ accountId: string | null }>('SELECT account_id AS accountId FROM transactions');
+        const splitRefs = await db.getAll<{ accountId: string }>('SELECT account_id AS accountId FROM transaction_splits');
+        const referenced = referencedAccountIds(txRefs, splitRefs);
+        const existingAccounts = localAccounts.filter((a) => !isUntouchedSeedAccount(a, referenced)).length;
         const [{ count: existingTransactions }] = await db.getAll<{ count: number }>(
           'SELECT COUNT(*) as count FROM transactions WHERE deleted_at IS NULL',
         );
@@ -187,21 +197,35 @@ export function AuthVerifyScreen() {
       // yet — this is the actual fix for two household members'
       // identically-named accounts never being conflated, generalized
       // from "own vs. someone-else" to "any specific profile").
+      //
+      // Untouched starter accounts (seed.ts) skip matching entirely for an
+      // existing profile that already has accounts, and are discarded
+      // instead — that profile's real accounts are already coming down via
+      // sync, and matching would either re-add a Cash they deliberately
+      // deleted or raise a pointless manual review ("Checking" vs. "TD
+      // Checking"). Kept for a brand-new profile (they're that person's own
+      // starters) or an existing one with no accounts yet (else this
+      // device would be left with none).
+      const localOwn = store.accounts.filter((a) => a.ownerUserId === getLocalUserId());
+      const serverOwn = picked.kind === 'existing' ? snapshot.accounts.filter((a) => a.ownerUserId === picked.profile.id) : [];
+      const referenced = referencedAccountIds(store.transactions, store.transactionSplits);
+      const discardAccountIds =
+        serverOwn.length > 0 ? localOwn.filter((a) => isUntouchedSeedAccount(a, referenced)).map((a) => a.id) : [];
       const accountMatch =
         picked.kind === 'existing'
           ? matchAccounts(
-              store.accounts.filter((a) => a.ownerUserId === getLocalUserId()),
-              snapshot.accounts.filter((a) => a.ownerUserId === picked.profile.id),
+              localOwn.filter((a) => !discardAccountIds.includes(a.id)),
+              serverOwn,
             )
           : null;
 
       const needsReview = categoryMatch.manual.length > 0 || (accountMatch?.manual.length ?? 0) > 0;
       if (!needsReview) {
-        await applyAndFinish(userId, picked, categoryMatch, accountMatch, {});
+        await applyAndFinish(userId, picked, categoryMatch, accountMatch, discardAccountIds, {});
         return;
       }
       setResolutions({});
-      setStep({ kind: 'merge-review', userId, picked, categoryMatch, accountMatch });
+      setStep({ kind: 'merge-review', userId, picked, categoryMatch, accountMatch, discardAccountIds });
     } catch (err) {
       setStep({ kind: 'error', message: err instanceof Error ? err.message : 'Could not check your account.' });
     }
@@ -212,6 +236,7 @@ export function AuthVerifyScreen() {
     picked: PickedIdentity,
     categoryMatch: CategoryMatchResult,
     accountMatch: AccountMatchResult | null,
+    discardAccountIds: string[],
     manualResolutions: Record<string, ManualResolution>,
   ) {
     const categoryRewrites = resolveCategoryRewrites(store.categories, categoryMatch, manualResolutions);
@@ -219,6 +244,7 @@ export function AuthVerifyScreen() {
     await store.applySignInMergePlan({
       categoryRewrites,
       accountRewrites,
+      discardAccountIds,
       // docs/48 D177: identity only ever rewrites onto an *existing*
       // profile — a brand-new one is already this device's own id.
       identity: picked.kind === 'existing' ? { newId: picked.profile.id } : null,
@@ -305,7 +331,7 @@ export function AuthVerifyScreen() {
           <button
             className="save-btn"
             disabled={!allManualResolved(step)}
-            onClick={() => void applyAndFinish(step.userId, step.picked, step.categoryMatch, step.accountMatch, resolutions)}
+            onClick={() => void applyAndFinish(step.userId, step.picked, step.categoryMatch, step.accountMatch, step.discardAccountIds, resolutions)}
           >
             Continue
           </button>

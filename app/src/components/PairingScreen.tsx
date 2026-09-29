@@ -6,6 +6,7 @@ import { answerOffer, completeOffer, exchangeHello, exchangeJson, startOffer, wr
 import type { AnswerSession, OfferSession, PairedChannel } from '../lib/pairing';
 import { computeSas, joinRelayAsAnswerer, startRelayOffer } from '../lib/relayClient';
 import { getLocalUserId } from '../lib/identity';
+import { isUntouchedSeedAccount, referencedAccountIds } from '../lib/seed';
 import { usePairedPeers } from '../lib/peers';
 import { effectiveDeviceLabel } from '../lib/settings';
 import { useStore } from '../lib/store';
@@ -159,10 +160,18 @@ export function PairingScreen() {
   async function performMerge(pc: PairedChannel, peerLabel: string, peerLocalUserId: string, adoptPeerIdentity: boolean) {
     setStep({ kind: 'merging' });
     try {
+      // The joining device in own-device mode never sends its untouched
+      // starter accounts — applyPeerDataset discards them on this side
+      // anyway, and sending them would plant duplicate Cash/Checking on
+      // the canonical device.
+      const referenced = referencedAccountIds(store.transactions, store.transactionSplits);
+      const accounts = adoptPeerIdentity
+        ? store.accounts.filter((a) => !isUntouchedSeedAccount(a, referenced))
+        : store.accounts;
       const localDataset: PeerDataset = {
         localUserId: getLocalUserId(),
         categories: store.categories,
-        accounts: store.accounts,
+        accounts,
         transactions: store.transactions,
         transactionSplits: store.transactionSplits,
         budgets: store.budgets,
@@ -219,7 +228,10 @@ export function PairingScreen() {
         // — but only if there's anything to ask about. Skips straight to
         // the merge for a genuinely fresh device, matching D126's "a
         // fresh device with no prior data skips this sheet entirely."
-        const existingAccounts = store.accounts.length;
+        // Untouched starter accounts (seed.ts) don't count — a fresh
+        // install still has nothing worth asking about.
+        const referenced = referencedAccountIds(store.transactions, store.transactionSplits);
+        const existingAccounts = store.accounts.filter((a) => !isUntouchedSeedAccount(a, referenced)).length;
         const existingTransactions = store.transactions.length;
         if (existingAccounts > 0 || existingTransactions > 0) {
           setStep({ kind: 'merge-prompt', pc, peerLabel, peerLocalUserId, existingAccounts, existingTransactions });

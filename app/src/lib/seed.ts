@@ -1,12 +1,12 @@
-import type { Category, CategoryKeyword } from './types';
+import type { Account, Category, CategoryKeyword, Transaction, TransactionSplit } from './types';
 
-// A real starter taxonomy + parser vocabulary, shipped to every fresh
-// install (signed-in or not) — not demo/placeholder data. Accounts,
-// transactions, and budgets used to be seeded here too as fake UI-dev
-// fixtures (Visa/Costco/Uber/...), but that meant every real new user's
-// first launch silently mixed fictional financial data into their own
-// store with no way to tell it apart. Removed outright — a real user's
-// Home starts genuinely empty and they add their own first account.
+// A real starter taxonomy + parser vocabulary + two starter accounts,
+// shipped to every fresh install (signed-in or not) — not demo/placeholder
+// data. Accounts, transactions, and budgets used to be seeded here too as
+// fake UI-dev fixtures (Visa/Costco/Uber/...), but that meant every real
+// new user's first launch silently mixed fictional financial data into
+// their own store with no way to tell it apart. Those stay removed — no
+// transactions, no budgets, no guessed-at institutions or cards.
 
 // docs/14: a full starter taxonomy — 7 expense groups with 4-9 children
 // each, English (2026-08-12 decision — the app's bilingual promise, docs/09,
@@ -94,3 +94,46 @@ export const seedCategoryKeywords: CategoryKeyword[] = [
   ...['gasolina', 'gas', 'combustível', 'combustivel'].map((k) => kw('cat-transport-fuel', k)),
   ...['salário', 'salario', 'salary', 'recebi', 'pagamento', 'paycheck'].map((k) => kw('cat-salary', k)),
 ];
+
+// Starter accounts (2026-09-29) — the two payment methods nearly everyone
+// has, so a new user can log their first transaction without first
+// detouring through Accounts. Deliberately no credit cards (a guessed
+// Visa/Mastercard is wrong for many users — clutter they must delete
+// before trusting the list) and no institution (a placeholder "My Bank"
+// would render as a fake institution group heading, docs/12, until
+// renamed). Unlike seedCategories these get a fresh crypto.randomUUID()
+// per install, not fixed slugs: accounts.id is a global uuid primary key
+// in Postgres, and sign-in merge matches accounts by name anyway
+// (mergeMatch.ts, docs/46 D168).
+export const seedAccounts: Pick<Account, 'institution' | 'name' | 'kind'>[] = [
+  { institution: null, name: 'Cash', kind: 'cash' },
+  { institution: null, name: 'Checking', kind: 'checking' },
+];
+
+// Every account id a transaction (or a split portion, docs/50) points at —
+// soft-deleted transactions included, conservatively: an account with any
+// history at all is never treated as disposable below.
+export function referencedAccountIds(
+  transactions: Pick<Transaction, 'accountId'>[],
+  splits: Pick<TransactionSplit, 'accountId'>[],
+): Set<string> {
+  const ids = new Set<string>();
+  for (const t of transactions) if (t.accountId) ids.add(t.accountId);
+  for (const s of splits) ids.add(s.accountId);
+  return ids;
+}
+
+// A seedAccounts row the user never used or renamed — safe to discard when
+// this device joins data that already has its own accounts (own-device
+// pairing, signing in to an existing profile), where keeping it would just
+// duplicate the other side's Cash/Checking. Also excluded from "this
+// device already has N accounts" counts, so a fresh install still reads
+// as fresh. Any edit to name/kind/institution, or any transaction against
+// it, makes it a real account.
+export function isUntouchedSeedAccount(
+  a: Pick<Account, 'id' | 'institution' | 'name' | 'kind'>,
+  referenced: ReadonlySet<string>,
+): boolean {
+  if (referenced.has(a.id)) return false;
+  return seedAccounts.some((s) => s.institution === a.institution && s.name === a.name && s.kind === a.kind);
+}
