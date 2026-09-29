@@ -370,7 +370,15 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
             className="text-input"
             type="date"
             value={datePart(transaction.occurredAt)}
-            onChange={(e) => commit({ occurredAt: combine(e.target.value, timePart(transaction.occurredAt)) })}
+            onChange={(e) => {
+              // Native date inputs can fire onChange with an empty value
+              // while a manually-typed date is still incomplete (seen for
+              // real on some browsers) — combine() would silently drop the
+              // date and write a bare "THH:MM:00", so ignore it rather than
+              // commit garbage.
+              if (!e.target.value) return;
+              commit({ occurredAt: combine(e.target.value, timePart(transaction.occurredAt)) });
+            }}
           />
         </label>
 
@@ -380,7 +388,10 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
             className="text-input"
             type="time"
             value={timePart(transaction.occurredAt)}
-            onChange={(e) => commit({ occurredAt: combine(datePart(transaction.occurredAt), e.target.value) })}
+            onChange={(e) => {
+              if (!e.target.value) return;
+              commit({ occurredAt: combine(datePart(transaction.occurredAt), e.target.value) });
+            }}
           />
         </label>
       </div>
