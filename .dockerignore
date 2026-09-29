@@ -22,6 +22,11 @@ docs/artifacts
 docs/logo
 docs/prototypes
 
+# Real env files (api/.env's dev JWT private key, app/.env.*.local, ...) —
+# the api/ image gets its config from deploy/.env via compose, never these.
+**/.env
+**/.env.*
+
 *.log
 .DS_Store
 .claude
