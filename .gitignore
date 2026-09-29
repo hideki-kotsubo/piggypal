@@ -6,9 +6,11 @@ dist
 dist-ssr
 *.local
 
-# Env
+# Env — every .env variant (.env.development, .env.production.local, ...),
+# not just .env/.env.local; only the committed templates are kept.
 .env
-.env.local
+.env.*
+!.env.example
 
 # Logs
 logs
