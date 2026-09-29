@@ -84,10 +84,29 @@ const COMPOSITE_KEY_TABLES = new Set(['categories', 'category_keywords']);
 // NULL, not silently leave a stale value in place.
 const COLUMN_DEFAULTS: Record<string, unknown> = { sort_order: 0 };
 
+// Columns whose Postgres type can reject an otherwise well-formed op (e.g.
+// `timestamp` columns fed a malformed string by a client-side bug) —
+// checked before the query runs so a bad value resolves to a per-op
+// `skipped` (docs/46 D163) instead of throwing mid-transaction and 500ing
+// the whole batch, which left a stuck device retrying the same bad op
+// forever (found from a real report: `occurred_at` written as bare
+// "THH:MM:00" by a native date-input quirk in TransactionEditForm.tsx).
+const COLUMN_VALIDATORS: Record<string, (value: unknown) => boolean> = {
+  occurred_at: (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(v),
+};
+
 function coerce(column: string, value: unknown): unknown {
   if (BOOLEAN_COLUMNS.has(column)) return value === 1 || value === true;
   if (value === null || value === undefined) return COLUMN_DEFAULTS[column] ?? null;
   return value;
+}
+
+function invalidColumn(columns: readonly string[], data: Record<string, unknown> | undefined): string | null {
+  for (const c of columns) {
+    const validator = COLUMN_VALIDATORS[c];
+    if (validator && data && c in data && !validator(data[c])) return c;
+  }
+  return null;
 }
 
 function isValidOp(op: unknown): op is SyncOp {
@@ -168,6 +187,12 @@ syncRouter.post('/upload', requireAccessToken, async (req: AuthedRequest, res) =
 
     for (const op of orderedOps) {
       const columns = TABLE_COLUMNS[op.table];
+
+      const badColumn = invalidColumn(columns, op.data);
+      if (badColumn) {
+        result.skipped.push({ table: op.table, id: op.id, reason: `invalid-${badColumn}` });
+        continue;
+      }
 
       if (op.op === 'DELETE') {
         const r = await client.query(`DELETE FROM ${op.table} WHERE id = $1 AND user_id = $2`, [op.id, userId]);
