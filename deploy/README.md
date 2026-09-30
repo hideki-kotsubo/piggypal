@@ -1,5 +1,8 @@
 # Deploying Flowtab
 
+> Already set up and just shipping changes? See [REDEPLOY.md](REDEPLOY.md)
+> for the prod and dev redeploy checklist.
+
 One way to deploy the whole backend: `docker-compose.yaml` in this
 directory brings up Postgres + `api` (built from source) + PowerSync
 Service together, on one shared network, with one command. There's no
