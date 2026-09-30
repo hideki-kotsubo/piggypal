@@ -184,10 +184,11 @@ directly by nginx, same pattern as the existing production setup.
 
 ```bash
 cd flowtab/app
-cp .env.example .env
+cp .env.example .env.production.local
 ```
 
-Edit `app/.env`:
+Edit `app/.env.production.local` (read only by `vite build`; the dev
+server uses `.env.development.local` instead — see `app/.env.example`):
 ```
 VITE_API_BASE_URL=https://api.yourdomain.com
 VITE_POWERSYNC_URL=https://powersync.yourdomain.com
