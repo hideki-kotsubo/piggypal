@@ -70,7 +70,7 @@ services:
         condition: service_healthy
     environment:
       PORT: ${API_PORT:-3002}
-      DATABASE_URL: postgres://${POSTGRES_USER:-flowtab}:${POSTGRES_PASSWORD:?set a real password in .env}@postgres:5432/${POSTGRES_DB:-flowtab}
+      DATABASE_URL: postgres://${POSTGRES_USER:-flowtab}:${POSTGRES_PASSWORD:?set a real password in .env}@${POSTGRES_HOST:-flowtab-postgres}:5432/${POSTGRES_DB:-flowtab}
       # RS256 keypair for signAccessToken/getJwks (docs/05 D13, api/jwt.ts).
       # Generate with: npm run -w api generate-jwt-keys
       JWT_PRIVATE_KEY: "${JWT_PRIVATE_KEY:?generate with: npm run -w api generate-jwt-keys}"
@@ -114,8 +114,8 @@ services:
       # ~80% of the container's memory limit — adjust to match whatever
       # this host actually gives the container.
       NODE_OPTIONS: --max-old-space-size=1000
-      PS_DATA_SOURCE_URI: postgres://${POSTGRES_USER:-flowtab}:${POSTGRES_PASSWORD:?set a real password in .env}@postgres:5432/${POSTGRES_DB:-flowtab}
-      PS_STORAGE_SOURCE_URI: postgres://${POSTGRES_USER:-flowtab}:${POSTGRES_PASSWORD:?set a real password in .env}@postgres:5432/${POSTGRES_DB:-flowtab}
+      PS_DATA_SOURCE_URI: postgres://${POSTGRES_USER:-flowtab}:${POSTGRES_PASSWORD:?set a real password in .env}@${POSTGRES_HOST:-flowtab-postgres}:5432/${POSTGRES_DB:-flowtab}
+      PS_STORAGE_SOURCE_URI: postgres://${POSTGRES_USER:-flowtab}:${POSTGRES_PASSWORD:?set a real password in .env}@${POSTGRES_HOST:-flowtab-postgres}:5432/${POSTGRES_DB:-flowtab}
       PS_DB_SSLMODE: disable
       # Internal container-to-container URL by default — api and powersync
       # share this compose's own network, so no public domain/DNS record

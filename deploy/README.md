@@ -132,13 +132,44 @@ docker compose exec api node -e "fetch('http://localhost:3002/health').then(r=>r
 docker compose exec powersync node -e "fetch('http://localhost:8090/probes/liveness').then(r=>console.log(r.status))"
 ```
 
+## 3b. Dev backend (optional): its own Postgres + PowerSync
+
+`docker-compose.dev.yaml` runs a second, independent Postgres and
+PowerSync Service on the same host, for the dev api (`npm run dev:api`,
+outside Docker) and the dev app server. Same `db/schema.sql`, publication
+script and `powersync/*.yaml` as production, so sync rules can't drift.
+
+```bash
+cd deploy
+cp .env.dev.example .env.dev    # fill in POSTGRES_PASSWORD, PS_ADMIN_API_TOKEN
+docker compose -f docker-compose.dev.yaml --env-file .env.dev up -d
+docker compose -f docker-compose.dev.yaml --env-file .env.dev logs -f
+```
+
+Then:
+- `api/.env`: point `DATABASE_URL` at the dev Postgres's published port,
+  e.g. `postgres://flowtab:<password>@<host>:5433/flowtab`, and restart
+  `npm run dev:api`.
+- nginx-proxy-manager: `powersync-beta.yourdomain.com` →
+  `http://flowtab-dev-powersync:8090`.
+- `app/.env.development.local`: `VITE_POWERSYNC_URL` at that host.
+
+Each stack reads its Postgres host from `POSTGRES_HOST` in its own env
+file (`flowtab-postgres` / `flowtab-dev-postgres`). Keep the two
+different: each PowerSync needs its own source database (its own
+replication slot) and storage schema.
+
 ## 4. Expose api/powersync publicly
 
 `api`/`powersync` publish no host port by design (only reachable over
 `docker-stack_frontend`). In nginx-proxy-manager's UI (port 81), add a
 **Proxy Host** for each, pointing at the container name/port directly:
-- `api.yourdomain.com` → `http://api:3002`
-- `powersync.yourdomain.com` → `http://powersync:8090`
+- `api.yourdomain.com` → `http://flowtab-api:3002`
+- `powersync.yourdomain.com` → `http://flowtab-powersync:8090`
+
+Use the container names, not the bare service names `api`/`powersync`:
+the dev stack (step 3b) joins the same networks, and service names there
+are shared DNS aliases.
 
 Point DNS `A` records for both at the host's IP *before* requesting SSL
 (Let's Encrypt) on them in the same dialog, or the cert request fails.
