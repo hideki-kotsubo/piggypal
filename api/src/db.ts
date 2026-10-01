@@ -14,7 +14,22 @@ import { Pool } from 'pg';
 // a string" from pg, not an obvious "env var missing" error).
 let instance: Pool | undefined;
 
+// DATABASE_URL wins when set (production's docker-compose.yaml builds it
+// from POSTGRES_*). Otherwise the split DATABASE_* vars from api/.env —
+// passed to pg as separate fields, so the password needs no URL-encoding.
+function config(): ConstructorParameters<typeof Pool>[0] {
+  const env = process.env;
+  if (env.DATABASE_URL) return { connectionString: env.DATABASE_URL };
+  return {
+    host: env.DATABASE_HOST,
+    port: env.DATABASE_PORT ? Number(env.DATABASE_PORT) : undefined,
+    user: env.DATABASE_USER,
+    password: env.DATABASE_PASSWORD,
+    database: env.DATABASE_NAME,
+  };
+}
+
 export function pool(): Pool {
-  instance ??= new Pool({ connectionString: process.env.DATABASE_URL });
+  instance ??= new Pool(config());
   return instance;
 }
