@@ -1,0 +1,100 @@
+# Dev backend: its own Postgres + PowerSync Service, next to the production
+# stack (docker-compose.yaml) on the same host. api/ is NOT here — in dev
+# it runs on the host with hot reload (`npm run dev:api`, api/.env), and
+# this PowerSync fetches that api's JWKS over its public URL.
+#
+# Same schema, publication and PowerSync config files as production, so
+# the two environments can't drift apart on sync rules.
+#
+# Usage:
+#   cd deploy
+#   cp .env.dev.example .env.dev
+#   # fill in .env.dev
+#   docker compose -f docker-compose.dev.yaml --env-file .env.dev up -d
+#   docker compose -f docker-compose.dev.yaml --env-file .env.dev logs -f
+#
+# Service and container names are all dev-prefixed on purpose: both stacks
+# join the same external docker-stack_* networks, where service names are
+# DNS aliases — a second "postgres" or "powersync" would make those names
+# resolve to either environment.
+
+name: flowtab-dev
+
+networks:
+  frontend:
+    name: docker-stack_frontend
+    external: true
+  backend:
+    name: docker-stack_backend
+    external: true
+
+services:
+  dev-postgres:
+    image: postgres:17
+    container_name: flowtab-dev-postgres
+    restart: unless-stopped
+    networks:
+      - backend
+    # Same reasons as production's postgres service (docker-compose.yaml):
+    # logical WAL for PowerSync, md5 for pgwire's scram-sha-256 bug.
+    command: ["postgres", "-c", "wal_level=logical"]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-flowtab}
+      POSTGRES_USER: ${POSTGRES_USER:-flowtab}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set a real password in .env.dev}
+      POSTGRES_HOST_AUTH_METHOD: md5
+    volumes:
+      - pgdata-dev:/var/lib/postgresql/data
+      - ../db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./postgres-init/02-create-publication.sql:/docker-entrypoint-initdb.d/02-create-publication.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-flowtab}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Unlike production, published: the dev api runs outside Docker and
+    # needs a host port to reach this (api/.env's DATABASE_URL). Bound to
+    # DEV_PG_BIND (default loopback) rather than every interface; a
+    # non-5432 port so it can't collide with another Postgres on the host.
+    ports:
+      - "${DEV_PG_BIND:-127.0.0.1}:${DEV_PG_PORT:-5433}:5432"
+
+  dev-powersync:
+    image: journeyapps/powersync-service:latest
+    container_name: flowtab-dev-powersync
+    restart: unless-stopped
+    command: ["start", "-r", "unified"]
+    depends_on:
+      dev-postgres:
+        condition: service_healthy
+    environment:
+      POWERSYNC_CONFIG_PATH: /config/service.yaml
+      NODE_OPTIONS: --max-old-space-size=500
+      PS_DATA_SOURCE_URI: postgres://${POSTGRES_USER:-flowtab}:${POSTGRES_PASSWORD:?set a real password in .env.dev}@${POSTGRES_HOST:-flowtab-dev-postgres}:5432/${POSTGRES_DB:-flowtab}
+      PS_STORAGE_SOURCE_URI: postgres://${POSTGRES_USER:-flowtab}:${POSTGRES_PASSWORD:?set a real password in .env.dev}@${POSTGRES_HOST:-flowtab-dev-postgres}:5432/${POSTGRES_DB:-flowtab}
+      PS_DB_SSLMODE: disable
+      # The dev api's own JWKS — it signs with the dev keypair in api/.env,
+      # which production's api/PowerSync know nothing about.
+      PS_JWKS_URL: ${PS_JWKS_URL:?set to the dev api's public /.well-known/jwks.json}
+      PS_ADMIN_API_TOKEN: "${PS_ADMIN_API_TOKEN:?generate with: openssl rand -hex 32}"
+      PS_PORT: ${PS_PORT:-8090}
+    volumes:
+      - ./powersync/service.yaml:/config/service.yaml:ro
+      - ./powersync/sync-config.yaml:/config/sync-config.yaml:ro
+    networks:
+      - frontend
+      - backend
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:${PS_PORT:-8090}/probes/liveness').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 1s
+      retries: 15
+
+volumes:
+  pgdata-dev:
