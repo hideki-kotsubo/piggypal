@@ -14,6 +14,11 @@ it needs doing.
 
 ## ⚪ Next
 
+- [ ] Speech/typed parse preview shows the (possibly defaulted) account
+      but can't change it — the only way is to save, then edit the
+      transaction. Add an account picker to the preview panel
+      (`EntryZone.tsx`), same pattern as tap-entry (D46). Noted
+      2026-10-06 while fixing the Cash-default bug.
 - [ ] Native mobile shell (docs/52, 2026-09-10): `app/android/` and
       `app/ios/` are scaffolded (Capacitor + `@powersync/capacitor`), but
       nothing native has actually been built or run — this sandbox has no
@@ -861,6 +866,17 @@ it needs doing.
       Deferred — parked per user 2026-08-11, revisit later.
 ## ✅ Done
 
+- [x] Speech/typed entry always pre-selected Cash as the account instead
+      of the last-used or most-used one — reported 2026-10-06. Root
+      cause in `store.defaultAccountId()`: it took the most recent
+      transaction from *anyone* in the household (synced rows included),
+      didn't skip archived accounts, and with no match fell back to
+      `state.accounts[0]` — the seeded Cash account. Fixed (D46
+      refinement, docs/07): non-archived accounts only, the local user's
+      own most recent entry first, then the household's, then the
+      most-used account via the same ranking the account picker uses.
+      Verified: `tsc` clean, 77/77 tests pass. Not verified against real
+      data (no DB access that session) — confirm on the real app.
 - [x] Dynamic Home header wordmark (docs/51) — `App.tsx`'s app-bar
       `<span className="wordmark">` now rotates through a 64-line
       English phrase pool (`lib/wordmarkPhrases.ts`) instead of the
