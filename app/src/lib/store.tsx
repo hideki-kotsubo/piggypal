@@ -770,6 +770,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         .filter((t) => !t.deletedAt)
         .sort((a, b) => (a.occurredAt < b.occurredAt ? 1 : -1));
 
+    // docs/50: an account used only through split legs (never as a plain
+    // transaction's own accountId) still counts here — otherwise it'd
+    // never rank by frequency at all.
+    const rankAccounts = () => {
+      const counts = new Map<string, number>();
+      for (const t of activeTx()) {
+        if (t.accountId !== null) counts.set(t.accountId, (counts.get(t.accountId) ?? 0) + 1);
+      }
+      const activeIds = new Set(activeTx().map((t) => t.id));
+      for (const s of state.transactionSplits) {
+        if (!activeIds.has(s.transactionId)) continue;
+        counts.set(s.accountId, (counts.get(s.accountId) ?? 0) + 1);
+      }
+      return [...state.accounts]
+        .filter((a) => !a.archived)
+        .sort((a, b) => (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0));
+    };
+
     return {
       ...state,
 
@@ -946,9 +964,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       // "the most recent" — it has no single account to default to; the
       // most recent *ordinary* transaction's account is still a better
       // default than falling all the way to state.accounts[0].
+      //
+      // Only non-archived accounts qualify, and this user's own entries win
+      // over a household member's synced ones — otherwise a partner's
+      // latest Cash expense becomes everyone's default. With no usable
+      // history at all, fall back to the most-used account rather than
+      // state.accounts[0], which is just seed order (Cash).
       defaultAccountId() {
-        const recent = activeTx().find((t) => t.accountId !== null);
-        return recent?.accountId ?? state.accounts[0]?.id ?? '';
+        const usable = new Set(state.accounts.filter((a) => !a.archived).map((a) => a.id));
+        const candidates = activeTx().filter((t) => t.accountId !== null && usable.has(t.accountId));
+        const localUserId = getLocalUserId();
+        const recent = candidates.find((t) => t.createdByUserId === localUserId) ?? candidates[0];
+        return recent?.accountId ?? rankAccounts()[0]?.id ?? state.accounts[0]?.id ?? '';
       },
 
       // Accounts don't have a currency of their own (see Account) — the
@@ -965,23 +992,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return state.accounts.find((a) => a.id === accountId)?.ownerUserId ?? getLocalUserId();
       },
 
-      // docs/50: an account used only through split legs (never as a plain
-      // transaction's own accountId) still counts here — otherwise it'd
-      // never rank by frequency at all.
-      rankedAccounts() {
-        const counts = new Map<string, number>();
-        for (const t of activeTx()) {
-          if (t.accountId !== null) counts.set(t.accountId, (counts.get(t.accountId) ?? 0) + 1);
-        }
-        const activeIds = new Set(activeTx().map((t) => t.id));
-        for (const s of state.transactionSplits) {
-          if (!activeIds.has(s.transactionId)) continue;
-          counts.set(s.accountId, (counts.get(s.accountId) ?? 0) + 1);
-        }
-        return [...state.accounts]
-          .filter((a) => !a.archived)
-          .sort((a, b) => (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0));
-      },
+      rankedAccounts: rankAccounts,
 
       // Ranked by this account's own transaction-currency history first
       // (accounts don't carry a currency of their own to seed with), then
