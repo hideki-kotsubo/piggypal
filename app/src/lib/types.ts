@@ -41,7 +41,7 @@ export interface Category {
   updatedAt: string; // docs/46 D170 — see Account.updatedAt
 }
 
-export type TransactionSource = 'manual' | 'ai' | 'import';
+export type TransactionSource = 'manual' | 'ai' | 'import' | 'schedule';
 
 export interface Transaction {
   id: string;
@@ -65,6 +65,46 @@ export interface Transaction {
   // Account.ownerUserId above.
   paidByUserId: string;
   createdByUserId: string;
+  // docs/57 D207 — set only on a posted scheduled-payment occurrence
+  // (source 'schedule', or one posted by hand from the schedule screen);
+  // null for every ordinary transaction. occurrenceDate is the projected
+  // "YYYY-MM-DD" this row fulfils — occurredAt may differ if paid late.
+  scheduleId: string | null;
+  occurrenceDate: string | null;
+  updatedAt: string; // docs/46 D170 — see Account.updatedAt
+}
+
+export type ScheduleFreq = 'weekly' | 'monthly' | 'yearly';
+
+// docs/57 — a recurring or installment rule. Occurrences are never stored:
+// lib/schedules.ts projects them from this rule at read time (D206), and
+// a real Transaction exists only once one is posted (D208).
+export interface ScheduledPayment {
+  id: string;
+  name: string;
+  accountId: string | null;
+  categoryId: string | null;
+  // Signed like Transaction.amountCents. Per occurrence for 'recurring';
+  // the whole plan's TOTAL for 'installment' (D211 — split per
+  // installment by installmentAmount(), remainder on the first).
+  amountCents: number;
+  amountMode: 'fixed' | 'estimated';
+  currency: string;
+  merchant: string | null;
+  note: string | null;
+  paidByUserId: string;
+  kind: 'recurring' | 'installment';
+  freq: ScheduleFreq;
+  intervalCount: number; // every N freq units
+  anchorDate: string; // "YYYY-MM-DD", the first occurrence in Flowtab
+  occurrenceCount: number | null; // installments in the whole plan; null = open-ended
+  endDate: string | null; // "YYYY-MM-DD", inclusive; null = open-ended
+  // The number of the anchorDate occurrence — > 1 for a plan already
+  // partly paid before Flowtab ("starting at 4/10").
+  startIndex: number;
+  autoPost: boolean;
+  paused: boolean;
+  archived: boolean;
   updatedAt: string; // docs/46 D170 — see Account.updatedAt
 }
 
@@ -113,6 +153,9 @@ export interface PeerDataset {
   transactions: Transaction[];
   transactionSplits: TransactionSplit[];
   budgets: Budget[];
+  // docs/57 — optional so a peer still running a pre-docs/57 build (no
+  // such field in its payload) still merges cleanly.
+  scheduledPayments?: ScheduledPayment[];
 }
 
 // docs/48 D175 — one row per real person sharing this account. `id` is
@@ -139,6 +182,7 @@ export interface MergeSummary {
   accountsAdded: number;
   transactionsAdded: number;
   transactionSplitsAdded: number;
+  scheduledPaymentsAdded: number;
   budgetsAdded: number;
   budgetsUpdated: number;
 }

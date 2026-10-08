@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Transaction as SqliteTransaction } from '@powersync/web';
 import { connectSync, db } from './db';
@@ -9,7 +9,18 @@ import { nowUtc } from './format';
 import { computeBalances } from './balances';
 import type { AccountRewrite, CategoryRewrite } from './mergeMatch';
 import { effectiveDeviceLabel } from './settings';
-import type { Account, AccountKind, Budget, Category, CategoryKeyword, Device, MergeSummary, PeerDataset, Profile, Transaction, TransactionSplit } from './types';
+import type { Account, AccountKind, Budget, Category, CategoryKeyword, Device, MergeSummary, PeerDataset, Profile, ScheduledPayment, Transaction, TransactionSplit } from './types';
+import {
+  addDays,
+  dueOccurrences,
+  occurrenceNote,
+  occurrenceOccurredAt,
+  occurrenceTransactionId,
+  postedKeys,
+  splitStartIndex,
+  todayLocal,
+} from './schedules';
+import type { Occurrence } from './schedules';
 import { AppSkeleton } from '../components/AppSkeleton';
 import { isUntouchedSeedAccount, referencedAccountIds, seedAccounts, seedCategories, seedCategoryKeywords } from './seed';
 
@@ -96,6 +107,8 @@ interface TransactionRow {
   deleted_at: string | null;
   paid_by_user_id: string | null; // see rowToTransaction's fallback note
   created_by_user_id: string | null;
+  schedule_id: string | null; // docs/57 — absent (null) on every pre-docs/57 row
+  occurrence_date: string | null;
   updated_at: string | null;
 }
 function rowToTransaction(r: TransactionRow): Transaction {
@@ -118,6 +131,10 @@ function rowToTransaction(r: TransactionRow): Transaction {
     // today's single-user-per-device world, so that's the fallback here.
     paidByUserId: r.paid_by_user_id ?? getLocalUserId(),
     createdByUserId: r.created_by_user_id ?? getLocalUserId(),
+    scheduleId: r.schedule_id ?? null,
+    // Postgres `date` columns can come down through PowerSync with a time
+    // part attached — only the date is ever meaningful here.
+    occurrenceDate: r.occurrence_date ? r.occurrence_date.slice(0, 10) : null,
     updatedAt: r.updated_at ?? NEVER_UPDATED,
   };
 }
@@ -136,6 +153,57 @@ function rowToTransactionSplit(r: TransactionSplitRow): TransactionSplit {
     transactionId: r.transaction_id,
     accountId: r.account_id,
     amountCents: r.amount_cents,
+    updatedAt: r.updated_at ?? NEVER_UPDATED,
+  };
+}
+
+// docs/57 — a recurring/installment rule.
+interface ScheduledPaymentRow {
+  id: string;
+  name: string;
+  account_id: string | null;
+  category_id: string | null;
+  amount_cents: number;
+  amount_mode: string;
+  currency: string;
+  merchant: string | null;
+  note: string | null;
+  paid_by_user_id: string | null;
+  kind: string;
+  freq: string;
+  interval_count: number | null;
+  anchor_date: string;
+  occurrence_count: number | null;
+  end_date: string | null;
+  start_index: number | null;
+  auto_post: number;
+  paused: number;
+  archived: number;
+  updated_at: string | null;
+}
+function rowToScheduledPayment(r: ScheduledPaymentRow): ScheduledPayment {
+  return {
+    id: r.id,
+    name: r.name,
+    accountId: r.account_id,
+    categoryId: r.category_id,
+    amountCents: r.amount_cents,
+    amountMode: r.amount_mode as ScheduledPayment['amountMode'],
+    currency: r.currency,
+    merchant: r.merchant,
+    note: r.note,
+    paidByUserId: r.paid_by_user_id ?? getLocalUserId(),
+    kind: r.kind as ScheduledPayment['kind'],
+    freq: r.freq as ScheduledPayment['freq'],
+    intervalCount: r.interval_count ?? 1,
+    // Same date-only trim as rowToTransaction's occurrence_date.
+    anchorDate: r.anchor_date.slice(0, 10),
+    occurrenceCount: r.occurrence_count,
+    endDate: r.end_date ? r.end_date.slice(0, 10) : null,
+    startIndex: r.start_index ?? 1,
+    autoPost: Boolean(r.auto_post),
+    paused: Boolean(r.paused),
+    archived: Boolean(r.archived),
     updatedAt: r.updated_at ?? NEVER_UPDATED,
   };
 }
@@ -237,8 +305,35 @@ const TRANSACTION_COLUMNS: Record<keyof Transaction, string> = {
   deletedAt: 'deleted_at',
   paidByUserId: 'paid_by_user_id',
   createdByUserId: 'created_by_user_id',
+  scheduleId: 'schedule_id',
+  occurrenceDate: 'occurrence_date',
   updatedAt: 'updated_at',
 };
+
+const SCHEDULED_PAYMENT_COLUMNS: Record<keyof ScheduledPayment, string> = {
+  id: 'id',
+  name: 'name',
+  accountId: 'account_id',
+  categoryId: 'category_id',
+  amountCents: 'amount_cents',
+  amountMode: 'amount_mode',
+  currency: 'currency',
+  merchant: 'merchant',
+  note: 'note',
+  paidByUserId: 'paid_by_user_id',
+  kind: 'kind',
+  freq: 'freq',
+  intervalCount: 'interval_count',
+  anchorDate: 'anchor_date',
+  occurrenceCount: 'occurrence_count',
+  endDate: 'end_date',
+  startIndex: 'start_index',
+  autoPost: 'auto_post',
+  paused: 'paused',
+  archived: 'archived',
+  updatedAt: 'updated_at',
+};
+const SCHEDULED_PAYMENT_BOOLEANS = new Set<keyof ScheduledPayment>(['autoPost', 'paused', 'archived']);
 
 const TRANSACTION_SPLIT_COLUMNS: Record<keyof TransactionSplit, string> = {
   id: 'id',
@@ -266,6 +361,7 @@ async function rewriteOwnerIdentity(tx: SqliteTransaction, oldId: string, newId:
   await tx.execute('UPDATE accounts SET owner_user_id = ?, updated_at = ? WHERE owner_user_id = ?', [newId, now, oldId]);
   await tx.execute('UPDATE transactions SET paid_by_user_id = ?, updated_at = ? WHERE paid_by_user_id = ?', [newId, now, oldId]);
   await tx.execute('UPDATE transactions SET created_by_user_id = ?, updated_at = ? WHERE created_by_user_id = ?', [newId, now, oldId]);
+  await tx.execute('UPDATE scheduled_payments SET paid_by_user_id = ?, updated_at = ? WHERE paid_by_user_id = ?', [newId, now, oldId]);
   setLocalUserId(newId);
 }
 
@@ -278,9 +374,11 @@ async function cascadeCategoryReferences(tx: SqliteTransaction, oldId: string, n
   await tx.execute('UPDATE transactions SET category_id = ? WHERE category_id = ?', [newId, oldId]);
   await tx.execute('UPDATE budgets SET category_id = ? WHERE category_id = ?', [newId, oldId]);
   await tx.execute('UPDATE category_keywords SET category_id = ? WHERE category_id = ?', [newId, oldId]);
+  await tx.execute('UPDATE scheduled_payments SET category_id = ? WHERE category_id = ?', [newId, oldId]);
 }
 async function cascadeAccountReferences(tx: SqliteTransaction, oldId: string, newId: string): Promise<void> {
   await tx.execute('UPDATE transactions SET account_id = ? WHERE account_id = ?', [newId, oldId]);
+  await tx.execute('UPDATE scheduled_payments SET account_id = ? WHERE account_id = ?', [newId, oldId]);
 }
 
 // Manual-merge-only entry points: unlike applySignInMergePlan's rewrites,
@@ -303,6 +401,68 @@ async function insertAccountRow(a: Account): Promise<void> {
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [a.id, a.institution, a.name, a.kind, a.archived ? 1 : 0, a.ownerUserId, a.updatedAt],
   );
+}
+
+// One place that knows the transactions INSERT shape — addTransaction,
+// posted schedule occurrences and the P2P merge all write through it.
+async function insertTransactionRow(tx: Pick<SqliteTransaction, 'execute'>, t: Transaction): Promise<void> {
+  await tx.execute(
+    `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_at, note, merchant, source, ai_raw, deleted_at, paid_by_user_id, created_by_user_id, schedule_id, occurrence_date, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [t.id, t.accountId, t.categoryId, t.amountCents, t.currency, t.occurredAt, t.note, t.merchant, t.source, t.aiRaw, t.deletedAt, t.paidByUserId, t.createdByUserId, t.scheduleId, t.occurrenceDate, t.updatedAt],
+  );
+}
+
+// docs/57 — same, for scheduled_payments.
+async function insertScheduledPaymentRow(tx: Pick<SqliteTransaction, 'execute'>, r: ScheduledPayment): Promise<void> {
+  await tx.execute(
+    `INSERT INTO scheduled_payments (id, name, account_id, category_id, amount_cents, amount_mode, currency, merchant, note, paid_by_user_id, kind, freq, interval_count, anchor_date, occurrence_count, end_date, start_index, auto_post, paused, archived, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [r.id, r.name, r.accountId, r.categoryId, r.amountCents, r.amountMode, r.currency, r.merchant, r.note, r.paidByUserId, r.kind, r.freq, r.intervalCount, r.anchorDate, r.occurrenceCount, r.endDate, r.startIndex, r.autoPost ? 1 : 0, r.paused ? 1 : 0, r.archived ? 1 : 0, r.updatedAt],
+  );
+}
+
+// docs/57 D208/D210/D212 — writes posted occurrences as real transactions,
+// atomically. Each id is uuidv5(schedule_id + occurrence_date), computed
+// before the write lock is taken; an id that already exists locally (a
+// StrictMode double-run, a second tap, or a row already downloaded from
+// another device) is left untouched, never overwritten. `skip` writes the
+// row already soft-deleted — a skip is a posted-then-deleted occurrence,
+// so it syncs like any delete and keeps suppressing the projection.
+async function postOccurrenceRows(
+  items: { rule: ScheduledPayment; occ: Occurrence }[],
+  opts: { skip: boolean; accountFallback: string },
+): Promise<string[]> {
+  const ids = await Promise.all(items.map(({ rule, occ }) => occurrenceTransactionId(rule.id, occ.date)));
+  await db.writeTransaction(async (tx) => {
+    const now = nowUtc();
+    for (let i = 0; i < items.length; i++) {
+      const { rule, occ } = items[i];
+      const existing = await tx.getAll<{ id: string }>('SELECT id FROM transactions WHERE id = ?', [ids[i]]);
+      if (existing.length > 0) continue;
+      await insertTransactionRow(tx, {
+        id: ids[i],
+        // A null accountId means "split across accounts" (docs/50) on a
+        // transaction — never what a rule without an account intends.
+        accountId: rule.accountId ?? opts.accountFallback,
+        categoryId: rule.categoryId,
+        amountCents: occ.amountCents,
+        currency: rule.currency,
+        occurredAt: occurrenceOccurredAt(occ.date),
+        note: occurrenceNote(rule, occ),
+        merchant: rule.merchant,
+        source: 'schedule',
+        aiRaw: null,
+        deletedAt: opts.skip ? now : null,
+        paidByUserId: rule.paidByUserId,
+        createdByUserId: getLocalUserId(),
+        scheduleId: rule.id,
+        occurrenceDate: occ.date,
+        updatedAt: now,
+      });
+    }
+  });
+  return ids;
 }
 
 // docs/48 D176 — upserts this device's own row (id, current profile,
@@ -416,6 +576,7 @@ interface StoreState {
   categories: Category[];
   transactions: Transaction[];
   transactionSplits: TransactionSplit[];
+  scheduledPayments: ScheduledPayment[];
   budgets: Budget[];
   categoryKeywords: CategoryKeyword[];
   profiles: Profile[];
@@ -452,6 +613,21 @@ interface StoreApi extends StoreState {
   // row and restores a real account_id, atomically (same reasoning as
   // startSplit above).
   endSplit: (transactionId: string, accountId: string) => Promise<void>;
+  // docs/57 — scheduled payments. Rules are never hard-deleted (archive
+  // via updateScheduledPayment), so posted transactions' schedule_id
+  // always resolves.
+  addScheduledPayment: (rule: ScheduledPayment) => void;
+  updateScheduledPayment: (ruleId: string, patch: Partial<ScheduledPayment>) => void;
+  // D210 "change this and future" for timing changes on a rule that
+  // already has posted history: ends (and archives) the old rule the day
+  // before newAnchor and starts a new rule there with `patch` applied,
+  // keeping installment numbering continuous. One atomic write; returns
+  // the new rule's id.
+  splitScheduledPayment: (ruleId: string, newAnchor: string, patch: Partial<ScheduledPayment>) => Promise<string>;
+  // D212 — posts one occurrence as a real transaction (or, with skip, as
+  // an already-soft-deleted one). Idempotent per occurrence. Returns the
+  // transaction's deterministic id.
+  postOccurrence: (rule: ScheduledPayment, occ: Occurrence, opts?: { skip?: boolean }) => Promise<string>;
   addAccount: (account: Account) => void;
   updateAccount: (accountId: string, patch: Partial<Account>) => void;
   addCategory: (category: Category) => void;
@@ -563,6 +739,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     categories: [],
     transactions: [],
     transactionSplits: [],
+    scheduledPayments: [],
     budgets: [],
     categoryKeywords: [],
     profiles: [],
@@ -592,6 +769,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           'categories',
           'transactions',
           'transactionSplits',
+          'scheduledPayments',
           'budgets',
           'categoryKeywords',
           'profiles',
@@ -675,6 +853,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             onError: (err) => {
               console.error('flowtab: transaction_splits watch failed', err);
               markFirstLoad('transactionSplits');
+            },
+          },
+          { signal: controller.signal, triggerImmediate: true },
+        );
+        db.watch(
+          'SELECT * FROM scheduled_payments',
+          [],
+          {
+            onResult: (r) => {
+              setState((s) => ({ ...s, scheduledPayments: r.rows?._array.map(rowToScheduledPayment) ?? [] }));
+              markFirstLoad('scheduledPayments');
+            },
+            onError: (err) => {
+              console.error('flowtab: scheduled_payments watch failed', err);
+              markFirstLoad('scheduledPayments');
             },
           },
           { signal: controller.signal, triggerImmediate: true },
@@ -764,6 +957,41 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (getAuthAccount()) void connectSync().then(() => touchDevice());
   }, []);
 
+  // docs/57 D212 — auto-post: every due occurrence of an auto_post rule
+  // becomes a real transaction as soon as this device sees it due, on any
+  // device. Concurrent auto-posting elsewhere is safe by construction
+  // (D208's deterministic ids locally, the upload handler's first-post-
+  // wins insert server-side). Re-checks whenever rules or transactions
+  // change, and when the app comes back to the foreground — `today` may
+  // have rolled over while it sat in the background overnight.
+  const [today, setToday] = useState(todayLocal);
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === 'visible') setToday(todayLocal());
+    };
+    document.addEventListener('visibilitychange', refresh);
+    return () => document.removeEventListener('visibilitychange', refresh);
+  }, []);
+  const autoPosting = useRef(false);
+  useEffect(() => {
+    if (!ready || autoPosting.current) return;
+    const rules = state.scheduledPayments.filter((r) => r.autoPost);
+    if (rules.length === 0) return;
+    const due = dueOccurrences(rules, postedKeys(state.transactions), today);
+    if (due.length === 0) return;
+    const byId = new Map(rules.map((r) => [r.id, r]));
+    autoPosting.current = true;
+    const fallback = state.accounts.find((a) => !a.archived)?.id ?? '';
+    postOccurrenceRows(
+      due.map((occ) => ({ rule: byId.get(occ.scheduleId)!, occ })),
+      { skip: false, accountFallback: fallback },
+    )
+      .catch((err) => console.error('flowtab: auto-post failed', err))
+      .finally(() => {
+        autoPosting.current = false;
+      });
+  }, [ready, today, state.scheduledPayments, state.transactions, state.accounts]);
+
   const api = useMemo<StoreApi>(() => {
     const activeTx = () =>
       [...state.transactions]
@@ -792,11 +1020,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ...state,
 
       addTransaction(tx) {
-        void db.execute(
-          `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_at, note, merchant, source, ai_raw, deleted_at, paid_by_user_id, created_by_user_id, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [tx.id, tx.accountId, tx.categoryId, tx.amountCents, tx.currency, tx.occurredAt, tx.note, tx.merchant, tx.source, tx.aiRaw, tx.deletedAt, tx.paidByUserId, tx.createdByUserId, tx.updatedAt],
-        );
+        void insertTransactionRow(db, tx);
       },
 
       // docs/46 D170 — updated_at always bumped to now, regardless of
@@ -896,6 +1120,54 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             transactionId,
           ]);
         });
+      },
+
+      addScheduledPayment(rule) {
+        void insertScheduledPaymentRow(db, rule);
+      },
+
+      updateScheduledPayment(ruleId, patch) {
+        const entries = (Object.entries(patch) as [keyof ScheduledPayment, unknown][]).filter(
+          ([k]) => k !== 'updatedAt' && k !== 'id',
+        );
+        if (entries.length === 0) return;
+        const setClause = entries.map(([k]) => `${SCHEDULED_PAYMENT_COLUMNS[k]} = ?`).join(', ');
+        const params = entries.map(([k, v]) => (SCHEDULED_PAYMENT_BOOLEANS.has(k) ? (v ? 1 : 0) : v));
+        void db.execute(`UPDATE scheduled_payments SET ${setClause}, updated_at = ? WHERE id = ?`, [...params, nowUtc(), ruleId]);
+      },
+
+      async splitScheduledPayment(ruleId, newAnchor, patch) {
+        const old = state.scheduledPayments.find((r) => r.id === ruleId);
+        if (!old) throw new Error(`splitScheduledPayment: no rule ${ruleId}`);
+        const now = nowUtc();
+        const next: ScheduledPayment = {
+          ...old,
+          ...patch,
+          id: crypto.randomUUID(),
+          anchorDate: newAnchor,
+          startIndex: splitStartIndex(old, newAnchor),
+          endDate: patch.endDate !== undefined ? patch.endDate : old.endDate,
+          archived: false,
+          updatedAt: now,
+        };
+        await db.writeTransaction(async (tx) => {
+          // Archived as well as ended: from the user's point of view it's
+          // the same schedule, now continuing as the new rule — the old
+          // one only stays around as its posted history's schedule_id.
+          await tx.execute('UPDATE scheduled_payments SET end_date = ?, archived = 1, updated_at = ? WHERE id = ?', [
+            addDays(newAnchor, -1),
+            now,
+            ruleId,
+          ]);
+          await insertScheduledPaymentRow(tx, next);
+        });
+        return next.id;
+      },
+
+      async postOccurrence(rule, occ, opts) {
+        const fallback = rankAccounts()[0]?.id ?? '';
+        const [id] = await postOccurrenceRows([{ rule, occ }], { skip: opts?.skip ?? false, accountFallback: fallback });
+        return id;
       },
 
       addAccount(account) {
@@ -1175,6 +1447,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           accountsAdded: 0,
           transactionsAdded: 0,
           transactionSplitsAdded: 0,
+          scheduledPaymentsAdded: 0,
           budgetsAdded: 0,
           budgetsUpdated: 0,
         };
@@ -1216,7 +1489,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             const localAccounts = await tx.getAll<{ id: string; institution: string | null; name: string; kind: AccountKind }>(
               'SELECT id, institution, name, kind FROM accounts',
             );
-            const txRefs = await tx.getAll<{ accountId: string | null }>('SELECT account_id AS accountId FROM transactions');
+            // docs/57 — a starter account a schedule points at counts as used.
+            const txRefs = await tx.getAll<{ accountId: string | null }>(
+              'SELECT account_id AS accountId FROM transactions UNION ALL SELECT account_id AS accountId FROM scheduled_payments',
+            );
             const splitRefs = await tx.getAll<{ accountId: string }>('SELECT account_id AS accountId FROM transaction_splits');
             const referenced = referencedAccountIds(txRefs, splitRefs);
             for (const a of localAccounts) {
@@ -1240,31 +1516,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             summary.accountsAdded += 1;
           }
 
+          // docs/57 — scheduled-payment rules, same defensive-only
+          // existence check. Before the transactions loop so a posted
+          // occurrence's schedule_id already exists locally — and, once
+          // uploaded, reaches the server ahead of the row referencing it.
+          for (const r of peer.scheduledPayments ?? []) {
+            const existing = await tx.getAll<{ id: string }>('SELECT id FROM scheduled_payments WHERE id = ?', [r.id]);
+            if (existing.length > 0) continue;
+            await insertScheduledPaymentRow(tx, r);
+            summary.scheduledPaymentsAdded += 1;
+          }
+
           // Transactions — always inserted as distinct events, same
-          // defensive-only existence check as accounts.
+          // defensive-only existence check as accounts. A posted
+          // schedule occurrence both sides posted independently has the
+          // same deterministic id (docs/57 D208), so it dedupes here too.
           for (const t of peer.transactions) {
             const existing = await tx.getAll<{ id: string }>('SELECT id FROM transactions WHERE id = ?', [t.id]);
             if (existing.length > 0) continue;
-            await tx.execute(
-              `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_at, note, merchant, source, ai_raw, deleted_at, paid_by_user_id, created_by_user_id, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-              [
-                t.id,
-                t.accountId,
-                t.categoryId,
-                t.amountCents,
-                t.currency,
-                t.occurredAt,
-                t.note,
-                t.merchant,
-                t.source,
-                t.aiRaw,
-                t.deletedAt,
-                t.paidByUserId,
-                t.createdByUserId,
-                t.updatedAt,
-              ],
-            );
+            // Older peers' rows have no schedule fields at all.
+            await insertTransactionRow(tx, { ...t, scheduleId: t.scheduleId ?? null, occurrenceDate: t.occurrenceDate ?? null });
             summary.transactionsAdded += 1;
           }
 

@@ -17,6 +17,8 @@ function tx(overrides: Partial<Transaction>): Transaction {
     deletedAt: null,
     paidByUserId: 'u-1',
     createdByUserId: 'u-1',
+    scheduleId: null,
+    occurrenceDate: null,
     updatedAt: '2026-08-30T12:00:00',
     ...overrides,
   };

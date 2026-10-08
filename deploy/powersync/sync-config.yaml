@@ -60,6 +60,13 @@ streams:
     auto_subscribe: true
     query: SELECT * FROM transaction_splits WHERE user_id = auth.user_id()
 
+  # docs/57 — scheduled-payment rules. Small and low-churn (one row per
+  # rent/lease/installment plan, not per occurrence — occurrences are
+  # projected on-device), so synced whole, no windowing concern.
+  scheduled_payments:
+    auto_subscribe: true
+    query: SELECT * FROM scheduled_payments WHERE user_id = auth.user_id()
+
   # docs/48 D175/D176 — small, low-churn reference tables, synced whole
   # (no windowing concern like transactions above).
   profiles:

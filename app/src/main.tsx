@@ -16,6 +16,8 @@ import { DuplicateTransactionsScreen } from './components/DuplicateTransactionsS
 import { InboxScreen } from './components/InboxScreen'
 import { AccountsScreen } from './components/AccountsScreen'
 import { CategoriesScreen } from './components/CategoriesScreen'
+import { SchedulesScreen } from './components/SchedulesScreen'
+import { ScheduleScreen } from './components/ScheduleScreen'
 import { InsightsScreen } from './components/InsightsScreen'
 import { SettingsScreen } from './components/SettingsScreen'
 import { PairingScreen } from './components/PairingScreen'
@@ -56,6 +58,8 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/about" element={<AboutScreen />} />
           <Route path="/accounts" element={<AccountsScreen />} />
           <Route path="/categories" element={<CategoriesScreen />} />
+          <Route path="/schedules" element={<SchedulesScreen />} />
+          <Route path="/schedules/:id" element={<ScheduleScreen />} />
         </Routes>
       </StoreProvider>
     </BrowserRouter>

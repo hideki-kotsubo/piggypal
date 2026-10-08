@@ -55,7 +55,7 @@ const transactions = new Table(
     occurred_at: column.text, // local date+time, "YYYY-MM-DDTHH:MM:SS", no timezone
     note: column.text,
     merchant: column.text, // nullable, free text — display/grouping only, see docs/15
-    source: column.text, // manual | ai | import
+    source: column.text, // manual | ai | import | schedule
     ai_raw: column.text,
     deleted_at: column.text,
     // docs/24 D110 — paid_by_user_id (mutable, whose money it was) vs
@@ -63,10 +63,38 @@ const transactions = new Table(
     // separate columns, not one.
     paid_by_user_id: column.text,
     created_by_user_id: column.text,
+    // docs/57 D207 — set only on a posted scheduled-payment occurrence.
+    schedule_id: column.text,
+    occurrence_date: column.text, // "YYYY-MM-DD"
     updated_at: column.text,
   },
-  { indexes: { by_account: ['account_id'], by_category: ['category_id'] } },
+  { indexes: { by_account: ['account_id'], by_category: ['category_id'], by_schedule: ['schedule_id'] } },
 );
+
+// docs/57 — recurring/installment rules. Occurrences are projected from
+// these at read time (lib/schedules.ts), never stored as rows.
+const scheduled_payments = new Table({
+  name: column.text,
+  account_id: column.text,
+  category_id: column.text,
+  amount_cents: column.integer, // signed; the plan TOTAL for installments (D211)
+  amount_mode: column.text, // fixed | estimated
+  currency: column.text,
+  merchant: column.text,
+  note: column.text,
+  paid_by_user_id: column.text,
+  kind: column.text, // recurring | installment
+  freq: column.text, // weekly | monthly | yearly
+  interval_count: column.integer,
+  anchor_date: column.text, // "YYYY-MM-DD"
+  occurrence_count: column.integer,
+  end_date: column.text,
+  start_index: column.integer,
+  auto_post: column.integer,
+  paused: column.integer,
+  archived: column.integer,
+  updated_at: column.text,
+});
 
 // docs/50 — the per-account amount breakdown when a transaction is split
 // across 2+ accounts (that transaction's own account_id is then NULL, see
@@ -124,6 +152,7 @@ export const AppSchema = new Schema({
   categories,
   transactions,
   transaction_splits,
+  scheduled_payments,
   budgets,
   category_keywords,
   profiles,

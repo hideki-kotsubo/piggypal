@@ -796,7 +796,10 @@ it needs doing.
       + the app requesting only the weeks/months it actually wants —
       PowerSync's own recommended pattern, more precise, more app-side
       work). Needs a real design pass before either gets built.
-- [ ] Recurring transactions — explicitly out of MVP scope (docs/01).
+- [x] Recurring transactions — brought into scope 2026-10-08 as scheduled
+      payments + installments and built (docs/57, D205-D216, branch
+      `feat/scheduled-payments`). Still to do: a real-browser pass over
+      `/schedules`, then migration + API + PowerSync deploy.
 - [ ] Household sharing — explicitly out of MVP scope (docs/01).
 - [ ] docs/04 learning loop (writing corrections back into
       `category_keywords` when a user resolves an Inbox item) and its

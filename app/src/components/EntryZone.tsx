@@ -83,6 +83,8 @@ export function EntryZone({ onSubmitted }: Props) {
       deletedAt: null,
       paidByUserId: store.defaultPayerFor(accountId),
       createdByUserId: getLocalUserId(),
+      scheduleId: null,
+      occurrenceDate: null,
       updatedAt: nowUtc(),
     };
     store.addTransaction(tx);
@@ -170,6 +172,8 @@ export function EntryZone({ onSubmitted }: Props) {
       deletedAt: null,
       paidByUserId: store.defaultPayerFor(preview.accountId),
       createdByUserId: getLocalUserId(),
+      scheduleId: null,
+      occurrenceDate: null,
       updatedAt: nowUtc(),
     };
     store.addTransaction(tx);
