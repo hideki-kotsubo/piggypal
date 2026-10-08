@@ -39,6 +39,32 @@ const TABLE_COLUMNS: Record<string, readonly string[]> = {
     'deleted_at',
     'paid_by_user_id',
     'created_by_user_id',
+    // docs/57 D207 — set only on a posted scheduled-payment occurrence.
+    'schedule_id',
+    'occurrence_date',
+  ],
+  // docs/57 — a recurring/installment rule. Bare-id table like
+  // transactions (real crypto.randomUUID() ids).
+  scheduled_payments: [
+    'name',
+    'account_id',
+    'category_id',
+    'amount_cents',
+    'amount_mode',
+    'currency',
+    'merchant',
+    'note',
+    'paid_by_user_id',
+    'kind',
+    'freq',
+    'interval_count',
+    'anchor_date',
+    'occurrence_count',
+    'end_date',
+    'start_index',
+    'auto_post',
+    'paused',
+    'archived',
   ],
   // docs/50 — the per-account amount breakdown when a transaction is split
   // across 2+ accounts (that transaction's own account_id is then NULL).
@@ -58,7 +84,7 @@ const TABLE_COLUMNS: Record<string, readonly string[]> = {
 
 // SQLite stores booleans as 0/1 (schema.ts's own convention); Postgres
 // columns are real `boolean`.
-const BOOLEAN_COLUMNS = new Set(['archived']);
+const BOOLEAN_COLUMNS = new Set(['archived', 'auto_post', 'paused']);
 
 // docs/46 D162 — categories/category_keywords use a composite
 // `(user_id, id)` primary key (db/migrations/2026-08-24-categories-
@@ -91,8 +117,13 @@ const COLUMN_DEFAULTS: Record<string, unknown> = { sort_order: 0 };
 // the whole batch, which left a stuck device retrying the same bad op
 // forever (found from a real report: `occurred_at` written as bare
 // "THH:MM:00" by a native date-input quirk in TransactionEditForm.tsx).
+const isDate = (v: unknown) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
 const COLUMN_VALIDATORS: Record<string, (value: unknown) => boolean> = {
   occurred_at: (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(v),
+  // docs/57 — plain local dates; the nullable ones accept null.
+  anchor_date: isDate,
+  end_date: (v) => v === null || v === undefined || isDate(v),
+  occurrence_date: (v) => v === null || v === undefined || isDate(v),
 };
 
 function coerce(column: string, value: unknown): unknown {
@@ -241,6 +272,28 @@ syncRouter.post('/upload', requireAccessToken, async (req: AuthedRequest, res) =
         }
         // No collision (nothing here yet, or it's this exact row being
         // re-uploaded) — falls through to the generic upsert below.
+      }
+
+      if (op.op === 'PUT' && op.table === 'transactions' && op.data?.schedule_id) {
+        // docs/57 D208 — a posted scheduled-payment occurrence has a
+        // deterministic id (uuidv5 of schedule_id + occurrence_date), so a
+        // PUT for an id that already exists means a second device posted
+        // (or skipped) the same occurrence independently. First post wins:
+        // the generic upsert below would let that late PUT overwrite the
+        // first device's row — including any edit made to it since.
+        // Reported as applied, not skipped: nothing is left to retry and
+        // nothing needs the user's attention; the device converges to the
+        // winning row on its next download.
+        const values = columns.map((c) => coerce(c, op.data?.[c]));
+        const placeholders = columns.map((_, i) => `$${i + 3}`).join(', ');
+        await client.query(
+          `INSERT INTO transactions (id, user_id, ${columns.join(', ')})
+           VALUES ($1, $2, ${placeholders})
+           ON CONFLICT (id) DO NOTHING`,
+          [op.id, userId, ...values],
+        );
+        result.applied.push(op.id);
+        continue;
       }
 
       if (op.op === 'PUT') {

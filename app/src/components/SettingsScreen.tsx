@@ -154,6 +154,10 @@ export function SettingsScreen() {
           <span>Categories</span>
           <span className="settings-row-arrow">›</span>
         </Link>
+        <Link to="/schedules" className="settings-row">
+          <span>Scheduled payments</span>
+          <span className="settings-row-arrow">›</span>
+        </Link>
       </div>
 
       <div className="section-label">Account</div>

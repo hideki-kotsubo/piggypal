@@ -141,7 +141,10 @@ export function AuthVerifyScreen() {
         const localAccounts = await db.getAll<{ id: string; institution: string | null; name: string; kind: AccountKind }>(
           'SELECT id, institution, name, kind FROM accounts',
         );
-        const txRefs = await db.getAll<{ accountId: string | null }>('SELECT account_id AS accountId FROM transactions');
+        // docs/57 — a schedule's account counts as used, same as a transaction's.
+        const txRefs = await db.getAll<{ accountId: string | null }>(
+          'SELECT account_id AS accountId FROM transactions UNION ALL SELECT account_id AS accountId FROM scheduled_payments',
+        );
         const splitRefs = await db.getAll<{ accountId: string }>('SELECT account_id AS accountId FROM transaction_splits');
         const referenced = referencedAccountIds(txRefs, splitRefs);
         const existingAccounts = localAccounts.filter((a) => !isUntouchedSeedAccount(a, referenced)).length;
@@ -241,7 +244,7 @@ export function AuthVerifyScreen() {
       // device would be left with none).
       const localOwn = store.accounts.filter((a) => a.ownerUserId === getLocalUserId());
       const serverOwn = picked.kind === 'existing' ? snapshot.accounts.filter((a) => a.ownerUserId === picked.profile.id) : [];
-      const referenced = referencedAccountIds(store.transactions, store.transactionSplits);
+      const referenced = referencedAccountIds([...store.transactions, ...store.scheduledPayments], store.transactionSplits);
       const discardAccountIds =
         serverOwn.length > 0 ? localOwn.filter((a) => isUntouchedSeedAccount(a, referenced)).map((a) => a.id) : [];
       const accountMatch =

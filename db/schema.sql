@@ -78,6 +78,41 @@ create table categories (
   foreign key (user_id, parent_id) references categories (user_id, id)
 );
 
+-- docs/57 D207 — a scheduled payment is a *rule* (rent, tuition, a lease,
+-- a 10x card installment plan), never a stored list of future rows:
+-- upcoming occurrences are projected on-device at read time (D206), and a
+-- real transactions row exists only once an occurrence is posted. Defined
+-- before transactions because transactions.schedule_id references it.
+create table scheduled_payments (
+  id                uuid primary key,
+  user_id           uuid not null,
+  name              text not null,              -- "Rent", "Civic lease", "TV 10x"
+  account_id        uuid references accounts(id),
+  category_id       text,                       -- text, not uuid — see categories.id
+  amount_cents      bigint not null,            -- signed like transactions; per
+                                                -- occurrence, or the plan TOTAL
+                                                -- when kind = 'installment' (D211)
+  amount_mode       text not null default 'fixed',  -- fixed | estimated
+  currency          char(3) not null,
+  merchant          text,
+  note              text,
+  paid_by_user_id   uuid not null,
+  kind              text not null default 'recurring',  -- recurring | installment
+  freq              text not null,              -- weekly | monthly | yearly
+  interval_count    int  not null default 1,    -- every N freq units
+  anchor_date       date not null,              -- first occurrence in Flowtab (local date)
+  occurrence_count  int,                        -- installments in the whole plan; null = open-ended
+  end_date          date,                       -- null = open-ended
+  start_index       int  not null default 1,    -- number of the anchor_date occurrence
+                                                -- (a plan already partly paid before Flowtab)
+  auto_post         boolean not null default false,
+  paused            boolean not null default false,
+  archived          boolean not null default false,
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now(),
+  foreign key (user_id, category_id) references categories (user_id, id)
+);
+
 create table transactions (
   id           uuid primary key,
   user_id      uuid not null,
@@ -101,7 +136,7 @@ create table transactions (
   merchant     text,    -- nullable, free text ("Costco", "Uber") — display/
                          -- grouping only, no FK, same shape as
                          -- accounts.institution — see docs/15
-  source       text not null default 'manual',   -- manual | ai | import
+  source       text not null default 'manual',   -- manual | ai | import | schedule
   ai_raw       text,                             -- original utterance, if source = 'ai'
   deleted_at   timestamptz,
   paid_by_user_id     uuid not null,  -- whose money this was — mutable,
@@ -110,6 +145,11 @@ create table transactions (
                                        -- insert, never patched after —
                                        -- docs/24 D110. Deliberately not the
                                        -- same column: see docs/24 for why.
+  schedule_id         uuid references scheduled_payments(id),  -- docs/57 —
+                                       -- set only on a posted occurrence,
+                                       -- whose id is then uuidv5(schedule_id
+                                       -- + occurrence_date) (D208)
+  occurrence_date     date,           -- the projected date this row fulfils
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now(),
   -- docs/46 D162 — composite, matching categories' own composite key
@@ -226,6 +266,8 @@ create index on transactions (user_id, category_id, occurred_at);
 create index on transaction_splits (user_id, transaction_id);
 create index on transaction_splits (user_id, account_id);
 create index on budgets      (user_id, month);
+create index on scheduled_payments (user_id);
+create index on transactions (schedule_id) where schedule_id is not null;
 create index on devices      (user_id, profile_id);
 
 -- ── Auth (docs/05) — server-only, not part of the sync buckets above ───────

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { EntryZone } from './components/EntryZone';
+import { DueBanner } from './components/DueBanner';
 import { InboxBanner } from './components/InboxBanner';
 import { RecentList } from './components/RecentList';
 import { hasHousehold, useHouseholdPeers } from './lib/household';
@@ -42,6 +43,7 @@ export default function App() {
         </div>
       </div>
 
+      <DueBanner />
       <InboxBanner />
       <RecentList />
 

@@ -128,8 +128,8 @@ export function referencedAccountIds(
 // pairing, signing in to an existing profile), where keeping it would just
 // duplicate the other side's Cash/Checking. Also excluded from "this
 // device already has N accounts" counts, so a fresh install still reads
-// as fresh. Any edit to name/kind/institution, or any transaction against
-// it, makes it a real account.
+// as fresh. Any edit to name/kind/institution, or any transaction (or
+// docs/57 scheduled payment) against it, makes it a real account.
 export function isUntouchedSeedAccount(
   a: Pick<Account, 'id' | 'institution' | 'name' | 'kind'>,
   referenced: ReadonlySet<string>,

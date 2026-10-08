@@ -1,3 +1,5 @@
+import { addDays } from './schedules';
+
 // docs/09: number formatting keyed to UI language, currency symbol keyed to
 // the transaction's own currency — independent axes. UI language is
 // hardcoded to en-CA for now; docs/09's language switcher isn't built yet.
@@ -107,4 +109,18 @@ export function transactionTitle(
   category: { name: string } | null | undefined,
 ): string {
   return transaction.note ?? category?.name ?? 'Uncategorized';
+}
+
+// docs/57 — "Today", "Tomorrow", "Oct 15" for a scheduled-payment date. A
+// schedule date has no time part ("YYYY-MM-DD"), so it never goes through
+// the occurredAt-oriented helpers above.
+export function formatOccurrenceDate(date: string, today: string): string {
+  if (date === today) return 'Today';
+  if (date === addDays(today, 1)) return 'Tomorrow';
+  if (date === addDays(today, -1)) return 'Yesterday';
+  const [y, m, d] = date.split('-').map(Number);
+  const sameYear = date.slice(0, 4) === today.slice(0, 4);
+  return new Intl.DateTimeFormat(UI_LOCALE, { month: 'short', day: 'numeric', ...(sameYear ? {} : { year: 'numeric' }) }).format(
+    new Date(y, m - 1, d),
+  );
 }

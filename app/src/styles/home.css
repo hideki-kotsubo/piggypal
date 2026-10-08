@@ -1528,3 +1528,60 @@
 @media (prefers-reduced-motion: reduce) {
   .skeleton-bar { animation: none; }
 }
+
+/* docs/57 — scheduled payments. Lists reuse .day-card/.tx-row; the only
+   new pieces are the per-occurrence Paid/Skip actions, the overdue tint,
+   and the budget bar's "committed" segment. */
+.schedule-list {
+  margin: 0 1.1rem 1.2rem;
+}
+.schedule-occ-row {
+  gap: 0.6rem;
+}
+.schedule-occ-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+.schedule-occ-actions {
+  margin: 0;
+  flex-wrap: nowrap;
+}
+.schedule-occ-actions .chip {
+  padding: 0.2rem 0.7rem;
+  font-size: 0.78rem;
+}
+.schedule-overdue {
+  color: var(--warn);
+}
+.schedule-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.87rem;
+  color: var(--ink);
+}
+.track {
+  display: flex;
+}
+/* Same accent as "spent", hatched so it reads as not-yet-happened. */
+.fill.committed {
+  border-radius: 0 4px 4px 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--accent) 0 3px,
+    transparent 3px 6px
+  );
+  opacity: 0.55;
+}
+.fill.committed.over {
+  background: repeating-linear-gradient(-45deg, var(--warn) 0 3px, transparent 3px 6px);
+}
+.budget-committed-note {
+  margin-top: 0.2rem;
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+  text-align: right;
+}

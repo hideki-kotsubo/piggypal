@@ -164,7 +164,7 @@ export function PairingScreen() {
       // starter accounts — applyPeerDataset discards them on this side
       // anyway, and sending them would plant duplicate Cash/Checking on
       // the canonical device.
-      const referenced = referencedAccountIds(store.transactions, store.transactionSplits);
+      const referenced = referencedAccountIds([...store.transactions, ...store.scheduledPayments], store.transactionSplits);
       const accounts = adoptPeerIdentity
         ? store.accounts.filter((a) => !isUntouchedSeedAccount(a, referenced))
         : store.accounts;
@@ -174,6 +174,7 @@ export function PairingScreen() {
         accounts,
         transactions: store.transactions,
         transactionSplits: store.transactionSplits,
+        scheduledPayments: store.scheduledPayments,
         budgets: store.budgets,
       };
       const peerDataset = await exchangeJson<PeerDataset>(pc, localDataset);
@@ -230,7 +231,7 @@ export function PairingScreen() {
         // fresh device with no prior data skips this sheet entirely."
         // Untouched starter accounts (seed.ts) don't count — a fresh
         // install still has nothing worth asking about.
-        const referenced = referencedAccountIds(store.transactions, store.transactionSplits);
+        const referenced = referencedAccountIds([...store.transactions, ...store.scheduledPayments], store.transactionSplits);
         const existingAccounts = store.accounts.filter((a) => !isUntouchedSeedAccount(a, referenced)).length;
         const existingTransactions = store.transactions.length;
         if (existingAccounts > 0 || existingTransactions > 0) {

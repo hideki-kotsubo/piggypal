@@ -129,7 +129,7 @@ Handler responsibilities, in order:
 
 - Multi-currency *conversion* (each currency is tracked and budgeted on its
   own terms — docs/10 — but no FX rates, no unified single-number rollup)
-- Recurring transactions
+- Recurring transactions — **no longer missing**: built as scheduled payments, see docs/57
 - Transfer-between-accounts as linked pair (model as two transactions for now)
 
 **Shared/household budgets** — no longer out of scope, superseded by
