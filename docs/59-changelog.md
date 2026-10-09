@@ -30,11 +30,12 @@ An optional short paragraph.
 A malformed `## ` heading throws instead of silently merging two
 releases. A test parses the real file, so CI catches it.
 
-**One parser: `app/src/lib/changelog.ts`.** It has no imports and uses
-only erasable TypeScript, so the app bundles it and Node 22+/24 runs it
-directly from `scripts/build-changelog.mts`
-(`node --experimental-strip-types`), with no build step or extra
-dependency.
+**One parser: `app/src/lib/changelog.ts`.** The app bundles it, and
+`scripts/build-changelog.mts` runs it through `tsx` (a root dev
+dependency), so it works on any Node the repo supports. The first
+version used Node's built-in `--experimental-strip-types`, which failed
+on the user's terminal: older Node than this sandbox's 24 rejects the
+flag. Fixed 2026-10-09.
 
 **Three outputs from the same text** (D224):
 

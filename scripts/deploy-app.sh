@@ -35,10 +35,17 @@ fi
 
 git pull --ff-only
 
-if [[ "$CHANGELOG" == 1 ]] && ! npm run -s changelog -- --has-unreleased; then
-  echo "No notes under \"## Unreleased\" in app/CHANGELOG.md. Write them first," >&2
-  echo "or pass --no-changelog for a release users won't notice." >&2
-  exit 1
+if [[ "$CHANGELOG" == 1 ]]; then
+  status=0
+  npm run -s changelog -- --has-unreleased || status=$?
+  if [[ "$status" == 3 ]]; then
+    echo "No notes under \"## Unreleased\" in app/CHANGELOG.md. Write them first," >&2
+    echo "or pass --no-changelog for a release users won't notice." >&2
+    exit 1
+  elif [[ "$status" != 0 ]]; then
+    echo "The changelog check itself failed (see above), nothing was released." >&2
+    exit 1
+  fi
 fi
 
 # npm version only commits and tags when run at the git root, and app/ is
