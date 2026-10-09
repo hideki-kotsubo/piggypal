@@ -1,13 +1,12 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 // appId is essentially permanent once uploaded to TestFlight/Play Console —
-// confirmed with the user directly (com.myflowtab.app), not derived from the
-// "piggypal" brand, which is still parked (docs/01 item 5). appName is left
-// as the same placeholder used in vite.config.ts's PWA manifest since it's
-// trivial to change later, unlike appId.
+// confirmed with the user directly (com.myflowtab.app). appName is the
+// display name under the icon (docs/60); `cap sync` doesn't copy it into
+// already-created native projects, so strings.xml / Info.plist carry it too.
 const config: CapacitorConfig = {
   appId: 'com.myflowtab.app',
-  appName: 'piggypal', // TODO: replace once branding/naming is resolved
+  appName: 'Flowtab',
   webDir: 'dist',
 };
 

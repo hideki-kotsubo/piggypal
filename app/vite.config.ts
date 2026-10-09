@@ -45,14 +45,10 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
       manifest: {
-        // Name and icons are both real now (docs/53's rename, docs/52's
-        // Flowtab wave-mark icon set below) — theme_color/background_color
-        // are the only pieces still the old piggypal placeholders
-        // (docs/01 item 5), pending real brand colors.
-        name: 'Flowtab',
-        short_name: 'Flowtab',
-        description: 'Simple, light, private budgeting — type or say what you spent.',
-        theme_color: '#3f7d69',
+        // Brand v2 (docs/60): theme_color is the logo's dark teal wave;
+        // background_color stays the app's own --bg, which the install
+        // splash hands over to.
+        theme_color: '#125251',
         background_color: '#eef0ea',
         display: 'standalone',
         // Explicit rather than left to VitePWA's defaults — an unambiguous
@@ -74,14 +70,14 @@ export default defineConfig({
           handle_links: 'preferred',
         } as Record<string, unknown>),
         icons: [
-          { src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml' },
+          { src: 'favicon.png', sizes: '64x64', type: 'image/png' },
           { src: 'icons/icon-48.webp', sizes: '48x48', type: 'image/webp' },
           { src: 'icons/icon-72.webp', sizes: '72x72', type: 'image/webp' },
           { src: 'icons/icon-96.webp', sizes: '96x96', type: 'image/webp' },
           { src: 'icons/icon-128.webp', sizes: '128x128', type: 'image/webp' },
-          // 192/512 are the two sizes install prompts actually use, and the
-          // icon's design was verified to survive a circular safe-zone crop
-          // (docs/52), so "maskable" is genuinely safe here, not just copied.
+          // 192/512 are the two sizes install prompts actually use. The v2
+          // icon is full-bleed with the waves inside the middle 60%, inside
+          // the maskable safe zone (docs/60), so "maskable" is safe.
           { src: 'icons/icon-192.webp', sizes: '192x192', type: 'image/webp', purpose: 'any maskable' },
           { src: 'icons/icon-256.webp', sizes: '256x256', type: 'image/webp' },
           { src: 'icons/icon-512.webp', sizes: '512x512', type: 'image/webp', purpose: 'any maskable' },
