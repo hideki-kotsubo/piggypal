@@ -1,0 +1,108 @@
+/* Shared by every page on the site (index.html, the generated
+   changelog.html). Brand v2 palette, docs/60-61. */
+
+:root {
+  --paper: #f5f8f6;
+  --surface: #ffffff;
+  --ink: #0f1a17;
+  --ink-soft: #4a5c57;
+  --line: #dde7e3;
+  --flow: #2fcba4;          /* fills, marks, the icon's gradient start */
+  --flow-ink: #0a6f59;      /* accent text: 5.7:1 on --paper */
+  --flow-deep: #125251;     /* the icon's dark wave */
+  --flow-soft: #ddf7ee;
+  --warn: #9a6a12;
+  --gradient: linear-gradient(135deg, #2fcba4 0%, #6be9a9 100%);
+  --on-gradient: #06291f;
+  --shadow: 0 1px 2px rgba(15, 26, 23, 0.05), 0 12px 32px rgba(15, 26, 23, 0.07);
+
+  --font-display: 'Space Grotesk', -apple-system, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0e1513;
+    --surface: #15201d;
+    --ink: #e6f0ec;
+    --ink-soft: #93a8a1;
+    --line: #23312d;
+    --flow: #45ddb0;
+    --flow-ink: #5fe3bb;
+    --flow-deep: #9fefd3;
+    --flow-soft: #173a31;
+    --warn: #e0b34d;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 32px rgba(0, 0, 0, 0.4);
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0e1513;
+  --surface: #15201d;
+  --ink: #e6f0ec;
+  --ink-soft: #93a8a1;
+  --line: #23312d;
+  --flow: #45ddb0;
+  --flow-ink: #5fe3bb;
+  --flow-deep: #9fefd3;
+  --flow-soft: #173a31;
+  --warn: #e0b34d;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+* { box-sizing: border-box; }
+html { background: var(--paper); }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; }
+::selection { background: var(--flow-soft); }
+img { max-width: 100%; }
+
+.wrap { max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+@media (min-width: 640px) { .wrap { padding: 0 32px; } }
+
+/* ---------- Nav ---------- */
+.site-nav {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding-top: 20px; padding-bottom: 20px;
+}
+.brand { display: inline-flex; align-items: center; text-decoration: none; }
+.brand img { height: 36px; width: auto; display: block; }
+.nav-links { display: flex; align-items: center; gap: 22px; }
+.nav-links a:not(.btn) {
+  text-decoration: none; color: var(--ink-soft); font-size: 0.93rem; font-weight: 500;
+}
+.nav-links a:not(.btn):hover { color: var(--ink); }
+@media (max-width: 720px) { .nav-links a:not(.btn) { display: none; } }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-family: var(--font-body); font-weight: 600; font-size: 0.95rem;
+  padding: 12px 20px; border-radius: 12px; border: 1px solid transparent;
+  text-decoration: none; cursor: pointer; white-space: nowrap;
+}
+.btn:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; }
+.btn-primary { background: var(--gradient); color: var(--on-gradient); }
+.btn-primary:hover { filter: brightness(1.04) saturate(1.05); }
+.btn-ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+.btn-ghost:hover { border-color: var(--ink-soft); }
+.btn-sm { padding: 9px 16px; font-size: 0.9rem; border-radius: 10px; }
+
+/* ---------- Footer ---------- */
+.site-foot {
+  margin-top: 24px; padding: 28px 0 40px; border-top: 1px solid var(--line);
+  color: var(--ink-soft); font-size: 0.88rem;
+}
+.site-foot .wrap { display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: center; justify-content: space-between; }
+.site-foot .brand img { height: 28px; }
+.foot-links { display: flex; flex-wrap: wrap; gap: 8px 22px; }
+.foot-links a { text-decoration: none; }
+.foot-links a:hover { color: var(--ink); }
