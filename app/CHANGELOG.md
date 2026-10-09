@@ -5,7 +5,12 @@ How to write an entry (docs/59):
 
 - Write the next release's notes under "## Unreleased", at the top.
   Don't guess the version: scripts/deploy-app.sh turns the heading into
-  "## 0.3.0 — 2026-10-12" when you release, and refuses to release
+  "## Unreleased
+
+- **A fresh new look**: a new Flowtab icon on your home screen, and a
+  matching splash screen.
+
+## 0.3.0 — 2026-10-12" when you release, and refuses to release
   without notes (pass --no-changelog for a silent release).
 - Write for people who use the app, not for developers: what they can
   now do, or what works better. Skip refactors and internals.
