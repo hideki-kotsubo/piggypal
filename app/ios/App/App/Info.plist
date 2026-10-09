@@ -8,6 +8,15 @@
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
         <string>Flowtab</string>
+	<!-- docs/62: WebKit needs these before it lets the web view use the mic,
+	     speech recognition (voice entry, docs/16) or camera (QR pairing,
+	     docs/25). Shown to the user in the iOS permission prompt. -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Flowtab uses the microphone so you can say an expense instead of typing it.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Flowtab turns what you say into text, so it can fill in the expense for you to confirm.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Flowtab uses the camera to scan the QR code when you pair with another device.</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
