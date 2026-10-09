@@ -574,7 +574,9 @@ async function seedIfEmpty() {
       }
     });
   } catch (err) {
-    console.error('flowtab: seed transaction FAILED, rolled back', err);
+    // Message and stack spelled out: Capacitor's native console bridge
+    // prints a bare Error object as {} (docs/64).
+    console.error('flowtab: seed transaction FAILED, rolled back', err instanceof Error ? `${err.message}\n${err.stack}` : err);
     throw err;
   }
 }
@@ -764,7 +766,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const controller = new AbortController();
 
     seedIfEmpty()
-      .catch((err) => console.error('flowtab: seed failed', err))
+      .catch((err) => console.error('flowtab: seed failed', err instanceof Error ? `${err.message}\n${err.stack}` : err))
       .finally(() => {
         if (controller.signal.aborted) return;
 
