@@ -7,7 +7,8 @@ import { attachRelay } from './relay.js';
 import { authRouter } from './auth/routes.js';
 import { syncRouter } from './sync/routes.js';
 import { getJwks } from './jwt.js';
-import { API_VERSION } from './version.js';
+import { getSchemaVersion, MigrationError, runMigrations } from './migrate.js';
+import { API_COMMIT, API_VERSION } from './version.js';
 
 // Node's own .env support (stable since 20.6, no dotenv dependency
 // needed) — resolves relative to process.cwd(), which is api/ when this
@@ -56,7 +57,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/sync', syncRouter);
 
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', version: API_VERSION });
+  res.json({ status: 'ok', version: API_VERSION, commit: API_COMMIT, schema: getSchemaVersion() });
 });
 
 // docs/05 D13 / docs/39 step 4 — PowerSync Service's client_auth.jwks_uri
@@ -87,6 +88,22 @@ app.get('/.well-known/jwks.json', async (_req, res) => {
 const server = createServer(app);
 attachRelay(server);
 
+// docs/58 D220 — pending migrations are applied before the api takes any
+// traffic, so new code never meets an old schema. A failed migration stops
+// the api (better than serving against a half-migrated schema); an
+// unreachable database doesn't, matching how the api behaved before —
+// /health just reports schema: null.
+try {
+  const applied = await runMigrations();
+  if (applied.length) console.log(`migrate: applied ${applied.length} migration(s)`);
+} catch (err) {
+  if (err instanceof MigrationError) {
+    console.error(err.message);
+    process.exit(1);
+  }
+  console.warn(`migrate: skipped, database unreachable (${(err as Error).message})`);
+}
+
 server.listen(port, () => {
-  console.log(`api listening on :${port}`);
+  console.log(`api listening on :${port} (v${API_VERSION}, ${API_COMMIT})`);
 });

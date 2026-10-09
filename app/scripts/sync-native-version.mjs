@@ -3,8 +3,10 @@
 // before a store build, and bumps each platform's own build-number counter
 // (versionCode / CURRENT_PROJECT_VERSION) — those must strictly increase on
 // every submitted build regardless of the marketing version, per App
-// Store/Play Store rules. Run via `npm run sync:android` / `npm run
-// sync:ios` (see docs/55-versioning-and-release-tagging.md), not directly.
+// Store/Play Store rules. Run via `npm run release:android` / `npm run
+// release:ios` (docs/55, docs/58 D222), not directly — and only for a build
+// you're actually submitting. Plain `sync:*` no longer calls this, so dev
+// syncs don't burn build numbers.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';

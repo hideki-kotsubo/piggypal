@@ -1,5 +1,10 @@
 # 55 — Per-Component Versioning, Deploy-Time Tags, Native Build Numbers
 
+> **Partly superseded by docs/58 (2026-10-08).** Production runs on its own
+> server, not this machine, so tags now mean "released" rather than "live"
+> (D219 refines D197). Native build numbers bump via `release:ios`/
+> `release:android`, no longer `sync:*` (D222). Everything else stands.
+
 ## The ask
 
 Deploys are manual and run separately per component (api, web app,

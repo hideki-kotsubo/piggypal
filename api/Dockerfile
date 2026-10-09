@@ -32,6 +32,16 @@ ENV NODE_ENV=production
 COPY --from=build /repo/node_modules ./node_modules
 COPY --from=build /repo/api ./api
 
+# docs/58 D220 — api/src/migrate.ts applies these at startup, reading them
+# from ../../db/migrations relative to api/dist, i.e. /repo/db/migrations.
+COPY db/migrations ./db/migrations
+
+# docs/58 D218 — the image has no .git (.dockerignore), so deploy/up.sh
+# passes the commit in. Declared last so a new commit only rebuilds this
+# one tiny layer, not the npm install above.
+ARG GIT_COMMIT=unknown
+ENV GIT_COMMIT=$GIT_COMMIT
+
 # Matches api/.env.example's PORT default; deploy/docker-compose.yaml
 # overrides this via the API_PORT env var if you change it there.
 EXPOSE 3002

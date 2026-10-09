@@ -60,7 +60,9 @@ services:
       - "${DEV_PG_BIND:-127.0.0.1}:${DEV_PG_PORT:-5433}:5432"
 
   dev-powersync:
-    image: journeyapps/powersync-service:latest
+    # Pinned, not :latest (docs/58 D221) — a rebuild must never upgrade
+    # PowerSync by accident. Bump deliberately, in both compose files.
+    image: journeyapps/powersync-service:1.26.1
     container_name: flowtab-dev-powersync
     restart: unless-stopped
     command: ["start", "-r", "unified"]

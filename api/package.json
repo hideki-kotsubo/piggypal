@@ -7,7 +7,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "generate-jwt-keys": "tsx scripts/generate-jwt-keys.ts"
+    "generate-jwt-keys": "tsx scripts/generate-jwt-keys.ts",
+    "migrate": "tsx src/migrate-cli.ts"
   },
   "keywords": [],
   "author": "",

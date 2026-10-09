@@ -63,6 +63,10 @@ services:
     build:
       context: ..
       dockerfile: api/Dockerfile
+      # docs/58 D218 — set by deploy/up.sh; a bare `docker compose up`
+      # still works, the api just reports commit "unknown".
+      args:
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
     container_name: flowtab-api
     restart: unless-stopped
     depends_on:
@@ -100,7 +104,9 @@ services:
       retries: 10
 
   powersync:
-    image: journeyapps/powersync-service:latest
+    # Pinned, not :latest (docs/58 D221) — a rebuild must never upgrade
+    # PowerSync by accident. Bump deliberately, in both compose files.
+    image: journeyapps/powersync-service:1.26.1
     container_name: flowtab-powersync
     restart: unless-stopped
     command: ["start", "-r", "unified"]
