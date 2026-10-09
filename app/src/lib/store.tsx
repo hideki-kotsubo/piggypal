@@ -479,6 +479,12 @@ async function touchDevice(): Promise<void> {
   if (!getAuthAccount()) return;
   const id = getDeviceId();
   const profileId = getLocalUserId();
+  // Only once this device's identity is a real profile — a devices row
+  // pointing at a nonexistent profile is rejected by the server
+  // (devices_profile_id_fkey). The next touchDevice() after a profile
+  // exists (sign-in picker, reconnect) writes the row.
+  const profile = await db.getAll<{ id: string }>('SELECT id FROM profiles WHERE id = ?', [profileId]);
+  if (profile.length === 0) return;
   const label = effectiveDeviceLabel();
   const now = nowUtc();
   const existing = await db.getAll<{ id: string }>('SELECT id FROM devices WHERE id = ?', [id]);
