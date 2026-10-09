@@ -179,6 +179,7 @@ interface ScheduledPaymentRow {
   auto_post: number;
   paused: number;
   archived: number;
+  deleted_at: string | null;
   updated_at: string | null;
 }
 function rowToScheduledPayment(r: ScheduledPaymentRow): ScheduledPayment {
@@ -204,6 +205,7 @@ function rowToScheduledPayment(r: ScheduledPaymentRow): ScheduledPayment {
     autoPost: Boolean(r.auto_post),
     paused: Boolean(r.paused),
     archived: Boolean(r.archived),
+    deletedAt: r.deleted_at ?? null,
     updatedAt: r.updated_at ?? NEVER_UPDATED,
   };
 }
@@ -331,6 +333,7 @@ const SCHEDULED_PAYMENT_COLUMNS: Record<keyof ScheduledPayment, string> = {
   autoPost: 'auto_post',
   paused: 'paused',
   archived: 'archived',
+  deletedAt: 'deleted_at',
   updatedAt: 'updated_at',
 };
 const SCHEDULED_PAYMENT_BOOLEANS = new Set<keyof ScheduledPayment>(['autoPost', 'paused', 'archived']);
@@ -416,9 +419,9 @@ async function insertTransactionRow(tx: Pick<SqliteTransaction, 'execute'>, t: T
 // docs/57 — same, for scheduled_payments.
 async function insertScheduledPaymentRow(tx: Pick<SqliteTransaction, 'execute'>, r: ScheduledPayment): Promise<void> {
   await tx.execute(
-    `INSERT INTO scheduled_payments (id, name, account_id, category_id, amount_cents, amount_mode, currency, merchant, note, paid_by_user_id, kind, freq, interval_count, anchor_date, occurrence_count, end_date, start_index, auto_post, paused, archived, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [r.id, r.name, r.accountId, r.categoryId, r.amountCents, r.amountMode, r.currency, r.merchant, r.note, r.paidByUserId, r.kind, r.freq, r.intervalCount, r.anchorDate, r.occurrenceCount, r.endDate, r.startIndex, r.autoPost ? 1 : 0, r.paused ? 1 : 0, r.archived ? 1 : 0, r.updatedAt],
+    `INSERT INTO scheduled_payments (id, name, account_id, category_id, amount_cents, amount_mode, currency, merchant, note, paid_by_user_id, kind, freq, interval_count, anchor_date, occurrence_count, end_date, start_index, auto_post, paused, archived, deleted_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [r.id, r.name, r.accountId, r.categoryId, r.amountCents, r.amountMode, r.currency, r.merchant, r.note, r.paidByUserId, r.kind, r.freq, r.intervalCount, r.anchorDate, r.occurrenceCount, r.endDate, r.startIndex, r.autoPost ? 1 : 0, r.paused ? 1 : 0, r.archived ? 1 : 0, r.deletedAt ?? null, r.updatedAt],
   );
 }
 
@@ -634,6 +637,10 @@ interface StoreApi extends StoreState {
   // an already-soft-deleted one). Idempotent per occurrence. Returns the
   // transaction's deterministic id.
   postOccurrence: (rule: ScheduledPayment, occ: Occurrence, opts?: { skip?: boolean }) => Promise<string>;
+  // docs/57 D217 — soft-deletes the rule and every still-live transaction
+  // it posted, in one atomic write. Already-skipped rows are left as they
+  // are (they're deleted already).
+  deleteScheduledPayment: (ruleId: string) => Promise<void>;
   addAccount: (account: Account) => void;
   updateAccount: (accountId: string, patch: Partial<Account>) => void;
   addCategory: (category: Category) => void;
@@ -1174,6 +1181,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const fallback = rankAccounts()[0]?.id ?? '';
         const [id] = await postOccurrenceRows([{ rule, occ }], { skip: opts?.skip ?? false, accountFallback: fallback });
         return id;
+      },
+
+      async deleteScheduledPayment(ruleId) {
+        const now = nowUtc();
+        await db.writeTransaction(async (tx) => {
+          await tx.execute('UPDATE scheduled_payments SET deleted_at = ?, updated_at = ? WHERE id = ?', [now, now, ruleId]);
+          await tx.execute(
+            'UPDATE transactions SET deleted_at = ?, updated_at = ? WHERE schedule_id = ? AND deleted_at IS NULL',
+            [now, now, ruleId],
+          );
+        });
       },
 
       addAccount(account) {

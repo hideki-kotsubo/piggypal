@@ -1585,3 +1585,6 @@
   color: var(--ink-faint);
   text-align: right;
 }
+.save-btn.schedule-delete-btn {
+  background: var(--warn);
+}

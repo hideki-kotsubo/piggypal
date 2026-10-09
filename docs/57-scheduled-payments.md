@@ -261,6 +261,28 @@ download before running.
 - `source = 'schedule'`, `account_id` from the rule (a rule always has
   one; a null account on a transaction would mean docs/50's split state).
 
+## D217 — Deleting a schedule (added 2026-10-09)
+
+The ask: undo a schedule saved by mistake. "Stop this schedule" (archive)
+only ends it — the rule stays listed under Stopped and anything it already
+logged (e.g. auto-posted catch-up payments) stays in balances and budgets.
+
+**Delete schedule** is a soft delete: a new `scheduled_payments.deleted_at`
+column (migration `2026-10-09-scheduled-payments-deleted-at.sql`), set in
+the same atomic write that soft-deletes every still-live transaction the
+rule posted. The confirmation spells out what goes with it — "Delete "TV"
+and its 2 logged payments? $666.67 will be removed from your
+transactions, balances and budgets" — or just "Delete "Oops"?" when
+nothing was logged. A deleted rule projects nothing (`isLive`) and is
+hidden from every list; opening its URL shows "doesn't exist".
+
+Soft, not hard, even with no history (the first proposal was a hard
+delete for that case): a hard-deleted rule would be resurrected by
+docs/25's insert-if-missing P2P merge from any paired device that still
+has it, while a soft-deleted one is still a row that the merge skips. It
+also never trips the `transactions.schedule_id` FK, whatever was posted.
+Stop/Restore stays as the "end it but keep what's logged" option.
+
 ## Implementation notes
 
 - Pure logic in `app/src/lib/schedules.ts` (projection, month-end
@@ -297,14 +319,29 @@ download before running.
   rather than 500ing, D215's first-post-wins (an edit survives a later
   duplicate post; a late skip doesn't delete a paid occurrence), ordinary
   PUTs still upserting, a split's PATCH + PUT, and clearing a nullable date.
-- **Not verified**: the screens in a real browser. This sandbox's Chromium
-  can't start (missing system libraries such as libglib), and they weren't
-  installed. Nothing has run through a real PowerSync Service either (same
-  standing gap as docs/43).
+- Screens, in headless Chromium (2026-10-09) against the live :3001 dev
+  server in a fresh browser profile — 25/25 checks: create a past-anchored
+  rule → 2 due + Home banner → Paid / Skip → a real transaction and a
+  "Skipped" history row; a timing change splits the rule; an auto-post
+  installment plan logs 1/3 ($333.34) and 2/3 ($333.33) and a reload
+  doesn't duplicate them; Location persists; delete with history removes
+  the rule and its payments (leaving others untouched), delete without
+  history is the simple confirm, and neither comes back after a reload; no
+  console errors. Chromium's missing system libraries were unpacked from
+  Debian's mirror into a throwaway directory, nothing installed system-wide.
+  The screenshots surfaced three fixes made the same day: a signed
+  "-$666.67" in the delete confirmation, rule rows saying "next Nov 1"
+  while two earlier payments were overdue (now "2 due"), and the date
+  field reading "New timing starts" before any timing change.
+- D217's server side: both migrations applied in order on PGlite and a
+  soft delete of a rule + its payment round-trips (11/11 with the above).
+- **Not verified**: anything through a real PowerSync Service (same
+  standing gap as docs/43), and on a real phone.
 
 ## Deploying
 
-Run the migration on Postgres, redeploy the API
+Run both migrations on Postgres (`2026-10-08-scheduled-payments.sql`,
+then `2026-10-09-scheduled-payments-deleted-at.sql`), redeploy the API
 (`docker compose up -d --build api` — not just `npm run build`), and
 restart PowerSync Service so it picks up the new `scheduled_payments`
 stream in `deploy/powersync/sync-config.yaml`.

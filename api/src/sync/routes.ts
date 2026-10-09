@@ -65,6 +65,7 @@ const TABLE_COLUMNS: Record<string, readonly string[]> = {
     'auto_post',
     'paused',
     'archived',
+    'deleted_at', // docs/57 D217
   ],
   // docs/50 — the per-account amount breakdown when a transaction is split
   // across 2+ accounts (that transaction's own account_id is then NULL).

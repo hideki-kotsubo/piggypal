@@ -108,6 +108,7 @@ create table scheduled_payments (
   auto_post         boolean not null default false,
   paused            boolean not null default false,
   archived          boolean not null default false,
+  deleted_at        timestamptz,                -- docs/57 D217 — soft delete, like transactions
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now(),
   foreign key (user_id, category_id) references categories (user_id, id)
