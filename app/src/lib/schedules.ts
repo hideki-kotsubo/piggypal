@@ -132,7 +132,7 @@ export function postedKeys(transactions: Pick<Transaction, 'scheduleId' | 'occur
 }
 
 function isLive(rule: ScheduledPayment): boolean {
-  return !rule.paused && !rule.archived;
+  return !rule.paused && !rule.archived && !rule.deletedAt;
 }
 
 export function openOccurrences(rule: ScheduledPayment, posted: ReadonlySet<string>, from: string, to: string): Occurrence[] {

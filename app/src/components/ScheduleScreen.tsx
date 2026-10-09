@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../lib/store';
+import { totalsByCurrency } from '../lib/filterTransactions';
 import { formatAmount, formatOccurrenceDate, nowUtc } from '../lib/format';
 import {
   addDays,
@@ -37,7 +38,7 @@ export function ScheduleScreen() {
   const { id } = useParams();
   const store = useStore();
   if (id === 'new') return <ScheduleEditor rule={null} />;
-  const rule = store.scheduledPayments.find((r) => r.id === id);
+  const rule = store.scheduledPayments.find((r) => r.id === id && !r.deletedAt);
   if (!rule) {
     return (
       <main className="home">
@@ -87,6 +88,7 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
       autoPost: false,
       paused: false,
       archived: false,
+      deletedAt: null,
       updatedAt: nowUtc(),
     };
   });
@@ -118,6 +120,7 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
     base.endDate ? 'date' : base.kind === 'recurring' && base.occurrenceCount ? 'count' : 'never',
   );
   const [error, setError] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   function commit(patch: Partial<ScheduledPayment>) {
     if (!rule) {
@@ -172,6 +175,19 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
     const id = crypto.randomUUID();
     store.addScheduledPayment({ ...draft, id, name, note: noteStr.trim() || null, updatedAt: nowUtc() });
     navigate(`/schedules/${id}`, { replace: true });
+  }
+
+  // docs/57 D217 — what a delete will take with it: only payments still
+  // live (skipped ones are already deleted), totalled per currency.
+  const livePayments = history.filter((t) => !t.deletedAt);
+  const liveTotals = totalsByCurrency(livePayments)
+    .map((t) => formatAmount(Math.abs(t.cents), t.currency))
+    .join(' + ');
+
+  async function confirmDelete() {
+    if (!rule) return;
+    await store.deleteScheduledPayment(rule.id);
+    navigate('/schedules', { replace: true });
   }
 
   async function applyTiming() {
@@ -329,7 +345,7 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
               />
             </label>
             <label className="field-label">
-              {stagesTiming ? 'New timing starts' : 'First payment'}
+              {stagesTiming && Object.keys(timingDraft).length > 0 ? 'New timing starts' : 'First payment'}
               <input
                 className="text-input"
                 type="date"
@@ -521,9 +537,36 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
                   {rule.paused ? 'Resume' : 'Pause'}
                 </button>
               )}
-              <button className="text-link delete-link" onClick={() => commit({ archived: !rule.archived })}>
+              <button className="text-link" onClick={() => commit({ archived: !rule.archived })}>
                 {rule.archived ? 'Restore' : 'Stop this schedule'}
               </button>
+              <button className="text-link delete-link" onClick={() => setConfirmingDelete(true)}>
+                Delete schedule
+              </button>
+            </div>
+          )}
+
+          {rule && confirmingDelete && (
+            <div className="merge-conflict">
+              <p className="merge-conflict-title">
+                {livePayments.length === 0
+                  ? `Delete "${rule.name}"?`
+                  : `Delete "${rule.name}" and its ${livePayments.length} logged payment${livePayments.length === 1 ? '' : 's'}?`}
+              </p>
+              <p className="merge-conflict-detail">
+                {livePayments.length === 0
+                  ? "Nothing has been logged from it yet, so nothing else changes."
+                  : `${liveTotals} will be removed from your transactions, balances and budgets.`}
+                {' '}To keep what's logged and just end it, use “Stop this schedule” instead.
+              </p>
+              <div className="chip-row">
+                <button className="save-btn schedule-delete-btn" onClick={() => void confirmDelete()}>
+                  Delete
+                </button>
+                <button className="chip ghost" onClick={() => setConfirmingDelete(false)}>
+                  Cancel
+                </button>
+              </div>
             </div>
           )}
         </div>

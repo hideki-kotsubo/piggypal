@@ -105,6 +105,10 @@ export interface ScheduledPayment {
   autoPost: boolean;
   paused: boolean;
   archived: boolean;
+  // docs/57 D217 — soft delete. A deleted rule projects nothing and is
+  // hidden everywhere, but stays a row so its posted transactions'
+  // scheduleId still resolves and P2P merges can't resurrect it.
+  deletedAt: string | null;
   updatedAt: string; // docs/46 D170 — see Account.updatedAt
 }
 

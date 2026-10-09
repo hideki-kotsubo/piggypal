@@ -93,6 +93,7 @@ const scheduled_payments = new Table({
   auto_post: column.integer,
   paused: column.integer,
   archived: column.integer,
+  deleted_at: column.text, // docs/57 D217
   updated_at: column.text,
 });
 

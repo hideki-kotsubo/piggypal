@@ -85,11 +85,13 @@ export function SchedulesScreen() {
   const byId = new Map(store.scheduledPayments.map((r) => [r.id, r]));
 
   const due = dueOccurrences(store.scheduledPayments, posted, today);
+  const dueCount = new Map<string, number>();
+  for (const o of due) dueCount.set(o.scheduleId, (dueCount.get(o.scheduleId) ?? 0) + 1);
   const upcoming = upcomingOccurrences(store.scheduledPayments, posted, today, UPCOMING_DAYS);
   const active = store.scheduledPayments
-    .filter((r) => !r.archived)
+    .filter((r) => !r.archived && !r.deletedAt)
     .sort((a, b) => a.name.localeCompare(b.name));
-  const archived = store.scheduledPayments.filter((r) => r.archived);
+  const archived = store.scheduledPayments.filter((r) => r.archived && !r.deletedAt);
 
   function renderRule(rule: ScheduledPayment) {
     const next = nextOpenOccurrence(rule, posted, today);
@@ -97,7 +99,13 @@ export function SchedulesScreen() {
     const left = remainingCount(rule);
     const meta = [
       describeCadence(rule),
-      rule.paused ? 'Paused' : next ? `next ${formatOccurrenceDate(next.date, today)}` : 'no more payments',
+      rule.paused
+        ? 'Paused'
+        : dueCount.get(rule.id)
+          ? `${dueCount.get(rule.id)} due`
+          : next
+            ? `next ${formatOccurrenceDate(next.date, today)}`
+            : 'no more payments',
       rule.kind === 'installment' && left !== null && next ? `${rule.occurrenceCount! - next.number + 1} of ${rule.occurrenceCount} left` : null,
       rule.autoPost ? 'Auto' : null,
       account ? accountLabel(account) : null,

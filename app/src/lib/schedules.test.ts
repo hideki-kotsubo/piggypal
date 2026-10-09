@@ -37,6 +37,7 @@ function rule(overrides: Partial<ScheduledPayment>): ScheduledPayment {
     autoPost: false,
     paused: false,
     archived: false,
+    deletedAt: null,
     updatedAt: '2026-01-01T00:00:00.000Z',
     ...overrides,
   };
@@ -126,6 +127,12 @@ describe('open / due / upcoming', () => {
   it('keeps every unposted past occurrence due, with no lower bound', () => {
     const r = rule({ anchorDate: '2026-07-01' });
     expect(dueOccurrences([r], posted, '2026-10-08').map((o) => o.date)).toEqual(['2026-07-01', '2026-10-01']);
+  });
+
+  it('excludes soft-deleted rules (D217) from due and committed', () => {
+    const deleted = rule({ deletedAt: '2026-10-09T00:00:00.000Z', anchorDate: '2026-07-01' });
+    expect(dueOccurrences([deleted], posted, '2026-10-08')).toEqual([]);
+    expect(committedForMonth([deleted], posted, '2026-10-01').size).toBe(0);
   });
 
   it('excludes paused and archived rules', () => {
