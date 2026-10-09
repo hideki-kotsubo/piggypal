@@ -18,6 +18,8 @@ jobs:
       - run: npm run lint -w app
       - run: npm run build -w app
       - run: npm run test -w app
+      # docs/59 — website/changelog.html must match app/CHANGELOG.md.
+      - run: npm run changelog -- --check
 
   api:
     runs-on: ubuntu-latest

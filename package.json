@@ -10,6 +10,7 @@
     "dev:app": "npm run dev -w app",
     "dev:api": "npm run dev -w api",
     "build": "npm run build -w app && npm run build -w api",
-    "test": "npm run test -w app"
+    "test": "npm run test -w app",
+    "changelog": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/build-changelog.mts"
   }
 }
