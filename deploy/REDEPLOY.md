@@ -53,6 +53,12 @@ curl https://api.flowtab.codexbase.dev/health
 ./scripts/deploy-app.sh            # bump app, tag app-vX.Y.Z, push, build app/dist
 ```
 
+- `deploy-app.sh` releases the notes under `## Unreleased` in
+  `app/CHANGELOG.md` (docs/59). Write them before running it, or pass
+  `--no-changelog` for a release nobody would notice. It regenerates
+  `website/changelog.html` and prints the notes for the App Store / Play
+  Store.
+
 - Both scripts take `patch` (default), `minor` or `major`.
 - **Database migrations apply themselves** when the api container starts
   (docs/58 D220). Check the log for `migrate: applying ...`; `/health`
