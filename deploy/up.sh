@@ -26,3 +26,7 @@ done
 
 echo "Building with GIT_COMMIT=${GIT_COMMIT}"
 docker compose "${compose_args[@]}" up -d --build "${service_args[@]}"
+
+# Each rebuild leaves the previous image untagged (<none>). Remove those;
+# prune never touches an image a container (running or stopped) uses.
+docker image prune -f

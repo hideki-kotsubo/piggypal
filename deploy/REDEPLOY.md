@@ -62,6 +62,10 @@ curl https://api.flowtab.codexbase.dev/health
   `docker compose up -d --build` plus the commit stamp; a bare
   `docker compose up -d --build` still works but `/health` then shows
   `"commit":"unknown"`.
+- `deploy/up.sh` also runs `docker image prune -f` afterwards, removing the
+  untagged images earlier builds left behind. Docker's build cache is kept
+  (it's what makes rebuilds fast); trim it by hand now and then with
+  `docker builder prune -f --filter until=168h`.
 - `/health` returns `version`, `commit` and `schema`. The app's About
   screen shows the version and commit.
 - Only changed the sync rules (`deploy/powersync/*.yaml`)? Then
