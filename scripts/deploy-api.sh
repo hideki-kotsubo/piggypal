@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Bump api/'s version, tag it, and push — run this right before you actually
-# deploy, so the tag always means "this is what's live," not just "this is
-# what merged." See docs/55-versioning-and-release-tagging.md.
+# Bump api/'s version, tag it, and push — run this when you cut an api
+# release, so the tag means "this is a released version," not just "this
+# merged." The tag is then rolled out to staging (this machine) and
+# production (its own server). See docs/55 and docs/58.
 set -euo pipefail
 
 BUMP="${1:-patch}"
@@ -32,9 +33,12 @@ cat <<EOF
 
 Tagged and pushed ${TAG}.
 
-Now deploy it for real (deploy/README.md step 3):
-  ssh <your-host>
-  cd flowtab && git pull
-  cd deploy && docker compose up -d --build
-  curl https://<api-host>/health   # should report "version":"${VERSION}"
+1. Staging (this machine) — migrations apply on api startup (docs/58):
+     deploy/up.sh api
+     curl https://api.flowtab.codexbase.dev/health   # "version":"${VERSION}"
+
+2. Production (its own server), once staging looks right:
+     cd flowtab && git fetch --tags && git checkout ${TAG}
+     deploy/up.sh api
+     curl <prod-api-host>/health                    # "version":"${VERSION}"
 EOF

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Bump app/'s version, tag it, build, and push — run this right before you
-# actually deploy the web PWA, so the tag always means "this is what's
-# live." See docs/55-versioning-and-release-tagging.md.
+# Bump app/'s version, tag it, push, and build app/dist for staging — run
+# this when you cut a web app release. The tag is then rolled out to
+# production (its own server). See docs/55 and docs/58.
 set -euo pipefail
 
 BUMP="${1:-patch}"
@@ -32,9 +32,12 @@ npm run build -w app
 
 cat <<EOF
 
-Tagged, pushed, and built ${TAG} (app/dist).
+Tagged and pushed ${TAG}, and built app/dist — staging (this machine) is
+live once nginx serves the new files. Check About shows ${VERSION} and its
+commit.
 
-Now deploy it for real (deploy/README.md step 5):
-  upload app/dist/ (and website/, if it changed) to wherever nginx serves them
-  reload the site and confirm Settings/About shows v${VERSION}
+Production (its own server), once staging looks right:
+  cd flowtab && git fetch --tags && git checkout ${TAG}
+  npm ci && npm run build -w app        # reads app/.env.production.local there
+  reload the site and check About shows ${VERSION}
 EOF

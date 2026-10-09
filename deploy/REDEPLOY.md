@@ -1,28 +1,34 @@
 # Redeploying Flowtab
 
-Day-to-day checklist for shipping changes to an already-running setup.
-First-time host setup lives in [README.md](README.md). Both environments run
-on the same machine from the same checkout:
+Day-to-day checklist for shipping changes. First-time host setup lives in
+[README.md](README.md). There are three environments (docs/58):
 
-| | Production | Dev |
-|---|---|---|
-| App | `app/dist`, built by `vite build`, served by nginx | Vite dev server, `:3001` (`npm run dev:app`) |
-| App env | `app/.env.production.local` | `app/.env.development.local` |
-| api | `flowtab-api` container (`docker-compose.yaml`) | host process, `:3002` (`npm run dev:api`) |
-| api env | `deploy/.env` | `api/.env` |
-| Postgres | `flowtab-postgres` | `flowtab-dev-postgres` (host port `5433`) |
-| PowerSync | `flowtab-powersync` | `flowtab-dev-powersync` |
-| Compose | `docker-compose.yaml` + `.env` | `docker-compose.dev.yaml` + `.env.dev` |
-| Proxy hosts | `api.*` → `flowtab-api:3002`, `powersync.*` → `flowtab-powersync:8090` | `powersync-beta.*` → `flowtab-dev-powersync:8090` |
+| | Dev | Staging | Production |
+|---|---|---|---|
+| Where | this machine | this machine | its own server |
+| Domain | `app-beta.codexbase.dev` | `app.codexbase.dev` | `app.myflowtab.com` (not final) |
+| App | Vite dev server, `:3001` (`npm run dev:app`) | `app/dist`, served by nginx | `app/dist`, served by nginx |
+| App env | `app/.env.development.local` | `app/.env.production.local` | `app/.env.production.local` (on that server) |
+| api | host process, `:3002` (`npm run dev:api`) | `flowtab-api` container | `flowtab-api` container |
+| api env | `api/.env` | `deploy/.env` | `deploy/.env` (on that server) |
+| Postgres | `flowtab-dev-postgres` (host port `5433`) | `flowtab-postgres` | `flowtab-postgres` |
+| PowerSync | `flowtab-dev-powersync` | `flowtab-powersync` | `flowtab-powersync` |
+| Compose | `docker-compose.dev.yaml` + `.env.dev` | `docker-compose.yaml` + `.env` | `docker-compose.yaml` + `.env` |
+| Code | any branch | `main`, at the new tag | a release tag, checked out |
 
 All real env files are gitignored; only the `*.example` templates are
 committed.
 
+How a release flows: merge to `main` → run a release script (bumps the
+version, tags, pushes) → staging on this machine → test → check out the
+same tag on the production server. Only ever release from `main`, and
+only ever run production from a tag.
+
 ---
 
-## Production
+## Release (this machine)
 
-The deploy scripts refuse to run unless you're on `main` with a clean
+The release scripts refuse to run unless you're on `main` with a clean
 working tree, and they push to `origin`. Merge your feature branch first.
 
 ### 1. Merge to main
@@ -34,62 +40,34 @@ git merge --no-ff <branch>
 git push origin main
 ```
 
-### 2. Apply new database migrations (before the api)
+### 2. Cut the release and roll it out to staging
 
-`db/schema.sql` only runs on a brand-new volume, so every new file in
-`db/migrations/` has to be applied by hand. To see what's new since the
-last api deploy:
-
-```bash
-git diff --name-only $(git describe --tags --match 'api-v*' --abbrev=0) main -- db/migrations
-```
-
-That needs at least one `api-v*` tag. Before the first `deploy-api.sh`
-run there is none: list `db/migrations/` and check each against the live
-schema instead (`\d <table>` in psql).
-
-Apply each one, oldest first:
+Only for the component(s) that changed. Each script prints the exact next
+steps, including the production ones.
 
 ```bash
-docker exec -i flowtab-postgres psql -U flowtab -d flowtab < db/migrations/<file>.sql
+./scripts/deploy-api.sh            # bump api, tag api-vX.Y.Z, push
+deploy/up.sh api                   # rebuild the staging api container
+curl https://api.flowtab.codexbase.dev/health
+
+./scripts/deploy-app.sh            # bump app, tag app-vX.Y.Z, push, build app/dist
 ```
 
-Apply migrations **before** deploying the api. New api code that expects
-new columns fails against an old schema.
+- Both scripts take `patch` (default), `minor` or `major`.
+- **Database migrations apply themselves** when the api container starts
+  (docs/58 D220). Check the log for `migrate: applying ...`; `/health`
+  reports the newest one as `"schema"`.
+- Always rebuild through `deploy/up.sh`, never `npm run build` alone (that
+  leaves the container on the old code). `deploy/up.sh` is
+  `docker compose up -d --build` plus the commit stamp; a bare
+  `docker compose up -d --build` still works but `/health` then shows
+  `"commit":"unknown"`.
+- `/health` returns `version`, `commit` and `schema`. The app's About
+  screen shows the version and commit.
+- Only changed the sync rules (`deploy/powersync/*.yaml`)? Then
+  `docker compose restart powersync` is enough.
 
-### 3. api (plus PowerSync and Postgres config)
-
-```bash
-./scripts/deploy-api.sh            # bump api version, tag api-vX.Y.Z, push
-cd deploy && docker compose up -d --build
-docker compose ps                  # all three healthy
-docker compose logs --tail 50 powersync
-curl https://api.flowtab.codexbase.dev/health    # shows the new version
-```
-
-- Always use `docker compose up -d --build`. `npm run build` alone leaves the
-  container on the old code.
-- `deploy-api.sh` takes `patch` (default), `minor` or `major`.
-- Compose only recreates containers whose config changed. Postgres data lives
-  in the `pgdata` volume and survives this.
-
-Only changed the sync rules (`deploy/powersync/*.yaml`)? Then
-`docker compose restart powersync` is enough.
-
-### 4. App
-
-```bash
-./scripts/deploy-app.sh            # bump app version, tag app-vX.Y.Z, push, build app/dist
-```
-
-- `vite build` reads `app/.env.production.local`. Check its URLs point at
-  the **production** api and PowerSync, not the `-beta` (dev) hosts.
-- If nginx serves `app/dist` straight from this checkout, it's live once the
-  build finishes. Otherwise copy `app/dist/` (and `website/` if it changed)
-  to where nginx serves it.
-- Verify: reload the app and check Settings → About shows the new version.
-
-### 5. Smoke test
+### 3. Smoke test staging
 
 ```bash
 curl https://api.flowtab.codexbase.dev/health
@@ -100,6 +78,54 @@ A `502` from either means the nginx-proxy-manager proxy host doesn't reach
 the container. Point it at the container name (`flowtab-api`,
 `flowtab-powersync`), not the bare service name (`api`, `powersync`). Both
 stacks share the Docker networks, so service names are ambiguous there.
+
+Then use the app on `app.codexbase.dev` and check About shows the new
+version.
+
+---
+
+## Production (its own server)
+
+Production is a `git clone` of this repo. Roll out the **same tag** you
+just tested on staging, never `main` directly.
+
+```bash
+cd flowtab
+git fetch --tags
+
+# api (migrations apply on startup)
+git checkout api-vX.Y.Z
+deploy/up.sh api
+curl <prod-api-host>/health        # version, commit and schema as on staging
+
+# app
+git checkout app-vX.Y.Z
+npm ci && npm run build -w app     # reads app/.env.production.local
+```
+
+Check out each tag right before building that component: the checkout
+moves the whole tree, so building the app while the api tag is checked
+out would build the wrong app code.
+
+### One-time: start tracking migrations on an existing database
+
+Databases created before docs/58 have no `schema_migrations` table. Until
+they get one, the api logs a warning and applies nothing. Run this once
+per database (staging and production):
+
+```bash
+docker compose exec api node api/dist/migrate-cli.js status     # "does not exist yet"
+# check the live schema has every file in db/migrations/ (\d <table> in psql)
+docker compose exec api node api/dist/migrate-cli.js baseline   # marks all as applied
+```
+
+If the database is behind (e.g. production hasn't had the newest
+migrations), mark only what it really has, and let the api apply the rest:
+
+```bash
+docker compose exec api node api/dist/migrate-cli.js baseline 2026-09-29-magic-links-code.sql
+docker compose restart api
+```
 
 ---
 
@@ -118,7 +144,7 @@ hot-reloads the app.
 | `app/.env.development.local`, `vite.config.ts` | restart `npm run dev:app` |
 | `deploy/powersync/*.yaml` | `docker compose -f docker-compose.dev.yaml --env-file .env.dev restart dev-powersync` |
 | `deploy/.env.dev`, `docker-compose.dev.yaml` | rerun the `up -d` command below |
-| new file in `db/migrations/` | apply it to the dev database (below) |
+| new file in `db/migrations/` | restart `npm run dev:api`, it applies pending migrations on startup |
 
 All `docker compose` commands below run from `deploy/`.
 
@@ -141,11 +167,19 @@ Use `127.0.0.1` as `<host>`, or the host's private IP (`10.71.71.55`) if
 `DEV_PG_BIND` in `.env.dev` is set to it. Use it when the dev api can't
 reach the host's loopback.
 
-### Apply a migration to dev
+### Migrations in dev
+
+`npm run dev:api` applies pending `db/migrations/` files on startup, same
+as staging/production (docs/58). To check or apply without a restart:
 
 ```bash
-docker exec -i flowtab-dev-postgres psql -U flowtab -d flowtab < db/migrations/<file>.sql
+npm run migrate -w api -- status
+npm run migrate -w api -- up
 ```
+
+When you add a migration, also update `db/schema.sql` to match and add the
+filename to the `schema_migrations` insert at its end. Otherwise a fresh
+database would apply it on top of a schema that already has it.
 
 ### Reset dev to an empty database
 
@@ -158,7 +192,7 @@ This rebuilds from the current `schema.sql`, so no migrations are needed
 afterwards. Browsers signed in to `app-beta` must sign in again. If uploads
 stay stuck, use Settings → "Reset local data".
 
-Dev never uses the version/tag scripts. They're production-only.
+Dev never uses the release scripts. They're for staging/production only.
 
 ---
 
@@ -166,11 +200,11 @@ Dev never uses the version/tag scripts. They're production-only.
 
 ```bash
 # psql shells
-docker exec -it flowtab-postgres     psql -U flowtab -d flowtab   # prod
+docker exec -it flowtab-postgres     psql -U flowtab -d flowtab   # staging (or prod, on its server)
 docker exec -it flowtab-dev-postgres psql -U flowtab -d flowtab   # dev
 
 # logs
-docker compose logs -f api powersync                                              # prod
+docker compose logs -f api powersync                                              # staging/prod
 docker compose -f docker-compose.dev.yaml --env-file .env.dev logs -f dev-powersync  # dev
 ```
 

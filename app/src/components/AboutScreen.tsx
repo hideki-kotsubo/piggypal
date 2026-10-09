@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { APP_VERSION } from '../lib/version';
+import { APP_COMMIT, APP_VERSION } from '../lib/version';
 
 export function AboutScreen() {
   return (
@@ -26,7 +26,7 @@ export function AboutScreen() {
         </a>
         <div className="settings-row settings-row-static">
           <span>Version</span>
-          <span style={{ color: 'var(--ink-faint)' }}>{APP_VERSION}</span>
+          <span style={{ color: 'var(--ink-faint)' }}>{APP_VERSION} ({APP_COMMIT})</span>
         </div>
       </div>
     </main>

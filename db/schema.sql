@@ -310,3 +310,28 @@ create table subscriptions (
   current_period_end      timestamptz,
   updated_at              timestamptz not null default now()
 );
+
+-- ── Migration tracking (docs/58 D220) ───────────────────────────────────────
+
+-- One row per db/migrations/*.sql already applied; api/src/migrate.ts runs
+-- whatever is missing at api startup. This file already contains every
+-- migration below, so a fresh database starts with all of them marked.
+-- When you add a migration, update this file to match AND add its filename
+-- here, or a fresh database would try to apply it a second time.
+create table schema_migrations (
+  filename   text primary key,
+  applied_at timestamptz not null default now()
+);
+
+insert into schema_migrations (filename) values
+  ('2026-08-22-categories-id-text.sql'),
+  ('2026-08-24-categories-composite-key.sql'),
+  ('2026-08-30-accounts-owner-nullable.sql'),
+  ('2026-08-30-devices-add-updated-at.sql'),
+  ('2026-08-30-drop-split-group-id.sql'),
+  ('2026-08-30-profiles-and-devices.sql'),
+  ('2026-08-30-transaction-splits-and-nullable-account.sql'),
+  ('2026-08-30-transactions-split-group-id.sql'),
+  ('2026-09-29-magic-links-code.sql'),
+  ('2026-10-08-scheduled-payments.sql'),
+  ('2026-10-09-scheduled-payments-deleted-at.sql');

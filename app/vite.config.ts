@@ -1,9 +1,28 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { execSync } from 'node:child_process'
+
+// docs/58 D218 — every build is stamped with the commit it came from, so a
+// running app can say exactly what it is (About shows "0.2.1 (a428ee8)").
+// "-dirty" marks a build with uncommitted changes — never true for a real
+// release, since deploy-app.sh refuses a dirty tree. "unknown" when there's
+// no git at all (a tarball checkout), rather than failing the build.
+function gitCommit(): string {
+  try {
+    const sha = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim()
+    const dirty = execSync('git status --porcelain', { encoding: 'utf8' }).trim() !== ''
+    return dirty ? `${sha}-dirty` : sha
+  } catch {
+    return 'unknown'
+  }
+}
 
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    __APP_COMMIT__: JSON.stringify(gitCommit()),
+  },
   plugins: [
     react(),
     VitePWA({
