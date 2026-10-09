@@ -14,6 +14,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      # docs/63 — fail if the lockfile lost another platform's native binaries.
+      - run: node scripts/lockfile-platforms.mjs --check
       - run: npm ci
       - run: npm run lint -w app
       - run: npm run build -w app
