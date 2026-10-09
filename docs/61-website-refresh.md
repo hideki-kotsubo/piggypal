@@ -14,7 +14,7 @@ the old `piggypal` host. Refreshed 2026-10-09.
 | D230 | The call to action is **"Open Flowtab"** (the web app) plus install hints; the waitlist is gone | The app is live; the form had no backend anyway |
 | D231 | Pricing shows the free plan as what's real today and **Flowtab Sync** as "coming later", no price | Matches docs/01's free/paid split without claiming billing or AI entry that don't exist |
 | D232 | Every feature claim on the site must be true of the app today | The old page had drifted into describing mockups |
-| D233 | Domain undecided: `myflowtab.com` (site) and `app.myflowtab.com` (app) are placeholders | One search-and-replace switches them (below) |
+| D233 | The website lives at `<domain>` and the app at `app.<domain>`. The domain is `myflowtab.com` today (app: `https://app.myflowtab.com/`), and may move to `flowtab.it` | One search-and-replace switches the repo (below); the user confirmed the convention 2026-10-09 |
 
 ## What the page is now
 
@@ -59,6 +59,20 @@ npm run changelog
 Then remove the `noindex` meta from `index.html` and the changelog
 template once the public domain is live, so search engines can find it.
 
+A domain move also touches things outside the repo, on the production
+server and DNS:
+
+- DNS and nginx for `<domain>` (website) and `app.<domain>` (app), plus
+  the api and PowerSync hosts.
+- `deploy/.env`: `APP_BASE_URL` (magic-link emails point here),
+  `CORS_ORIGIN`, `COOKIE_DOMAIN`.
+- `app/.env.production.local`: the api / PowerSync / relay URLs, then
+  rebuild the app.
+- `app/public/.well-known/` (docs/54): served from `app.<domain>`; the
+  native apps' Associated Domains / App Links must name it too.
+- Old links: redirect the old domain to the new one, since magic-link
+  emails already sent point at it.
+
 ## Verified
 
 Screenshots (headless Chromium, installed 2026-10-09 with the user's OK)
@@ -70,8 +84,6 @@ price line.
 
 ## Open
 
-- The production domain (D233), and whether it's live yet: until then
-  "Open Flowtab" points at a placeholder.
 - Sign-in sync works today without paying; the page lists it as a free
   feature and as part of the future Flowtab Sync plan. Decide what
   existing users keep when billing arrives (docs/06).
