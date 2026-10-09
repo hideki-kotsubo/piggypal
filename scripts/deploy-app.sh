@@ -20,10 +20,22 @@ fi
 
 git pull --ff-only
 
-(cd app && npm version "$BUMP" --tag-version-prefix="app-v" -m "app: bump to %s" >/dev/null)
+# npm version only commits and tags when run at the git root, and app/ is
+# a workspace, so it just bumps the files here; the commit and tag are ours.
+(cd app && npm version "$BUMP" --no-git-tag-version >/dev/null)
 
 VERSION="$(node -p "require('./app/package.json').version")"
 TAG="app-v${VERSION}"
+
+if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+  git checkout -- app/package.json package-lock.json
+  echo "Tag ${TAG} already exists, nothing bumped." >&2
+  exit 1
+fi
+
+git add app/package.json package-lock.json
+git commit -q -m "app: bump to ${VERSION}"
+git tag -a "$TAG" -m "app ${VERSION}"
 
 git push origin main
 git push origin "$TAG"
