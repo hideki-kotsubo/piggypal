@@ -15,5 +15,9 @@
   },
   "devDependencies": {
     "tsx": "^4.23.11"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "sharp@0.32.6": true
   }
 }
