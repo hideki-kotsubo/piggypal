@@ -23,6 +23,7 @@ import {
 import type { Occurrence } from './schedules';
 import { AppSkeleton } from '../components/AppSkeleton';
 import { isUntouchedSeedAccount, referencedAccountIds, seedAccounts, seedCategories, seedCategoryKeywords } from './seed';
+import { centsFromRow } from './cents';
 
 // Real local data layer — docs/01 D1 (on-device SQLite via wa-sqlite/
 // PowerSync web SDK), running in local-only mode (no connector passed to
@@ -90,7 +91,7 @@ interface TransactionRow {
   id: string;
   account_id: string | null; // docs/50 — null exactly when split across 2+ accounts
   category_id: string | null;
-  amount_cents: number;
+  amount_cents: number | bigint; // see centsFromRow
   currency: string;
   // Genuinely nullable at runtime, whatever the column comment claims: a
   // row written before occurred_on was renamed to occurred_at has nothing
@@ -116,7 +117,7 @@ function rowToTransaction(r: TransactionRow): Transaction {
     id: r.id,
     accountId: r.account_id,
     categoryId: r.category_id,
-    amountCents: r.amount_cents,
+    amountCents: centsFromRow(r.amount_cents),
     currency: r.currency,
     occurredAt: r.occurred_at ?? '1970-01-01T00:00:00',
     note: r.note,
@@ -144,7 +145,7 @@ interface TransactionSplitRow {
   id: string;
   transaction_id: string;
   account_id: string;
-  amount_cents: number;
+  amount_cents: number | bigint; // see centsFromRow
   updated_at: string | null;
 }
 function rowToTransactionSplit(r: TransactionSplitRow): TransactionSplit {
@@ -152,7 +153,7 @@ function rowToTransactionSplit(r: TransactionSplitRow): TransactionSplit {
     id: r.id,
     transactionId: r.transaction_id,
     accountId: r.account_id,
-    amountCents: r.amount_cents,
+    amountCents: centsFromRow(r.amount_cents),
     updatedAt: r.updated_at ?? NEVER_UPDATED,
   };
 }
@@ -163,7 +164,7 @@ interface ScheduledPaymentRow {
   name: string;
   account_id: string | null;
   category_id: string | null;
-  amount_cents: number;
+  amount_cents: number | bigint; // see centsFromRow
   amount_mode: string;
   currency: string;
   merchant: string | null;
@@ -188,7 +189,7 @@ function rowToScheduledPayment(r: ScheduledPaymentRow): ScheduledPayment {
     name: r.name,
     accountId: r.account_id,
     categoryId: r.category_id,
-    amountCents: r.amount_cents,
+    amountCents: centsFromRow(r.amount_cents),
     amountMode: r.amount_mode as ScheduledPayment['amountMode'],
     currency: r.currency,
     merchant: r.merchant,
@@ -215,7 +216,7 @@ interface BudgetRow {
   category_id: string;
   month: string;
   currency: string;
-  amount_cents: number;
+  amount_cents: number | bigint; // see centsFromRow
   updated_at: string | null;
 }
 function rowToBudget(r: BudgetRow): Budget {
@@ -224,7 +225,7 @@ function rowToBudget(r: BudgetRow): Budget {
     categoryId: r.category_id,
     month: r.month,
     currency: r.currency,
-    amountCents: r.amount_cents,
+    amountCents: centsFromRow(r.amount_cents),
     updatedAt: r.updated_at ?? NEVER_UPDATED,
   };
 }

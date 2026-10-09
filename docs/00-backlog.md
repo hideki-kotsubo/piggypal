@@ -830,23 +830,6 @@ it needs doing.
       worth chasing further (e.g. researching known WebKit bug reports
       for this exact standalone-PWA case) or accepting it as a platform
       limitation.
-- [ ] `BudgetBars.tsx:19` throws `Uncaught TypeError: Cannot mix BigInt and
-      other types, use explicit conversions` — reported 2026-08-12. Root
-      cause: `store.tsx:75` maps `amountCents: r.amount_cents` straight from
-      the raw SQLite row with no conversion, and the SQLite driver (wa-sqlite
-      via PowerSync) returns `INTEGER` columns as native JS `bigint`, not
-      `number` — `types.ts` declares `amountCents: number`, but at runtime
-      it's actually a `bigint`, and TS has no way to catch that mismatch
-      since the row mapper does no runtime coercion. `BudgetBars.tsx:19`
-      (`(spendByKey.get(key) ?? 0) + -t.amountCents`) mixes the `bigint`
-      with a plain-number `0`/accumulator, which throws. `store.tsx:444`
-      has the identical mixing pattern (`(totals.get(...) ?? 0) +
-      t.amountCents`) — likely reproduces wherever that total is consumed
-      (trend/home totals), not just this one call site. Not yet fixed;
-      real fix is probably at the source — coerce `amount_cents`/
-      `amountCents` (and likely `budgets.amount_cents`, same column type)
-      to `Number(...)` once in `store.tsx`'s row mappers rather than
-      patching every arithmetic call site individually.
 - [ ] Date/Time fields (`.field-pair` in `TransactionEditForm`) still
       overflow each other on real iOS Safari — confirmed by the user
       2026-08-11 on an actual device (app.piggypal.codexbase.dev,
@@ -868,6 +851,19 @@ it needs doing.
       real iOS Safari on this specific bug, not just theoretically.
       Deferred — parked per user 2026-08-11, revisit later.
 ## ✅ Done
+
+- [x] `BudgetBars.tsx:19` "Cannot mix BigInt and other types" (reported
+      2026-08-12, root cause: `amount_cents` read from SQLite as `bigint`).
+      **Not reproducible 2026-10-09**: on `@powersync/web` 2.3.0 (2.1.1 at
+      the report) behind the `CapacitorPowerSyncDatabase` wrapper (docs/52),
+      `transactions`/`budgets.amount_cents` come back as `number`; a headless
+      run with a real expense + budget rendered Insights' trend and budget
+      bars with no errors. Fixed defensively anyway at the source, as the
+      report proposed: `lib/cents.ts`'s `centsFromRow()` converts in all four
+      store.tsx row mappers (transactions, splits, scheduled payments,
+      budgets), with tests. Covers the native drivers, which can't be
+      checked here. Other INTEGER columns (interval_count, sort_order...)
+      aren't converted; they're never mixed into money sums.
 
 - [x] Speech/typed entry always pre-selected Cash as the account instead
       of the last-used or most-used one — reported 2026-10-06. Root
