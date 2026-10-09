@@ -32,4 +32,13 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- docs/62: voice entry (docs/16) and QR pairing (docs/25) go through the
+         WebView's mic/camera, which Capacitor's BridgeWebChromeClient asks
+         for at runtime; it can only ask for what's declared here. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Not required: devices without a camera or mic can still install and type. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
 </manifest>

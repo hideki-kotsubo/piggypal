@@ -14,6 +14,12 @@ it needs doing.
 
 ## ⚪ Next
 
+- [ ] Test voice entry and QR pairing on a real device in the native
+      apps (docs/62): iOS should prompt for mic, speech and camera once,
+      then never again; Android should prompt for mic and camera. If
+      speech doesn't work in Android's WebView, add a native speech plugin
+      (e.g. `@capacitor-community/speech-recognition`).
+
 - [ ] Speech/typed parse preview shows the (possibly defaulted) account
       but can't change it — the only way is to save, then edit the
       transaction. Add an account picker to the preview panel
@@ -813,23 +819,6 @@ it needs doing.
       re-entering the Accounts screen — flagged 2026-08-19. The edit panel
       itself updates fine; it's the list's own grouping that doesn't
       re-render live off the same edit.
-- [ ] Mic permission prompt still appears on every app open, not just
-      every tap (docs/16 D149 only fixed the latter) — reported
-      2026-08-19. One attempted mitigation (D161: prime via `getUserMedia`
-      before `SpeechRecognition`) was tried and **confirmed NOT to fix
-      it** on a real iPhone PWA build (prompted on all 3 opens tested),
-      then fully reverted rather than keep the added complexity for no
-      benefit. Current read, not yet confirmed: may not be an instance-
-      vs-origin scoping quirk at all for a standalone/home-screen-
-      installed PWA specifically — iOS has a longer-standing class of
-      WebKit bugs around installed PWAs not persisting *any* media
-      permission across separate launches, which would explain why both
-      D149's and D161's mitigations failed the same way and suggest this
-      isn't fixable from the web-app side. Doesn't block voice entry,
-      just adds a tap each open. Needs the user's call on whether it's
-      worth chasing further (e.g. researching known WebKit bug reports
-      for this exact standalone-PWA case) or accepting it as a platform
-      limitation.
 - [ ] Date/Time fields (`.field-pair` in `TransactionEditForm`) still
       overflow each other on real iOS Safari — confirmed by the user
       2026-08-11 on an actual device (app.piggypal.codexbase.dev,
@@ -851,6 +840,15 @@ it needs doing.
       real iOS Safari on this specific bug, not just theoretically.
       Deferred — parked per user 2026-08-11, revisit later.
 ## ✅ Done
+
+- [x] Mic permission prompt on every app open (reported 2026-08-19).
+      **Accepted as an iOS platform limitation for the home-screen PWA**
+      (docs/62 D236): WebKit leaves permission persistence to the
+      embedding app, and a PWA has none, which is why D149 and D161 both
+      failed. The native iOS app is the fix (Capacitor auto-grants WebKit
+      media requests), so docs/62 also added the missing iOS usage
+      descriptions and Android mic/camera permissions (D234-D235).
+      Device testing tracked under Next. 2026-10-09.
 
 - [x] `BudgetBars.tsx:19` "Cannot mix BigInt and other types" (reported
       2026-08-12, root cause: `amount_cents` read from SQLite as `bigint`).
