@@ -108,6 +108,7 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
   // values that round-trip through an async DB write jumps the cursor.
   const [nameStr, setNameStr] = useState(() => base.name);
   const [noteStr, setNoteStr] = useState(() => base.note ?? '');
+  const [merchantStr, setMerchantStr] = useState(() => base.merchant ?? '');
   const [amountLocal, setAmountLocal] = useState(() => base.amountCents);
   const [countStr, setCountStr] = useState(() => (base.occurrenceCount ? String(base.occurrenceCount) : ''));
   const [startIndexStr, setStartIndexStr] = useState(() => String(base.startIndex));
@@ -149,6 +150,12 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
   }
 
   const category = store.categories.find((c) => c.id === view.categoryId);
+  // docs/15's recency-ranked Location suggestions, same as
+  // TransactionEditForm's — every posted occurrence copies this onto its
+  // transaction (D216), so it should read the same as one typed there.
+  const merchantSuggestions = store
+    .rankedMerchants()
+    .filter((m) => m.toLowerCase().includes(merchantStr.toLowerCase()));
 
   function saveNew() {
     const name = nameStr.trim();
@@ -470,6 +477,36 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
               }}
             />
           </label>
+
+          <label className="field-label">
+            Location
+            <input
+              className="text-input"
+              placeholder="optional…"
+              value={merchantStr}
+              onChange={(e) => {
+                const v = e.target.value;
+                setMerchantStr(v);
+                commit({ merchant: v.trim() || null });
+              }}
+            />
+          </label>
+          {merchantSuggestions.length > 0 && (
+            <div className="chip-row">
+              {merchantSuggestions.map((m) => (
+                <button
+                  key={m}
+                  className={`chip ${m === merchantStr ? 'picked' : ''}`}
+                  onClick={() => {
+                    setMerchantStr(m);
+                    commit({ merchant: m });
+                  }}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+          )}
 
           {error && <p className="field-hint schedule-overdue">{error}</p>}
 

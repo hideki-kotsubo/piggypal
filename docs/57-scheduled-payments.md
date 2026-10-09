@@ -277,7 +277,9 @@ download before running.
   checks (an account a schedule points at counts as used).
 - Screens: `/schedules` (Due, Next 30 days, the rules, Stopped) and
   `/schedules/:id` (`/schedules/new` to create) with Paid/Skip per
-  occurrence; a Home banner while anything is due (`DueBanner.tsx`);
+  occurrence, and a Location field (`merchant`, docs/15's suggestion chips,
+  added 2026-10-08 after first use) copied onto every posted occurrence;
+  a Home banner while anything is due (`DueBanner.tsx`);
   a Settings row; a hatched "committed" segment plus "+ $X scheduled" on
   Insights' budget bars.
 - Server: `db/migrations/2026-10-08-scheduled-payments.sql`, the upload
