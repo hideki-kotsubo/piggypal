@@ -16,7 +16,7 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
-## Unreleased
+## 0.3.0 — 2026-10-09
 
 The first public version of Flowtab: a simple, private way to keep track
 of what you spend.
