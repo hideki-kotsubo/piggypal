@@ -1,8 +1,8 @@
 // docs/59 — the user-facing changelog. app/CHANGELOG.md is the one source;
 // this parser feeds About's "What's new" (bundled via ?raw), and
 // scripts/build-changelog.mts, which generates website/changelog.html and
-// stamps a release. No imports, and erasable syntax only, so Node can run
-// it straight from the script without a build step.
+// stamps a release (run through tsx). No imports, so it stays usable from
+// both places.
 
 export interface ChangelogEntry {
   version: string; // 'Unreleased' or semver

@@ -3,7 +3,7 @@
 //
 //   (no args)            regenerate website/changelog.html
 //   --check              exit 1 if website/changelog.html is out of date (CI)
-//   --has-unreleased     exit 1 unless "## Unreleased" has notes
+//   --has-unreleased     exit 3 unless "## Unreleased" has notes
 //   --release <version>  stamp "## Unreleased" as <version> — <today>, regenerate
 //   --plain <version>    print that entry as plain text (store release notes)
 //
@@ -154,7 +154,8 @@ switch (mode) {
     break;
   }
   case '--has-unreleased':
-    if (!hasUnreleasedNotes(parseChangelog(source))) process.exit(1);
+    // 3, not 1: deploy-app.sh must tell "no notes" apart from a crash.
+    if (!hasUnreleasedNotes(parseChangelog(source))) process.exit(3);
     break;
   case '--release':
     if (!arg) throw new Error('--release needs a version');

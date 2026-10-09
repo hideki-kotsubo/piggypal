@@ -11,6 +11,9 @@
     "dev:api": "npm run dev -w api",
     "build": "npm run build -w app && npm run build -w api",
     "test": "npm run test -w app",
-    "changelog": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/build-changelog.mts"
+    "changelog": "tsx scripts/build-changelog.mts"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.11"
   }
 }
