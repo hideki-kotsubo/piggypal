@@ -225,6 +225,24 @@ syncRouter.post('/upload', requireAccessToken, async (req: AuthedRequest, res) =
         continue;
       }
 
+      // docs/48 D176 — a devices row whose profile_id isn't one of this
+      // user's profiles (a device whose getLocalUserId() never became a
+      // profile, e.g. adopted from a P2P peer) used to hit
+      // devices_profile_id_fkey mid-transaction, 500 the whole batch, and
+      // leave the device retrying it forever. Checked here instead, also
+      // scoped to user_id so a device can't point at another account's
+      // profile. Sees a profile PUT from earlier in this same batch.
+      if (op.table === 'devices' && op.op !== 'DELETE' && op.data?.profile_id != null) {
+        const profile = await client.query('SELECT 1 FROM profiles WHERE id = $1 AND user_id = $2', [
+          op.data.profile_id,
+          userId,
+        ]);
+        if (profile.rowCount === 0) {
+          result.skipped.push({ table: op.table, id: op.id, reason: 'unknown-profile' });
+          continue;
+        }
+      }
+
       if (op.op === 'DELETE') {
         const r = await client.query(`DELETE FROM ${op.table} WHERE id = $1 AND user_id = $2`, [op.id, userId]);
         if (r.rowCount === 0) result.skipped.push({ table: op.table, id: op.id, reason: 'not-found' });
