@@ -16,7 +16,7 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
-## Unreleased
+## 0.3.1 — 2026-10-09
 
 - **A fresh new look**: a new Flowtab icon on your home screen, and a
   matching splash screen.
