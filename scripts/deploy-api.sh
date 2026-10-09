@@ -21,10 +21,22 @@ fi
 
 git pull --ff-only
 
-(cd api && npm version "$BUMP" --tag-version-prefix="api-v" -m "api: bump to %s" >/dev/null)
+# npm version only commits and tags when run at the git root, and api/ is
+# a workspace, so it just bumps the files here; the commit and tag are ours.
+(cd api && npm version "$BUMP" --no-git-tag-version >/dev/null)
 
 VERSION="$(node -p "require('./api/package.json').version")"
 TAG="api-v${VERSION}"
+
+if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+  git checkout -- api/package.json package-lock.json
+  echo "Tag ${TAG} already exists, nothing bumped." >&2
+  exit 1
+fi
+
+git add api/package.json package-lock.json
+git commit -q -m "api: bump to ${VERSION}"
+git tag -a "$TAG" -m "api ${VERSION}"
 
 git push origin main
 git push origin "$TAG"
