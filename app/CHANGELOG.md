@@ -16,7 +16,7 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
-## Unreleased
+## 0.3.5 — 2026-10-10
 
 - **Fixed**: in the iPhone and Android apps, sync no longer stops a while
   after you sign in. If you were signed in before this update, sign in
