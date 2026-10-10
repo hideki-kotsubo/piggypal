@@ -164,7 +164,10 @@ different folders; this file does.)
     `--no-changelog`). Production server: `git fetch --tags && git checkout
     app-vX.Y.Z && npm ci && npm run build -w app`; publish `website/` if it
     changed.
-  - **iOS / Android** — on the user's Mac: `git pull`, `npm ci`,
+  - **iOS / Android** — needed after every app release meant to reach
+    phones (the native apps bundle `app/dist`; a web release alone doesn't
+    update them) and after any change to `app/ios`, `app/android`,
+    Capacitor plugins or `capacitor.config.ts`. On the user's Mac: `git pull`, `npm ci`,
     `npm run build -w app`, then `npx cap sync` for testing or
     `npm run release:ios` / `release:android` for a store build (it commits
     and pushes the build number bump to `main` itself); then Xcode /
