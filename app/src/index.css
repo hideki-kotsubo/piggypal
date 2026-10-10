@@ -10,3 +10,19 @@ body {
   font-family: var(--sans);
   -webkit-font-smoothing: antialiased;
 }
+
+/* docs/65 — iOS draws the app under the status bar (native app, and the
+   home-screen PWA). .home pads its top by the status bar's height; this
+   strip covers that area in the surface colour so content scrolling up
+   doesn't show through behind the clock. Zero height wherever there's no
+   inset (desktop, Android with a separate status bar). */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top, 0px);
+  background: var(--surface);
+  z-index: 30;
+}
