@@ -16,7 +16,7 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
-## Unreleased
+## 0.3.4 — 2026-10-10
 
 - **Fixed**: on iPhone, the top of the screen no longer sits under the
   clock and status icons.
