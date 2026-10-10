@@ -1,4 +1,4 @@
-import { Router, type Response } from 'express';
+import { Router, type Request, type Response } from 'express';
 import type { PoolClient } from 'pg';
 import { pool } from '../db.js';
 import { signAccessToken } from '../jwt.js';
@@ -49,6 +49,40 @@ function refreshCookieOptions() {
   };
 }
 
+// docs/68: the iOS/Android apps' web views run at these origins, which are
+// cross-site to the api, so WebKit never stores or sends the refresh
+// cookie there (SameSite=lax, plus WKWebView's third-party cookie
+// blocking). Requests from them get the refresh token in the JSON body
+// instead, and the app keeps it in the Keychain / Android Keystore. Keyed
+// on Origin because a browser page can't forge it: a web page, XSS
+// included, never gets the token out of its httpOnly cookie this way.
+const NATIVE_ORIGINS = new Set(['capacitor://localhost', 'https://localhost']);
+
+function isNativeClient(req: Request): boolean {
+  return NATIVE_ORIGINS.has(req.get('origin') ?? '');
+}
+
+// The presented refresh token: the cookie on the web, the request body
+// from the native apps.
+function presentedRefreshToken(req: Request): string {
+  const cookieToken = req.cookies?.[REFRESH_COOKIE];
+  if (typeof cookieToken === 'string' && cookieToken) return cookieToken;
+  const bodyToken = req.body?.refreshToken;
+  return typeof bodyToken === 'string' ? bodyToken : '';
+}
+
+// Hands a newly issued refresh token to the client the way it can keep
+// it: a cookie for the web, a `refreshToken` field merged into the JSON
+// response for the native apps.
+function sendWithRefreshToken(req: Request, res: Response, refreshToken: string, body: Record<string, unknown>): void {
+  if (isNativeClient(req)) {
+    res.json({ ...body, refreshToken });
+    return;
+  }
+  res.cookie(REFRESH_COOKIE, refreshToken, refreshCookieOptions());
+  res.json(body);
+}
+
 // docs/05 flow, step 2: "Always returns 200 (no user enumeration)" — this
 // never checks whether `email` already has an account before sending,
 // same code path either way.
@@ -80,6 +114,7 @@ authRouter.post('/request-link', async (req, res) => {
 // issuance. Runs inside the caller's transaction; the caller commits.
 async function completeSignIn(
   client: PoolClient,
+  req: Request,
   res: Response,
   link: { id: string; email: string },
   localUserId: string,
@@ -111,8 +146,7 @@ async function completeSignIn(
 
   await client.query('COMMIT');
 
-  res.cookie(REFRESH_COOKIE, refreshToken, refreshCookieOptions());
-  res.json({ accessToken: await signAccessToken(userId), userId, isNewUser });
+  sendWithRefreshToken(req, res, refreshToken, { accessToken: await signAccessToken(userId), userId, isNewUser });
 }
 
 // Called by the app's own client-side JS (not a raw browser navigation)
@@ -143,7 +177,7 @@ authRouter.get('/verify', async (req, res) => {
       res.status(400).json({ error: 'Invalid or expired link' });
       return;
     }
-    await completeSignIn(client, res, link, localUserId, deviceId);
+    await completeSignIn(client, req, res, link, localUserId, deviceId);
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
@@ -195,7 +229,7 @@ authRouter.post('/verify-code', async (req, res) => {
       res.status(400).json({ error: 'Invalid or expired code' });
       return;
     }
-    await completeSignIn(client, res, link, localUserId, deviceId);
+    await completeSignIn(client, req, res, link, localUserId, deviceId);
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
@@ -204,18 +238,18 @@ authRouter.post('/verify-code', async (req, res) => {
   }
 });
 
-// docs/05: "Access token refresh" — cookie-authenticated, no body, rotates
-// on every use. Reuse of an already-rotated token is a theft signal: the
+// docs/05: "Access token refresh" — cookie-authenticated on the web, the
+// token in the body from the native apps (docs/68), rotates on every use. Reuse of an already-rotated token is a theft signal: the
 // whole chain for that device gets revoked, forcing re-login on that
 // device only (other devices' own chains are untouched).
 authRouter.post('/refresh', async (req, res) => {
-  const cookieToken = req.cookies?.[REFRESH_COOKIE];
-  if (typeof cookieToken !== 'string' || !cookieToken) {
+  const presentedToken = presentedRefreshToken(req);
+  if (!presentedToken) {
     res.status(401).json({ error: 'No refresh token' });
     return;
   }
 
-  const tokenHash = hashToken(cookieToken);
+  const tokenHash = hashToken(presentedToken);
   const result = await pool().query<{
     id: string;
     user_id: string;
@@ -254,8 +288,7 @@ authRouter.post('/refresh', async (req, res) => {
           insertResult.rows[0].id,
           tip.rows[0].id,
         ]);
-        res.cookie(REFRESH_COOKIE, newToken, refreshCookieOptions());
-        res.json({ accessToken: await signAccessToken(row.user_id) });
+        sendWithRefreshToken(req, res, newToken, { accessToken: await signAccessToken(row.user_id) });
         return;
       }
     }
@@ -285,8 +318,7 @@ authRouter.post('/refresh', async (req, res) => {
   );
   await pool().query('UPDATE refresh_tokens SET revoked_at = now(), replaced_by = $1 WHERE id = $2', [insertResult.rows[0].id, row.id]);
 
-  res.cookie(REFRESH_COOKIE, newToken, refreshCookieOptions());
-  res.json({ accessToken: await signAccessToken(row.user_id) });
+  sendWithRefreshToken(req, res, newToken, { accessToken: await signAccessToken(row.user_id) });
 });
 
 // A real gap found alongside the refresh-reuse race above: there was no
@@ -300,11 +332,11 @@ authRouter.post('/refresh', async (req, res) => {
 // is memory-only and may already be gone by the time a real user reaches
 // for "sign out," but the refresh cookie is still there to revoke.
 authRouter.post('/logout', async (req, res) => {
-  const cookieToken = req.cookies?.[REFRESH_COOKIE];
+  const presentedToken = presentedRefreshToken(req);
   res.clearCookie(REFRESH_COOKIE, refreshCookieOptions());
-  if (typeof cookieToken === 'string' && cookieToken) {
+  if (presentedToken) {
     await pool().query('UPDATE refresh_tokens SET revoked_at = now() WHERE token_hash = $1 AND revoked_at IS NULL', [
-      hashToken(cookieToken),
+      hashToken(presentedToken),
     ]);
   }
   res.status(204).end();

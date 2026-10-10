@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { getDeviceId, getLocalUserId } from './identity';
+import { forgetRefreshToken, loadRefreshToken, saveRefreshToken, usesNativeRefreshToken } from './nativeRefreshToken';
 import { migrateStorageKey } from './storageMigration';
 import type { Account, Category, Profile } from './types';
 
@@ -45,13 +46,48 @@ export function getAuthAccount(): AuthAccount | null {
 // "fresh device, not signed in" state.
 export function clearAuthAccount(): void {
   localStorage.removeItem(AUTH_ACCOUNT_KEY);
+  setSessionExpired(false);
+  // Unlike the web's httpOnly cookie, the native apps' Keychain copy
+  // (docs/68) is reachable from here, so a reset really forgets it.
+  void forgetRefreshToken();
+}
+
+// docs/68: "signed in" on this device (the marker above) but the server
+// no longer accepts its refresh token — revoked, expired, or, before
+// docs/68, never stored at all in the native apps. Sync can't resume
+// until the user signs in again, so Home and Settings say so rather than
+// leaving it to look like a slow connection.
+let sessionExpired = false;
+const sessionListeners = new Set<() => void>();
+
+function setSessionExpired(next: boolean) {
+  if (sessionExpired === next) return;
+  sessionExpired = next;
+  for (const listener of sessionListeners) listener();
+}
+
+export function isSessionExpired(): boolean {
+  return sessionExpired;
+}
+
+export function useSessionExpired(): boolean {
+  return useSyncExternalStore(
+    (listener) => {
+      sessionListeners.add(listener);
+      return () => sessionListeners.delete(listener);
+    },
+    isSessionExpired,
+  );
 }
 
 export function useAuthAccount(): [AuthAccount | null, (account: AuthAccount | null) => void] {
   const [account, setAccountState] = useState<AuthAccount | null>(getAuthAccount);
   function setAccount(next: AuthAccount | null) {
     if (next) localStorage.setItem(AUTH_ACCOUNT_KEY, JSON.stringify(next));
-    else localStorage.removeItem(AUTH_ACCOUNT_KEY);
+    else {
+      localStorage.removeItem(AUTH_ACCOUNT_KEY);
+      setSessionExpired(false);
+    }
     setAccountState(next);
   }
   return [account, setAccount];
@@ -116,6 +152,17 @@ export interface VerifyResult {
   accessToken: string;
   userId: string;
   isNewUser: boolean;
+  // docs/68: only in responses to the native apps — the web gets a cookie.
+  refreshToken?: string;
+}
+
+// Every successful sign-in lands here: keeps the access token in memory
+// and, in the native apps, the refresh token in the Keychain.
+async function adoptSession(result: VerifyResult): Promise<VerifyResult> {
+  accessToken = result.accessToken;
+  if (result.refreshToken) await saveRefreshToken(result.refreshToken);
+  setSessionExpired(false);
+  return result;
 }
 
 // docs/41's `/api/auth/verify` needs two client-only values (localUserId,
@@ -129,9 +176,7 @@ export async function verifyMagicLink(token: string): Promise<VerifyResult> {
     const body = await res.json().catch(() => ({}) as { error?: string });
     throw new Error(body.error ?? 'That sign-in link is invalid or has expired.');
   }
-  const result = (await res.json()) as VerifyResult;
-  accessToken = result.accessToken;
-  return result;
+  return adoptSession((await res.json()) as VerifyResult);
 }
 
 // docs/56 D204: the same sign-in as verifyMagicLink, proven by the
@@ -148,13 +193,12 @@ export async function verifyMagicCode(email: string, code: string): Promise<Veri
     const body = await res.json().catch(() => ({}) as { error?: string });
     throw new Error(body.error ?? 'That code is invalid or has expired.');
   }
-  const result = (await res.json()) as VerifyResult;
-  accessToken = result.accessToken;
-  return result;
+  return adoptSession((await res.json()) as VerifyResult);
 }
 
-// Cookie-authenticated (docs/05's refresh flow) — mints a fresh access
-// token from the httpOnly refresh cookie, no body. Returns null rather
+// docs/05's refresh flow — mints a fresh access token from the httpOnly
+// refresh cookie on the web, or from the Keychain's refresh token in the
+// native apps (docs/68), sent in the body. Returns null rather
 // than throwing when there's no valid session (expired/revoked/never
 // signed in on this device), matching PowerSyncBackendConnector's own
 // "return null if not signed in" contract that connector.ts relies on.
@@ -173,13 +217,34 @@ let refreshInFlight: Promise<string | null> | null = null;
 export async function refreshAccessToken(): Promise<string | null> {
   if (refreshInFlight) return refreshInFlight;
   refreshInFlight = (async () => {
-    const res = await apiFetch('/api/auth/refresh', { method: 'POST' });
+    let init: RequestInit = { method: 'POST' };
+    if (usesNativeRefreshToken) {
+      const refreshToken = await loadRefreshToken();
+      if (!refreshToken) {
+        accessToken = null;
+        if (getAuthAccount()) setSessionExpired(true);
+        return null;
+      }
+      init = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refreshToken }) };
+    }
+    const res = await apiFetch('/api/auth/refresh', init);
     if (!res.ok) {
       accessToken = null;
+      // 401 is the server's final word on this token (unknown, expired,
+      // revoked); anything else (a 5xx, a proxy error) may pass, so the
+      // token is kept for the next try.
+      if (res.status === 401) {
+        await forgetRefreshToken();
+        if (getAuthAccount()) setSessionExpired(true);
+      }
       return null;
     }
-    const body = (await res.json()) as { accessToken: string };
+    const body = (await res.json()) as { accessToken: string; refreshToken?: string };
+    // The token rotates on every use, so the new one has to be saved
+    // before anything else can ask for a refresh.
+    if (body.refreshToken) await saveRefreshToken(body.refreshToken);
     accessToken = body.accessToken;
+    setSessionExpired(false);
     return accessToken;
   })();
   try {
@@ -200,11 +265,19 @@ export async function refreshAccessToken(): Promise<string | null> {
 // either).
 export async function signOut(): Promise<void> {
   try {
-    await apiFetch('/api/auth/logout', { method: 'POST' });
+    const refreshToken = await loadRefreshToken();
+    await apiFetch(
+      '/api/auth/logout',
+      refreshToken
+        ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refreshToken }) }
+        : { method: 'POST' },
+    );
   } catch {
     // Network failure signing out is still a sign-out, locally.
   }
   accessToken = null;
+  await forgetRefreshToken();
+  setSessionExpired(false);
 }
 
 // Always tries the in-memory token first (cheap, no network) and only

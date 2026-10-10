@@ -16,6 +16,14 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
+## Unreleased
+
+- **Fixed**: in the iPhone and Android apps, sync no longer stops a while
+  after you sign in. If you were signed in before this update, sign in
+  once more in Settings and it stays signed in from then on.
+- If sync ever needs you to sign in again, Flowtab now says so on the
+  home screen instead of quietly keeping your entries on the phone.
+
 ## 0.3.4 — 2026-10-10
 
 - **Fixed**: on iPhone, the top of the screen no longer sits under the
