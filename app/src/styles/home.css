@@ -15,6 +15,10 @@
   align-items: center;
   justify-content: space-between;
   padding: 1.6rem 1.1rem 0.6rem;
+  /* docs/65 — under an iOS status bar, .home's safe-area padding already
+     supplies the space, so the bar's own top padding drops to 0.6rem
+     instead of stacking a full 1.6rem on top. 1.6rem anywhere else. */
+  padding-top: max(0.6rem, calc(1.6rem - env(safe-area-inset-top, 0px)));
 }
 .wordmark {
   font-family: var(--serif);

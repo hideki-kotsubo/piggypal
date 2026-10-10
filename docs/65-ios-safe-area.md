@@ -22,6 +22,11 @@ whole screen, status bar included.
   below the strip; the toast clears `safe-area-inset-bottom`. The bottom
   dock already did (docs/31).
 
+- Follow-up after the first device check (user screenshot): the title sat
+  ~85px from the top, the inset plus the app bar's own 1.6rem. The app
+  bar's top padding is now `max(0.6rem, calc(1.6rem - inset))`: 0.6rem
+  under a status bar, unchanged 1.6rem elsewhere.
+
 Everything is 0 where there's no inset (desktop, Android), so nothing
 moves there.
 
