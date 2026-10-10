@@ -4,7 +4,9 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover: without it iOS reports every env(safe-area-inset-*)
+         as 0, and the native app draws under the status bar (docs/65). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <!-- docs/56 D202: same theme color as the manifest (brand v2, docs/60);
          the apple-* tags give iOS's Add to Home Screen a proper name and chrome. -->
     <meta name="theme-color" content="#125251" />
