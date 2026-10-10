@@ -166,8 +166,9 @@ different folders; this file does.)
     changed.
   - **iOS / Android** — on the user's Mac: `git pull`, `npm ci`,
     `npm run build -w app`, then `npx cap sync` for testing or
-    `npm run release:ios` / `release:android` for a store build (commit the
-    bumped native files); then Xcode / Android Studio. Store steps: docs/66.
+    `npm run release:ios` / `release:android` for a store build (it commits
+    and pushes the build number bump to `main` itself); then Xcode /
+    Android Studio. Store steps: docs/66.
   - Release scripts run only on this server, on `main`; never on the
     production server.
 - **Branch before committing**, never commit to `main` directly; merge

@@ -7,6 +7,11 @@
 // release:ios` (docs/55, docs/58 D222), not directly — and only for a build
 // you're actually submitting. Plain `sync:*` no longer calls this, so dev
 // syncs don't burn build numbers.
+//
+// The project file is the only record of the last build number, so the bump
+// is committed and pushed to main right here (docs/66): an uncommitted bump
+// gets lost and the next release reuses a number the store already has.
+import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -19,36 +24,80 @@ if (!['android', 'ios'].includes(platform)) {
   process.exit(1);
 }
 
+const git = (...args) => execFileSync('git', args, { cwd: appRoot, encoding: 'utf8' }).trim();
+const fail = (message) => {
+  console.error(message);
+  process.exit(1);
+};
+
+const projectFile = {
+  android: 'android/app/build.gradle',
+  ios: 'ios/App/App.xcodeproj/project.pbxproj',
+}[platform];
+const projectPath = path.join(appRoot, projectFile);
+
+if (git('rev-parse', '--abbrev-ref', 'HEAD') !== 'main') {
+  fail('Not on main — store builds are released from main. Switch to main and re-run.');
+}
+
+if (git('status', '--porcelain', '--', projectFile)) {
+  fail(
+    `app/${projectFile} has uncommitted changes. Commit them (or discard them)\n` +
+      'first, so this build number bump goes in a commit of its own.',
+  );
+}
+
+const headBefore = git('rev-parse', 'HEAD');
+try {
+  execFileSync('git', ['pull', '--ff-only'], { cwd: appRoot, stdio: 'inherit' });
+} catch {
+  fail('git pull failed (see above), nothing was bumped.');
+}
+if (git('rev-parse', 'HEAD') !== headBefore) {
+  fail(
+    'git pull brought in new commits, so app/dist is out of date. Run\n' +
+      '`npm ci` and `npm run build -w app` again, then re-run this release.',
+  );
+}
+
 const { version: marketingVersion } = JSON.parse(
   readFileSync(path.join(appRoot, 'package.json'), 'utf8'),
 );
 
+let project = readFileSync(projectPath, 'utf8');
+let newCode;
+
 if (platform === 'android') {
-  const gradlePath = path.join(appRoot, 'android/app/build.gradle');
-  let gradle = readFileSync(gradlePath, 'utf8');
+  const match = project.match(/versionCode (\d+)/);
+  if (!match) throw new Error(`versionCode not found in ${projectPath}`);
+  newCode = Number(match[1]) + 1;
 
-  const match = gradle.match(/versionCode (\d+)/);
-  if (!match) throw new Error(`versionCode not found in ${gradlePath}`);
-  const newCode = Number(match[1]) + 1;
-
-  gradle = gradle.replace(/versionCode \d+/, `versionCode ${newCode}`);
-  gradle = gradle.replace(/versionName "[^"]*"/, `versionName "${marketingVersion}"`);
-  writeFileSync(gradlePath, gradle);
+  project = project.replace(/versionCode \d+/, `versionCode ${newCode}`);
+  project = project.replace(/versionName "[^"]*"/, `versionName "${marketingVersion}"`);
 
   console.log(`android: versionName "${marketingVersion}", versionCode ${newCode}`);
 }
 
 if (platform === 'ios') {
-  const pbxprojPath = path.join(appRoot, 'ios/App/App.xcodeproj/project.pbxproj');
-  let pbxproj = readFileSync(pbxprojPath, 'utf8');
+  const match = project.match(/CURRENT_PROJECT_VERSION = (\d+);/);
+  if (!match) throw new Error(`CURRENT_PROJECT_VERSION not found in ${projectPath}`);
+  newCode = Number(match[1]) + 1;
 
-  const match = pbxproj.match(/CURRENT_PROJECT_VERSION = (\d+);/);
-  if (!match) throw new Error(`CURRENT_PROJECT_VERSION not found in ${pbxprojPath}`);
-  const newCode = Number(match[1]) + 1;
-
-  pbxproj = pbxproj.replace(/CURRENT_PROJECT_VERSION = \d+;/g, `CURRENT_PROJECT_VERSION = ${newCode};`);
-  pbxproj = pbxproj.replace(/MARKETING_VERSION = [^;]+;/g, `MARKETING_VERSION = ${marketingVersion};`);
-  writeFileSync(pbxprojPath, pbxproj);
+  project = project.replace(/CURRENT_PROJECT_VERSION = \d+;/g, `CURRENT_PROJECT_VERSION = ${newCode};`);
+  project = project.replace(/MARKETING_VERSION = [^;]+;/g, `MARKETING_VERSION = ${marketingVersion};`);
 
   console.log(`ios: MARKETING_VERSION ${marketingVersion}, CURRENT_PROJECT_VERSION ${newCode}`);
+}
+
+writeFileSync(projectPath, project);
+
+// `commit -- <path>` commits only that file, whatever else happens to be staged.
+git('commit', '-q', '-m', `${platform}: build ${marketingVersion} (${newCode})`, '--', projectFile);
+try {
+  execFileSync('git', ['push', 'origin', 'main'], { cwd: appRoot, stdio: 'inherit' });
+} catch {
+  console.warn(
+    `\nCommitted the bump locally, but the push failed. Run \`git push origin main\`\n` +
+      'before the next release, or another machine may reuse this build number.',
+  );
 }
