@@ -60,14 +60,18 @@ npm run release:ios
 
 `release:ios` (docs/55 D198, docs/58 D222) stamps the app's version
 (e.g. 0.3.4) as the iOS marketing version and bumps the build number,
-which must increase on every upload. It edits the iOS project, so commit
-that:
+which must increase on every upload. It then commits that one file
+(`ios: build 0.3.4 (2)`) and pushes it to `main` by itself: the project
+file is the only record of the last build number, so a bump left
+uncommitted gets lost and the next upload reuses a number App Store
+Connect already has. `release:android` does the same for `build.gradle`.
 
-```bash
-git add ios
-git commit -m "ios: build for App Store"
-git push
-```
+It refuses to run off `main`, or when the project file already has
+uncommitted changes (commit or discard those first, e.g. a signing team
+set in Xcode). If its `git pull` brings in new commits it stops too, since
+`app/dist` was built from the older code: run `npm ci` and the build
+again, then `release:ios`. If only the push fails, the commit is kept;
+run `git push origin main` before the next release.
 
 Then in Xcode:
 

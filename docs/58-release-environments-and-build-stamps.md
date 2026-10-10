@@ -103,8 +103,9 @@ deliberate edit to both files.
 
 `npm run sync:android`/`sync:ios` are plain `cap sync` again.
 `npm run release:android`/`release:ios` stamp the app version and bump
-the build number (docs/55 D198's script), then sync. Use them only for a
-build that's actually going to a store.
+the build number (docs/55 D198's script), commit and push that bump to
+`main` (2026-10-10, docs/66), then sync. Use them only for a build that's
+actually going to a store.
 
 ## Decisions locked in this doc
 
