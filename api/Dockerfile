@@ -14,6 +14,9 @@ WORKDIR /repo
 COPY package.json package-lock.json ./
 COPY api/package.json api/package.json
 COPY app/package.json app/package.json
+# The root postinstall (docs/64) runs this script; it only links app/'s
+# Capacitor plugins, so here it finds nothing to do, but it must exist.
+COPY scripts/link-capacitor-plugins.mjs scripts/link-capacitor-plugins.mjs
 RUN npm ci --workspace api --include-workspace-root
 
 COPY api ./api
