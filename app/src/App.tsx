@@ -4,6 +4,7 @@ import { EntryZone } from './components/EntryZone';
 import { DueBanner } from './components/DueBanner';
 import { InboxBanner } from './components/InboxBanner';
 import { RecentList } from './components/RecentList';
+import { SessionExpiredBanner } from './components/SessionExpiredBanner';
 import { hasHousehold, useHouseholdPeers } from './lib/household';
 import { pickWordmarkPhrase } from './lib/wordmarkPhrases';
 
@@ -43,6 +44,7 @@ export default function App() {
         </div>
       </div>
 
+      <SessionExpiredBanner />
       <DueBanner />
       <InboxBanner />
       <RecentList />

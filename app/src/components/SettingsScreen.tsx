@@ -13,6 +13,7 @@ import {
   requestMagicLink,
   signOut,
   useAuthAccount,
+  useSessionExpired,
 } from '../lib/auth';
 import { useInstallPrompt } from '../lib/installPrompt';
 import { connectSync, disconnectSync, useSyncStatus } from '../lib/db';
@@ -41,6 +42,7 @@ export function SettingsScreen() {
   const householdPeers = useHouseholdPeers();
   const [authAccount, setAuthAccount] = useAuthAccount();
   const syncStatus = useSyncStatus();
+  const sessionExpired = useSessionExpired();
   const skippedSyncOps = useSkippedSyncOps();
   const navigate = useNavigate();
   const install = useInstallPrompt();
@@ -171,7 +173,15 @@ export function SettingsScreen() {
             <span>Cloud sync</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>
-                {reconnecting ? 'Reconnecting…' : syncStatus.connected ? 'Connected' : syncStatus.connecting ? 'Connecting…' : 'Not connected'}
+                {reconnecting
+                  ? 'Reconnecting…'
+                  : sessionExpired
+                    ? 'Signed out on this device'
+                    : syncStatus.connected
+                      ? 'Connected'
+                      : syncStatus.connecting
+                        ? 'Connecting…'
+                        : 'Not connected'}
               </span>
               {/* Not gated to the "Not connected" case only — a real report
                   found the sync connection can silently stall without the
@@ -179,7 +189,7 @@ export function SettingsScreen() {
                   stays available whenever it isn't already mid-attempt. */}
               {!reconnecting && !syncStatus.connected && (
                 <button type="button" className="chip ghost" onClick={() => void handleReconnect()}>
-                  Reconnect
+                  {sessionExpired ? 'Sign in again' : 'Reconnect'}
                 </button>
               )}
             </span>
