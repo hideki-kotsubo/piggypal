@@ -144,6 +144,40 @@ cd deploy && docker compose up   # local Postgres+api+PowerSync stack, see deplo
 - When a decision above seems wrong, say so directly — but as a flagged
   proposal, not a silent change.
 
+## Working with Claude — rules for every session
+
+These apply to every Claude session in this repo, including ones in a
+git worktree. (Personal memory doesn't carry across sessions started from
+different folders; this file does.)
+
+- **Always end shipped work with the exact release and rollout commands**,
+  every time, even if they seem implied — the user asked for this
+  explicitly. Only list the parts that changed, with real tag names. Three
+  environments (docs/58): dev and staging on this server, production on
+  its own server. Full flow in `deploy/REDEPLOY.md`.
+  - **api** — here, on `main`: `./scripts/deploy-api.sh [patch|minor|major]`,
+    then `deploy/up.sh api` (staging). Production server:
+    `git fetch --tags && git checkout api-vX.Y.Z && deploy/up.sh api`.
+    Migrations apply on api startup. Never just `npm run build`.
+  - **app (web)** — write notes under `## Unreleased` in `app/CHANGELOG.md`,
+    then here: `./scripts/deploy-app.sh [patch|minor|major]` (or
+    `--no-changelog`). Production server: `git fetch --tags && git checkout
+    app-vX.Y.Z && npm ci && npm run build -w app`; publish `website/` if it
+    changed.
+  - **iOS / Android** — on the user's Mac: `git pull`, `npm ci`,
+    `npm run build -w app`, then `npx cap sync` for testing or
+    `npm run release:ios` / `release:android` for a store build (commit the
+    bumped native files); then Xcode / Android Studio. Store steps: docs/66.
+  - Release scripts run only on this server, on `main`; never on the
+    production server.
+- **Branch before committing**, never commit to `main` directly; merge
+  with `--no-ff`. Claude's shell has no GitHub key: the user pushes.
+- **No `#` comments inside commands meant to be pasted** — the user's Mac
+  zsh passes them as arguments. Explain in prose instead.
+- **Parallel sessions**: one session per folder; extra sessions get a git
+  worktree. Procedure and rules (dev servers, doc numbers, one dev
+  database, releases only from the main checkout) in docs/67.
+
 ## Docs index
 
 - `docs/01-scope-and-decisions.md` — product scope, tiers, decisions log, open questions
@@ -210,4 +244,5 @@ cd deploy && docker compose up   # local Postgres+api+PowerSync stack, see deplo
 - `docs/64-capacitor-powersync-plugin.md` — first iOS run hung on the skeleton (seed writes failing): `@powersync/capacitor`'s native code was never in the iOS/Android projects, because the Capacitor CLI can't `require.resolve` its `package.json` (restrictive `exports`) and its fallback only looks in `app/node_modules`, while npm hoists it to the root. Root `postinstall` `scripts/link-capacitor-plugins.mjs` links it into `app/node_modules` (D239); native plugin lists regenerated with PowerSync + `@capacitor/app` (D240). Seed errors now log message/stack (Capacitor's bridge prints Errors as `{}`). 2026-10-09; not yet run on a device.
 - `docs/65-ios-safe-area.md` — the app drew under the iPhone status bar: `viewport-fit=cover` added, `.home` pads `env(safe-area-inset-top)`, a fixed `body::before` strip in `--surface` covers the status bar area, sticky day headers stick below it, toast clears the bottom inset (D241). Zero inset elsewhere, so desktop/Android unchanged. 2026-10-09; simulated in headless renders, not yet on a device.
 - `docs/66-ios-app-store-release.md` — plan for the first App Store submission (2026-10-09, nothing submitted yet). Blockers: in-app account deletion (guideline 5.1.1(v); design first), privacy policy page, production `CORS_ORIGIN` for the native origins, iPhone-only for v1, encryption answer (SQLCipher), optional ≥1024px icon. Then: Developer Program + App Store Connect record, `release:ios` + Archive/Upload, TestFlight, listing (screenshots 6.9", privacy questionnaire, reviewer notes). Tracked in docs/00-backlog's Next.
+- `docs/67-parallel-claude-sessions.md` — running several Claude sessions at once: one git worktree per extra session (`git worktree add ../flowtab-<topic> -b <branch>`, then `npm ci`), dev servers only from the main checkout, agree doc numbers up front, one session at a time adds migrations, releases only from the main checkout on `main`. 2026-10-09.
 - `docs/artifacts/` — standalone HTML mockups (open directly in a browser): `piggypal-entry-ux.html` (doc 07), `piggypal-accounts-screen.html` (doc 12), `piggypal-picker-grouping.html` (doc 13), `piggypal-location-field.html` (doc 15 brainstorm — its three frames shipped as docs/16-18, each diverging in some way from the mockup's literal staging; see each doc's own notes), `piggypal-household-sharing.html` (doc 26 brainstorm — not yet built), `piggypal-p2p-pairing.html` (doc 27 brainstorm — not yet built), `piggypal-home-directions.html` (Home-screen UI directions, 2026-08-19 — direction C's bottom-entry idea is trialed for real in doc 31), `piggypal-desktop-tablet-directions.html` (three desktop/tablet structural directions — rail+side-composer, list+detail split, minimal/centered — 2026-08-20, not built or decided, see docs/00-backlog's "Custom UI for tablets and desktops")
