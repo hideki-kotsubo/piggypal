@@ -77,6 +77,12 @@ export default defineConfig({
         // Brand v2 (docs/60): theme_color is the logo's dark teal wave;
         // background_color stays the app's own --bg, which the install
         // splash hands over to.
+        // Lost by accident in the brand v2 commit (docs/60); without them
+        // vite-plugin-pwa falls back to package.json's "app", which iOS
+        // showed as "App" in Add to Home Screen.
+        name: 'Flowtab',
+        short_name: 'Flowtab',
+        description: 'Simple, light, private budgeting — type or say what you spent.',
         theme_color: '#125251',
         background_color: '#eef0ea',
         display: 'standalone',
