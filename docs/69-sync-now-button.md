@@ -1,6 +1,8 @@
 # 69 — "Sync now" button for cloud data sync
 
-2026-10-13. Design only, nothing built yet. Tracked in docs/00-backlog's Next.
+2026-10-13. Implemented the same day (`app/src/lib/syncNow.ts`, `db.ts`'s
+`forceSync()`/`usePendingUploadCount()`, Settings' Account section).
+Not yet run against a real PowerSync sync; see "Verification" below.
 
 ## The gap
 
@@ -54,7 +56,7 @@ SDK facts this plan relies on, checked in `node_modules`:
 | D247 | The button gives feedback. While it waits it reads "Syncing…", or "Downloading… 40%" when `downloadProgress` is set. A completed sync shows "Synced just now". If `uploadError` or `downloadError` is set, it shows a short error line. On the idle timeout it shows "Still syncing in the background". | The current Reconnect button was once reported as "does nothing" because it gave no feedback (see the comment above `handleReconnect`). A slow sync shouldn't look like a failed one. |
 | D248 | **"You're offline"** shows **only to signed-in users** (`authAccount` set), in the Cloud sync status line. It replaces "Not connected" while `navigator.onLine` is false (tracked with `online`/`offline` events). While offline, Sync now is disabled with that reason shown. Local-only users never see it. | User's call, 2026-10-13: a local-only user isn't missing anything when offline. `navigator.onLine` can say "online" on a network with no internet; then the normal "Not connected" / error path covers it, so this message is only a clearer label for the obvious case. |
 | D249 | **Last sync date and time** shows under the Cloud sync row for signed-in users: "Last synced today 14:32" or "Last synced 3 Oct, 09:10", formatted for the app's locale (docs/09). The source is `syncStatus.lastSyncedAt`, and the row shows "Never synced" before the first sync completes. It is always visible, not only after tapping Sync now. | User's request, 2026-10-13. The time is saved by the SDK and survives restarts and offline use, so it's a single read with no new storage. An absolute time is clearer than "X ago" for "did my phone get yesterday's changes?". |
-| D250 | When changes are waiting to upload (`getUploadQueueStats().count > 0`), add "· 3 changes waiting to upload" to the same line. Refresh the count on status changes. | Confirmed by the user, 2026-10-13. It pairs naturally with D248 ("You're offline · 3 changes waiting to upload") and answers the other half of "is my data safe?". `lastSyncedAt` only covers downloads. |
+| D250 | When changes are waiting to upload (`getUploadQueueStats().count > 0`), show the count. As built, it's its own row ("Waiting to upload · 3 changes") under "Last synced", because one combined line was too long at phone width. Refresh the count on status changes. | Confirmed by the user, 2026-10-13. It pairs naturally with D248 ("You're offline · 3 changes waiting to upload") and answers the other half of "is my data safe?". `lastSyncedAt` only covers downloads. |
 
 Shape of the helper:
 
@@ -98,7 +100,26 @@ export async function forceSync(idleMs = 20000): Promise<ForceSyncResult> {
 - Copy for the new strings, in pt-BR and English, once docs/09's UI
   translation pass covers Settings.
 
-## Verification (when built)
+## As built
+
+- One chip, three labels: "Sync now" when connected, "Reconnect" when
+  not, "Sign in again" when the session is dead. One handler for all
+  three (D246).
+- Rows under Cloud sync, signed-in only: "Last synced" (hidden while the
+  session is dead), "Waiting to upload" (only when > 0), and a "Sync" row
+  after a tap that didn't end in a completed sync: "Still running in the
+  background" or "Didn't finish, retrying". The raw SDK error is
+  server JSON, so it goes in the row's tooltip, not the text.
+- `.chip:disabled` styling added (none existed).
+- Checked: 7 unit tests (`syncNow.test.ts`), full suite 127/127, `tsc`,
+  `oxlint`. Headless Chromium at 390px against the dev server, with a
+  faked sign-in and stubbed token endpoints: offline label + disabled
+  chip, "never", the pending count, and the error row after a failed
+  sync all render correctly. **Not checked:** a sync that actually
+  completes ("Last synced just now"), and download progress. Both need a
+  real signed-in account against a real PowerSync Service.
+
+## Verification still to do
 
 - Unit tests for `forceSync()` with a fake `db`:
   - it resolves `'synced'` when a newer `lastSyncedAt` arrives;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { ACCOUNT_PICKER_SCALE_THRESHOLD, guessDeviceLabel, useAccountPickerMode, useDeviceLabel, useThemeMode } from '../lib/settings';
@@ -16,7 +16,8 @@ import {
   useSessionExpired,
 } from '../lib/auth';
 import { useInstallPrompt } from '../lib/installPrompt';
-import { connectSync, disconnectSync, useSyncStatus } from '../lib/db';
+import { disconnectSync, forceSync, usePendingUploadCount, useSyncStatus } from '../lib/db';
+import { formatLastSynced, useOnline, type ForceSyncResult } from '../lib/syncNow';
 import { useSkippedSyncOps } from '../lib/connector';
 
 // "synced just now" / "N minutes/hours ago" — finer-grained than
@@ -57,7 +58,17 @@ export function SettingsScreen() {
   const [linkError, setLinkError] = useState('');
   const [codeInput, setCodeInput] = useState('');
   const codeDigits = codeInput.replace(/\D/g, '');
-  const [reconnecting, setReconnecting] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<ForceSyncResult | null>(null);
+  const online = useOnline();
+  const pendingUploads = usePendingUploadCount();
+  // Re-render twice a minute so "Last synced just now" doesn't outlive
+  // the minute it's true for.
+  const [, setClockTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setClockTick((n) => n + 1), 30_000);
+    return () => clearInterval(timer);
+  }, []);
 
   // A real gap found from a real stuck device: its refresh chain had been
   // revoked server-side (see auth.ts's signOut comment), and there was no
@@ -82,8 +93,12 @@ export function SettingsScreen() {
   // the sign-in-again form instead of silently failing, with the known
   // email pre-filled since there's no reason to make the user retype
   // something this device already knows.
-  async function handleReconnect() {
-    setReconnecting(true);
+  //
+  // docs/69 D246: the same handler backs "Sync now" while connected —
+  // forceSync() is a reconnect that also waits for the sync to land.
+  async function handleSyncNow() {
+    setSyncing(true);
+    setSyncResult(null);
     try {
       await disconnectSync();
       const credentials = await fetchPowerSyncCredentials();
@@ -93,11 +108,13 @@ export function SettingsScreen() {
         setEmailInput(knownEmail);
         return;
       }
-      await connectSync();
+      setSyncResult(await forceSync());
     } finally {
-      setReconnecting(false);
+      setSyncing(false);
     }
   }
+  const downloadProgress = syncStatus.downloadProgress;
+  const syncError = syncStatus.dataFlowStatus.downloadError ?? syncStatus.dataFlowStatus.uploadError;
   // docs/13 D69 — only surface this once it'd actually do something,
   // rather than a control that's a no-op below the threshold.
   const showPickerModeSetting = store.accounts.filter((a) => !a.archived).length > ACCOUNT_PICKER_SCALE_THRESHOLD;
@@ -173,27 +190,66 @@ export function SettingsScreen() {
             <span>Cloud sync</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>
-                {reconnecting
-                  ? 'Reconnecting…'
+                {syncing
+                  ? downloadProgress
+                    ? `Downloading… ${Math.round(downloadProgress.downloadedFraction * 100)}%`
+                    : 'Syncing…'
                   : sessionExpired
                     ? 'Signed out on this device'
-                    : syncStatus.connected
-                      ? 'Connected'
-                      : syncStatus.connecting
-                        ? 'Connecting…'
-                        : 'Not connected'}
+                    : !online
+                      ? "You're offline"
+                      : syncStatus.connected
+                        ? 'Connected'
+                        : syncStatus.connecting
+                          ? 'Connecting…'
+                          : 'Not connected'}
               </span>
-              {/* Not gated to the "Not connected" case only — a real report
-                  found the sync connection can silently stall without the
-                  status ever flipping away from "Connecting…", so this
-                  stays available whenever it isn't already mid-attempt. */}
-              {!reconnecting && !syncStatus.connected && (
-                <button type="button" className="chip ghost" onClick={() => void handleReconnect()}>
-                  {sessionExpired ? 'Sign in again' : 'Reconnect'}
+              {/* Available whether or not the status says connected — a
+                  real report found the connection can silently stall
+                  without ever leaving "Connecting…", and a "Connected"
+                  device can still be behind (docs/69). Offline, it has
+                  nothing to reach, so it's disabled rather than hidden. */}
+              {!syncing && (
+                <button
+                  type="button"
+                  className="chip ghost"
+                  disabled={!online && !sessionExpired}
+                  onClick={() => void handleSyncNow()}
+                >
+                  {sessionExpired ? 'Sign in again' : syncStatus.connected ? 'Sync now' : 'Reconnect'}
                 </button>
               )}
             </span>
           </div>
+          {!sessionExpired && (
+            <div className="settings-row settings-row-static">
+              <span>Last synced</span>
+              <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>
+                {formatLastSynced(syncStatus.lastSyncedAt)}
+              </span>
+            </div>
+          )}
+          {pendingUploads > 0 && (
+            <div className="settings-row settings-row-static">
+              <span>Waiting to upload</span>
+              <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>
+                {pendingUploads} change{pendingUploads === 1 ? '' : 's'}
+              </span>
+            </div>
+          )}
+          {/* D247: the SDK's error text is raw server JSON — kept in the
+              tooltip for debugging, not shown as the message. */}
+          {!syncing && (syncResult === 'still-running' || (syncResult === 'error' && syncError)) && (
+            <div className="settings-row settings-row-static">
+              <span>Sync</span>
+              <span
+                title={syncResult === 'error' ? syncError?.message : undefined}
+                style={{ color: syncResult === 'error' ? 'var(--warn)' : 'var(--ink-faint)', fontSize: '0.85rem' }}
+              >
+                {syncResult === 'error' ? "Didn't finish, retrying" : 'Still running in the background'}
+              </span>
+            </div>
+          )}
           {/* docs/46 D163 — the whole point of this endpoint no longer
               returning a bare { ok: true }: a skipped op is now visible
               here instead of silently vanishing from view. */}

@@ -9,6 +9,7 @@ import { PowerSyncDatabase } from '@powersync/capacitor';
 import { useEffect, useState } from 'react';
 import { AppSchema } from './schema';
 import { FlowtabConnector } from './connector';
+import { waitForSync, type ForceSyncResult } from './syncNow';
 
 // Constructed without a connector — every read/write always goes straight
 // to local SQLite regardless of sync state (docs/01 D1's "UI never awaits
@@ -57,6 +58,42 @@ export function connectSync(): Promise<void> {
 
 export function disconnectSync(): Promise<void> {
   return db.disconnect();
+}
+
+// docs/69 D245 — the SDK has no public "sync now", so restart the
+// connection: fresh credentials, an immediate upload-queue retry, and a
+// new checkpoint. The listener goes on before connecting so no status
+// change from the new connection is missed.
+export async function forceSync(idleMs = 20_000): Promise<ForceSyncResult> {
+  const before = db.currentStatus.lastSyncedAt?.getTime() ?? 0;
+  await db.disconnect();
+  const result = waitForSync(db, before, idleMs);
+  await connectSync();
+  return result;
+}
+
+// docs/69 D250 — local writes made while offline don't change the sync
+// status, so status events alone would leave this stale; a slow poll
+// covers that while Settings is open.
+export function usePendingUploadCount(): number {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    const refresh = () =>
+      void db
+        .getUploadQueueStats()
+        .then((stats) => alive && setCount(stats.count))
+        .catch(() => {});
+    refresh();
+    const off = db.registerListener({ statusChanged: refresh });
+    const timer = setInterval(refresh, 5_000);
+    return () => {
+      alive = false;
+      off();
+      clearInterval(timer);
+    };
+  }, []);
+  return count;
 }
 
 // Settings' Sync section reads this to show connected/error state — the

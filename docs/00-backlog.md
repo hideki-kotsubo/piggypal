@@ -31,7 +31,9 @@ it needs doing.
         record, TestFlight run, store listing.
 
 - [ ] **"Sync now" button for cloud data sync**. Plan in docs/69
-      (D245-D250).
+      (D245-D250). **Built 2026-10-13** (branch `feat/sync-now`); still
+      to do: check a real completed sync and download progress with a
+      real account, on web and on the iPhone build.
   - Add `forceSync()` in `db.ts`: disconnect, reconnect, then wait for a
     newer `lastSyncedAt`. It uses an idle timeout, so a slow first
     download isn't treated as an error.
