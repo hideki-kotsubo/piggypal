@@ -30,6 +30,21 @@ it needs doing.
   - [ ] User: Apple Developer Program enrollment, App Store Connect app
         record, TestFlight run, store listing.
 
+- [ ] **"Sync now" button for cloud data sync**. Plan in docs/69
+      (D245-D250).
+  - Add `forceSync()` in `db.ts`: disconnect, reconnect, then wait for a
+    newer `lastSyncedAt`. It uses an idle timeout, so a slow first
+    download isn't treated as an error.
+  - Settings' Cloud sync row gets a Sync now chip that shows even while
+    connected. Feedback: Syncing…, Downloading… %, Synced, error, or
+    "Still syncing in the background".
+  - For signed-in users only: show "You're offline" and the date/time of
+    the last sync (saved by PowerSync, so it survives restarts).
+  - Also show a count of changes waiting to upload (D250).
+  - Not covered: retrying rows in the "didn't sync" list.
+  - App-only change: app release plus iOS and Android builds.
+  - Added 2026-10-13.
+
 - [ ] Test voice entry and QR pairing on a real device in the native
       apps (docs/62): iOS should prompt for mic, speech and camera once,
       then never again; Android should prompt for mic and camera. If
