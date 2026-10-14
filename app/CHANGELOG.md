@@ -16,7 +16,7 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
-## Unreleased
+## 0.3.6 — 2026-10-13
 
 - **Sync now** in Settings: if you're signed in, you can make Flowtab sync
   right away, even when it already says Connected. It shows the progress
