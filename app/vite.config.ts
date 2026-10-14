@@ -2,6 +2,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { execSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 
 // docs/58 D218 — every build is stamped with the commit it came from, so a
 // running app can say exactly what it is (About shows "0.2.1 (a428ee8)").
@@ -18,6 +20,21 @@ function gitCommit(): string {
   }
 }
 
+// docs/60 D251 — icon URLs carry a hash of the file's own bytes, so a new
+// icon means a new URL. Chrome only re-checks an installed PWA's icon when
+// the manifest changes, and a re-added iOS home-screen icon must not come
+// from a cached old copy. Automatic, so there's no version to remember
+// to bump when the brand assets are regenerated.
+function iconUrl(file: string): string {
+  const bytes = readFileSync(new URL(`./public/${file}`, import.meta.url))
+  return `${file}?v=${createHash('sha256').update(bytes).digest('hex').slice(0, 8)}`
+}
+
+const MANIFEST_ICON_FILES = [
+  'favicon.png',
+  ...[48, 72, 96, 128, 192, 256, 512].map((size) => `icons/icon-${size}.webp`),
+]
+
 // https://vite.dev/config/
 export default defineConfig({
   define: {
@@ -25,6 +42,13 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    {
+      name: 'versioned-html-icons',
+      transformIndexHtml: (html) =>
+        html
+          .replace('href="/favicon.png"', `href="/${iconUrl('favicon.png')}"`)
+          .replace('href="/apple-touch-icon.png"', `href="/${iconUrl('apple-touch-icon.png')}"`),
+    },
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
@@ -42,6 +66,11 @@ export default defineConfig({
         // (docs/01 D1), so what's left (wa-sqlite-async.wasm, ~2.3MB) still
         // needs to be precached, not skipped.
         globIgnores: ['**/mc-wa-sqlite*'],
+        // D251: vite-plugin-pwa can't match a "?v=" icon URL to its file,
+        // so it stops precaching the manifest icons; list them here under
+        // the exact URLs the manifest and index.html request. The hash in
+        // the URL already does the revision's job.
+        additionalManifestEntries: MANIFEST_ICON_FILES.map((file) => ({ url: iconUrl(file), revision: null })),
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
       manifest: {
@@ -70,17 +99,17 @@ export default defineConfig({
           handle_links: 'preferred',
         } as Record<string, unknown>),
         icons: [
-          { src: 'favicon.png', sizes: '64x64', type: 'image/png' },
-          { src: 'icons/icon-48.webp', sizes: '48x48', type: 'image/webp' },
-          { src: 'icons/icon-72.webp', sizes: '72x72', type: 'image/webp' },
-          { src: 'icons/icon-96.webp', sizes: '96x96', type: 'image/webp' },
-          { src: 'icons/icon-128.webp', sizes: '128x128', type: 'image/webp' },
+          { src: iconUrl('favicon.png'), sizes: '64x64', type: 'image/png' },
+          { src: iconUrl('icons/icon-48.webp'), sizes: '48x48', type: 'image/webp' },
+          { src: iconUrl('icons/icon-72.webp'), sizes: '72x72', type: 'image/webp' },
+          { src: iconUrl('icons/icon-96.webp'), sizes: '96x96', type: 'image/webp' },
+          { src: iconUrl('icons/icon-128.webp'), sizes: '128x128', type: 'image/webp' },
           // 192/512 are the two sizes install prompts actually use. The v2
           // icon is full-bleed with the waves inside the middle 60%, inside
           // the maskable safe zone (docs/60), so "maskable" is safe.
-          { src: 'icons/icon-192.webp', sizes: '192x192', type: 'image/webp', purpose: 'any maskable' },
-          { src: 'icons/icon-256.webp', sizes: '256x256', type: 'image/webp' },
-          { src: 'icons/icon-512.webp', sizes: '512x512', type: 'image/webp', purpose: 'any maskable' },
+          { src: iconUrl('icons/icon-192.webp'), sizes: '192x192', type: 'image/webp', purpose: 'any maskable' },
+          { src: iconUrl('icons/icon-256.webp'), sizes: '256x256', type: 'image/webp' },
+          { src: iconUrl('icons/icon-512.webp'), sizes: '512x512', type: 'image/webp', purpose: 'any maskable' },
         ],
       },
     }),
