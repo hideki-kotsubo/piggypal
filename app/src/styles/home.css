@@ -413,6 +413,11 @@
   border-style: dashed;
   background: none;
 }
+/* docs/69 D248 — Settings' Sync now while offline. */
+.chip:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
 
 /* docs/13 — grouped account picker: an expanded institution's accounts,
    forced onto its own line within the surrounding chip-row's flex-wrap. */

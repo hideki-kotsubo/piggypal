@@ -16,6 +16,14 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
+## Unreleased
+
+- **Sync now** in Settings: if you're signed in, you can make Flowtab sync
+  right away, even when it already says Connected. It shows the progress
+  and tells you if it couldn't finish.
+- Settings now shows when your data last synced, how many changes are
+  still waiting to upload, and when you're offline.
+
 ## 0.3.5 — 2026-10-10
 
 - **Fixed**: in the iPhone and Android apps, sync no longer stops a while
