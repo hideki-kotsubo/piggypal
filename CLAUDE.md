@@ -168,7 +168,9 @@ different folders; this file does.)
     phones (the native apps bundle `app/dist`; a web release alone doesn't
     update them) and after any change to `app/ios`, `app/android`,
     Capacitor plugins or `capacitor.config.ts`. On the user's Mac: `git pull`, `npm ci`,
-    `npm run build -w app`, then `npx cap sync` for testing or
+    `npm run build -w app`, then `cd app` (Capacitor's config lives in
+    `app/`; from the root `cap sync` fails looking for `./www`) and
+    `npx cap sync` for testing or
     `npm run release:ios` / `release:android` for a store build (it commits
     and pushes the build number bump to `main` itself); then Xcode /
     Android Studio. Store steps: docs/66.
