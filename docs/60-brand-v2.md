@@ -66,6 +66,7 @@ palette in `tokens.css`). Only icons, splash and manifest moved to v2.
 | D227 | Every icon/splash input is generated from `docs/logo/v2-icon.png` by one script; the 637px source is upscaled to 1024 | Reproducible; no hand-edited images. Replace the source with a ≥1024px export before store submission |
 | D228 | Theme colour is the logo's dark teal `#125251` | Retires the docs/01 item 5 placeholder with a real brand colour |
 | D229 | The native app name is `Flowtab` everywhere | Was still the parked `piggypal` brand |
+| D251 | Icon URLs in the manifest and `index.html` end in `?v=<first 8 hex of the file's sha256>`, computed in `vite.config.ts` at build time; the manifest icons are precached under those URLs (`additionalManifestEntries`) | Added 2026-10-13: an installed PWA kept the old icon. Chrome (Android/desktop) only re-checks icons when the manifest changes, then asks the user to confirm. A content hash changes the URL exactly when the image changes, with no version to bump. iOS can't be helped: it keeps the icon from Add to Home Screen until the app is removed and added again; the hash only makes sure the re-add gets the new image |
 
 ## Verified
 
