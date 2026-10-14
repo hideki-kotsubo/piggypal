@@ -16,6 +16,11 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
+## Unreleased
+
+- **Fixed**: adding Flowtab to your home screen now names it "Flowtab"
+  instead of "App".
+
 ## 0.3.6 — 2026-10-13
 
 - **Sync now** in Settings: if you're signed in, you can make Flowtab sync
