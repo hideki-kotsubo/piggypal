@@ -154,6 +154,9 @@ export interface VerifyResult {
   isNewUser: boolean;
   // docs/68: only in responses to the native apps — the web gets a cookie.
   refreshToken?: string;
+  // docs/71 D255: only from a QR device link — this device never typed
+  // the email, so there's no pending one to take.
+  email?: string;
 }
 
 // Every successful sign-in lands here: keeps the access token in memory
@@ -194,6 +197,48 @@ export async function verifyMagicCode(email: string, code: string): Promise<Veri
     throw new Error(body.error ?? 'That code is invalid or has expired.');
   }
   return adoptSession((await res.json()) as VerifyResult);
+}
+
+// docs/71 D255 (docs/48 D178) — the QR code payload. Prefixed and
+// versioned so the scanner can reject a random QR (or a docs/25 pairing
+// code) with a clear message instead of a failed sign-in.
+const DEVICE_LINK_PREFIX = 'flowtab-link:v1:';
+
+export function deviceLinkPayload(token: string): string {
+  return `${DEVICE_LINK_PREFIX}${token}`;
+}
+
+export function parseDeviceLinkPayload(text: string): string | null {
+  return text.startsWith(DEVICE_LINK_PREFIX) ? text.slice(DEVICE_LINK_PREFIX.length) || null : null;
+}
+
+// The signed-in side: a fresh single-use code, valid for a few minutes.
+export async function startDeviceLink(): Promise<{ token: string; expiresAt: string }> {
+  const res = await authedFetch('/api/auth/device-link/start', { method: 'POST' });
+  if (!res?.ok) throw new Error('Could not create a code — check your connection and try again.');
+  return res.json();
+}
+
+// The new device's side: the scanned code is the credential, like the
+// magic link's token in verifyMagicLink.
+export async function claimDeviceLink(token: string): Promise<VerifyResult> {
+  const res = await apiFetch('/api/auth/device-link/claim', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, localUserId: getLocalUserId(), deviceId: getDeviceId() }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}) as { error?: string });
+    throw new Error(body.error ?? 'That code has expired or was already used.');
+  }
+  return adoptSession((await res.json()) as VerifyResult);
+}
+
+// docs/71 D253 — signs another device out remotely (its refresh tokens are
+// revoked). Online-only by nature; throws so the caller can say so.
+export async function revokeDevice(deviceId: string): Promise<void> {
+  const res = await authedFetch(`/api/auth/devices/${encodeURIComponent(deviceId)}/revoke`, { method: 'POST' });
+  if (!res?.ok) throw new Error("Couldn't sign that device out — check your connection and try again.");
 }
 
 // docs/05's refresh flow — mints a fresh access token from the httpOnly
@@ -286,6 +331,22 @@ export async function signOut(): Promise<void> {
 async function ensureAccessToken(): Promise<string | null> {
   if (accessToken) return accessToken;
   return refreshAccessToken();
+}
+
+// An authenticated call with the same one-refresh-retry-on-401 shape
+// fetchPowerSyncCredentials/fetchServerSnapshot use. Null when there's no
+// session at all.
+async function authedFetch(path: string, init: RequestInit = {}): Promise<Response | null> {
+  let token = await ensureAccessToken();
+  if (!token) return null;
+  const withToken = (t: string): RequestInit => ({ ...init, headers: { ...init.headers, Authorization: `Bearer ${t}` } });
+  let res = await apiFetch(path, withToken(token));
+  if (res.status === 401) {
+    token = await refreshAccessToken();
+    if (!token) return null;
+    res = await apiFetch(path, withToken(token));
+  }
+  return res;
 }
 
 export async function fetchPowerSyncCredentials(): Promise<{ token: string } | null> {

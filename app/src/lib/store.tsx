@@ -244,9 +244,10 @@ interface ProfileRow {
   id: string;
   display_name: string;
   updated_at: string | null;
+  deleted_at: string | null;
 }
 function rowToProfile(r: ProfileRow): Profile {
-  return { id: r.id, displayName: r.display_name, updatedAt: r.updated_at ?? NEVER_UPDATED };
+  return { id: r.id, displayName: r.display_name, updatedAt: r.updated_at ?? NEVER_UPDATED, deletedAt: r.deleted_at ?? null };
 }
 
 interface DeviceRow {
@@ -351,6 +352,7 @@ const PROFILE_COLUMNS: Record<keyof Profile, string> = {
   id: 'id',
   displayName: 'display_name',
   updatedAt: 'updated_at',
+  deletedAt: 'deleted_at',
 };
 
 // Shared by applyPeerDataset's docs/25 D126 rewrite and adoptAccountId's
@@ -744,6 +746,9 @@ interface StoreApi extends StoreState {
   // can call it after whatever just changed: connecting sync, settling
   // the sign-in profile picker, or editing this device's own label.
   touchDevice: () => Promise<void>;
+  // docs/71 D253 — drops another device's row after its session was
+  // revoked server-side (auth.ts's revokeDevice). Synced like any delete.
+  removeDevice: (deviceId: string) => void;
 }
 
 const StoreContext = createContext<StoreApi | null>(null);
@@ -1288,7 +1293,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
 
       defaultPayerFor(accountId) {
-        return state.accounts.find((a) => a.id === accountId)?.ownerUserId ?? getLocalUserId();
+        const owner = state.accounts.find((a) => a.id === accountId)?.ownerUserId;
+        // docs/71 D252 — a removed owner isn't a sensible payer for new entries.
+        if (!owner || state.profiles.some((p) => p.id === owner && p.deletedAt)) return getLocalUserId();
+        return owner;
       },
 
       rankedAccounts: rankAccounts,
@@ -1610,11 +1618,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
 
       addProfile(profile) {
-        void db.execute('INSERT INTO profiles (id, display_name, updated_at) VALUES (?, ?, ?)', [
-          profile.id,
-          profile.displayName,
-          profile.updatedAt,
-        ]);
+        // docs/71 D252 — the id can already exist as a removed profile (a
+        // removed person's device signing in again as "Someone new" keeps
+        // its old id), so that row is brought back instead of a duplicate
+        // insert. Select-then-write like touchDevice: PowerSync's tables are
+        // views, which don't take ON CONFLICT.
+        void (async () => {
+          const existing = await db.getAll<{ id: string }>('SELECT id FROM profiles WHERE id = ?', [profile.id]);
+          if (existing.length > 0) {
+            await db.execute('UPDATE profiles SET display_name = ?, deleted_at = NULL, updated_at = ? WHERE id = ?', [
+              profile.displayName,
+              profile.updatedAt,
+              profile.id,
+            ]);
+          } else {
+            await db.execute('INSERT INTO profiles (id, display_name, updated_at) VALUES (?, ?, ?)', [
+              profile.id,
+              profile.displayName,
+              profile.updatedAt,
+            ]);
+          }
+        })();
       },
 
       updateProfile(profileId, patch) {
@@ -1630,6 +1654,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
 
       touchDevice,
+
+      removeDevice(deviceId) {
+        void db.execute('DELETE FROM devices WHERE id = ?', [deviceId]);
+      },
     };
   }, [state]);
 

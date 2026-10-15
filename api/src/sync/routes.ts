@@ -79,7 +79,7 @@ const TABLE_COLUMNS: Record<string, readonly string[]> = {
   // docs/48 D175/D176 — profiles.id/devices.id are client-generated
   // (getLocalUserId()/getDeviceId()), same upsert-by-id shape as every
   // other table here.
-  profiles: ['display_name'],
+  profiles: ['display_name', 'deleted_at'], // docs/71 D252
   devices: ['profile_id', 'label', 'last_seen_at'],
 };
 
@@ -404,9 +404,11 @@ syncRouter.get('/snapshot', requireAccessToken, async (req: AuthedRequest, res) 
     // "read the true server state directly" reasoning as categories/
     // accounts above — a brand-new device has no local PowerSync data
     // to show a profile list from yet.
-    const profiles = await client.query('SELECT id, display_name, updated_at FROM profiles WHERE user_id = $1', [
-      userId,
-    ]);
+    // docs/71 D252 — a removed person isn't offered to a new device.
+    const profiles = await client.query(
+      'SELECT id, display_name, updated_at FROM profiles WHERE user_id = $1 AND deleted_at IS NULL',
+      [userId],
+    );
     res.json({
       categories: categories.rows.map((c) => ({
         id: c.id,

@@ -395,6 +395,7 @@ export function AccountsScreen() {
 // editing an existing account (account set) and creating one (account null).
 function AccountForm({ account, onDone }: { account: Account | null; onDone: () => void }) {
   const store = useStore();
+  const peers = useHouseholdPeers();
   const isNew = account === null;
 
   const [draft, setDraft] = useState<Account>(
@@ -499,11 +500,13 @@ function AccountForm({ account, onDone }: { account: Account | null; onDone: () 
           (EntryZone.tsx's startBlank/confirmPreview). Only shown once
           there's actually more than one profile to choose between —
           identical to a solo account, this has nothing to offer. */}
-      {store.profiles.length > 1 && (
+      {/* docs/71 D252 — removed people aren't offered as a new owner; an
+          account they already own keeps showing their name, marked. */}
+      {store.profiles.filter((p) => !p.deletedAt).length > 1 && (
         <div>
           <div className="field-label">Owner</div>
           <button className="pill-tap" onClick={() => setPickerOpen(pickerOpen === 'owner' ? null : 'owner')}>
-            {store.profiles.find((p) => p.id === current.ownerUserId)?.displayName ?? 'Shared'} ▾
+            {current.ownerUserId ? personLabel(current.ownerUserId, peers, store.profiles) : 'Shared'} ▾
           </button>
           {pickerOpen === 'owner' && (
             <div className="chip-row">
@@ -516,7 +519,9 @@ function AccountForm({ account, onDone }: { account: Account | null; onDone: () 
               >
                 Shared
               </button>
-              {store.profiles.map((p) => (
+              {store.profiles
+                .filter((p) => !p.deletedAt)
+                .map((p) => (
                 <button
                   key={p.id}
                   className={`chip ${p.id === current.ownerUserId ? 'picked' : ''}`}

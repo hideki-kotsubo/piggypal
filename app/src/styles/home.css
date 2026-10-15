@@ -1636,3 +1636,88 @@
 .save-btn.schedule-delete-btn {
   background: var(--warn);
 }
+
+/* docs/71 — Household screen: one card per person, their devices beneath. */
+.household-people {
+  margin: 0.4rem 1.1rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.household-person {
+  display: flex;
+  flex-direction: column;
+  padding: 0.7rem 0.85rem;
+  background: var(--surface-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+.household-person-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.household-name-input {
+  flex: 1;
+  min-width: 0;
+  margin-top: 0;
+  font-weight: 600;
+}
+.household-device {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.55rem 0 0.55rem 2.1rem;
+  border-bottom: 1px solid var(--line);
+}
+.household-device:last-of-type {
+  border-bottom: none;
+}
+.household-device-label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 0.87rem;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.household-device-none {
+  margin: 0.45rem 0 0 2.1rem;
+}
+.household-row-action {
+  flex-shrink: 0;
+}
+.household-remove-person {
+  margin: 0.55rem 0 0 2.1rem;
+}
+.household-remove-person:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.household-removed .member-name {
+  flex: 1;
+  color: var(--ink-muted);
+}
+.household-add {
+  margin-top: 0.4rem;
+}
+.household-hint {
+  margin: 0 1.1rem 1rem;
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+}
+.household-error {
+  margin: 0.4rem 1.1rem;
+  font-size: 0.85rem;
+  color: var(--warn);
+}
+.device-link-countdown {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+}
+.signin-scan-link {
+  display: inline-block;
+  margin-top: 0.8rem;
+}

@@ -169,6 +169,8 @@ export interface Profile {
   id: string;
   displayName: string;
   updatedAt: string;
+  // docs/71 D252 — removed from the household; history keeps the name.
+  deletedAt: string | null;
 }
 
 // docs/48 D176 — one row per physical device, `id` reusing identity.ts's

@@ -238,7 +238,8 @@ create table profiles (
   user_id      uuid not null,
   display_name text not null,
   created_at   timestamptz not null default now(),
-  updated_at   timestamptz not null default now()
+  updated_at   timestamptz not null default now(),
+  deleted_at   timestamptz                -- docs/71 D252: removed from the household, history kept
 );
 
 -- docs/48 D176 — one row per physical device. `id` reuses
@@ -289,6 +290,18 @@ create table magic_links (
   code_attempts int not null default 0    -- wrong-code tries; the row is consumed at 5
 );
 
+-- docs/71 D255 (docs/48 D178) — a QR code an already signed-in device
+-- shows so a new device can sign in without email. Single-use, minutes
+-- long; only the hash is stored.
+create table device_link_codes (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references users(id),
+  token_hash  text not null unique,
+  created_at  timestamptz not null default now(),
+  expires_at  timestamptz not null,
+  claimed_at  timestamptz
+);
+
 create table refresh_tokens (
   id            uuid primary key default gen_random_uuid(),
   user_id       uuid not null references users(id),
@@ -334,4 +347,5 @@ insert into schema_migrations (filename) values
   ('2026-08-30-transactions-split-group-id.sql'),
   ('2026-09-29-magic-links-code.sql'),
   ('2026-10-08-scheduled-payments.sql'),
-  ('2026-10-09-scheduled-payments-deleted-at.sql');
+  ('2026-10-09-scheduled-payments-deleted-at.sql'),
+  ('2026-10-14-household-management.sql');

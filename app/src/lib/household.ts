@@ -51,10 +51,15 @@ export function householdMembers(peers: PairedPeer[], profiles: Profile[]): Hous
 // person's own label already comes from (docs/48 D175) — falling back to
 // effectiveDeviceLabel() only when this device has no profile yet at all
 // (solo, local-only mode, never signed in).
+//
+// docs/71 D252: a removed person's history keeps their name, marked as
+// removed, rather than falling back to the generic label.
 export function personLabel(userId: string, peers: PairedPeer[], profiles: Profile[]): string {
   if (userId === getLocalUserId()) {
     return profiles.find((p) => p.id === userId)?.displayName ?? effectiveDeviceLabel();
   }
+  const removed = profiles.find((p) => p.id === userId && p.deletedAt);
+  if (removed) return `${removed.displayName} (removed)`;
   return (
     otherMembers(peers).find((p) => p.id === userId)?.label ??
     profiles.find((p) => p.id === userId)?.displayName ??
@@ -117,6 +122,10 @@ export function useHouseholdPeers(): PairedPeer[] {
     ...store.profiles.map((p) => p.id),
   ]);
   otherIds.delete(localId);
+  // docs/71 D252 — a removed person stays out of the household (payer
+  // picker, members list, hasHousehold) even though their old
+  // transactions would otherwise re-add them as an observed id.
+  for (const p of store.profiles) if (p.deletedAt) otherIds.delete(p.id);
   const synthesized: PairedPeer[] = [...otherIds]
     .filter((id) => !known.has(id))
     .map((id) => ({
