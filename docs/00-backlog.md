@@ -30,6 +30,17 @@ it needs doing.
   - [ ] User: Apple Developer Program enrollment, App Store Connect app
         record, TestFlight run, store listing.
 
+- [ ] **Google Play release** — full plan in docs/70. Shares account
+      deletion, privacy policy and `CORS_ORIGIN` with the iOS item above.
+  - [ ] Web page to request account deletion (Play's Data safety form
+        requires one besides the in-app button).
+  - [ ] First run on a real Android device or emulator; check voice entry
+        (Android WebView probably has no Web Speech) and the 16 KB
+        page-size warning on the release bundle.
+  - [ ] User: Play Console account ($25) + identity verification, upload
+        key, 12 testers for a 14-day closed test, then apply for production.
+  - Added 2026-10-14.
+
 - [ ] **"Sync now" button for cloud data sync**. Plan in docs/69
       (D245-D250). **Built 2026-10-13** (branch `feat/sync-now`); still
       to do: check a real completed sync and download progress with a
