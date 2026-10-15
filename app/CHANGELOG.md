@@ -16,7 +16,7 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
-## Unreleased
+## 0.4.0 — 2026-10-15
 
 - **Household** in Settings: everyone in your household and the
   devices they use, in one place. Rename people, add someone who
