@@ -107,6 +107,7 @@ ${body}  </section>
     <div class="foot-links">
       <a href="./">Home</a>
       <a href="https://app.myflowtab.com/">Open the app</a>
+      <a href="privacy.html">Privacy</a>
       <span>© 2026 Flowtab</span>
     </div>
   </div>
