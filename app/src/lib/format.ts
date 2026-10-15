@@ -124,3 +124,18 @@ export function formatOccurrenceDate(date: string, today: string): string {
     new Date(y, m - 1, d),
   );
 }
+
+// "just now" / "N minutes/hours ago" — finer-grained than
+// formatRelativeDate (which only resolves to whole calendar days), for
+// Settings' paired peers and the Household screen's devices (docs/71): a
+// peer synced 20 minutes ago and one synced yesterday should read
+// differently, not both collapse to "today".
+export function formatTimeAgo(iso: string): string {
+  const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  const days = Math.round(hours / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
+}

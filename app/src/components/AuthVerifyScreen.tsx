@@ -4,7 +4,7 @@ import { connectSync, db } from '../lib/db';
 import { formatDateTime, nowUtc } from '../lib/format';
 import { getLocalUserId } from '../lib/identity';
 import { isUntouchedSeedAccount, referencedAccountIds } from '../lib/seed';
-import { fetchServerSnapshot, takePendingEmail, useAuthAccount, verifyMagicCode, verifyMagicLink } from '../lib/auth';
+import { claimDeviceLink, fetchServerSnapshot, takePendingEmail, useAuthAccount, verifyMagicCode, verifyMagicLink } from '../lib/auth';
 import { isIosDevice, isRunningInstalled } from '../lib/installPrompt';
 import { useStore } from '../lib/store';
 import { matchAccounts, matchCategories, resolveAccountRewrites, resolveCategoryRewrites } from '../lib/mergeMatch';
@@ -42,8 +42,14 @@ type PickedIdentity = { kind: 'existing'; profile: Profile } | { kind: 'new'; di
 
 // docs/56 D204: two ways to prove the email — the link's token (opened
 // from the email) or the 6-digit code (typed into Settings, arriving here
-// via router state). Everything after verification is identical.
-type Credential = { via: 'link'; token: string } | { via: 'code'; email: string; code: string };
+// via router state). docs/71 D255 adds a third that proves nothing about
+// the email: a QR code scanned from a device already signed in
+// (ScanDeviceLinkScreen, also via router state). Everything after
+// verification is identical.
+type Credential =
+  | { via: 'link'; token: string }
+  | { via: 'code'; email: string; code: string }
+  | { via: 'device-link'; token: string };
 
 type Step =
   | { kind: 'confirm'; credential: Credential }
@@ -62,9 +68,12 @@ type Step =
   | { kind: 'error'; message: string };
 
 function initialStep(token: string | null, state: unknown): Step {
-  const codeState = state as { email?: unknown; code?: unknown } | null;
+  const codeState = state as { email?: unknown; code?: unknown; deviceLink?: unknown } | null;
   if (typeof codeState?.email === 'string' && typeof codeState?.code === 'string') {
     return { kind: 'confirm', credential: { via: 'code', email: codeState.email, code: codeState.code } };
+  }
+  if (typeof codeState?.deviceLink === 'string') {
+    return { kind: 'confirm', credential: { via: 'device-link', token: codeState.deviceLink } };
   }
   if (!token) return { kind: 'error', message: 'This link is missing its sign-in token.' };
   return { kind: 'confirm', credential: { via: 'link', token } };
@@ -91,8 +100,12 @@ export function AuthVerifyScreen() {
   // primary fix — a human tapping twice fast shouldn't fire two calls
   // against a single-use token either.
   const verifiedRef = useRef(false);
+  // docs/71 D255: a QR device link's response carries the account's email,
+  // since this device never typed it.
+  const claimedEmailRef = useRef<string | null>(null);
 
-  // docs/56 D204: a code was typed by a real person in Settings, so there's
+  // docs/56 D204: a code was typed by a real person in Settings (or, docs/71
+  // D255, a device-link QR was scanned in the app), so there's
   // no link-scanner risk to guard against — verify immediately instead of
   // asking for a second tap. The router state is dropped right away so a
   // reload doesn't resubmit an already-consumed code. verifiedRef also
@@ -106,7 +119,7 @@ export function AuthVerifyScreen() {
     confirmSignInRef.current = confirmSignIn;
   });
   useEffect(() => {
-    if (step.kind === 'confirm' && step.credential.via === 'code') {
+    if (step.kind === 'confirm' && step.credential.via !== 'link') {
       navigate('/auth/verify', { replace: true, state: null });
       void confirmSignInRef.current(step.credential);
     }
@@ -121,7 +134,10 @@ export function AuthVerifyScreen() {
       const result =
         credential.via === 'link'
           ? await verifyMagicLink(credential.token)
-          : await verifyMagicCode(credential.email, credential.code);
+          : credential.via === 'code'
+            ? await verifyMagicCode(credential.email, credential.code)
+            : await claimDeviceLink(credential.token);
+      claimedEmailRef.current = result.email ?? null;
 
       // docs/05 D14: only the second-device-joins-an-existing-account
       // case can possibly need the picker/merge sequence below — a
@@ -175,7 +191,7 @@ export function AuthVerifyScreen() {
       // fire on the actual signup moment, never a repeat sign-in on an
       // already-established device — this profile's id is a primary key.
       if (result.isNewUser) {
-        store.addProfile({ id: getLocalUserId(), displayName: 'You', updatedAt: nowUtc() });
+        store.addProfile({ id: getLocalUserId(), displayName: 'You', updatedAt: nowUtc(), deletedAt: null });
       }
       await finish(result.userId);
     } catch (err) {
@@ -188,7 +204,7 @@ export function AuthVerifyScreen() {
       // This device's own pre-existing getLocalUserId() becomes the new
       // profile's id directly — no adoption/rewrite needed, it's already
       // what every local row this device has ever written uses.
-      store.addProfile({ id: getLocalUserId(), displayName: picked.displayName, updatedAt: nowUtc() });
+      store.addProfile({ id: getLocalUserId(), displayName: picked.displayName, updatedAt: nowUtc(), deletedAt: null });
     }
     await proceedWithProfile(userId, picked);
   }
@@ -289,7 +305,8 @@ export function AuthVerifyScreen() {
   }
 
   async function finish(userId: string) {
-    setAuthAccount({ userId, email: takePendingEmail() });
+    const pendingEmail = takePendingEmail();
+    setAuthAccount({ userId, email: claimedEmailRef.current || pendingEmail });
     // docs/48 D176 — refresh this device's own devices row right after
     // connecting, on every sign-in path that reaches here (new signup,
     // repeat sign-in, or either profile-picker branch).

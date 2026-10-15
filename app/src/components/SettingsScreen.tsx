@@ -6,6 +6,7 @@ import { usePairedPeers } from '../lib/peers';
 import { hasHousehold, householdMembers, useHouseholdPeers } from '../lib/household';
 import { PayerBadge } from './PayerBadge';
 import { APP_VERSION } from '../lib/version';
+import { formatTimeAgo } from '../lib/format';
 import {
   clearPendingEmail,
   fetchPowerSyncCredentials,
@@ -19,20 +20,6 @@ import { useInstallPrompt } from '../lib/installPrompt';
 import { disconnectSync, forceSync, usePendingUploadCount, useSyncStatus } from '../lib/db';
 import { formatLastSynced, useOnline, type ForceSyncResult } from '../lib/syncNow';
 import { useSkippedSyncOps } from '../lib/connector';
-
-// "synced just now" / "N minutes/hours ago" — finer-grained than
-// format.ts's formatRelativeDate (which only resolves to whole calendar
-// days), needed here since a peer synced 20 minutes ago and one synced
-// yesterday should read differently, not both collapse to "today".
-function formatSyncedAgo(iso: string): string {
-  const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
-  const days = Math.round(hours / 24);
-  return `${days} day${days === 1 ? '' : 's'} ago`;
-}
 
 export function SettingsScreen() {
   const store = useStore();
@@ -314,6 +301,11 @@ export function SettingsScreen() {
             {linkState === 'sending' ? 'Sending…' : 'Send sign-in link'}
           </button>
           {linkState === 'error' && <p className="qr-caption">{linkError}</p>}
+          {/* docs/71 D255 — no email needed when another device is
+              already signed in to the account. */}
+          <Link to="/auth/scan" className="text-link signin-scan-link">
+            Scan a code from a signed-in device
+          </Link>
         </div>
       )}
 
@@ -341,40 +333,18 @@ export function SettingsScreen() {
           <span>+ Connect a device</span>
           <span className="settings-row-arrow">›</span>
         </Link>
+        {/* docs/71 — people and devices in one place (replaces the
+            separate profiles screen, devices list and members list). */}
         {authAccount && (
-          <Link to="/settings/profiles" className="settings-row">
-            <span>Household profiles</span>
-            <span className="settings-row-arrow">›</span>
+          <Link to="/settings/household" className="settings-row">
+            <span>Household</span>
+            <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>
+              {householdSummary(store.profiles.filter((p) => !p.deletedAt).length, store.devices.length)}{' '}
+              <span className="settings-row-arrow">›</span>
+            </span>
           </Link>
         )}
       </div>
-      {/* docs/48 D179 — every device across the whole household, grouped
-          by profile, sourced from the synced devices/profiles tables —
-          separate from "Paired devices" above, which is docs/25's P2P
-          pairing management specifically and stays exactly as it was. */}
-      {authAccount && store.devices.length > 0 && (
-        <>
-          <div className="section-label">Household devices</div>
-          <div className="accounts-list">
-            {store.profiles
-              .filter((p) => store.devices.some((d) => d.profileId === p.id))
-              .map((p) => (
-                <div key={p.id}>
-                  <div className="settings-row settings-row-static">
-                    <strong>{p.displayName}</strong>
-                  </div>
-                  {store.devices
-                    .filter((d) => d.profileId === p.id)
-                    .map((d) => (
-                      <div className="settings-row settings-row-static" key={d.id}>
-                        <span>{d.label}</span>
-                      </div>
-                    ))}
-                </div>
-              ))}
-          </div>
-        </>
-      )}
       {peers.length > 0 && (
         <>
           <div className="section-label">Paired devices</div>
@@ -387,14 +357,16 @@ export function SettingsScreen() {
             {peers.map((p) => (
               <Link key={p.id} to={`/settings/pair?peer=${encodeURIComponent(p.id)}`} className="settings-row">
                 <span>{p.label}</span>
-                <span style={{ color: 'var(--ink-faint)', fontSize: '0.8rem' }}>synced {formatSyncedAgo(p.lastSyncedAt)}</span>
+                <span style={{ color: 'var(--ink-faint)', fontSize: '0.8rem' }}>synced {formatTimeAgo(p.lastSyncedAt)}</span>
               </Link>
             ))}
           </div>
         </>
       )}
 
-      {hasHousehold(householdPeers) && (
+      {/* Signed in, the Household screen covers this (docs/71); this stays
+          for a household formed only through docs/25's P2P pairing. */}
+      {!authAccount && hasHousehold(householdPeers) && (
         <>
           {/* docs/26 D124 — bare read-only members list, just enough to say
               who the payer/owner badges elsewhere refer to. No invite/
@@ -505,4 +477,9 @@ export function SettingsScreen() {
       </div>
     </main>
   );
+}
+
+// "2 people · 3 devices" for the Household row.
+function householdSummary(people: number, devices: number): string {
+  return `${people} ${people === 1 ? 'person' : 'people'} · ${devices} device${devices === 1 ? '' : 's'}`;
 }

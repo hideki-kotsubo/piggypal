@@ -16,6 +16,19 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
+## Unreleased
+
+- **Household** in Settings: everyone in your household and the
+  devices they use, in one place. Rename people, add someone who
+  doesn't have the app yet, or remove someone. Their past
+  transactions keep their name, and you can bring them back.
+- **Remove a device** you no longer use. It's signed out and has to
+  sign in again before it can sync.
+- **Add a device with a QR code**: on a device that's already signed
+  in, go to Household → Add a device, then scan the code from the new
+  device (Settings → Scan a code from a signed-in device). No email
+  needed.
+
 ## 0.3.8 — 2026-10-13
 
 - **Fixed**: adding Flowtab to your home screen now names it "Flowtab"

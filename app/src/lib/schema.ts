@@ -136,6 +136,7 @@ const category_keywords = new Table({
 const profiles = new Table({
   display_name: column.text,
   updated_at: column.text,
+  deleted_at: column.text, // docs/71 D252
 });
 
 // docs/48 D176 — one row per physical device, `id` reusing identity.ts's

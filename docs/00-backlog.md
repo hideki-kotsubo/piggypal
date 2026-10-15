@@ -91,11 +91,19 @@ it needs doing.
       worth a look, but Flowtab is the confirmed name going forward, not
       a third option to weigh.
 
-- [ ] Build docs/48's household profiles & devices design: a real
-      `profiles`/`devices` schema (reusing existing ids, no data rewrite),
-      the generalized "pick your profile" sign-in fork, QR device linking,
-      and a cross-device household devices list. Design-only as of
-      2026-08-30, pending review before implementation.
+- [ ] Check docs/71's Household screen by eye (light/dark, phone width)
+      and do a real two-device QR link: show the code on one signed-in
+      device, scan it from a signed-out one in the native app and in a
+      home-screen PWA, then remove that device and confirm it lands on
+      "Sync paused — sign in again" within ~15 min. Flagged 2026-10-14.
+- [ ] docs/71 D253's gap: a device removed while connected can put its
+      own row back via `touchDevice()` during its last ≤15 min of access
+      token. Would need the upload handler to refuse `devices` upserts for
+      a device whose refresh chains are all revoked. Flagged 2026-10-14.
+- [ ] Renaming or moving *another* device from the Household screen
+      (docs/71 D256): blocked by `touchDevice()` rewriting each device's
+      own row on every connect. Needs a decision on letting a device adopt
+      a label or profile changed elsewhere. Not asked for yet.
 - [ ] Generate + deploy a production JWT keypair, and decide/expose
       PowerSync Service's public subdomain (docs/39 open question #4).
       This is what's actually left before a real device can sync
@@ -884,6 +892,14 @@ it needs doing.
       real iOS Safari on this specific bug, not just theoretically.
       Deferred — parked per user 2026-08-11, revisit later.
 ## ✅ Done
+
+- [x] docs/48's household profiles & devices, finished by docs/71
+      (2026-10-14). docs/48 itself was mostly built 2026-08-30 (schema,
+      sync, profile picker, rename, read-only devices list; this entry
+      had gone stale). docs/71 adds: remove a person as a soft delete
+      that keeps history (D252), remove a device by revoking its session
+      (D253), add a person with no device (D254), QR device linking
+      (D255, docs/48 D178), and one Settings → Household screen (D256).
 
 - [x] Mic permission prompt on every app open (reported 2026-08-19).
       **Accepted as an iOS platform limitation for the home-screen PWA**

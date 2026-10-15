@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom'
 import { App as CapacitorApp } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
 import './styles/tokens.css'
@@ -21,7 +21,9 @@ import { ScheduleScreen } from './components/ScheduleScreen'
 import { InsightsScreen } from './components/InsightsScreen'
 import { SettingsScreen } from './components/SettingsScreen'
 import { PairingScreen } from './components/PairingScreen'
-import { ProfilesScreen } from './components/ProfilesScreen'
+import { HouseholdScreen } from './components/HouseholdScreen'
+import { DeviceLinkScreen } from './components/DeviceLinkScreen'
+import { ScanDeviceLinkScreen } from './components/ScanDeviceLinkScreen'
 import { AboutScreen } from './components/AboutScreen'
 import { AuthVerifyScreen } from './components/AuthVerifyScreen'
 
@@ -53,8 +55,12 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/insights" element={<InsightsScreen />} />
           <Route path="/settings" element={<SettingsScreen />} />
           <Route path="/settings/pair" element={<PairingScreen />} />
-          <Route path="/settings/profiles" element={<ProfilesScreen />} />
+          <Route path="/settings/household" element={<HouseholdScreen />} />
+          <Route path="/settings/household/link-device" element={<DeviceLinkScreen />} />
+          {/* docs/71 — the old Profiles screen folded into Household. */}
+          <Route path="/settings/profiles" element={<Navigate to="/settings/household" replace />} />
           <Route path="/auth/verify" element={<AuthVerifyScreen />} />
+          <Route path="/auth/scan" element={<ScanDeviceLinkScreen />} />
           <Route path="/about" element={<AboutScreen />} />
           <Route path="/accounts" element={<AccountsScreen />} />
           <Route path="/categories" element={<CategoriesScreen />} />

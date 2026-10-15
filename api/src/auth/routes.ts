@@ -138,6 +138,20 @@ async function completeSignIn(
     await client.query('INSERT INTO users (id, email) VALUES ($1, $2)', [userId, link.email]);
   }
 
+  await issueSession(client, req, res, userId, deviceId, { isNewUser });
+}
+
+// A new refresh-token chain for this device plus an access token — the
+// end of every sign-in: email (completeSignIn above) and QR device
+// linking (docs/71 D255). Commits the caller's transaction.
+async function issueSession(
+  client: PoolClient,
+  req: Request,
+  res: Response,
+  userId: string,
+  deviceId: string,
+  body: Record<string, unknown>,
+): Promise<void> {
   const refreshToken = generateOpaqueToken();
   await client.query(
     `INSERT INTO refresh_tokens (user_id, device_id, token_hash, expires_at) VALUES ($1, $2, $3, now() + interval '${REFRESH_TTL_DAYS} days')`,
@@ -146,7 +160,7 @@ async function completeSignIn(
 
   await client.query('COMMIT');
 
-  sendWithRefreshToken(req, res, refreshToken, { accessToken: await signAccessToken(userId), userId, isNewUser });
+  sendWithRefreshToken(req, res, refreshToken, { accessToken: await signAccessToken(userId), userId, ...body });
 }
 
 // Called by the app's own client-side JS (not a raw browser navigation)
@@ -351,4 +365,81 @@ authRouter.post('/logout', async (req, res) => {
 // its own schedule, not because the token itself differs.
 authRouter.get('/powersync-token', requireAccessToken, async (req: AuthedRequest, res) => {
   res.json({ token: await signAccessToken(req.userId!) });
+});
+
+// docs/71 D255 (docs/48 D178) — QR device linking, step 1: a device that's
+// already signed in asks for a short-lived, single-use code to show as a
+// QR. Being authenticated is what makes this safe to put on a screen: only
+// someone already in the account can mint one. Each new code retires this
+// account's older unclaimed ones, so at most one is live at a time.
+const DEVICE_LINK_TTL_MINUTES = 5;
+
+authRouter.post('/device-link/start', requireAccessToken, async (req: AuthedRequest, res) => {
+  const userId = req.userId!;
+  const token = generateOpaqueToken();
+  await pool().query('DELETE FROM device_link_codes WHERE user_id = $1 AND (claimed_at IS NULL OR expires_at < now())', [
+    userId,
+  ]);
+  const inserted = await pool().query<{ expires_at: Date }>(
+    `INSERT INTO device_link_codes (user_id, token_hash, expires_at) VALUES ($1, $2, now() + interval '${DEVICE_LINK_TTL_MINUTES} minutes') RETURNING expires_at`,
+    [userId, hashToken(token)],
+  );
+  res.json({ token, expiresAt: inserted.rows[0].expires_at.toISOString() });
+});
+
+// Step 2: the new device scanned the code. Deliberately unauthenticated —
+// this device has no session yet; the code is the credential. Consumed on
+// first use. Responds exactly like /verify (plus the account's email, which
+// the scanning device never typed), so the app runs the same profile picker
+// and merge flow after it (docs/48 D177).
+authRouter.post('/device-link/claim', async (req, res) => {
+  const token = typeof req.body?.token === 'string' ? req.body.token : '';
+  const localUserId = typeof req.body?.localUserId === 'string' ? req.body.localUserId : '';
+  const deviceId = typeof req.body?.deviceId === 'string' ? req.body.deviceId : '';
+  if (!token || !UUID_RE.test(localUserId) || !UUID_RE.test(deviceId)) {
+    res.status(400).json({ error: 'token, localUserId, and deviceId (both UUIDs) are all required' });
+    return;
+  }
+
+  const client = await pool().connect();
+  try {
+    await client.query('BEGIN');
+    const codeResult = await client.query<{ id: string; user_id: string; email: string }>(
+      `SELECT c.id, c.user_id, u.email FROM device_link_codes c JOIN users u ON u.id = c.user_id
+       WHERE c.token_hash = $1 AND c.claimed_at IS NULL AND c.expires_at > now() FOR UPDATE OF c`,
+      [hashToken(token)],
+    );
+    const code = codeResult.rows[0];
+    if (!code) {
+      await client.query('ROLLBACK');
+      res.status(400).json({ error: 'That code has expired or was already used. Show a new one on the other device.' });
+      return;
+    }
+    await client.query('UPDATE device_link_codes SET claimed_at = now() WHERE id = $1', [code.id]);
+    await issueSession(client, req, res, code.user_id, deviceId, { isNewUser: false, email: code.email });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+});
+
+// docs/71 D253 — signs another device out remotely: revokes every refresh
+// token it holds for this account. Its current access token still works
+// until it expires (15 min, docs/05); after that it gets a 401 on refresh
+// and shows "Sync paused — sign in again" (docs/68 D244). The devices row
+// itself is deleted by the caller through the normal upload path (one
+// write path for synced tables), not here — refresh_tokens is server-only.
+authRouter.post('/devices/:deviceId/revoke', requireAccessToken, async (req: AuthedRequest, res) => {
+  const deviceId = String(req.params.deviceId);
+  if (!UUID_RE.test(deviceId)) {
+    res.status(400).json({ error: 'deviceId must be a UUID' });
+    return;
+  }
+  await pool().query('UPDATE refresh_tokens SET revoked_at = now() WHERE user_id = $1 AND device_id = $2 AND revoked_at IS NULL', [
+    req.userId!,
+    deviceId,
+  ]);
+  res.status(204).end();
 });
