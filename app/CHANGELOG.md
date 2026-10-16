@@ -16,7 +16,7 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
-## Unreleased
+## 0.5.0 — 2026-10-16
 
 - **Delete account** in Settings: the person who created the account
   can delete it, with all its synced data, from inside the app. Your
