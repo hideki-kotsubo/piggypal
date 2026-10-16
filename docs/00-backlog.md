@@ -15,15 +15,15 @@ it needs doing.
 ## ⚪ Next
 
 - [ ] **iOS App Store release** — full plan in docs/66. Blockers:
-  - [ ] In-app account deletion (App Review 5.1.1(v)): api endpoint +
-        Settings button. Deletes server data, so design it with the user
-        before coding.
-  - [ ] Privacy policy page (`website/privacy.html`), wording reviewed by
-        the user.
+  - [x] In-app account deletion (App Review 5.1.1(v)), owner only,
+        this device keeps its data: docs/72 D257 (2026-10-15).
+  - [x] Privacy policy page (`website/privacy.html`); deletion section
+        updated for the in-app path (docs/72).
   - [ ] Production `CORS_ORIGIN` += `capacitor://localhost,https://localhost`,
         then `deploy/up.sh api` (user, on the production server).
-  - [ ] iPhone-only for v1 (`TARGETED_DEVICE_FAMILY = 1`), so iPad
-        screenshots and iPad review aren't needed.
+  - [x] iPhone-only for v1 (`TARGETED_DEVICE_FAMILY = 1`), docs/72 D259.
+  - [ ] Review sign-in (docs/72 D258) built: set `REVIEW_EMAIL` and
+        `REVIEW_CODE` in the production `deploy/.env` (user).
   - [ ] Encryption answer in App Store Connect (SQLCipher is in the
         binary), then `ITSAppUsesNonExemptEncryption` in `Info.plist`.
   - [ ] Optional: a ≥1024px export of the icon (docs/60 D227).

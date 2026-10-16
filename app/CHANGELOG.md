@@ -16,6 +16,12 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
+## Unreleased
+
+- **Delete account** in Settings: the person who created the account
+  can delete it, with all its synced data, from inside the app. Your
+  budget stays on your device and keeps working without an account.
+
 ## 0.4.0 — 2026-10-15
 
 - **Household** in Settings: everyone in your household and the

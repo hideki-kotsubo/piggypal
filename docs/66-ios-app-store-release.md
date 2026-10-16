@@ -10,12 +10,17 @@ Checked against the project and Apple's App Review Guidelines.
 
 | # | Blocker | Why | Who | Status |
 |---|---|---|---|---|
-| 1 | No in-app **account deletion** | Apps that let users create an account (email sign-in does, docs/41) must let them delete it from inside the app, guideline 5.1.1(v). A very common rejection. Deletes server data, so it needs a design pass first | Claude: api endpoint + Settings button | To do |
-| 2 | No **privacy policy** page | App Store Connect requires a privacy policy URL | Claude writes `website/privacy.html`; the user reviews the wording | To do |
+| 1 | No in-app **account deletion** | Apps that let users create an account (email sign-in does, docs/41) must let them delete it from inside the app, guideline 5.1.1(v). A very common rejection. Deletes server data, so it needs a design pass first | Claude: api endpoint + Settings button | Done (docs/72 D257) |
+| 2 | No **privacy policy** page | App Store Connect requires a privacy policy URL | Claude writes `website/privacy.html`; the user reviews the wording | Done |
 | 3 | Production api doesn't allow the native apps' origins (`CORS_ORIGIN`) | Sign-in and sync fail inside the app, and the reviewer will try them | User, on the production server (below) | To do |
-| 4 | **iPad support** is on (`TARGETED_DEVICE_FAMILY = "1,2"`) | iPad screenshots become mandatory and reviewers test on iPad; the UI is a 480px phone column | Claude: iPhone-only for v1 | To do |
+| 4 | **iPad support** is on (`TARGETED_DEVICE_FAMILY = "1,2"`) | iPad screenshots become mandatory and reviewers test on iPad; the UI is a 480px phone column | Claude: iPhone-only for v1 | Done (docs/72 D259) |
 | 5 | **Encryption** question on every upload | The binary includes SQLCipher (via `@powersync/capacitor`). Usually exempt, but the answer has to be given | User answers in App Store Connect; then add `ITSAppUsesNonExemptEncryption` to `Info.plist` so it isn't asked every upload | To do |
 | 6 | App icon upscaled from 637px (docs/60 D227) | Acceptable, but the store page shows it large | User: export `docs/logo/v2-icon.png` at ≥1024px (or SVG), then re-run the brand script | Optional |
+
+Also needed, found while filling in the listing: the reviewer can't
+receive the emailed sign-in code. Fixed by a fixed review login,
+`REVIEW_EMAIL` + `REVIEW_CODE` in the production `deploy/.env`
+(docs/72 D258). Put both in App Review Information's notes.
 
 Blocker 3 on the production server: in `deploy/.env`, add the native
 origins to the existing list, then rebuild the api.

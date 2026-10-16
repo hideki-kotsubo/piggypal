@@ -83,6 +83,18 @@ function sendWithRefreshToken(req: Request, res: Response, refreshToken: string,
   res.json(body);
 }
 
+// docs/72 D258 — one fixed email + code for App Store / Play review, whose
+// reviewers can't receive our email. Both env vars must be set, and the
+// code must be 6 digits, or this is off. Everything else about sign-in
+// is unchanged: the code still expires with its row and still dies after
+// MAX_CODE_ATTEMPTS wrong tries.
+function reviewLogin(): { email: string; code: string } | null {
+  const email = process.env.REVIEW_EMAIL?.trim().toLowerCase() ?? '';
+  const code = process.env.REVIEW_CODE?.trim() ?? '';
+  if (!EMAIL_RE.test(email) || !CODE_RE.test(code)) return null;
+  return { email, code };
+}
+
 // docs/05 flow, step 2: "Always returns 200 (no user enumeration)" — this
 // never checks whether `email` already has an account before sending,
 // same code path either way.
@@ -94,11 +106,19 @@ authRouter.post('/request-link', async (req, res) => {
   }
 
   const token = generateOpaqueToken();
-  const code = generateSignInCode();
+  const review = reviewLogin();
+  const isReviewEmail = review !== null && email === review.email;
+  const code = isReviewEmail ? review.code : generateSignInCode();
   await pool().query(
     `INSERT INTO magic_links (email, token_hash, code_hash, expires_at) VALUES ($1, $2, $3, now() + interval '${MAGIC_LINK_TTL_MINUTES} minutes')`,
     [email, hashToken(token), hashToken(code)],
   );
+
+  // docs/72 D258: the reviewer has no inbox to read, so nothing is sent.
+  if (isReviewEmail) {
+    res.json({ ok: true });
+    return;
+  }
 
   const appBaseUrl = process.env.APP_BASE_URL || 'http://localhost:3001';
   const verifyUrl = `${appBaseUrl}/auth/verify?token=${encodeURIComponent(token)}`;
@@ -441,5 +461,84 @@ authRouter.post('/devices/:deviceId/revoke', requireAccessToken, async (req: Aut
     req.userId!,
     deviceId,
   ]);
+  res.status(204).end();
+});
+
+// docs/72 D257 — App Review 5.1.1(v): deletes the account and everything
+// synced under it, for every person in the household (one account, docs/48).
+// Only the owner may do it: the profile whose id is users.id itself. The
+// caller proves which device it is with its own refresh token (the cookie
+// on the web, the body from the native apps), and that device's synced row
+// has to belong to the owner's profile. That stops another household
+// member's device by accident; it isn't a hard boundary against a member
+// who forges a device id, who could read all the data anyway.
+//
+// Rows go in foreign-key order, in one transaction. PowerSync then streams
+// the deletions to any device still connected, so the caller disconnects
+// its own sync first to keep its local copy (D257). Every refresh token is
+// deleted with the user, so other devices drop to "sign in again" within
+// one access-token lifetime, and requireAccessToken turns away the access
+// tokens still live until then.
+const ACCOUNT_TABLES = [
+  'transaction_splits',
+  'transactions',
+  'budgets',
+  'category_keywords',
+  'scheduled_payments',
+  'accounts',
+  'categories',
+  'devices',
+  'profiles',
+] as const;
+
+authRouter.post('/delete-account', requireAccessToken, async (req: AuthedRequest, res) => {
+  const userId = req.userId!;
+  const presentedToken = presentedRefreshToken(req);
+  if (!presentedToken) {
+    res.status(401).json({ error: 'Sign in again on this device to delete the account.' });
+    return;
+  }
+
+  const client = await pool().connect();
+  try {
+    await client.query('BEGIN');
+    const session = await client.query<{ device_id: string }>(
+      'SELECT device_id FROM refresh_tokens WHERE token_hash = $1 AND user_id = $2 AND revoked_at IS NULL AND expires_at > now()',
+      [hashToken(presentedToken), userId],
+    );
+    const deviceId = session.rows[0]?.device_id;
+    if (!deviceId) {
+      await client.query('ROLLBACK');
+      res.status(401).json({ error: 'Sign in again on this device to delete the account.' });
+      return;
+    }
+    const device = await client.query<{ profile_id: string }>('SELECT profile_id FROM devices WHERE id = $1 AND user_id = $2', [
+      deviceId,
+      userId,
+    ]);
+    if (device.rows[0]?.profile_id !== userId) {
+      await client.query('ROLLBACK');
+      res.status(403).json({ error: 'Only the account owner can delete the account.' });
+      return;
+    }
+
+    for (const table of ACCOUNT_TABLES) {
+      await client.query(`DELETE FROM ${table} WHERE user_id = $1`, [userId]);
+    }
+    const user = await client.query<{ email: string }>('SELECT email FROM users WHERE id = $1', [userId]);
+    await client.query('DELETE FROM device_link_codes WHERE user_id = $1', [userId]);
+    await client.query('DELETE FROM refresh_tokens WHERE user_id = $1', [userId]);
+    await client.query('DELETE FROM subscriptions WHERE user_id = $1', [userId]);
+    if (user.rows[0]) await client.query('DELETE FROM magic_links WHERE email = $1', [user.rows[0].email]);
+    await client.query('DELETE FROM users WHERE id = $1', [userId]);
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+
+  res.clearCookie(REFRESH_COOKIE, refreshCookieOptions());
   res.status(204).end();
 });
