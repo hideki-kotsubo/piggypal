@@ -251,6 +251,11 @@ export function SettingsScreen() {
           <button className="settings-row settings-row-danger" onClick={() => void handleSignOut()}>
             <span>Sign out</span>
           </button>
+          {/* docs/72 D257 — App Review 5.1.1(v). */}
+          <Link to="/settings/delete-account" className="settings-row settings-row-danger">
+            <span>Delete account</span>
+            <span className="settings-row-arrow">›</span>
+          </Link>
         </div>
       ) : linkState === 'sent' ? (
         <div className="settings-field signin-code">

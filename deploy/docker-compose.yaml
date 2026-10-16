@@ -86,6 +86,9 @@ services:
       # instead of sending real email, same safe fallback as local dev.
       SMTP2GO_API_KEY: ${SMTP2GO_API_KEY:-}
       SMTP2GO_FROM_ADDRESS: ${SMTP2GO_FROM_ADDRESS:-}
+      # docs/72 D258: App Store / Play review sign-in. Unset = off.
+      REVIEW_EMAIL: ${REVIEW_EMAIL:-}
+      REVIEW_CODE: ${REVIEW_CODE:-}
     # No published host port — reachable only via nginx-proxy-manager over
     # the `frontend` network (same reasoning as postgres's comment above).
     networks:

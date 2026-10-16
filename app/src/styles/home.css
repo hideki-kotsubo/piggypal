@@ -1637,6 +1637,35 @@
   background: var(--warn);
 }
 
+/* docs/72 D257 — Delete account screen. */
+.delete-account-text {
+  margin: 0 0 0.6rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.delete-account-list {
+  margin: 0 0 1rem;
+  padding-left: 1.2rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+.delete-account-list li {
+  margin: 0.3rem 0;
+}
+.save-btn.delete-account-btn {
+  background: var(--warn);
+  border-color: var(--warn);
+  margin-top: 0.6rem;
+}
+.delete-account-done {
+  display: inline-block;
+  text-decoration: none;
+}
+.household-error.delete-account-error {
+  margin: 0.6rem 0 0;
+}
+
 /* docs/71 — Household screen: one card per person, their devices beneath. */
 .household-people {
   margin: 0.4rem 1.1rem 0.8rem;

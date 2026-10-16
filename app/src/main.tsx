@@ -22,6 +22,7 @@ import { InsightsScreen } from './components/InsightsScreen'
 import { SettingsScreen } from './components/SettingsScreen'
 import { PairingScreen } from './components/PairingScreen'
 import { HouseholdScreen } from './components/HouseholdScreen'
+import { DeleteAccountScreen } from './components/DeleteAccountScreen'
 import { DeviceLinkScreen } from './components/DeviceLinkScreen'
 import { ScanDeviceLinkScreen } from './components/ScanDeviceLinkScreen'
 import { AboutScreen } from './components/AboutScreen'
@@ -57,6 +58,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/settings/pair" element={<PairingScreen />} />
           <Route path="/settings/household" element={<HouseholdScreen />} />
           <Route path="/settings/household/link-device" element={<DeviceLinkScreen />} />
+          <Route path="/settings/delete-account" element={<DeleteAccountScreen />} />
           {/* docs/71 — the old Profiles screen folded into Household. */}
           <Route path="/settings/profiles" element={<Navigate to="/settings/household" replace />} />
           <Route path="/auth/verify" element={<AuthVerifyScreen />} />

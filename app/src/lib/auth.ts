@@ -241,6 +241,34 @@ export async function revokeDevice(deviceId: string): Promise<void> {
   if (!res?.ok) throw new Error("Couldn't sign that device out — check your connection and try again.");
 }
 
+// docs/72 D257 — deletes the account and all its synced data on the server.
+// The server checks this device's session (the refresh cookie on the web,
+// the Keychain token sent in the body natively) belongs to the owner.
+// Throws with the server's message; on success the session is gone, so the
+// local token is forgotten here. Callers disconnect sync first and clear
+// the `useAuthAccount()` marker after.
+export async function deleteAccount(): Promise<void> {
+  const refreshToken = usesNativeRefreshToken ? await loadRefreshToken() : null;
+  let res: Response | null;
+  try {
+    res = await authedFetch('/api/auth/delete-account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(refreshToken ? { refreshToken } : {}),
+    });
+  } catch {
+    throw new Error("Couldn't reach Flowtab. Check your connection and try again.");
+  }
+  if (!res) throw new Error('Sign in again on this device to delete the account.');
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}) as { error?: string });
+    throw new Error(body.error ?? "Couldn't delete the account. Check your connection and try again.");
+  }
+  accessToken = null;
+  await forgetRefreshToken();
+  setSessionExpired(false);
+}
+
 // docs/05's refresh flow — mints a fresh access token from the httpOnly
 // refresh cookie on the web, or from the Keychain's refresh token in the
 // native apps (docs/68), sent in the body. Returns null rather

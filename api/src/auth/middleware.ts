@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
+import { pool } from '../db.js';
 import { verifyAccessToken } from '../jwt.js';
 
 export interface AuthedRequest extends Request {
@@ -15,10 +16,9 @@ export async function requireAccessToken(req: AuthedRequest, res: Response, next
     res.status(401).json({ error: 'Missing bearer token' });
     return;
   }
+  let userId: string;
   try {
-    const { userId } = await verifyAccessToken(token);
-    req.userId = userId;
-    next();
+    ({ userId } = await verifyAccessToken(token));
   } catch {
     // docs/05: an access token is meant to be short-lived (15 min) and
     // silently refreshed by the client well before this happens in normal
@@ -26,5 +26,16 @@ export async function requireAccessToken(req: AuthedRequest, res: Response, next
     // just "not currently signed in," not worth distinguishing further to
     // the caller.
     res.status(401).json({ error: 'Invalid or expired access token' });
+    return;
   }
+  // docs/72 D257 — an access token outlives a deleted account by up to
+  // 15 minutes. Without this, a household device still holding one could
+  // upload rows under the deleted user_id and bring its data back.
+  const user = await pool().query('SELECT 1 FROM users WHERE id = $1', [userId]);
+  if (user.rowCount === 0) {
+    res.status(401).json({ error: 'Account no longer exists' });
+    return;
+  }
+  req.userId = userId;
+  next();
 }
