@@ -24,8 +24,9 @@ it needs doing.
   - [x] iPhone-only for v1 (`TARGETED_DEVICE_FAMILY = 1`), docs/72 D259.
   - [ ] Review sign-in (docs/72 D258) built: set `REVIEW_EMAIL` and
         `REVIEW_CODE` in the production `deploy/.env` (user).
-  - [ ] Encryption answer in App Store Connect (SQLCipher is in the
-        binary), then `ITSAppUsesNonExemptEncryption` in `Info.plist`.
+  - [x] Encryption answer ("None of the algorithms") in App Store
+        Connect, and `ITSAppUsesNonExemptEncryption = false` in `Info.plist`
+        (2026-10-15).
   - [ ] Optional: a ≥1024px export of the icon (docs/60 D227).
   - [ ] User: Apple Developer Program enrollment, App Store Connect app
         record, TestFlight run, store listing.
