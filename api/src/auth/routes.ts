@@ -4,7 +4,7 @@ import { pool } from '../db.js';
 import { signAccessToken } from '../jwt.js';
 import { generateOpaqueToken, generateSignInCode, hashToken, hashesMatch } from './crypto.js';
 import { sendMagicLinkEmail } from './email.js';
-import { requireAccessToken, type AuthedRequest } from './middleware.js';
+import { isDeletedAccount, requireAccessToken, type AuthedRequest } from './middleware.js';
 
 export const authRouter = Router();
 
@@ -156,6 +156,8 @@ async function completeSignIn(
     userId = localUserId;
     isNewUser = true;
     await client.query('INSERT INTO users (id, email) VALUES ($1, $2)', [userId, link.email]);
+    // docs/72 D260: the owner signing up again reuses the deleted id.
+    await client.query('DELETE FROM deleted_accounts WHERE user_id = $1', [userId]);
   }
 
   await issueSession(client, req, res, userId, deviceId, { isNewUser });
@@ -295,6 +297,14 @@ authRouter.post('/refresh', async (req, res) => {
   const row = result.rows[0];
   res.clearCookie(REFRESH_COOKIE, refreshCookieOptions());
   if (!row) {
+    // docs/72 D260: deleting an account deletes its refresh tokens, so a
+    // household device's token is simply unknown afterwards. The app sends
+    // the account id it thinks it's in; if that account was deleted, say
+    // so, and the app signs itself out instead of asking to sign in again.
+    if (await isDeletedAccount(req.body?.userId)) {
+      res.status(401).json({ error: 'This account was deleted', code: 'account_deleted' });
+      return;
+    }
     res.status(401).json({ error: 'Unknown refresh token' });
     return;
   }
@@ -531,6 +541,7 @@ authRouter.post('/delete-account', requireAccessToken, async (req: AuthedRequest
     await client.query('DELETE FROM subscriptions WHERE user_id = $1', [userId]);
     if (user.rows[0]) await client.query('DELETE FROM magic_links WHERE email = $1', [user.rows[0].email]);
     await client.query('DELETE FROM users WHERE id = $1', [userId]);
+    await client.query('INSERT INTO deleted_accounts (user_id) VALUES ($1) ON CONFLICT DO NOTHING', [userId]);
     await client.query('COMMIT');
   } catch (err) {
     await client.query('ROLLBACK');

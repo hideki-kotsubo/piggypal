@@ -12,8 +12,10 @@ import {
   fetchPowerSyncCredentials,
   getRecentPendingEmail,
   requestMagicLink,
+  setDeletedNotice,
   signOut,
   useAuthAccount,
+  useDeletedNotice,
   useSessionExpired,
 } from '../lib/auth';
 import { useInstallPrompt } from '../lib/installPrompt';
@@ -31,6 +33,7 @@ export function SettingsScreen() {
   const [authAccount, setAuthAccount] = useAuthAccount();
   const syncStatus = useSyncStatus();
   const sessionExpired = useSessionExpired();
+  const deletedNotice = useDeletedNotice();
   const skippedSyncOps = useSkippedSyncOps();
   const navigate = useNavigate();
   const install = useInstallPrompt();
@@ -167,6 +170,19 @@ export function SettingsScreen() {
       </div>
 
       <div className="section-label">Account</div>
+      {/* docs/72 D260 — signed out because the owner deleted the account
+          on another device. */}
+      {!authAccount && deletedNotice !== null && (
+        <div className="settings-field account-deleted-note">
+          <p className="delete-account-text">
+            The account{deletedNotice && <> <strong>{deletedNotice}</strong></>} was deleted by its owner, so this
+            device is signed out. Everything on it is still here and keeps working, it just doesn't sync anymore.
+          </p>
+          <button type="button" className="chip ghost" onClick={() => setDeletedNotice(null)}>
+            OK
+          </button>
+        </div>
+      )}
       {authAccount ? (
         <div className="accounts-list">
           <div className="settings-row settings-row-static">

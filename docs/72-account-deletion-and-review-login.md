@@ -81,6 +81,55 @@ The UI is a 480px phone column; with iPad on, iPad screenshots are required
 and review tests on an iPad. iPads can still run the iPhone app in
 compatibility mode.
 
+## D260 — Other household devices learn the account is gone
+
+Found by the user testing on two phones: after the owner deleted the
+account, a household member's device showed "Signed out on this device —
+Sign in again", "Waiting to upload 8 changes" and the Household row, as if
+the account still existed. The deletion had wiped its refresh token, so
+the server only saw an unknown token, the same as a revoked one (docs/68
+D244).
+
+- **Tombstone.** `deleted_accounts (user_id, deleted_at)` (migration
+  `2026-10-15-deleted-accounts.sql`), written by the delete in the same
+  transaction. It holds only the random account id and a time. It's
+  removed if that id signs up again (the owner re-signing with the same
+  email reuses it).
+- **Refresh** now sends the account id the device thinks it's in
+  (`userId`, from the "signed in" marker). An unknown token plus a deleted
+  id → 401 with `code: 'account_deleted'`. Every other unknown-token case
+  is unchanged. It only answers for an exact random UUID the device
+  already had. `requireAccessToken` adds the same code for a deleted
+  user's access token.
+- **App.** `refreshAccessToken()` handles that code (`handleAccountDeleted`):
+  it forgets the token, clears the marker, stops sync (`db.ts` registers
+  through `onAccountDeleted`, since `auth.ts` can't import `db.ts`), and
+  stores a notice with the email. Local data and the upload queue stay,
+  the same as a sign-out. Settings shows "The account … was deleted by its
+  owner" with an OK to dismiss, and Home's banner says "Your account was
+  deleted — this device now works without sync". Signing in again clears
+  the notice.
+- **`useAuthAccount()` is now one shared store** (`useSyncExternalStore`),
+  not a `useState` copy per component. Without that, a screen already open
+  (Settings) kept showing "Signed in" after a sign-out that happened
+  outside it.
+
+The code is detected the next time the device refreshes: when the app
+opens, on "Sync now"/"Reconnect", or when sync's access token runs out.
+A device whose account was deleted *before* this change has no tombstone,
+so it stays at "Sign in again"; Sign out clears it.
+
+Verified: api on throwaway PGlite started on the previous schema and
+applied the migration itself, 37/37 (adds the code with the right hint,
+plain 401 without a hint / with a live account / with a bad id, tombstone
+written and cleared on re-signup, and the code on a live access token).
+Headless Chromium with three "phones" on one account: the owner deletes;
+a member with Settings open taps Sync now and switches in place to the
+note plus the sign-in form (no "Signed in", "Waiting to upload" or
+Household rows); the Home banner shows, and OK clears both; a member who
+opens the app afterwards is signed out on load with the banner, and its
+local accounts are still there.
+
 ## Not done here
 
 - `ITSAppUsesNonExemptEncryption` in `Info.plist` (docs/66 blocker 5):

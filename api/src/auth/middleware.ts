@@ -2,6 +2,16 @@ import type { NextFunction, Request, Response } from 'express';
 import { pool } from '../db.js';
 import { verifyAccessToken } from '../jwt.js';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// docs/72 D260 — whether `userId` (any client-supplied value) is a deleted
+// account. Only answers for an exact random UUID the caller already had.
+export async function isDeletedAccount(userId: unknown): Promise<boolean> {
+  if (typeof userId !== 'string' || !UUID_RE.test(userId)) return false;
+  const result = await pool().query('SELECT 1 FROM deleted_accounts WHERE user_id = $1', [userId]);
+  return (result.rowCount ?? 0) > 0;
+}
+
 export interface AuthedRequest extends Request {
   userId?: string;
 }
@@ -33,7 +43,8 @@ export async function requireAccessToken(req: AuthedRequest, res: Response, next
   // upload rows under the deleted user_id and bring its data back.
   const user = await pool().query('SELECT 1 FROM users WHERE id = $1', [userId]);
   if (user.rowCount === 0) {
-    res.status(401).json({ error: 'Account no longer exists' });
+    const deleted = await isDeletedAccount(userId);
+    res.status(401).json({ error: 'Account no longer exists', ...(deleted && { code: 'account_deleted' }) });
     return;
   }
   req.userId = userId;
