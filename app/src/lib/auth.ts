@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from 'react';
+import { useSyncExternalStore } from 'react';
 import { getDeviceId, getLocalUserId } from './identity';
 import { forgetRefreshToken, loadRefreshToken, saveRefreshToken, usesNativeRefreshToken } from './nativeRefreshToken';
 import { migrateStorageKey } from './storageMigration';
@@ -28,12 +28,36 @@ migrateStorageKey('piggypal:auth-account', AUTH_ACCOUNT_KEY);
 // "was this device signed in before?" check on load, outside any
 // component's render cycle.
 export function getAuthAccount(): AuthAccount | null {
+  let raw: string | null;
   try {
-    const raw = localStorage.getItem(AUTH_ACCOUNT_KEY);
-    return raw ? (JSON.parse(raw) as AuthAccount) : null;
+    raw = localStorage.getItem(AUTH_ACCOUNT_KEY);
   } catch {
     return null;
   }
+  // Cached on the raw string so useSyncExternalStore gets the same object
+  // back until the marker actually changes.
+  if (raw !== cachedAccountRaw) {
+    cachedAccountRaw = raw;
+    try {
+      cachedAccount = raw ? (JSON.parse(raw) as AuthAccount) : null;
+    } catch {
+      cachedAccount = null;
+    }
+  }
+  return cachedAccount;
+}
+
+// docs/72 D260: one shared marker for every screen. Each useAuthAccount()
+// used to keep its own copy, so a sign-out that happened outside a screen
+// (the account deleted from another device) didn't show until it remounted.
+let cachedAccountRaw: string | null | undefined;
+let cachedAccount: AuthAccount | null = null;
+const accountListeners = new Set<() => void>();
+
+function writeAuthAccount(next: AuthAccount | null): void {
+  if (next) localStorage.setItem(AUTH_ACCOUNT_KEY, JSON.stringify(next));
+  else localStorage.removeItem(AUTH_ACCOUNT_KEY);
+  for (const listener of accountListeners) listener();
 }
 
 // Plain function (not part of the hook), same reasoning as peers.ts's
@@ -45,7 +69,7 @@ export function getAuthAccount(): AuthAccount | null {
 // confusing 401 in the console for what's actually a completely expected
 // "fresh device, not signed in" state.
 export function clearAuthAccount(): void {
-  localStorage.removeItem(AUTH_ACCOUNT_KEY);
+  writeAuthAccount(null);
   setSessionExpired(false);
   // Unlike the web's httpOnly cookie, the native apps' Keychain copy
   // (docs/68) is reachable from here, so a reset really forgets it.
@@ -81,16 +105,71 @@ export function useSessionExpired(): boolean {
 }
 
 export function useAuthAccount(): [AuthAccount | null, (account: AuthAccount | null) => void] {
-  const [account, setAccountState] = useState<AuthAccount | null>(getAuthAccount);
+  const account = useSyncExternalStore((listener) => {
+    accountListeners.add(listener);
+    return () => accountListeners.delete(listener);
+  }, getAuthAccount);
   function setAccount(next: AuthAccount | null) {
-    if (next) localStorage.setItem(AUTH_ACCOUNT_KEY, JSON.stringify(next));
-    else {
-      localStorage.removeItem(AUTH_ACCOUNT_KEY);
-      setSessionExpired(false);
-    }
-    setAccountState(next);
+    writeAuthAccount(next);
+    if (!next) setSessionExpired(false);
+    if (next) setDeletedNotice(null);
   }
   return [account, setAccount];
+}
+
+// docs/72 D260 — the account this device was signed in to was deleted from
+// another device. The device signs itself out (it keeps its data, like
+// signing out) and remembers the email so Settings and Home can say what
+// happened, until the person dismisses it or signs in again.
+const DELETED_NOTICE_KEY = 'flowtab:account-deleted-notice';
+let deletedNoticeRaw: string | null | undefined;
+const deletedNoticeListeners = new Set<() => void>();
+const accountDeletedHandlers = new Set<() => void>();
+
+export function getDeletedNotice(): string | null {
+  if (deletedNoticeRaw === undefined) {
+    try {
+      deletedNoticeRaw = localStorage.getItem(DELETED_NOTICE_KEY);
+    } catch {
+      deletedNoticeRaw = null;
+    }
+  }
+  return deletedNoticeRaw;
+}
+
+export function setDeletedNotice(email: string | null): void {
+  if (getDeletedNotice() === email) return;
+  deletedNoticeRaw = email;
+  try {
+    if (email === null) localStorage.removeItem(DELETED_NOTICE_KEY);
+    else localStorage.setItem(DELETED_NOTICE_KEY, email);
+  } catch {
+    // The notice is a convenience; losing it on a reload is fine.
+  }
+  for (const listener of deletedNoticeListeners) listener();
+}
+
+export function useDeletedNotice(): string | null {
+  return useSyncExternalStore((listener) => {
+    deletedNoticeListeners.add(listener);
+    return () => deletedNoticeListeners.delete(listener);
+  }, getDeletedNotice);
+}
+
+// db.ts registers its sync disconnect here: this module can't import db.ts
+// (db.ts → connector.ts → auth.ts).
+export function onAccountDeleted(handler: () => void): void {
+  accountDeletedHandlers.add(handler);
+}
+
+async function handleAccountDeleted(): Promise<void> {
+  const email = getAuthAccount()?.email ?? '';
+  accessToken = null;
+  await forgetRefreshToken();
+  writeAuthAccount(null);
+  setSessionExpired(false);
+  setDeletedNotice(email);
+  for (const handler of accountDeletedHandlers) handler();
 }
 
 // docs/05 D13: the access JWT lives in memory only, for this module's own
@@ -290,23 +369,34 @@ let refreshInFlight: Promise<string | null> | null = null;
 export async function refreshAccessToken(): Promise<string | null> {
   if (refreshInFlight) return refreshInFlight;
   refreshInFlight = (async () => {
-    let init: RequestInit = { method: 'POST' };
+    // docs/72 D260: the account id this device thinks it's in, so the
+    // server can say "deleted" rather than just "unknown token".
+    const userId = getAuthAccount()?.userId;
+    let refreshToken: string | null = null;
     if (usesNativeRefreshToken) {
-      const refreshToken = await loadRefreshToken();
+      refreshToken = await loadRefreshToken();
       if (!refreshToken) {
         accessToken = null;
         if (getAuthAccount()) setSessionExpired(true);
         return null;
       }
-      init = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refreshToken }) };
     }
-    const res = await apiFetch('/api/auth/refresh', init);
+    const res = await apiFetch('/api/auth/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...(refreshToken && { refreshToken }), ...(userId && { userId }) }),
+    });
     if (!res.ok) {
       accessToken = null;
       // 401 is the server's final word on this token (unknown, expired,
       // revoked); anything else (a 5xx, a proxy error) may pass, so the
       // token is kept for the next try.
       if (res.status === 401) {
+        const body = (await res.json().catch(() => ({}))) as { code?: string };
+        if (body.code === 'account_deleted') {
+          await handleAccountDeleted();
+          return null;
+        }
         await forgetRefreshToken();
         if (getAuthAccount()) setSessionExpired(true);
       }

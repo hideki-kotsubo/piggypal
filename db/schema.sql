@@ -313,6 +313,14 @@ create table refresh_tokens (
   replaced_by   uuid references refresh_tokens(id)
 );
 
+-- docs/72 D260 — one row per deleted account: only the random id and
+-- when, so other household devices can be told the account is gone.
+-- Removed again if the same id signs up anew.
+create table deleted_accounts (
+  user_id     uuid primary key,
+  deleted_at  timestamptz not null default now()
+);
+
 -- ── Billing (docs/06) — server-only ─────────────────────────────────────────
 
 create table subscriptions (
@@ -348,4 +356,5 @@ insert into schema_migrations (filename) values
   ('2026-09-29-magic-links-code.sql'),
   ('2026-10-08-scheduled-payments.sql'),
   ('2026-10-09-scheduled-payments-deleted-at.sql'),
-  ('2026-10-14-household-management.sql');
+  ('2026-10-14-household-management.sql'),
+  ('2026-10-15-deleted-accounts.sql');

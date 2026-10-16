@@ -9,6 +9,7 @@ import { PowerSyncDatabase } from '@powersync/capacitor';
 import { useEffect, useState } from 'react';
 import { AppSchema } from './schema';
 import { FlowtabConnector } from './connector';
+import { onAccountDeleted } from './auth';
 import { waitForSync, type ForceSyncResult } from './syncNow';
 
 // Constructed without a connector — every read/write always goes straight
@@ -59,6 +60,10 @@ export function connectSync(): Promise<void> {
 export function disconnectSync(): Promise<void> {
   return db.disconnect();
 }
+
+// docs/72 D260 — the account was deleted from another device: stop
+// syncing, so the SDK stops retrying with credentials that no longer exist.
+onAccountDeleted(() => void disconnectSync());
 
 // docs/69 D245 — the SDK has no public "sync now", so restart the
 // connection: fresh credentials, an immediate upload-queue retry, and a

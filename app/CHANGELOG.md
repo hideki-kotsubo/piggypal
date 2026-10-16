@@ -21,6 +21,8 @@ How to write an entry (docs/59):
 - **Delete account** in Settings: the person who created the account
   can delete it, with all its synced data, from inside the app. Your
   budget stays on your device and keeps working without an account.
+  Other devices in the household are signed out and told why, and
+  keep what's on them.
 
 ## 0.4.0 — 2026-10-15
 

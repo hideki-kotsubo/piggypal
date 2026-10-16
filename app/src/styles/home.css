@@ -1665,6 +1665,9 @@
 .household-error.delete-account-error {
   margin: 0.6rem 0 0;
 }
+.account-deleted-note {
+  margin-bottom: 0.6rem;
+}
 
 /* docs/71 — Household screen: one card per person, their devices beneath. */
 .household-people {
