@@ -67,5 +67,8 @@
     "errInstallments": "Un plan a plazos necesita 2 o más pagos.",
     "namePlaceholder": "Alquiler, Matrícula, Renting del coche, TV a 10 plazos…",
     "installments": "Pagos a plazos"
+  },
+  "voice": {
+    "languageUnsupported": "La entrada por voz en {{language}} no está disponible en este dispositivo. Cámbialo en Ajustes → Idioma de voz."
   }
 }

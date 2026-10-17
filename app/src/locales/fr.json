@@ -89,7 +89,9 @@
     "addToHome": "Ajouter Flowtab à l’écran d’accueil",
     "iosSteps": "Dans Safari, touchez le bouton Partager <icon>(□↑)</icon>, puis choisissez <strong>Sur l’écran d’accueil</strong>. Flowtab s’ouvrira depuis sa propre icône, en plein écran et hors ligne.",
     "about": "À propos de Flowtab",
-    "accountDeletedNoticeAnon": "Le compte a été supprimé par son propriétaire, cet appareil est donc déconnecté. Tout ce qu’il contient est toujours là et fonctionne, mais ne se synchronise plus."
+    "accountDeletedNoticeAnon": "Le compte a été supprimé par son propriétaire, cet appareil est donc déconnecté. Tout ce qu’il contient est toujours là et fonctionne, mais ne se synchronise plus.",
+    "voiceLanguage": "Langue de la voix",
+    "voiceSameAsApp": "Comme l’appli · {{language}}"
   },
   "occurrence": {
     "today": "Aujourd’hui",
@@ -617,5 +619,11 @@
   "device": {
     "android": "Appareil Android",
     "generic": "Cet appareil"
+  },
+  "voice": {
+    "permission": "La saisie vocale a besoin du micro et de la reconnaissance vocale — autorisez-les dans les réglages de l’appareil.",
+    "languageUnsupported": "La saisie vocale en {{language}} n’est pas disponible sur cet appareil. Changez-la dans Paramètres → Langue de la voix.",
+    "network": "La saisie vocale a besoin d’une connexion — réessayez, ou tapez-le.",
+    "failed": "Je n’ai pas compris — réessayez, ou tapez-le."
   }
 }

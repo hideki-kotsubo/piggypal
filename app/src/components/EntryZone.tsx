@@ -8,6 +8,8 @@ import { getLocalUserId } from '../lib/identity';
 import { markFreshBlank } from '../lib/freshBlankTransactions';
 import { parseUtterance } from '../lib/parser';
 import { isSpeechInputSupported, startSpeechInput } from '../lib/speechInput';
+import { LANGUAGES } from '../lib/i18n';
+import { voiceLanguage } from '../lib/voiceLanguage';
 import type { Transaction } from '../lib/types';
 
 interface Props {
@@ -217,7 +219,17 @@ export function EntryZone({ onSubmitted }: Props) {
         setTypedText(transcript);
         buildPreview(transcript);
       },
-      onError: () => setListening(false),
+      onError: (error) => {
+        setListening(false);
+        // docs/73: say why voice stopped, except when nothing was said or
+        // the user cancelled.
+        if (error === 'not-allowed' || error === 'service-not-allowed') onSubmitted(t('voice.permission'));
+        else if (error === 'language-not-supported') {
+          const language = LANGUAGES.find((l) => l.tag === voiceLanguage())?.label ?? voiceLanguage();
+          onSubmitted(t('voice.languageUnsupported', { language }));
+        } else if (error === 'network') onSubmitted(t('voice.network'));
+        else if (error !== 'no-speech' && error !== 'aborted') onSubmitted(t('voice.failed'));
+      },
       onEnd: () => setListening(false),
     });
     if (!handle) return;

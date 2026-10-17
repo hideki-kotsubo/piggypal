@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { Trans, useTranslation } from 'react-i18next';
 import i18n, { LANGUAGES, useLanguagePreference } from '../lib/i18n';
+import { isSpeechInputSupported } from '../lib/speechInput';
+import { useVoicePreference } from '../lib/voiceLanguage';
 import { ACCOUNT_PICKER_SCALE_THRESHOLD, guessDeviceLabel, useAccountPickerMode, useDeviceLabel, useThemeMode } from '../lib/settings';
 import { usePairedPeers } from '../lib/peers';
 import { hasHousehold, householdMembers, useHouseholdPeers } from '../lib/household';
@@ -30,7 +32,8 @@ export function SettingsScreen() {
   const [pickerMode, setPickerMode] = useAccountPickerMode();
   const [themeMode, setThemeMode] = useThemeMode();
   const { t } = useTranslation();
-  const { preference: languagePreference, automaticLanguage, setPreference: setLanguagePreference } = useLanguagePreference();
+  const { preference: languagePreference, language, automaticLanguage, setPreference: setLanguagePreference } = useLanguagePreference();
+  const [voicePreference, setVoicePreference] = useVoicePreference();
   const [deviceLabel, setDeviceLabel] = useDeviceLabel();
   const [peers] = usePairedPeers();
   const householdPeers = useHouseholdPeers();
@@ -456,6 +459,32 @@ export function SettingsScreen() {
           </button>
         ))}
       </div>
+
+      {/* docs/73 D268 — what voice entry listens for; often not the app's
+          language. Hidden where there's no voice entry at all. */}
+      {isSpeechInputSupported() && (
+        <>
+          <div className="section-label">{t('settings.voiceLanguage')}</div>
+          <div className="chip-row settings-chip-row">
+            <button
+              className={`chip ${voicePreference === 'app' ? 'picked' : ''}`}
+              onClick={() => setVoicePreference('app')}
+            >
+              {t('settings.voiceSameAsApp', { language: LANGUAGES.find((l) => l.tag === language)?.label })}
+            </button>
+            {LANGUAGES.map((l) => (
+              <button
+                key={l.tag}
+                lang={l.tag}
+                className={`chip ${voicePreference === l.tag ? 'picked' : ''}`}
+                onClick={() => setVoicePreference(l.tag)}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       {showPickerModeSetting && (
         <>
