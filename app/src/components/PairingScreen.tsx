@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Trans, useTranslation } from 'react-i18next';
 import { answerOffer, completeOffer, exchangeHello, exchangeJson, startOffer, wrapChannel } from '../lib/pairing';
 import type { AnswerSession, OfferSession, PairedChannel } from '../lib/pairing';
 import { computeSas, joinRelayAsAnswerer, startRelayOffer } from '../lib/relayClient';
@@ -61,6 +62,7 @@ type Step =
 
 export function PairingScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const store = useStore();
   const [searchParams] = useSearchParams();
   const [peers, recordSync] = usePairedPeers();
@@ -105,7 +107,7 @@ export function PairingScreen() {
         const session = await startOffer();
         setStep({ kind: 'show-offer', session });
       } catch {
-        setStep({ kind: 'error', message: 'Could not start pairing on this device.' });
+        setStep({ kind: 'error', message: t('pairing.startFailed') });
       }
     } else {
       setStep({ kind: 'scan-for-offer' });
@@ -129,7 +131,7 @@ export function PairingScreen() {
       const emoji = await computeSas(session.pc);
       setStep({ kind: 'sas-confirm', emoji, peerConnection: session.pc, pairedChannel, role: 'offerer' });
     } catch (err) {
-      setStep({ kind: 'error', message: err instanceof Error ? err.message : 'Could not connect — try again.' });
+      setStep({ kind: 'error', message: err instanceof Error ? err.message : t('pairing.connectFailed') });
     }
   }
 
@@ -147,7 +149,7 @@ export function PairingScreen() {
     } catch (err) {
       setStep({
         kind: 'error',
-        message: err instanceof Error ? err.message : 'Could not connect — check the code and try again.',
+        message: err instanceof Error ? err.message : t('pairing.connectCodeFailed'),
       });
     }
   }
@@ -185,7 +187,7 @@ export function PairingScreen() {
       recordSync(peerLocalUserId, peerLabel, identity ?? 'someone-else');
       setStep({ kind: 'synced', peerLabel, summary });
     } catch {
-      setStep({ kind: 'error', message: 'Connection dropped before syncing finished.' });
+      setStep({ kind: 'error', message: t('pairing.dropped') });
     }
   }
 
@@ -243,7 +245,7 @@ export function PairingScreen() {
 
       await performMerge(pc, peerLabel, peerLocalUserId, false);
     } catch {
-      setStep({ kind: 'error', message: 'Connection dropped before syncing finished.' });
+      setStep({ kind: 'error', message: t('pairing.dropped') });
     }
   }
 
@@ -254,7 +256,7 @@ export function PairingScreen() {
       const channel = await session.channelPromise;
       await afterHandshake(wrapChannel(channel), 'answerer');
     } catch {
-      setStep({ kind: 'error', message: "Couldn't complete pairing — try again." });
+      setStep({ kind: 'error', message: t('pairing.incomplete') });
     }
   }
 
@@ -264,7 +266,7 @@ export function PairingScreen() {
       const channel = await session.channelPromise;
       await afterHandshake(wrapChannel(channel), 'offerer');
     } catch {
-      setStep({ kind: 'error', message: 'Connection dropped before syncing finished.' });
+      setStep({ kind: 'error', message: t('pairing.dropped') });
     }
   }
 
@@ -277,26 +279,26 @@ export function PairingScreen() {
           // fall back to — it exits straight to Settings instead, same
           // as the top-level Cancel already does for a fresh session.
           <Link to="/settings" className="back-link">
-            ← Cancel
+            ← {t('pairing.cancel')}
           </Link>
         ) : (
           <button className="back-link" onClick={() => setStep({ kind: 'choice' })}>
-            ← Cancel
+            ← {t('pairing.cancel')}
           </button>
         )}
       </div>
 
       {step.kind === 'choice' && (
         <>
-          <div className="section-label">who are you connecting with?</div>
+          <div className="section-label">{t('pairing.whoQuestion')}</div>
           <div className="choice-stack">
             <button className="choice-card" onClick={() => chooseIdentity('own-device')}>
-              <span className="choice-title">This is my own device</span>
-              <span className="choice-sub">Phone, tablet, laptop — all you.</span>
+              <span className="choice-title">{t('pairing.ownDevice')}</span>
+              <span className="choice-sub">{t('pairing.ownDeviceSub')}</span>
             </button>
             <button className="choice-card" onClick={() => chooseIdentity('someone-else')}>
-              <span className="choice-title">Someone else's device</span>
-              <span className="choice-sub">A partner, roommate, or family member.</span>
+              <span className="choice-title">{t('pairing.someoneElse')}</span>
+              <span className="choice-sub">{t('pairing.someoneElseSub')}</span>
             </button>
           </div>
         </>
@@ -304,15 +306,15 @@ export function PairingScreen() {
 
       {step.kind === 'reach' && (
         <>
-          <div className="section-label">are you together right now?</div>
+          <div className="section-label">{t('pairing.togetherQuestion')}</div>
           <div className="choice-stack">
             <button className="choice-card" onClick={() => chooseReach('together')}>
-              <span className="choice-title">Yes, scan a code</span>
-              <span className="choice-sub">Works with no internet connection.</span>
+              <span className="choice-title">{t('pairing.together')}</span>
+              <span className="choice-sub">{t('pairing.togetherSub')}</span>
             </button>
             <button className="choice-card" onClick={() => chooseReach('remote')}>
-              <span className="choice-title">No, connect remotely</span>
-              <span className="choice-sub">Both devices need internet access.</span>
+              <span className="choice-title">{t('pairing.remote')}</span>
+              <span className="choice-sub">{t('pairing.remoteSub')}</span>
             </button>
           </div>
         </>
@@ -320,18 +322,18 @@ export function PairingScreen() {
 
       {step.kind === 'role' && (
         <>
-          <div className="section-label">{knownPeer ? `sync with ${knownPeer.label}` : 'which device is this?'}</div>
+          <div className="section-label">{knownPeer ? t('pairing.syncWith', { name: knownPeer.label }) : t('pairing.whichDevice')}</div>
           <div className="choice-stack">
             <button className="choice-card" onClick={() => chooseRole('show-first')}>
-              <span className="choice-title">{reach === 'remote' ? 'Generate a code' : 'Show my code first'}</span>
+              <span className="choice-title">{reach === 'remote' ? t('pairing.generateCode') : t('pairing.showFirst')}</span>
               <span className="choice-sub">
-                {reach === 'remote' ? 'The other device will enter it.' : 'The other device will scan it.'}
+                {reach === 'remote' ? t('pairing.otherEnters') : t('pairing.otherScans')}
               </span>
             </button>
             <button className="choice-card" onClick={() => chooseRole('scan-first')}>
-              <span className="choice-title">{reach === 'remote' ? 'I have a code' : 'Scan their code first'}</span>
+              <span className="choice-title">{reach === 'remote' ? t('pairing.haveCode') : t('pairing.scanFirst')}</span>
               <span className="choice-sub">
-                {reach === 'remote' ? 'Someone already sent you one.' : 'The other device is showing a code now.'}
+                {reach === 'remote' ? t('pairing.alreadySent') : t('pairing.otherShowing')}
               </span>
             </button>
           </div>
@@ -341,31 +343,31 @@ export function PairingScreen() {
       {step.kind === 'show-offer' && (
         <QrShowStep
           payload={step.session.offerPayload}
-          caption="Have the other device scan this code."
+          caption={t('pairing.haveOtherScan')}
           onNext={() => setStep({ kind: 'scan-for-answer', session: step.session })}
-          nextLabel="I've shown it — scan their code back"
+          nextLabel={t('pairing.shownNext')}
         />
       )}
 
       {step.kind === 'scan-for-answer' && (
         <QrScanStep
-          caption="Now scan the code the other device is showing."
+          caption={t('pairing.scanTheirs')}
           onResult={(text) => void handleScannedAnswer(step.session, text)}
         />
       )}
 
       {step.kind === 'scan-for-offer' && (
-        <QrScanStep caption="Point at the other device's code." onResult={(text) => void handleScannedOffer(text)} />
+        <QrScanStep caption={t('pairing.pointAtCode')} onResult={(text) => void handleScannedOffer(text)} />
       )}
 
       {step.kind === 'show-answer' && (
-        <QrShowStep payload={step.session.answerPayload} caption="Show this back to the first device." />
+        <QrShowStep payload={step.session.answerPayload} caption={t('pairing.showBack')} />
       )}
 
       {step.kind === 'relay-show-code' && (
         <div className="qr-stage">
           <div className="qr-caption relay-code">{step.code}</div>
-          <p className="qr-caption">Read this to the other person, or let them scan it below.</p>
+          <p className="qr-caption">{t('pairing.readCode')}</p>
           {/* Same QrCanvas as the QR pairing flow, just encoding the short
               code instead of an SDP payload — if the other person happens
               to be nearby, scanning sidesteps typos entirely (0/O, 1/I/l),
@@ -373,7 +375,7 @@ export function PairingScreen() {
               still has the plain text above. */}
           <QrCanvas payload={step.code} />
           <div className="qr-caption">
-            <span className="pulse-dot" /> Waiting for them to enter it…
+            <span className="pulse-dot" /> {t('pairing.waitingEntry')}
           </div>
         </div>
       )}
@@ -382,25 +384,25 @@ export function PairingScreen() {
 
       {step.kind === 'relay-connecting' && (
         <div className="qr-stage">
-          <p className="qr-caption">Connecting…</p>
+          <p className="qr-caption">{t('pairing.connecting')}</p>
         </div>
       )}
 
       {step.kind === 'sas-confirm' && (
         <div className="qr-stage">
-          <p className="qr-caption">Read these to the other person — do both devices show the same three?</p>
+          <p className="qr-caption">{t('pairing.sasPrompt')}</p>
           <div className="sas-emoji">{step.emoji.join(' ')}</div>
           <button className="save-btn" onClick={() => void afterHandshake(step.pairedChannel, step.role)}>
-            Yes, they match
+            {t('pairing.sasMatch')}
           </button>
           <button
             className="text-link"
             onClick={() => {
               step.peerConnection.close();
-              setStep({ kind: 'error', message: "Codes didn't match — pairing cancelled for safety." });
+              setStep({ kind: 'error', message: t('pairing.sasMismatch') });
             }}
           >
-            No, they don't match
+            {t('pairing.sasNoMatch')}
           </button>
         </div>
       )}
@@ -408,25 +410,26 @@ export function PairingScreen() {
       {step.kind === 'merge-prompt' && (
         <div className="qr-stage">
           <p className="qr-caption">
-            This device already has {step.existingAccounts} account{step.existingAccounts === 1 ? '' : 's'} and{' '}
-            {step.existingTransactions} transaction{step.existingTransactions === 1 ? '' : 's'}. Merge them into your
-            account, or keep this device separate?
+            {t('pairing.mergePrompt', {
+              accounts: t('pairing.accounts', { count: step.existingAccounts }),
+              transactions: t('transactions.count', { count: step.existingTransactions }),
+            })}
           </p>
           <button
             className="save-btn"
             onClick={() => void performMerge(step.pc, step.peerLabel, step.peerLocalUserId, true)}
           >
-            Merge into my account
+            {t('pairing.merge')}
           </button>
           <button className="text-link" onClick={() => setStep({ kind: 'cancelled' })}>
-            Keep this device separate
+            {t('pairing.keepSeparate')}
           </button>
         </div>
       )}
 
       {step.kind === 'merging' && (
         <div className="qr-stage">
-          <p className="qr-caption">Syncing…</p>
+          <p className="qr-caption">{t('pairing.syncing')}</p>
         </div>
       )}
 
@@ -434,22 +437,30 @@ export function PairingScreen() {
         <div className="qr-stage">
           <div className="confirm-check">✓</div>
           <p className="qr-caption">
-            Synced with <b>{step.peerLabel}</b>. Added {step.summary.categoriesAdded} categories,{' '}
-            {step.summary.accountsAdded} accounts, {step.summary.transactionsAdded} transactions,{' '}
-            {step.summary.budgetsAdded} budgets
-            {step.summary.budgetsUpdated > 0 ? ` (${step.summary.budgetsUpdated} updated)` : ''}.
+            <Trans
+              i18nKey="pairing.done"
+              values={{
+                peer: step.peerLabel,
+                categories: step.summary.categoriesAdded,
+                accounts: step.summary.accountsAdded,
+                transactions: step.summary.transactionsAdded,
+                budgets: step.summary.budgetsAdded,
+                updated: step.summary.budgetsUpdated > 0 ? t('pairing.budgetsUpdated', { count: step.summary.budgetsUpdated }) : '',
+              }}
+              components={{ b: <b /> }}
+            />
           </p>
           <button className="save-btn" onClick={() => navigate('/settings')}>
-            Done
+            {t('common.done')}
           </button>
         </div>
       )}
 
       {step.kind === 'cancelled' && (
         <div className="qr-stage">
-          <p className="qr-caption">Pairing cancelled — nothing on this device was changed.</p>
+          <p className="qr-caption">{t('pairing.cancelled')}</p>
           <button className="save-btn" onClick={() => navigate('/settings')}>
-            Done
+            {t('common.done')}
           </button>
         </div>
       )}
@@ -458,7 +469,7 @@ export function PairingScreen() {
         <div className="qr-stage">
           <p className="qr-caption">{step.message}</p>
           <button className="save-btn" onClick={() => setStep({ kind: 'choice' })}>
-            Try again
+            {t('common.tryAgain')}
           </button>
         </div>
       )}
@@ -480,6 +491,7 @@ function normalizeRelayCode(raw: string): string {
 }
 
 function RelayCodeEntry({ onSubmit }: { onSubmit: (code: string) => void }) {
+  const { t } = useTranslation();
   const [code, setCode] = useState('');
   // Typing is the only option that works over a phone call with someone
   // genuinely remote; scanning is the faster, typo-proof option (no
@@ -492,11 +504,11 @@ function RelayCodeEntry({ onSubmit }: { onSubmit: (code: string) => void }) {
     return (
       <>
         <QrScanStep
-          caption="Scan the code shown on the other device."
+          caption={t('pairing.scanOther')}
           onResult={(text) => onSubmit(normalizeRelayCode(text))}
         />
         <button className="text-link relay-mode-toggle" onClick={() => setMode('type')}>
-          Type it instead
+          {t('pairing.typeInstead')}
         </button>
       </>
     );
@@ -504,7 +516,7 @@ function RelayCodeEntry({ onSubmit }: { onSubmit: (code: string) => void }) {
 
   return (
     <div className="qr-stage">
-      <p className="qr-caption">Enter the code shown on the other device.</p>
+      <p className="qr-caption">{t('pairing.enterCode')}</p>
       <input
         className="text-input relay-code-input"
         value={code}
@@ -517,10 +529,10 @@ function RelayCodeEntry({ onSubmit }: { onSubmit: (code: string) => void }) {
         spellCheck={false}
       />
       <button className="save-btn" onClick={() => onSubmit(code.trim())} disabled={!code.trim()}>
-        Connect
+        {t('pairing.connect')}
       </button>
       <button className="text-link" onClick={() => setMode('scan')}>
-        Scan a code instead
+        {t('pairing.scanInstead')}
       </button>
     </div>
   );
