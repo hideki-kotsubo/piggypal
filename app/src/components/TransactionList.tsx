@@ -2,6 +2,7 @@ import { Fragment, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
+import { categoryLabel } from '../lib/starterLabels';
 import { accountLabel, formatAmount, formatTime, groupByDay, transactionTitle } from '../lib/format';
 import {
   filterTransactions,
@@ -142,7 +143,7 @@ export function TransactionList() {
             categories"/"Any location"/etc, already the first option there. */}
         <div className="pill-row filter-trigger-row">
           <button className={`pill-tap ${selectedCategory ? 'active' : ''}`} onClick={() => toggleFilter('category')}>
-            {selectedCategory?.name ?? t('filter.category')} ▾
+            {selectedCategory ? categoryLabel(selectedCategory) : t('filter.category')} ▾
           </button>
           <button className={`pill-tap ${selectedAccount ? 'active' : ''}`} onClick={() => toggleFilter('account')}>
             {selectedAccount ? accountLabel(selectedAccount) : t('filter.account')} ▾
@@ -294,7 +295,7 @@ export function TransactionList() {
                           <span className="tx-note">{transactionTitle(tx, category)}</span>
                           {/* day-label above already carries the date — just time here, still genuinely new info */}
                           <span className="tx-meta">
-                            {category?.name ?? t('category.uncategorized')} · {formatTime(tx.occurredAt)} · {accountSegment}
+                            {category ? categoryLabel(category) : t('category.uncategorized')} · {formatTime(tx.occurredAt)} · {accountSegment}
                           </span>
                         </div>
                       </div>

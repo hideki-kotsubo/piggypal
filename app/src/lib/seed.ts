@@ -9,8 +9,10 @@ import type { Account, Category, CategoryKeyword, Transaction, TransactionSplit 
 // transactions, no budgets, no guessed-at institutions or cards.
 
 // docs/14: a full starter taxonomy — 7 expense groups with 4-9 children
-// each, English (2026-08-12 decision — the app's bilingual promise, docs/09,
-// covers the UI chrome and AI parsing, not seed category names specifically).
+// each. Names are stored in English and shown in the UI language at display
+// time (docs/73 D266, starterLabels.ts, superseding the 2026-08-12 call to
+// keep them English-only); these names must equal en.json's seedCategory
+// labels, which starterLabels.test.ts checks.
 // Housing and Utilities are merged into one group per that same decision.
 // Ids stay fixed slugs deliberately (docs/24 D112) — household merge relies
 // on two installs' identical starter taxonomy sharing the same id so it

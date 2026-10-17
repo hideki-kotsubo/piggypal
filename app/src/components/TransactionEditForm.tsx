@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
+import { categoryLabel } from '../lib/starterLabels';
 import { AccountCurrencyPicker } from './AccountCurrencyPicker';
 import { AmountKeypad } from './AmountKeypad';
 import { CategoryPicker } from './CategoryPicker';
@@ -326,7 +327,7 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
 
       <div>
         <button className="pill-tap" onClick={() => setCategoryPickerOpen((o) => !o)}>
-          {category?.name ?? t('category.uncategorized')} ▾
+          {category ? categoryLabel(category) : t('category.uncategorized')} ▾
         </button>
         {categoryPickerOpen && (
           <CategoryPicker

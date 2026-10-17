@@ -1,5 +1,7 @@
 import { addDays } from './schedules';
 import i18n, { uiLocale } from './i18n';
+import { accountName, categoryLabel } from './starterLabels';
+import type { AccountKind } from './types';
 
 // docs/09: number formatting keyed to UI language, currency symbol keyed to
 // the transaction's own currency — independent axes. The locale comes from
@@ -97,8 +99,9 @@ export function nowUtc(): string {
 // docs/12 D61 — institution disambiguates same-named accounts at different
 // banks ("TD — Checking" vs "Itaú — Checking"); falls back to the bare name
 // when institution isn't set.
-export function accountLabel(account: { institution: string | null; name: string }): string {
-  return account.institution ? `${account.institution} — ${account.name}` : account.name;
+export function accountLabel(account: { institution: string | null; name: string; kind?: AccountKind }): string {
+  const name = accountName(account);
+  return account.institution ? `${account.institution} — ${name}` : name;
 }
 
 // A note-less transaction's category is more useful as the list-row title
@@ -106,9 +109,9 @@ export function accountLabel(account: { institution: string | null; name: string
 // entries that are neither (e.g. Inbox items, always category-less there).
 export function transactionTitle(
   transaction: { note: string | null },
-  category: { name: string } | null | undefined,
+  category: { id: string; name: string } | null | undefined,
 ): string {
-  return transaction.note ?? category?.name ?? i18n.t('category.uncategorized');
+  return transaction.note ?? (category ? categoryLabel(category) : i18n.t('category.uncategorized'));
 }
 
 // docs/57 — "Today", "Tomorrow", "Oct 15" for a scheduled-payment date. A

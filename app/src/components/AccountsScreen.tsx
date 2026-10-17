@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import i18n from '../lib/i18n';
 import { Link, useLocation } from 'react-router-dom';
 import { useStore } from '../lib/store';
+import { accountName } from '../lib/starterLabels';
 import { accountLabel, formatAmount, nowUtc } from '../lib/format';
 import { getLocalUserId } from '../lib/identity';
 import { hasHousehold, personLabel, useHouseholdPeers } from '../lib/household';
@@ -176,7 +177,7 @@ export function AccountsScreen() {
   function renderRow(account: Account, showInstitutionInLabel: boolean) {
     const isEditing = openPanel?.type === 'edit' && openPanel.id === account.id;
     const balances = store.balancesFor(account.id);
-    const label = showInstitutionInLabel ? accountLabel(account) : account.name;
+    const label = showInstitutionInLabel ? accountLabel(account) : accountName(account);
     const owner = ownerPrefix(account);
 
     if (mergeState.step === 'picking') {
@@ -419,7 +420,7 @@ function AccountForm({ account, onDone }: { account: Account | null; onDone: () 
   // through an async DB round-trip (PowerSync live query), so binding the
   // input's value directly to them snaps the cursor to the end on every
   // keystroke once that round-trip resolves.
-  const [nameStr, setNameStr] = useState(() => current.name);
+  const [nameStr, setNameStr] = useState(() => (isNew ? current.name : accountName(current)));
   const [institutionStr, setInstitutionStr] = useState(() => current.institution ?? '');
 
   function commit(patch: Partial<Account>) {

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { useStore } from '../lib/store';
+import { accountName } from '../lib/starterLabels';
 import { ACCOUNT_PICKER_SCALE_THRESHOLD, useAccountPickerMode } from '../lib/settings';
 import { accountLabel } from '../lib/format';
 import { personLabel, useHouseholdPeers } from '../lib/household';
@@ -58,7 +59,7 @@ function accountsNeedingOwnerLabel(accounts: Account[]): Set<string> {
 // Wise" rather than losing its disambiguation to the institution-only
 // shortcut.
 function flatChipLabel(a: Account, institutionCounts: Map<string, number>, ownerPrefix: string | null): string {
-  const base = !a.institution ? a.name : (institutionCounts.get(a.institution) ?? 0) > 1 ? accountLabel(a) : a.institution;
+  const base = !a.institution ? accountName(a) : (institutionCounts.get(a.institution) ?? 0) > 1 ? accountLabel(a) : a.institution;
   return ownerPrefix ? `${ownerPrefix} — ${base}` : base;
 }
 
@@ -193,7 +194,7 @@ export function AccountCurrencyPicker({ accountId, currency, onChange, showAccou
                           className={`chip ${a.id === accountId ? 'picked' : ''}`}
                           onClick={() => pickAccount(a)}
                         >
-                          {ownerPrefixFor(a) ? `${ownerPrefixFor(a)} — ${a.name}` : a.name}
+                          {ownerPrefixFor(a) ? `${ownerPrefixFor(a)} — ${accountName(a)}` : accountName(a)}
                         </button>
                       ))}
                     </div>

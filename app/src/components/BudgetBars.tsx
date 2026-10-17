@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
+import { categoryLabel } from '../lib/starterLabels';
 import { formatAmount } from '../lib/format';
 import { committedForMonth, postedKeys } from '../lib/schedules';
 
@@ -33,7 +34,7 @@ export function BudgetBars() {
       const category = store.categories.find((c) => c.id === b.categoryId);
       const spent = spendByKey.get(key) ?? 0;
       const committed = committedByKey.get(key) ?? 0;
-      return { ...b, categoryName: category?.name ?? '—', spent, committed };
+      return { ...b, categoryName: category ? categoryLabel(category) : '—', spent, committed };
     });
 
   if (rows.length === 0) return null;

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
+import { categoryLabel } from '../lib/starterLabels';
 import { findDuplicateGroups, type DuplicateGroup } from '../lib/duplicateTransactions';
 import { accountLabel, formatAmount, formatDateTime, formatRelativeDate, transactionTitle } from '../lib/format';
 
@@ -100,7 +101,7 @@ export function DuplicateTransactionsScreen() {
                                 {transactionTitle(tx, category)}
                               </span>
                               <span className="tx-meta">
-                                {category?.name ?? t('category.uncategorized')} · {formatDateTime(tx.occurredAt)} ·{' '}
+                                {category ? categoryLabel(category) : t('category.uncategorized')} · {formatDateTime(tx.occurredAt)} ·{' '}
                                 {account ? accountLabel(account) : '—'}
                               </span>
                             </div>

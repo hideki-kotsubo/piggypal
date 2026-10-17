@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../lib/store';
+import { categoryLabel } from '../lib/starterLabels';
 import type { Category } from '../lib/types';
 
 interface Props {
@@ -86,14 +87,14 @@ export function CategoryPicker({ selectedId, onPick }: Props) {
         return isOpen ? (
           <div className="picker-group" key={g.category.id}>
             <button className="picker-group-head" onClick={() => toggleGroup(g.category.id)}>
-              <span className="chev">▾</span> {g.category.name}
+              <span className="chev">▾</span> {categoryLabel(g.category)}
             </button>
             <div className="chip-row">
               <button
                 className={`chip ${g.category.id === selectedId ? 'picked' : ''}`}
                 onClick={() => onPick(g.category.id)}
               >
-                {g.category.name}
+                {categoryLabel(g.category)}
               </button>
               {g.children.map((c) => (
                 <button
@@ -101,14 +102,14 @@ export function CategoryPicker({ selectedId, onPick }: Props) {
                   className={`chip ${c.id === selectedId ? 'picked' : ''}`}
                   onClick={() => onPick(c.id)}
                 >
-                  {c.name}
+                  {categoryLabel(c)}
                 </button>
               ))}
             </div>
           </div>
         ) : (
           <button className="chip" key={g.category.id} onClick={() => toggleGroup(g.category.id)}>
-            {g.category.name} ▸ {g.children.length}
+            {categoryLabel(g.category)} ▸ {g.children.length}
           </button>
         );
       })}
@@ -118,7 +119,7 @@ export function CategoryPicker({ selectedId, onPick }: Props) {
           className={`chip ${c.id === selectedId ? 'picked' : ''}`}
           onClick={() => onPick(c.id)}
         >
-          {c.name}
+          {categoryLabel(c)}
         </button>
       ))}
     </div>

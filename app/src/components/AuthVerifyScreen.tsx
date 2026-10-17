@@ -9,6 +9,7 @@ import { isUntouchedSeedAccount, referencedAccountIds } from '../lib/seed';
 import { claimDeviceLink, fetchServerSnapshot, takePendingEmail, useAuthAccount, verifyMagicCode, verifyMagicLink } from '../lib/auth';
 import { isIosDevice, isRunningInstalled } from '../lib/installPrompt';
 import { useStore } from '../lib/store';
+import { accountName, categoryLabel } from '../lib/starterLabels';
 import { matchAccounts, matchCategories, resolveAccountRewrites, resolveCategoryRewrites } from '../lib/mergeMatch';
 import type {
   AccountManualCandidate,
@@ -517,17 +518,17 @@ function CategoryConflict({
   const { t } = useTranslation();
   return (
     <div className="merge-conflict">
-      <p className="merge-conflict-title">"{conflict.local.name}" vs. "{conflict.server.name}"</p>
+      <p className="merge-conflict-title">"{categoryLabel(conflict.local)}" vs. "{categoryLabel(conflict.server)}"</p>
       <p className="merge-conflict-detail">{t('auth.categoryConflictDetail')}</p>
       <div className="parse-fields">
         <div className="parse-field">
           <span className="k">{t('auth.yours')}</span>
-          <span className="v">{conflict.local.name}</span>
+          <span className="v">{categoryLabel(conflict.local)}</span>
           <span className="defaulted">{t('auth.edited', { date: formatDateTime(conflict.local.updatedAt) })}</span>
         </div>
         <div className="parse-field">
           <span className="k">{t('auth.theirs')}</span>
-          <span className="v">{conflict.server.name}</span>
+          <span className="v">{categoryLabel(conflict.server)}</span>
           <span className="defaulted">{t('auth.edited', { date: formatDateTime(conflict.server.updatedAt) })}</span>
         </div>
       </div>
@@ -556,7 +557,7 @@ function AccountConflict({
   return (
     <div className="merge-conflict">
       <p className="merge-conflict-title">
-        "{conflict.local.institution ?? ''} {conflict.local.name}" vs. "{conflict.server.institution ?? ''} {conflict.server.name}"
+        "{conflict.local.institution ?? ''} {accountName(conflict.local)}" vs. "{conflict.server.institution ?? ''} {accountName(conflict.server)}"
       </p>
       <p className="merge-conflict-detail">{t('auth.accountConflictDetail')}</p>
       <div className="parse-fields">

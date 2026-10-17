@@ -1,1 +1,13 @@
-{}
+{
+  "seedCategory": {
+    "cat-food": "Alimentation et Épicerie",
+    "cat-food-groceries": "Épicerie",
+    "cat-housing-rent": "Loyer/Hypothèque",
+    "cat-housing-proptax": "Impôt foncier",
+    "cat-health-fitness": "Gym",
+    "cat-transport-car": "Frais d’auto",
+    "cat-transport-fuel": "Essence",
+    "cat-transport-rideshare": "Taxi et covoiturage",
+    "cat-shopping": "Magasinage"
+  }
+}

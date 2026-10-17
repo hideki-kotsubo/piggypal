@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
+import { categoryLabel } from '../lib/starterLabels';
 import { accountLabel, formatAmount, formatRelativeDate, nowLocal, nowUtc } from '../lib/format';
 import { getLocalUserId } from '../lib/identity';
 import { markFreshBlank } from '../lib/freshBlankTransactions';
@@ -270,7 +271,12 @@ export function EntryZone({ onSubmitted }: Props) {
               <div className="parse-field">
                 <span className="k">{t('entry.category')}</span>
                 {preview.categoryId ? (
-                  <span className="v">{store.categories.find((c) => c.id === preview.categoryId)?.name}</span>
+                  <span className="v">
+                    {(() => {
+                      const category = store.categories.find((c) => c.id === preview.categoryId);
+                      return category ? categoryLabel(category) : '';
+                    })()}
+                  </span>
                 ) : (
                   <span className="v v-warn">{t('entry.uncategorizedToInbox')}</span>
                 )}

@@ -1,5 +1,16 @@
 {
   "nav": {
     "settings": "Ajustes"
+  },
+  "seedCategory": {
+    "cat-housing-proptax": "IBI",
+    "cat-housing-electricity": "Luz",
+    "cat-transport-car": "Gastos del coche",
+    "cat-transport-fuel": "Combustible",
+    "cat-transport-parking": "Aparcamiento",
+    "cat-transport-rideshare": "Taxi y VTC",
+    "cat-recreation-hobbies": "Aficiones",
+    "cat-recreation-events": "Eventos y Entradas",
+    "cat-personal-childcare": "Guardería"
   }
 }

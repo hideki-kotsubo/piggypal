@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useStore } from '../lib/store';
+import { categoryLabel } from '../lib/starterLabels';
 import { nowUtc } from '../lib/format';
 import { canMergeCategoryIntoSurvivor, categoryMergeBlockedReason } from '../lib/manualMerge';
 import type { Budget, Category } from '../lib/types';
@@ -108,7 +109,7 @@ export function CategoriesScreen() {
 
   function renderRow(category: Category) {
     const isEditing = openPanel?.type === 'edit' && openPanel.id === category.id;
-    const label = category.parentId ? `↳ ${category.name}` : category.name;
+    const label = category.parentId ? `↳ ${categoryLabel(category)}` : categoryLabel(category);
 
     if (mergeState.step === 'picking') {
       const isSurvivor = mergeState.survivorId === category.id;
@@ -184,8 +185,8 @@ export function CategoriesScreen() {
                 {!survivor
                   ? t('accounts.pickKeeper')
                   : mergeState.loserIds.size === 0
-                    ? t('accounts.pickDuplicates', { name: survivor.name })
-                    : t('accounts.willMerge', { count: mergeState.loserIds.size, name: survivor.name })}
+                    ? t('accounts.pickDuplicates', { name: categoryLabel(survivor) })
+                    : t('accounts.willMerge', { count: mergeState.loserIds.size, name: categoryLabel(survivor) })}
               </span>
               <div className="chip-row">
                 {survivor && <button className="chip ghost" onClick={changeKeeper}>{t('accounts.changeKeeper')}</button>}
@@ -204,10 +205,10 @@ export function CategoriesScreen() {
           const losers = mergeState.loserIds.map((id) => store.categories.find((c) => c.id === id)!).filter(Boolean);
           return (
             <div className="merge-review">
-              <p className="section-label">{t('accounts.mergeInto', { count: losers.length, name: survivor.name })}</p>
+              <p className="section-label">{t('accounts.mergeInto', { count: losers.length, name: categoryLabel(survivor) })}</p>
               <div className="merge-conflicts">
                 <div className="merge-conflict">
-                  <p className="merge-conflict-title">{t('accounts.keeping', { name: survivor.name })}</p>
+                  <p className="merge-conflict-title">{t('accounts.keeping', { name: categoryLabel(survivor) })}</p>
                   <p className="merge-conflict-detail">{t('accounts.nothingChanges')}</p>
                 </div>
                 {losers.map((loser) => {
@@ -215,13 +216,13 @@ export function CategoriesScreen() {
                   const childN = childCountForCategory(loser.id);
                   return (
                     <div className="merge-conflict" key={loser.id}>
-                      <p className="merge-conflict-title">{t('accounts.foldingIn', { name: loser.name })}</p>
+                      <p className="merge-conflict-title">{t('accounts.foldingIn', { name: categoryLabel(loser) })}</p>
                       <p className="merge-conflict-detail">
-                        {t('categories.movesTo', { transactions: t('transactions.count', { count: n }), name: survivor.name })}
+                        {t('categories.movesTo', { transactions: t('transactions.count', { count: n }), name: categoryLabel(survivor) })}
                       </p>
                       {childN > 0 && (
                         <p className="merge-conflict-detail">
-                          {t('categories.childrenMove', { count: childN, name: survivor.name })}
+                          {t('categories.childrenMove', { count: childN, name: categoryLabel(survivor) })}
                         </p>
                       )}
                     </div>
@@ -238,7 +239,12 @@ export function CategoriesScreen() {
         <section className="account-create">
           <div className="section-label">
             {openPanel.parentId
-              ? t('categories.newSub', { name: store.categories.find((c) => c.id === openPanel.parentId)?.name ?? '…' })
+              ? t('categories.newSub', {
+                  name: (() => {
+                    const parent = store.categories.find((c) => c.id === openPanel.parentId);
+                    return parent ? categoryLabel(parent) : '…';
+                  })(),
+                })
               : t('categories.new')}
           </div>
           <CategoryForm
@@ -288,7 +294,7 @@ export function CategoriesScreen() {
             archived.map((c) => (
               <div className="account-row archived-row" key={c.id}>
                 <div className="account-row-top">
-                  <span className="account-name">{c.name}</span>
+                  <span className="account-name">{categoryLabel(c)}</span>
                   <span className="account-kind">{c.kind === 'expense' ? t('categories.expense') : t('categories.income')}</span>
                 </div>
               </div>
@@ -333,6 +339,10 @@ function CategoryForm({
   });
   const current: Category = category ?? draft;
   const [pickerOpen, setPickerOpen] = useState<'kind' | 'group' | null>(null);
+  // Starts from the translated label (docs/73 D266) and only writes when
+  // the user actually edits it, so opening a starter category in another
+  // language never renames it.
+  const [nameStr, setNameStr] = useState(() => (isNew ? current.name : categoryLabel(current)));
 
   // docs/14 D70: exactly 2 levels, enforced app-side — a category that
   // already has children can't itself become a subcategory (no group
@@ -368,8 +378,11 @@ function CategoryForm({
         <input
           className="text-input"
           placeholder={t('categories.namePlaceholder')}
-          value={current.name}
-          onChange={(e) => commit({ name: e.target.value })}
+          value={nameStr}
+          onChange={(e) => {
+            setNameStr(e.target.value);
+            commit({ name: e.target.value });
+          }}
         />
       </label>
 
@@ -400,7 +413,7 @@ function CategoryForm({
         <div>
           <div className="field-label">{t('categories.group')}</div>
           <button className="pill-tap" onClick={() => setPickerOpen(pickerOpen === 'group' ? null : 'group')}>
-            {parentCategory ? parentCategory.name : t('categories.topLevel')} ▾
+            {parentCategory ? categoryLabel(parentCategory) : t('categories.topLevel')} ▾
           </button>
           {pickerOpen === 'group' && (
             <div className="chip-row">
@@ -422,7 +435,7 @@ function CategoryForm({
                     setPickerOpen(null);
                   }}
                 >
-                  {p.name}
+                  {categoryLabel(p)}
                 </button>
               ))}
             </div>

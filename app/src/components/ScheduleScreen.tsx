@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
+import { categoryLabel } from '../lib/starterLabels';
 import { totalsByCurrency } from '../lib/filterTransactions';
 import { formatAmount, formatOccurrenceDate, nowUtc } from '../lib/format';
 import {
@@ -454,7 +455,7 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
 
           <div>
             <button className="pill-tap" onClick={() => setCategoryOpen((o) => !o)}>
-              {category?.name ?? t('category.uncategorized')} ▾
+              {category ? categoryLabel(category) : t('category.uncategorized')} ▾
             </button>
             {categoryOpen && (
               <CategoryPicker
