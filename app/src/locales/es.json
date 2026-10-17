@@ -432,5 +432,33 @@
     "credit": "Crédito",
     "cash": "Efectivo",
     "savings": "Ahorros"
+  },
+  "categories": {
+    "title": "Categorías",
+    "add": "Agregar categoría",
+    "movesTo": "{{transactions}} pasan a “{{name}}”. Esta categoría se eliminará.",
+    "childrenMove_one": "{{count}} subcategoría pasa a “{{name}}”.",
+    "childrenMove_other": "{{count}} subcategorías pasan a “{{name}}”.",
+    "childrenMove_many": "{{count}} subcategorías pasan a “{{name}}”.",
+    "newSub": "Nueva subcategoría de {{name}}",
+    "new": "Nueva categoría",
+    "expense": "Gasto",
+    "income": "Ingreso",
+    "noExpense": "Aún no hay categorías de gasto.",
+    "noIncome": "Aún no hay categorías de ingreso.",
+    "namePlaceholder": "Supermercado, Transporte, Sueldo…",
+    "kind": "Tipo",
+    "group": "Grupo",
+    "topLevel": "Ninguno (nivel principal)",
+    "addSub": "+ Agregar subcategoría",
+    "archive": "Archivar categoría",
+    "monthBudget": "Presupuesto de este mes",
+    "removeLower": "quitar",
+    "addBudget": "+ Agregar presupuesto"
+  },
+  "merge": {
+    "alreadyKeeper": "Ya es la original.",
+    "groupIntoOwnChild": "No se puede combinar un grupo con su propia subcategoría.",
+    "tooDeep": "Tiene subcategorías: no se puede combinar con una subcategoría (quedarían 3 niveles)."
   }
 }

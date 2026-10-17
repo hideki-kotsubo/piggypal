@@ -433,5 +433,33 @@
     "credit": "Crédit",
     "cash": "Espèces",
     "savings": "Épargne"
+  },
+  "categories": {
+    "title": "Catégories",
+    "add": "Ajouter une catégorie",
+    "movesTo": "{{transactions}} passent dans « {{name}} ». Cette catégorie sera supprimée.",
+    "childrenMove_one": "{{count}} sous-catégorie passe sous « {{name}} ».",
+    "childrenMove_other": "{{count}} sous-catégories passent sous « {{name}} ».",
+    "childrenMove_many": "{{count}} sous-catégories passent sous « {{name}} ».",
+    "newSub": "Nouvelle sous-catégorie de {{name}}",
+    "new": "Nouvelle catégorie",
+    "expense": "Dépense",
+    "income": "Revenu",
+    "noExpense": "Aucune catégorie de dépense pour l’instant.",
+    "noIncome": "Aucune catégorie de revenu pour l’instant.",
+    "namePlaceholder": "Épicerie, Transport, Salaire…",
+    "kind": "Type",
+    "group": "Groupe",
+    "topLevel": "Aucun (niveau principal)",
+    "addSub": "+ Ajouter une sous-catégorie",
+    "archive": "Archiver la catégorie",
+    "monthBudget": "Budget de ce mois-ci",
+    "removeLower": "retirer",
+    "addBudget": "+ Ajouter un budget"
+  },
+  "merge": {
+    "alreadyKeeper": "C’est déjà l’original.",
+    "groupIntoOwnChild": "Impossible de fusionner un groupe dans sa propre sous-catégorie.",
+    "tooDeep": "A des sous-catégories — impossible de fusionner dans une sous-catégorie (3 niveaux)."
   }
 }

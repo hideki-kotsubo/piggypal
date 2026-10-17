@@ -412,5 +412,32 @@
     "credit": "Credit",
     "cash": "Cash",
     "savings": "Savings"
+  },
+  "categories": {
+    "title": "Categories",
+    "add": "Add category",
+    "movesTo": "{{transactions}} move to \"{{name}}\". This category will be deleted.",
+    "childrenMove_one": "{{count}} subcategory moves under \"{{name}}\".",
+    "childrenMove_other": "{{count}} subcategories move under \"{{name}}\".",
+    "newSub": "New subcategory of {{name}}",
+    "new": "New category",
+    "expense": "Expense",
+    "income": "Income",
+    "noExpense": "No expense categories yet.",
+    "noIncome": "No income categories yet.",
+    "namePlaceholder": "Mercado, Transporte, Salário…",
+    "kind": "Kind",
+    "group": "Group",
+    "topLevel": "None (top-level)",
+    "addSub": "+ Add subcategory",
+    "archive": "Archive category",
+    "monthBudget": "This month's budget",
+    "removeLower": "remove",
+    "addBudget": "+ Add a budget"
+  },
+  "merge": {
+    "alreadyKeeper": "Already the keeper.",
+    "groupIntoOwnChild": "Can't merge a group into its own subcategory.",
+    "tooDeep": "Has subcategories — can't merge into a subcategory (would nest 3 levels deep)."
   }
 }

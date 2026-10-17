@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { nowUtc } from '../lib/format';
@@ -51,6 +52,7 @@ function orderedWithChildren(list: Category[]): Category[] {
 
 export function CategoriesScreen() {
   const store = useStore();
+  const { t } = useTranslation();
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
   const [archivedOpen, setArchivedOpen] = useState(false);
   const [mergeState, setMergeState] = useState<MergeState>({ step: 'off' });
@@ -100,7 +102,7 @@ export function CategoriesScreen() {
   }
 
   const txCountForCategory = (categoryId: string) =>
-    store.transactions.filter((t) => !t.deletedAt && t.categoryId === categoryId).length;
+    store.transactions.filter((tx) => !tx.deletedAt && tx.categoryId === categoryId).length;
   const childCountForCategory = (categoryId: string) =>
     store.categories.filter((c) => !c.archived && c.parentId === categoryId).length;
 
@@ -122,7 +124,7 @@ export function CategoriesScreen() {
         >
           <div className="account-row-top">
             <span className="account-name">
-              {isSurvivor && <span className="merge-badge">Keeper</span>}
+              {isSurvivor && <span className="merge-badge">{t('duplicates.keeper')}</span>}
               {!isSurvivor && survivor && !blockedReason && <span className="merge-check">{isPicked ? '✓' : '○'}</span>}
               {label}
             </span>
@@ -155,16 +157,16 @@ export function CategoriesScreen() {
   return (
     <main className="home">
       <div className="app-bar">
-        <Link to="/settings" className="back-link">← Back</Link>
-        <span className="wordmark">Categories</span>
+        <Link to="/settings" className="back-link">← {t('common.back')}</Link>
+        <span className="wordmark">{t('categories.title')}</span>
         <div className="app-bar-actions">
           {mergeState.step === 'off' && active.length >= 2 && (
-            <button className="icon-btn" aria-label="Merge duplicates" onClick={toggleMergeMode}>⇄</button>
+            <button className="icon-btn" aria-label={t('accounts.mergeDuplicates')} onClick={toggleMergeMode}>⇄</button>
           )}
           {mergeState.step === 'off' && (
             <button
               className="icon-btn"
-              aria-label="Add category"
+              aria-label={t('categories.add')}
               onClick={() => setOpenPanel((p) => (p?.type === 'create' ? null : { type: 'create', parentId: null }))}
             >
               +
@@ -180,17 +182,17 @@ export function CategoriesScreen() {
             <div className="merge-toolbar">
               <span>
                 {!survivor
-                  ? 'Tap a row to keep as the original'
+                  ? t('accounts.pickKeeper')
                   : mergeState.loserIds.size === 0
-                    ? `Now tap any duplicates of "${survivor.name}" to fold in`
-                    : `${mergeState.loserIds.size} will merge into "${survivor.name}"`}
+                    ? t('accounts.pickDuplicates', { name: survivor.name })
+                    : t('accounts.willMerge', { count: mergeState.loserIds.size, name: survivor.name })}
               </span>
               <div className="chip-row">
-                {survivor && <button className="chip ghost" onClick={changeKeeper}>Change keeper</button>}
+                {survivor && <button className="chip ghost" onClick={changeKeeper}>{t('accounts.changeKeeper')}</button>}
                 {survivor && mergeState.loserIds.size > 0 && (
-                  <button className="save-btn" onClick={reviewMerge}>Review merge</button>
+                  <button className="save-btn" onClick={reviewMerge}>{t('accounts.reviewMerge')}</button>
                 )}
-                <button className="chip ghost" onClick={() => setMergeState({ step: 'off' })}>Cancel</button>
+                <button className="chip ghost" onClick={() => setMergeState({ step: 'off' })}>{t('common.cancel')}</button>
               </div>
             </div>
           );
@@ -202,32 +204,32 @@ export function CategoriesScreen() {
           const losers = mergeState.loserIds.map((id) => store.categories.find((c) => c.id === id)!).filter(Boolean);
           return (
             <div className="merge-review">
-              <p className="section-label">Merge {losers.length} into "{survivor.name}"</p>
+              <p className="section-label">{t('accounts.mergeInto', { count: losers.length, name: survivor.name })}</p>
               <div className="merge-conflicts">
                 <div className="merge-conflict">
-                  <p className="merge-conflict-title">Keeping: {survivor.name}</p>
-                  <p className="merge-conflict-detail">Nothing changes on this one.</p>
+                  <p className="merge-conflict-title">{t('accounts.keeping', { name: survivor.name })}</p>
+                  <p className="merge-conflict-detail">{t('accounts.nothingChanges')}</p>
                 </div>
                 {losers.map((loser) => {
                   const n = txCountForCategory(loser.id);
                   const childN = childCountForCategory(loser.id);
                   return (
                     <div className="merge-conflict" key={loser.id}>
-                      <p className="merge-conflict-title">Folding in: {loser.name}</p>
+                      <p className="merge-conflict-title">{t('accounts.foldingIn', { name: loser.name })}</p>
                       <p className="merge-conflict-detail">
-                        {n} transaction{n === 1 ? '' : 's'} move to "{survivor.name}". This category will be deleted.
+                        {t('categories.movesTo', { transactions: t('transactions.count', { count: n }), name: survivor.name })}
                       </p>
                       {childN > 0 && (
                         <p className="merge-conflict-detail">
-                          {childN} subcategor{childN === 1 ? 'y' : 'ies'} move under "{survivor.name}".
+                          {t('categories.childrenMove', { count: childN, name: survivor.name })}
                         </p>
                       )}
                     </div>
                   );
                 })}
               </div>
-              <button className="save-btn" onClick={() => void confirmMerge()}>Merge {losers.length}</button>
-              <button className="chip ghost" onClick={() => setMergeState({ step: 'off' })}>Cancel</button>
+              <button className="save-btn" onClick={() => void confirmMerge()}>{t('accounts.merge', { count: losers.length })}</button>
+              <button className="chip ghost" onClick={() => setMergeState({ step: 'off' })}>{t('common.cancel')}</button>
             </div>
           );
         })()}
@@ -236,8 +238,8 @@ export function CategoriesScreen() {
         <section className="account-create">
           <div className="section-label">
             {openPanel.parentId
-              ? `New subcategory of ${store.categories.find((c) => c.id === openPanel.parentId)?.name ?? '…'}`
-              : 'New category'}
+              ? t('categories.newSub', { name: store.categories.find((c) => c.id === openPanel.parentId)?.name ?? '…' })
+              : t('categories.new')}
           </div>
           <CategoryForm
             category={null}
@@ -259,16 +261,16 @@ export function CategoriesScreen() {
             <div className="accounts-list">
               {showExpense && (
                 <>
-                  <div className="section-label">Expense</div>
-                  {expense.length === 0 && <p className="empty-note">No expense categories yet.</p>}
+                  <div className="section-label">{t('categories.expense')}</div>
+                  {expense.length === 0 && <p className="empty-note">{t('categories.noExpense')}</p>}
                   {expense.map(renderRow)}
                 </>
               )}
 
               {showIncome && (
                 <>
-                  <div className="section-label">Income</div>
-                  {income.length === 0 && <p className="empty-note">No income categories yet.</p>}
+                  <div className="section-label">{t('categories.income')}</div>
+                  {income.length === 0 && <p className="empty-note">{t('categories.noIncome')}</p>}
                   {income.map(renderRow)}
                 </>
               )}
@@ -279,7 +281,7 @@ export function CategoriesScreen() {
       {mergeState.step === 'off' && archived.length > 0 && (
         <div className="account-group">
           <button className="group-header" onClick={() => setArchivedOpen((o) => !o)}>
-            <span>Archived ({archived.length})</span>
+            <span>{t('accounts.archived', { count: archived.length })}</span>
             <span className="group-count">{archivedOpen ? '▾' : '›'}</span>
           </button>
           {archivedOpen &&
@@ -287,7 +289,7 @@ export function CategoriesScreen() {
               <div className="account-row archived-row" key={c.id}>
                 <div className="account-row-top">
                   <span className="account-name">{c.name}</span>
-                  <span className="account-kind">{c.kind}</span>
+                  <span className="account-kind">{c.kind === 'expense' ? t('categories.expense') : t('categories.income')}</span>
                 </div>
               </div>
             ))}
@@ -312,6 +314,7 @@ function CategoryForm({
   onAddSubcategory?: (parentId: string) => void;
 }) {
   const store = useStore();
+  const { t } = useTranslation();
   const isNew = category === null;
 
   const [draft, setDraft] = useState<Category>(() => {
@@ -361,19 +364,19 @@ function CategoryForm({
   return (
     <div className="account-form">
       <label className="field-label">
-        Name
+        {t('common.name')}
         <input
           className="text-input"
-          placeholder="Mercado, Transporte, Salário…"
+          placeholder={t('categories.namePlaceholder')}
           value={current.name}
           onChange={(e) => commit({ name: e.target.value })}
         />
       </label>
 
       <div>
-        <div className="field-label">Kind</div>
+        <div className="field-label">{t('categories.kind')}</div>
         <button className="pill-tap" onClick={() => setPickerOpen(pickerOpen === 'kind' ? null : 'kind')}>
-          {current.kind === 'expense' ? 'Expense' : 'Income'} ▾
+          {current.kind === 'expense' ? t('categories.expense') : t('categories.income')} ▾
         </button>
         {pickerOpen === 'kind' && (
           <div className="chip-row">
@@ -386,7 +389,7 @@ function CategoryForm({
                   setPickerOpen(null);
                 }}
               >
-                {k === 'expense' ? 'Expense' : 'Income'}
+                {k === 'expense' ? t('categories.expense') : t('categories.income')}
               </button>
             ))}
           </div>
@@ -395,9 +398,9 @@ function CategoryForm({
 
       {!hasChildren && (
         <div>
-          <div className="field-label">Group</div>
+          <div className="field-label">{t('categories.group')}</div>
           <button className="pill-tap" onClick={() => setPickerOpen(pickerOpen === 'group' ? null : 'group')}>
-            {parentCategory ? parentCategory.name : 'None (top-level)'} ▾
+            {parentCategory ? parentCategory.name : t('categories.topLevel')} ▾
           </button>
           {pickerOpen === 'group' && (
             <div className="chip-row">
@@ -408,7 +411,7 @@ function CategoryForm({
                   setPickerOpen(null);
                 }}
               >
-                None (top-level)
+                {t('categories.topLevel')}
               </button>
               {eligibleParents.map((p) => (
                 <button
@@ -437,18 +440,18 @@ function CategoryForm({
           own picker was the indirect alternative to. */}
       {!isNew && !current.parentId && onAddSubcategory && (
         <button className="text-link" onClick={() => onAddSubcategory(current.id)}>
-          + Add subcategory
+          {t('categories.addSub')}
         </button>
       )}
 
       {isNew ? (
         <div className="form-actions">
-          <button className="chip ghost" onClick={onDone}>cancel</button>
-          <button className="save-btn" onClick={saveNew}>Add category</button>
+          <button className="chip ghost" onClick={onDone}>{t('common.cancelLower')}</button>
+          <button className="save-btn" onClick={saveNew}>{t('categories.add')}</button>
         </div>
       ) : (
         <div className="form-actions">
-          <button className="text-link archive-link" onClick={archive}>Archive category</button>
+          <button className="text-link archive-link" onClick={archive}>{t('categories.archive')}</button>
         </div>
       )}
     </div>
@@ -457,6 +460,7 @@ function CategoryForm({
 
 function BudgetsForCategory({ categoryId }: { categoryId: string }) {
   const store = useStore();
+  const { t } = useTranslation();
   const [addOpen, setAddOpen] = useState(false);
   const [currencyPickerOpen, setCurrencyPickerOpen] = useState(false);
   const [newCurrency, setNewCurrency] = useState('CAD');
@@ -469,7 +473,7 @@ function BudgetsForCategory({ categoryId }: { categoryId: string }) {
   const currencyOptions = [
     ...new Set([
       newCurrency,
-      ...store.transactions.map((t) => t.currency),
+      ...store.transactions.map((tx) => tx.currency),
       ...store.budgets.map((b) => b.currency),
       'CAD',
       'BRL',
@@ -503,7 +507,7 @@ function BudgetsForCategory({ categoryId }: { categoryId: string }) {
 
   return (
     <div className="goal-section">
-      <div className="field-label">This month's budget</div>
+      <div className="field-label">{t('categories.monthBudget')}</div>
 
       {budgets.map((b) => (
         <div className="goal-box" key={b.id}>
@@ -518,13 +522,13 @@ function BudgetsForCategory({ categoryId }: { categoryId: string }) {
               defaultValue={amountStrFor(b)}
               onChange={(e) => updateAmount(b, e.target.value)}
             />
-            <button className="text-link" onClick={() => store.removeBudget(b.id)}>remove</button>
+            <button className="text-link" onClick={() => store.removeBudget(b.id)}>{t('categories.removeLower')}</button>
           </div>
         </div>
       ))}
 
       {!addOpen && (
-        <button className="text-link" onClick={() => setAddOpen(true)}>+ Add a budget</button>
+        <button className="text-link" onClick={() => setAddOpen(true)}>{t('categories.addBudget')}</button>
       )}
 
       {addOpen && (
@@ -559,8 +563,8 @@ function BudgetsForCategory({ categoryId }: { categoryId: string }) {
             onChange={(e) => setNewAmountStr(e.target.value)}
           />
           <div className="form-actions">
-            <button className="chip ghost" onClick={() => setAddOpen(false)}>cancel</button>
-            <button className="save-btn" onClick={addBudget}>Add</button>
+            <button className="chip ghost" onClick={() => setAddOpen(false)}>{t('common.cancelLower')}</button>
+            <button className="save-btn" onClick={addBudget}>{t('common.add')}</button>
           </div>
         </div>
       )}

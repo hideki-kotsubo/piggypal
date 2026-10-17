@@ -432,5 +432,33 @@
     "credit": "Crédito",
     "cash": "Dinheiro",
     "savings": "Poupança"
+  },
+  "categories": {
+    "title": "Categorias",
+    "add": "Adicionar categoria",
+    "movesTo": "{{transactions}} vão para “{{name}}”. Esta categoria será excluída.",
+    "childrenMove_one": "{{count}} subcategoria vai para “{{name}}”.",
+    "childrenMove_other": "{{count}} subcategorias vão para “{{name}}”.",
+    "childrenMove_many": "{{count}} subcategorias vão para “{{name}}”.",
+    "newSub": "Nova subcategoria de {{name}}",
+    "new": "Nova categoria",
+    "expense": "Despesa",
+    "income": "Receita",
+    "noExpense": "Nenhuma categoria de despesa ainda.",
+    "noIncome": "Nenhuma categoria de receita ainda.",
+    "namePlaceholder": "Mercado, Transporte, Salário…",
+    "kind": "Tipo",
+    "group": "Grupo",
+    "topLevel": "Nenhum (nível principal)",
+    "addSub": "+ Adicionar subcategoria",
+    "archive": "Arquivar categoria",
+    "monthBudget": "Orçamento deste mês",
+    "removeLower": "remover",
+    "addBudget": "+ Adicionar orçamento"
+  },
+  "merge": {
+    "alreadyKeeper": "Já é a original.",
+    "groupIntoOwnChild": "Não dá para juntar um grupo na própria subcategoria.",
+    "tooDeep": "Tem subcategorias — não dá para juntar numa subcategoria (ficaria com 3 níveis)."
   }
 }

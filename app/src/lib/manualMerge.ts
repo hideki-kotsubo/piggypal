@@ -1,3 +1,4 @@
+import i18n from './i18n';
 import type { Account, Category } from './types';
 
 // Backlog 2026-08-23 — the manual, user-triggered "merge duplicates" tool
@@ -18,11 +19,11 @@ export function categoryMergeBlockedReason(
   loser: Category,
   categories: Category[],
 ): string | null {
-  if (loser.id === survivor.id) return 'Already the keeper.';
-  if (survivor.parentId === loser.id) return "Can't merge a group into its own subcategory.";
+  if (loser.id === survivor.id) return i18n.t('merge.alreadyKeeper');
+  if (survivor.parentId === loser.id) return i18n.t('merge.groupIntoOwnChild');
   const loserHasChildren = categories.some((c) => !c.archived && c.parentId === loser.id);
   if (loserHasChildren && survivor.parentId !== null) {
-    return "Has subcategories — can't merge into a subcategory (would nest 3 levels deep).";
+    return i18n.t('merge.tooDeep');
   }
   return null;
 }
