@@ -16,6 +16,20 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
+## Unreleased
+
+Flowtab now speaks your language.
+
+- **Português (Brasil), Español and Français**, alongside English. The
+  app follows your device's language, or pick one in Settings →
+  Language. Spain and Latin America, and France and Canada, each get
+  their own wording where it differs.
+- **Your starter categories and accounts follow the language too**:
+  Groceries becomes Mercado, Supermercado or Épicerie. Devices on the
+  same account can each use a different language. Categories you've
+  renamed or created stay exactly as you wrote them.
+- Dates and amounts are written the way your region writes them.
+
 ## 0.5.0 — 2026-10-16
 
 - **Delete account** in Settings: the person who created the account
