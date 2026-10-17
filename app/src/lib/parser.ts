@@ -42,6 +42,8 @@ export interface ParserContext {
   now: Date;
   // BCP 47 tag of the language the utterance is most likely in.
   language?: string;
+  // True when the text came from speech-to-text rather than the keyboard.
+  fromSpeech?: boolean;
   // Extra names for a category or account — the caller passes starter
   // names in every language (starterLabels.ts, docs/73 D266/D267), so
   // "épicerie" finds the starter Groceries category even though its
@@ -213,13 +215,22 @@ const CURRENCY_MARKERS: [RegExp, string][] = [
   [/\bcad\b/i, 'CAD'], [/c\$/i, 'CAD'],
 ];
 
-function extractCurrency(text: string, spans: Span[]): string | null {
+function extractCurrency(text: string, spans: Span[], ctx: ParserContext): string | null {
   for (const [re, code] of CURRENCY_MARKERS) {
     const match = re.exec(text);
     if (match) {
       spans.push([match.index, match.index + match[0].length]);
       return code;
     }
+  }
+  // No explicit marker matched, so any "$" left is bare. Only speech in a
+  // language whose dictation uses "$" for one currency gives it a meaning
+  // (docs/73, parserVocab.ts's speechDollar).
+  const speechDollar = ctx.fromSpeech ? orderedPacks(ctx.language)[0].pack.speechDollar : undefined;
+  const dollar = speechDollar ? text.indexOf('$') : -1;
+  if (speechDollar && dollar !== -1) {
+    spans.push([dollar, dollar + 1]);
+    return speechDollar;
   }
   return null;
 }
@@ -608,7 +619,7 @@ export function parseUtterance(text: string, ctx: ParserContext): ParseResult {
   const amountCents = digitAmount !== null ? digitAmount : wordAmount !== null ? wordAmount * 100 : null;
 
   const direction = matchDirection(textLower, spans, ctx.language);
-  const currency = extractCurrency(text, spans);
+  const currency = extractCurrency(text, spans, ctx);
   const categoryId = matchCategory(textLower, ctx, spans);
   const accountId = matchAccount(textLower, ctx, spans);
   const confirmedMerchant = matchMerchant(textLower, ctx, spans);

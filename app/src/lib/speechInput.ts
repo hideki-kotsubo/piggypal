@@ -71,28 +71,25 @@ export interface SpeechInputHandlers {
 // re-prompted every time. Reusing one instance is the standard mitigation.
 let sharedRecognition: SpeechRecognitionLike | null = null;
 
-function configuredRecognition(handlers: SpeechInputHandlers): SpeechRecognitionLike | null {
+function configuredRecognition(): SpeechRecognitionLike | null {
   const Ctor = getSpeechRecognitionCtor();
   if (!Ctor) return null;
   const recognition = sharedRecognition ?? new Ctor();
   recognition.lang = currentSpeechTag();
   recognition.interimResults = false;
   recognition.maxAlternatives = 1;
-  recognition.onresult = (event) => {
-    // continuous is unset (false), which per spec should auto-stop the
-    // mic once a final result comes in — but several real implementations
-    // (notably Android Chrome) don't honor that and keep the mic open
-    // indefinitely, waiting for an explicit stop(). Calling it here
-    // ourselves is what actually turns the mic off; the browser doing it
-    // too is harmless (stop() on an already-stopping session is a no-op).
-    recognition.stop();
-    const transcript = event.results[0]?.[0]?.transcript ?? '';
-    handlers.onResult(transcript);
-  };
-  recognition.onerror = (event) => handlers.onError?.(event.error);
-  recognition.onend = () => handlers.onEnd?.();
   return recognition;
 }
+
+// Real iPhone report (2026-10-16, home-screen PWA, XR and 12): after a
+// session that heard nothing, every later tap on the reused instance
+// started "listening" and never answered — no result, no error, no end.
+// So the reuse above only lasts while sessions succeed: a session that
+// ends without a result (nothing heard, an error, or the watchdog below)
+// throws its instance away, and the next tap starts a fresh one. A fresh
+// instance can mean one more permission prompt on iOS, which beats a
+// dead mic button. A cancel the user tapped keeps the instance.
+const SESSION_TIMEOUT_MS = 15_000;
 
 // docs/16 D161 tried priming with a getUserMedia call before ever
 // touching SpeechRecognition, on the theory that its grant persists per-
@@ -152,29 +149,91 @@ function startNativeSpeech(handlers: SpeechInputHandlers): { stop: () => void; a
 
 export function startSpeechInput(handlers: SpeechInputHandlers): { stop: () => void; abort: () => void } | null {
   if (isNativeSpeech()) return startNativeSpeech(handlers);
-  let recognition = configuredRecognition(handlers);
+  return startWebSpeech(handlers);
+}
+
+function startWebSpeech(handlers: SpeechInputHandlers): { stop: () => void; abort: () => void } | null {
+  let recognition = configuredRecognition();
   if (!recognition) return null;
+
+  // One session per tap. Handlers on a reused instance are replaced by the
+  // next session's, and `settled` stops a discarded instance's late
+  // events from reaching the caller twice.
+  let settled = false;
+  let gotResult = false;
+  let userAborted = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const finish = (error: string | null) => {
+    if (settled) return;
+    settled = true;
+    clearTimeout(timer);
+    if (error) {
+      if (!(error === 'aborted' && userAborted) && sharedRecognition === recognition) sharedRecognition = null;
+      handlers.onError?.(error);
+    }
+    handlers.onEnd?.();
+  };
+  const attach = (r: SpeechRecognitionLike) => {
+    r.onresult = (event) => {
+      if (settled) return;
+      gotResult = true;
+      // continuous is unset (false), which per spec should auto-stop the
+      // mic once a final result comes in — but several real
+      // implementations (notably Android Chrome) don't honor that and
+      // keep the mic open indefinitely, waiting for an explicit stop().
+      // Calling it here ourselves is what actually turns the mic off.
+      r.stop();
+      handlers.onResult(event.results[0]?.[0]?.transcript ?? '');
+      finish(null);
+    };
+    r.onerror = (event) => finish(event.error);
+    r.onend = () => finish(gotResult ? null : userAborted ? 'aborted' : 'no-speech');
+  };
+
+  attach(recognition);
+  // Shared before start(): a session can end inside start() itself, and
+  // finish() only discards the instance it finds here.
+  sharedRecognition = recognition;
   try {
     recognition.start();
   } catch {
-    // Reusing one instance (above) is what stops the repeat mic prompt,
-    // but it means a fast abort-then-restart can race ahead of the
-    // previous session's `end` event, which throws InvalidStateError on
-    // an instance that thinks it's still active. Discard and retry on a
-    // fresh instance rather than leaving the tap dead.
+    // Reusing one instance is what stops the repeat mic prompt, but a
+    // fast abort-then-restart can race ahead of the previous session's
+    // `end` event, which throws InvalidStateError on an instance that
+    // thinks it's still active. Discard and retry on a fresh instance
+    // rather than leaving the tap dead.
     sharedRecognition = null;
-    recognition = configuredRecognition(handlers);
+    recognition = configuredRecognition();
     if (!recognition) return null;
+    attach(recognition);
+    sharedRecognition = recognition;
     recognition.start();
   }
-  sharedRecognition = recognition;
+  const session = recognition;
+  if (!settled) {
+    timer = setTimeout(() => {
+      if (settled) return;
+      // Report first: the abort below fires its own "aborted" event,
+      // which must not pass for a cancel the user tapped.
+      finish('no-speech');
+      if (sharedRecognition === session) sharedRecognition = null;
+      try {
+        session.abort();
+      } catch {
+        // Already dead — the point is to stop waiting on it.
+      }
+    }, SESSION_TIMEOUT_MS);
+  }
 
   return {
-    stop: () => recognition!.stop(),
+    stop: () => session.stop(),
     // For the user bailing out mid-recording: abort() cuts the mic
     // immediately and discards whatever's been captured so far, unlike
     // stop() which still tries to deliver a final (possibly garbled,
     // half-spoken) result via onresult.
-    abort: () => recognition!.abort(),
+    abort: () => {
+      userAborted = true;
+      session.abort();
+    },
   };
 }

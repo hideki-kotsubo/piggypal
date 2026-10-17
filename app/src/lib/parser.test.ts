@@ -69,6 +69,19 @@ describe('Portuguese', () => {
     expect(r.merchantGuessed).toBe(true);
   });
 
+  it('reads iOS dictation\'s bare "$" as dollars, for speech only', () => {
+    // iOS Portuguese dictation: "cem dólares em combustível" -> "$100 em combustivel".
+    const spoken = parse('$100 em combustivel', 'pt-BR', { fromSpeech: true });
+    expect(spoken.amountCents).toBe(10000);
+    expect(spoken.currency).toBe('USD');
+    expect(spoken.categoryId).toBe('cat-transport-fuel');
+    expect(spoken.unrecognized).toBeNull();
+    expect(parse('R$ 30 em mercado', 'pt-BR', { fromSpeech: true }).currency).toBe('BRL');
+    expect(parse('$100 em combustivel', 'pt-BR').currency).toBeNull();
+    expect(parse('$100 gas', 'en', { fromSpeech: true }).currency).toBeNull();
+    expect(parse('$100 gasolina', 'es', { fromSpeech: true }).currency).toBeNull();
+  });
+
   it('never reads "dos" as Spanish two', () => {
     expect(parse('almoço dos meninos quarenta', 'pt-BR').amountCents).toBe(4000);
   });

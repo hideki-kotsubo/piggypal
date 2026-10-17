@@ -624,6 +624,7 @@
     "permission": "La entrada por voz necesita acceso al micrófono y al reconocimiento de voz: permítelo en la configuración del dispositivo.",
     "languageUnsupported": "La entrada por voz en {{language}} no está disponible en este dispositivo. Cámbialo en Configuración → Idioma de voz.",
     "network": "La entrada por voz necesita conexión ahora: inténtalo de nuevo o escríbelo.",
-    "failed": "No te entendí: inténtalo de nuevo o escríbelo."
+    "failed": "No te entendí: inténtalo de nuevo o escríbelo.",
+    "noSpeech": "No escuché nada: toca el micrófono e inténtalo de nuevo."
   }
 }
