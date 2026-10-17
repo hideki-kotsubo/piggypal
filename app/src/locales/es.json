@@ -33,7 +33,11 @@
     "undo": "Deshacer",
     "noNote": "Sin nota",
     "tryAgain": "Intentar de nuevo",
-    "done": "Listo"
+    "done": "Listo",
+    "add": "Agregar",
+    "cancel": "Cancelar",
+    "remove": "Quitar",
+    "name": "Nombre"
   },
   "nav": {
     "insights": "Análisis",
@@ -130,5 +134,76 @@
     "confirm_one": "Conservar 1, eliminar {{count}}",
     "confirm_other": "Conservar 1, eliminar {{count}}",
     "confirm_many": "Conservar 1, eliminar {{count}}"
+  },
+  "cadence": {
+    "weekly_one": "Semanal, los {{weekday}}",
+    "weekly_other": "Cada {{count}} semanas, los {{weekday}}",
+    "weekly_many": "Cada {{count}} semanas, los {{weekday}}",
+    "yearly_one": "Anual, el {{date}}",
+    "yearly_other": "Cada {{count}} años, el {{date}}",
+    "yearly_many": "Cada {{count}} años, el {{date}}",
+    "monthly_one": "Mensual, el día {{day}}",
+    "monthly_other": "Cada {{count}} meses, el día {{day}}",
+    "monthly_many": "Cada {{count}} meses, el día {{day}}",
+    "orLastDay": "{{day}} (o último día)",
+    "day_ordinal_other": "{{count}}"
+  },
+  "schedules": {
+    "title": "Programados",
+    "add": "Agregar pago programado",
+    "due": "Pendientes",
+    "nextDays_one": "Próximo {{count}} día",
+    "nextDays_other": "Próximos {{count}} días",
+    "nextDays_many": "Próximos {{count}} días",
+    "schedules": "Programaciones",
+    "empty": "Aún no hay nada programado: toca + para agregar el alquiler, la colegiatura, un arrendamiento o una compra a meses.",
+    "stopped": "Finalizados ({{count}})",
+    "overdue_one": "{{count}} día de atraso",
+    "overdue_other": "{{count}} días de atraso",
+    "overdue_many": "{{count}} días de atraso",
+    "skip": "Omitir",
+    "paid": "Pagado",
+    "paused": "En pausa",
+    "dueCount_one": "{{count}} pendiente",
+    "dueCount_many": "{{count}} pendientes",
+    "dueCount_other": "{{count}} pendientes",
+    "next": "próximo {{date}}",
+    "noMore": "sin más pagos",
+    "left": "quedan {{left}} de {{total}}",
+    "auto": "Automático"
+  },
+  "household": {
+    "title": "Hogar",
+    "member": "Miembro del hogar",
+    "signOutFailed": "No se pudo cerrar la sesión de ese dispositivo.",
+    "confirmRemoveDevice": "¿Cerrar la sesión de “{{label}}” y quitarlo? Tendrá que iniciar sesión de nuevo para sincronizar.",
+    "confirmRemovePerson": "¿Quitar a {{name}} del hogar?{{deviceNote}} Sus movimientos y cuentas anteriores se conservan, marcados como quitados.",
+    "devicesSignedOut_one": " Su dispositivo cerrará sesión.",
+    "devicesSignedOut_other": " Sus {{count}} dispositivos cerrarán sesión.",
+    "devicesSignedOut_many": " Sus {{count}} dispositivos cerrarán sesión.",
+    "signInFirst": "Inicia sesión (Configuración → Cuenta) para administrar las personas y los dispositivos de tu hogar.",
+    "offline": "Estás sin conexión: para quitar un dispositivo o una persona necesitas conexión.",
+    "people": "Personas",
+    "unlinked": "Sin vincular a una persona",
+    "namePlaceholder": "p. ej., Ana",
+    "addPerson": "+ Agregar persona",
+    "addDevice": "+ Agregar un dispositivo a esta cuenta",
+    "addDeviceHint": "Al agregar un dispositivo se muestra un código para escanear desde el nuevo dispositivo, sin necesidad de correo. Para sincronizar directamente con un dispositivo cercano sin la nube, usa Configuración → Conectar un dispositivo.",
+    "removed": "Quitados",
+    "restore": "Restaurar",
+    "yourName": "Tu nombre",
+    "theirName": "Nombre de {{name}}",
+    "you": "tú",
+    "noDevices": "Aún no hay dispositivos.",
+    "removePerson": "Quitar a {{name}}",
+    "thisDevice": "este dispositivo",
+    "seen": "visto {{time}}",
+    "removedName": "{{name}} (quitado)"
+  },
+  "accounts": {
+    "shared": "Compartida"
+  },
+  "picker": {
+    "more": "+ {{count}} más"
   }
 }

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { useStore } from '../lib/store';
 import { ACCOUNT_PICKER_SCALE_THRESHOLD, useAccountPickerMode } from '../lib/settings';
@@ -78,6 +79,7 @@ function countByInstitution(accounts: Account[]): Map<string, number> {
 // creates anything.
 export function AccountCurrencyPicker({ accountId, currency, onChange, showAccount = true, showCurrency = true }: Props) {
   const store = useStore();
+  const { t } = useTranslation();
   const peers = useHouseholdPeers();
   const [pickerOpen, setPickerOpen] = useState<'account' | 'currency' | null>(null);
   const [pickerMode] = useAccountPickerMode();
@@ -90,7 +92,7 @@ export function AccountCurrencyPicker({ accountId, currency, onChange, showAccou
   const institutionCounts = countByInstitution(ranked);
   const needsOwnerLabel = accountsNeedingOwnerLabel(ranked);
   const ownerPrefixFor = (a: Account): string | null =>
-    needsOwnerLabel.has(a.id) ? (a.ownerUserId ? personLabel(a.ownerUserId, peers, store.profiles) : 'Shared') : null;
+    needsOwnerLabel.has(a.id) ? (a.ownerUserId ? personLabel(a.ownerUserId, peers, store.profiles) : t('accounts.shared')) : null;
 
   const overThreshold = ranked.length > ACCOUNT_PICKER_SCALE_THRESHOLD;
   const grouped = overThreshold && pickerMode === 'grouped';
@@ -225,7 +227,7 @@ export function AccountCurrencyPicker({ accountId, currency, onChange, showAccou
               ))}
               {flatHiddenCount > 0 && (
                 <button className="chip ghost" onClick={() => setCappedExpanded(true)}>
-                  + {flatHiddenCount} more
+                  {t('picker.more', { count: flatHiddenCount })}
                 </button>
               )}
             </>

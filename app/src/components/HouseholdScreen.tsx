@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { revokeDevice, useAuthAccount } from '../lib/auth';
 import { formatTimeAgo, nowUtc } from '../lib/format';
 import { getDeviceId, getLocalUserId } from '../lib/identity';
@@ -20,6 +21,7 @@ import { PayerBadge } from './PayerBadge';
 // undone. Rename a device from that device's own Settings.
 export function HouseholdScreen() {
   const store = useStore();
+  const { t } = useTranslation();
   const [authAccount] = useAuthAccount();
   const online = useOnline();
   const [adding, setAdding] = useState(false);
@@ -44,7 +46,7 @@ export function HouseholdScreen() {
     try {
       for (const d of devices) await revokeDevice(d.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't sign that device out.");
+      setError(err instanceof Error ? err.message : t('household.signOutFailed'));
       return false;
     }
     for (const d of devices) store.removeDevice(d.id);
@@ -52,7 +54,7 @@ export function HouseholdScreen() {
   }
 
   async function handleRemoveDevice(device: Device) {
-    if (!window.confirm(`Sign out "${device.label}" and remove it? It will need to sign in again to sync.`)) return;
+    if (!window.confirm(t('household.confirmRemoveDevice', { label: device.label }))) return;
     await removeDevices([device]);
   }
 
@@ -61,13 +63,8 @@ export function HouseholdScreen() {
   // exactly as they are and keep showing their name, marked "(removed)".
   async function handleRemovePerson(profile: Profile) {
     const devices = devicesOf(profile.id);
-    const deviceNote =
-      devices.length > 0 ? ` Their ${devices.length} device${devices.length === 1 ? '' : 's'} will be signed out.` : '';
-    if (
-      !window.confirm(
-        `Remove ${profile.displayName} from the household?${deviceNote} Their past transactions and accounts stay, marked as removed.`,
-      )
-    )
+    const deviceNote = devices.length > 0 ? t('household.devicesSignedOut', { count: devices.length }) : '';
+    if (!window.confirm(t('household.confirmRemovePerson', { name: profile.displayName, deviceNote })))
       return;
     if (!(await removeDevices(devices))) return;
     store.updateProfile(profile.id, { deletedAt: nowUtc() });
@@ -87,19 +84,19 @@ export function HouseholdScreen() {
   return (
     <main className="home">
       <div className="app-bar">
-        <Link to="/settings" className="back-link">← Back</Link>
-        <span className="wordmark">Household</span>
+        <Link to="/settings" className="back-link">← {t('common.back')}</Link>
+        <span className="wordmark">{t('household.title')}</span>
         <span style={{ width: '3rem' }} />
       </div>
 
       {!authAccount ? (
-        <p className="empty-note">Sign in (Settings → Account) to manage your household's people and devices.</p>
+        <p className="empty-note">{t('household.signInFirst')}</p>
       ) : (
         <>
           {error && <p className="household-error">{error}</p>}
-          {!online && <p className="household-hint">You're offline — removing a device or person needs a connection.</p>}
+          {!online && <p className="household-hint">{t('household.offline')}</p>}
 
-          <div className="section-label">People</div>
+          <div className="section-label">{t('household.people')}</div>
           <div className="household-people">
             {active.map((p) => (
               <PersonCard
@@ -114,7 +111,7 @@ export function HouseholdScreen() {
             {unlinked.length > 0 && (
               <div className="household-person">
                 <div className="household-person-head">
-                  <span className="member-name">Not linked to a person</span>
+                  <span className="member-name">{t('household.unlinked')}</span>
                 </div>
                 {unlinked.map((d) => (
                   <DeviceRow key={d.id} device={d} online={online} onRemove={() => void handleRemoveDevice(d)} />
@@ -126,11 +123,11 @@ export function HouseholdScreen() {
           {adding ? (
             <div className="settings-field household-add">
               <label className="field-label">
-                Name
+                {t('common.name')}
                 <input
                   className="text-input"
                   autoFocus
-                  placeholder="e.g. Ana"
+                  placeholder={t('household.namePlaceholder')}
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   onKeyDown={(e) => {
@@ -140,32 +137,29 @@ export function HouseholdScreen() {
               </label>
               <div className="signin-code-actions">
                 <button className="save-btn" disabled={!newName.trim()} onClick={handleAddPerson}>
-                  Add
+                  {t('common.add')}
                 </button>
                 <button type="button" className="chip ghost" onClick={() => setAdding(false)}>
-                  Cancel
+                  {t('common.cancel')}
                 </button>
               </div>
             </div>
           ) : (
             <div className="accounts-list">
               <button className="settings-row" onClick={() => setAdding(true)}>
-                <span>+ Add a person</span>
+                <span>{t('household.addPerson')}</span>
               </button>
               <Link to="/settings/household/link-device" className="settings-row">
-                <span>+ Add a device to this account</span>
+                <span>{t('household.addDevice')}</span>
                 <span className="settings-row-arrow">›</span>
               </Link>
             </div>
           )}
-          <p className="household-hint">
-            Adding a device shows a code to scan from the new device — no email needed. To sync directly with a
-            nearby device without the cloud, use Settings → Connect a device.
-          </p>
+          <p className="household-hint">{t('household.addDeviceHint')}</p>
 
           {removed.length > 0 && (
             <>
-              <div className="section-label">Removed</div>
+              <div className="section-label">{t('household.removed')}</div>
               <div className="accounts-list">
                 {removed.map((p) => (
                   <div className="member-row household-removed" key={p.id}>
@@ -176,7 +170,7 @@ export function HouseholdScreen() {
                       className="chip ghost household-row-action"
                       onClick={() => store.updateProfile(p.id, { deletedAt: null })}
                     >
-                      Restore
+                      {t('household.restore')}
                     </button>
                   </div>
                 ))}
@@ -203,6 +197,7 @@ function PersonCard({
   onRemovePerson: () => void;
 }) {
   const store = useStore();
+  const { t } = useTranslation();
   // Local mirror of displayName, same reasoning as AccountsScreen's Name
   // field: binding straight to the store snaps the cursor to the end on
   // every keystroke once the async DB round-trip resolves.
@@ -215,7 +210,7 @@ function PersonCard({
         <PayerBadge label={nameStr || profile.displayName} mine={isYou} className="member-badge" />
         <input
           className="text-input household-name-input"
-          aria-label={isYou ? 'Your name' : `${profile.displayName}'s name`}
+          aria-label={isYou ? t('household.yourName') : t('household.theirName', { name: profile.displayName })}
           value={nameStr}
           onChange={(e) => {
             const v = e.target.value;
@@ -225,10 +220,10 @@ function PersonCard({
             if (v.trim()) store.updateProfile(profile.id, { displayName: v });
           }}
         />
-        {isYou && <span className="member-you">you</span>}
+        {isYou && <span className="member-you">{t('household.you')}</span>}
       </div>
       {devices.length === 0 ? (
-        <p className="household-hint household-device-none">No devices yet.</p>
+        <p className="household-hint household-device-none">{t('household.noDevices')}</p>
       ) : (
         devices.map((d) => <DeviceRow key={d.id} device={d} online={online} onRemove={() => onRemoveDevice(d)} />)
       )}
@@ -236,7 +231,7 @@ function PersonCard({
           device leaves; another person's device can remove you. */}
       {!isYou && (
         <button type="button" className="text-link household-remove-person" disabled={!online} onClick={onRemovePerson}>
-          Remove {profile.displayName}
+          {t('household.removePerson', { name: profile.displayName })}
         </button>
       )}
     </div>
@@ -244,16 +239,17 @@ function PersonCard({
 }
 
 function DeviceRow({ device, online, onRemove }: { device: Device; online: boolean; onRemove: () => void }) {
+  const { t } = useTranslation();
   const isThisDevice = device.id === getDeviceId();
   return (
     <div className="household-device">
       <span className="household-device-label">
         {device.label}
-        <span className="tx-meta">{isThisDevice ? 'this device' : `seen ${formatTimeAgo(device.lastSeenAt)}`}</span>
+        <span className="tx-meta">{isThisDevice ? t('household.thisDevice') : t('household.seen', { time: formatTimeAgo(device.lastSeenAt) })}</span>
       </span>
       {!isThisDevice && (
         <button type="button" className="chip ghost household-row-action" disabled={!online} onClick={onRemove}>
-          Remove
+          {t('common.remove')}
         </button>
       )}
     </div>

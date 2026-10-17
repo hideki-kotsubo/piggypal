@@ -9,7 +9,7 @@ function flatten(tree: Tree, prefix = ''): string[] {
   );
 }
 
-const PLURAL_SUFFIX = /_(zero|one|two|few|many|other)$/;
+const PLURAL_SUFFIX = /_(ordinal_)?(zero|one|two|few|many|other)$/;
 
 // Plural keys collapse to their base ("date.daysAgo_one" → "date.daysAgo"),
 // since each language needs a different set of suffixes.
@@ -40,11 +40,19 @@ describe('locale key parity', () => {
   for (const lang of ['en', ...BASE_LANGUAGES] as const) {
     it(`${lang} has every plural form its language needs`, () => {
       const flat = flatten(resources[lang].translation as Tree);
-      const pluralBases = new Set(flat.filter((k) => PLURAL_SUFFIX.test(k)).map((k) => k.replace(PLURAL_SUFFIX, '')));
-      const categories = new Intl.PluralRules(lang).resolvedOptions().pluralCategories;
-      const missing = [...pluralBases].flatMap((base) =>
-        categories.filter((c) => !flat.includes(`${base}_${c}`)).map((c) => `${base}_${c}`),
-      );
+      // "x_one" is a cardinal plural, "x_ordinal_one" an ordinal one; each
+      // kind has its own required categories.
+      const missing = (['cardinal', 'ordinal'] as const).flatMap((type) => {
+        const infix = type === 'ordinal' ? '_ordinal' : '';
+        const suffix = new RegExp(`${infix}_(zero|one|two|few|many|other)$`);
+        const bases = new Set(
+          flat.filter((k) => suffix.test(k) && (type === 'ordinal' || !k.includes('_ordinal_'))).map((k) => k.replace(suffix, '')),
+        );
+        const categories = new Intl.PluralRules(lang, { type }).resolvedOptions().pluralCategories;
+        return [...bases].flatMap((base) =>
+          categories.filter((c) => !flat.includes(`${base}${infix}_${c}`)).map((c) => `${base}${infix}_${c}`),
+        );
+      });
       expect(missing).toEqual([]);
     });
   }

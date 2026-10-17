@@ -33,7 +33,11 @@
     "undo": "Annuler",
     "noNote": "Sans note",
     "tryAgain": "Réessayer",
-    "done": "Terminé"
+    "done": "Terminé",
+    "add": "Ajouter",
+    "cancel": "Annuler",
+    "remove": "Retirer",
+    "name": "Nom"
   },
   "nav": {
     "insights": "Analyses",
@@ -130,5 +134,77 @@
     "confirm_one": "Garder 1, supprimer {{count}}",
     "confirm_other": "Garder 1, supprimer {{count}}",
     "confirm_many": "Garder 1, supprimer {{count}}"
+  },
+  "cadence": {
+    "weekly_one": "Chaque semaine le {{weekday}}",
+    "weekly_other": "Toutes les {{count}} semaines le {{weekday}}",
+    "weekly_many": "Toutes les {{count}} semaines le {{weekday}}",
+    "yearly_one": "Chaque année le {{date}}",
+    "yearly_other": "Tous les {{count}} ans le {{date}}",
+    "yearly_many": "Tous les {{count}} ans le {{date}}",
+    "monthly_one": "Chaque mois le {{day}}",
+    "monthly_other": "Tous les {{count}} mois le {{day}}",
+    "monthly_many": "Tous les {{count}} mois le {{day}}",
+    "orLastDay": "{{day}} (ou dernier jour)",
+    "day_ordinal_one": "{{count}}er",
+    "day_ordinal_other": "{{count}}"
+  },
+  "schedules": {
+    "title": "Programmés",
+    "add": "Ajouter un paiement programmé",
+    "due": "À régler",
+    "nextDays_one": "Prochain {{count}} jour",
+    "nextDays_other": "{{count}} prochains jours",
+    "nextDays_many": "{{count}} prochains jours",
+    "schedules": "Échéanciers",
+    "empty": "Rien de programmé pour l’instant — touchez + pour ajouter un loyer, des frais de scolarité, une location ou un achat en plusieurs fois.",
+    "stopped": "Arrêtés ({{count}})",
+    "overdue_one": "{{count}} jour de retard",
+    "overdue_other": "{{count}} jours de retard",
+    "overdue_many": "{{count}} jours de retard",
+    "skip": "Passer",
+    "paid": "Payé",
+    "paused": "En pause",
+    "dueCount_one": "{{count}} à régler",
+    "dueCount_many": "{{count}} à régler",
+    "dueCount_other": "{{count}} à régler",
+    "next": "prochain {{date}}",
+    "noMore": "plus de paiements",
+    "left": "{{left}} sur {{total}} restants",
+    "auto": "Auto"
+  },
+  "household": {
+    "title": "Foyer",
+    "member": "Membre du foyer",
+    "signOutFailed": "Impossible de déconnecter cet appareil.",
+    "confirmRemoveDevice": "Déconnecter et retirer « {{label}} » ? Il devra se reconnecter pour synchroniser.",
+    "confirmRemovePerson": "Retirer {{name}} du foyer ?{{deviceNote}} Ses opérations et comptes passés restent, marqués comme retirés.",
+    "devicesSignedOut_one": " Son appareil sera déconnecté.",
+    "devicesSignedOut_other": " Ses {{count}} appareils seront déconnectés.",
+    "devicesSignedOut_many": " Ses {{count}} appareils seront déconnectés.",
+    "signInFirst": "Connectez-vous (Paramètres → Compte) pour gérer les personnes et les appareils de votre foyer.",
+    "offline": "Vous êtes hors ligne — retirer un appareil ou une personne nécessite une connexion.",
+    "people": "Personnes",
+    "unlinked": "Lié à aucune personne",
+    "namePlaceholder": "ex. : Ana",
+    "addPerson": "+ Ajouter une personne",
+    "addDevice": "+ Ajouter un appareil à ce compte",
+    "addDeviceHint": "Ajouter un appareil affiche un code à scanner depuis le nouvel appareil — pas besoin de courriel. Pour synchroniser directement avec un appareil à proximité sans le nuage, utilisez Paramètres → Connecter un appareil.",
+    "removed": "Retirés",
+    "restore": "Restaurer",
+    "yourName": "Votre nom",
+    "theirName": "Nom de {{name}}",
+    "you": "vous",
+    "noDevices": "Aucun appareil pour l’instant.",
+    "removePerson": "Retirer {{name}}",
+    "thisDevice": "cet appareil",
+    "seen": "vu {{time}}",
+    "removedName": "{{name}} (retiré)"
+  },
+  "accounts": {
+    "shared": "Partagé"
+  },
+  "picker": {
+    "more": "+ {{count}} de plus"
   }
 }

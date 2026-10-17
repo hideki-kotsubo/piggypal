@@ -30,7 +30,11 @@
     "undo": "Undo",
     "noNote": "No note",
     "tryAgain": "Try again",
-    "done": "Done"
+    "done": "Done",
+    "add": "Add",
+    "cancel": "Cancel",
+    "remove": "Remove",
+    "name": "Name"
   },
   "nav": {
     "insights": "Insights",
@@ -121,5 +125,72 @@
     "notDuplicate": "Not a duplicate",
     "confirm_one": "Keep 1, delete {{count}}",
     "confirm_other": "Keep 1, delete {{count}}"
+  },
+  "cadence": {
+    "weekly_one": "Weekly on {{weekday}}",
+    "weekly_other": "Every {{count}} weeks on {{weekday}}",
+    "yearly_one": "Yearly on {{date}}",
+    "yearly_other": "Every {{count}} years on {{date}}",
+    "monthly_one": "Monthly on the {{day}}",
+    "monthly_other": "Every {{count}} months on the {{day}}",
+    "orLastDay": "{{day}} (or last day)",
+    "day_ordinal_one": "{{count}}st",
+    "day_ordinal_two": "{{count}}nd",
+    "day_ordinal_few": "{{count}}rd",
+    "day_ordinal_other": "{{count}}th"
+  },
+  "schedules": {
+    "title": "Scheduled",
+    "add": "Add scheduled payment",
+    "due": "Due",
+    "nextDays_one": "Next {{count}} day",
+    "nextDays_other": "Next {{count}} days",
+    "schedules": "Schedules",
+    "empty": "Nothing scheduled yet — tap + to add rent, tuition, a lease, or an installment purchase.",
+    "stopped": "Stopped ({{count}})",
+    "overdue_one": "{{count}} day overdue",
+    "overdue_other": "{{count}} days overdue",
+    "skip": "Skip",
+    "paid": "Paid",
+    "paused": "Paused",
+    "dueCount_one": "{{count}} due",
+    "dueCount_other": "{{count}} due",
+    "next": "next {{date}}",
+    "noMore": "no more payments",
+    "left": "{{left}} of {{total}} left",
+    "auto": "Auto"
+  },
+  "household": {
+    "title": "Household",
+    "member": "Household member",
+    "signOutFailed": "Couldn't sign that device out.",
+    "confirmRemoveDevice": "Sign out \"{{label}}\" and remove it? It will need to sign in again to sync.",
+    "confirmRemovePerson": "Remove {{name}} from the household?{{deviceNote}} Their past transactions and accounts stay, marked as removed.",
+    "devicesSignedOut_one": " Their device will be signed out.",
+    "devicesSignedOut_other": " Their {{count}} devices will be signed out.",
+    "signInFirst": "Sign in (Settings → Account) to manage your household's people and devices.",
+    "offline": "You're offline — removing a device or person needs a connection.",
+    "people": "People",
+    "unlinked": "Not linked to a person",
+    "namePlaceholder": "e.g. Ana",
+    "addPerson": "+ Add a person",
+    "addDevice": "+ Add a device to this account",
+    "addDeviceHint": "Adding a device shows a code to scan from the new device — no email needed. To sync directly with a nearby device without the cloud, use Settings → Connect a device.",
+    "removed": "Removed",
+    "restore": "Restore",
+    "yourName": "Your name",
+    "theirName": "{{name}}'s name",
+    "you": "you",
+    "noDevices": "No devices yet.",
+    "removePerson": "Remove {{name}}",
+    "thisDevice": "this device",
+    "seen": "seen {{time}}",
+    "removedName": "{{name}} (removed)"
+  },
+  "accounts": {
+    "shared": "Shared"
+  },
+  "picker": {
+    "more": "+ {{count}} more"
   }
 }

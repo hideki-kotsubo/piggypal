@@ -107,10 +107,15 @@ export function uiLocale(): string {
 }
 
 function applyLanguage(language: Language) {
-  formatLocale = formatLocaleFor(language, deviceLanguages());
-  if (typeof document !== 'undefined') document.documentElement.lang = language;
   void i18n.changeLanguage(language);
 }
+
+// Every language change, from any caller, keeps the Intl locale and
+// <html lang> in step with i18next.
+i18n.on('languageChanged', (language) => {
+  formatLocale = formatLocaleFor(language as Language, deviceLanguages());
+  if (typeof document !== 'undefined') document.documentElement.lang = language;
+});
 
 // Bundled, not lazy-loaded (D263): offline-first, and init is synchronous
 // with inline resources, so the first paint is already in the right
@@ -121,7 +126,6 @@ void i18n.use(initReactI18next).init({
   fallbackLng: 'en',
   interpolation: { escapeValue: false }, // React already escapes
 });
-if (typeof document !== 'undefined') document.documentElement.lang = i18n.language;
 
 export function useLanguagePreference(): {
   preference: LanguagePreference;

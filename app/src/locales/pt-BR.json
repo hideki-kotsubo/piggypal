@@ -33,7 +33,11 @@
     "undo": "Desfazer",
     "noNote": "Sem nota",
     "tryAgain": "Tentar novamente",
-    "done": "Concluir"
+    "done": "Concluir",
+    "add": "Adicionar",
+    "cancel": "Cancelar",
+    "remove": "Remover",
+    "name": "Nome"
   },
   "nav": {
     "insights": "Análises",
@@ -130,5 +134,76 @@
     "confirm_one": "Manter 1, excluir {{count}}",
     "confirm_other": "Manter 1, excluir {{count}}",
     "confirm_many": "Manter 1, excluir {{count}}"
+  },
+  "cadence": {
+    "weekly_one": "Semanal, {{weekday}}",
+    "weekly_other": "A cada {{count}} semanas, {{weekday}}",
+    "weekly_many": "A cada {{count}} semanas, {{weekday}}",
+    "yearly_one": "Anual, em {{date}}",
+    "yearly_other": "A cada {{count}} anos, em {{date}}",
+    "yearly_many": "A cada {{count}} anos, em {{date}}",
+    "monthly_one": "Mensal, no dia {{day}}",
+    "monthly_other": "A cada {{count}} meses, no dia {{day}}",
+    "monthly_many": "A cada {{count}} meses, no dia {{day}}",
+    "orLastDay": "{{day}} (ou último dia)",
+    "day_ordinal_other": "{{count}}"
+  },
+  "schedules": {
+    "title": "Agendados",
+    "add": "Adicionar pagamento agendado",
+    "due": "Pendentes",
+    "nextDays_one": "Próximo {{count}} dia",
+    "nextDays_other": "Próximos {{count}} dias",
+    "nextDays_many": "Próximos {{count}} dias",
+    "schedules": "Agendamentos",
+    "empty": "Nada agendado ainda — toque em + para adicionar aluguel, mensalidade, um leasing ou uma compra parcelada.",
+    "stopped": "Encerrados ({{count}})",
+    "overdue_one": "{{count}} dia de atraso",
+    "overdue_other": "{{count}} dias de atraso",
+    "overdue_many": "{{count}} dias de atraso",
+    "skip": "Pular",
+    "paid": "Pago",
+    "paused": "Pausado",
+    "dueCount_one": "{{count}} pendente",
+    "dueCount_many": "{{count}} pendentes",
+    "dueCount_other": "{{count}} pendentes",
+    "next": "próximo {{date}}",
+    "noMore": "sem mais pagamentos",
+    "left": "faltam {{left}} de {{total}}",
+    "auto": "Automático"
+  },
+  "household": {
+    "title": "Família",
+    "member": "Membro da família",
+    "signOutFailed": "Não foi possível desconectar esse dispositivo.",
+    "confirmRemoveDevice": "Desconectar e remover “{{label}}”? Ele vai precisar entrar novamente para sincronizar.",
+    "confirmRemovePerson": "Remover {{name}} da família?{{deviceNote}} Os lançamentos e contas anteriores continuam, marcados como removidos.",
+    "devicesSignedOut_one": " O dispositivo dessa pessoa será desconectado.",
+    "devicesSignedOut_other": " Os {{count}} dispositivos dessa pessoa serão desconectados.",
+    "devicesSignedOut_many": " Os {{count}} dispositivos dessa pessoa serão desconectados.",
+    "signInFirst": "Entre (Configurações → Conta) para gerenciar as pessoas e os dispositivos da sua família.",
+    "offline": "Você está off-line — remover um dispositivo ou uma pessoa precisa de conexão.",
+    "people": "Pessoas",
+    "unlinked": "Não vinculado a uma pessoa",
+    "namePlaceholder": "ex.: Ana",
+    "addPerson": "+ Adicionar pessoa",
+    "addDevice": "+ Adicionar dispositivo a esta conta",
+    "addDeviceHint": "Adicionar um dispositivo mostra um código para escanear no novo dispositivo — sem precisar de e-mail. Para sincronizar direto com um dispositivo próximo, sem a nuvem, use Configurações → Conectar dispositivo.",
+    "removed": "Removidos",
+    "restore": "Restaurar",
+    "yourName": "Seu nome",
+    "theirName": "Nome de {{name}}",
+    "you": "você",
+    "noDevices": "Nenhum dispositivo ainda.",
+    "removePerson": "Remover {{name}}",
+    "thisDevice": "este dispositivo",
+    "seen": "visto {{time}}",
+    "removedName": "{{name}} (removido)"
+  },
+  "accounts": {
+    "shared": "Compartilhada"
+  },
+  "picker": {
+    "more": "+ {{count}} mais"
   }
 }
