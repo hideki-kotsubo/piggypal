@@ -553,5 +553,19 @@
     "logged": "Enregistrés",
     "skipped": "Passé",
     "markPaid": "Marquer payé"
+  },
+  "errors": {
+    "sendLink": "Impossible d’envoyer le lien de connexion — vérifiez l’adresse et réessayez.",
+    "linkInvalid": "Ce lien de connexion est invalide ou a expiré.",
+    "codeInvalid": "Ce code est invalide ou a expiré.",
+    "createCode": "Impossible de créer un code — vérifiez votre connexion et réessayez.",
+    "codeUsed": "Ce code a expiré ou a déjà été utilisé.",
+    "signOutDevice": "Impossible de déconnecter cet appareil — vérifiez votre connexion et réessayez.",
+    "unreachable": "Impossible de joindre Flowtab. Vérifiez votre connexion et réessayez.",
+    "signInToDelete": "Reconnectez-vous sur cet appareil pour supprimer le compte.",
+    "deleteAccount": "Impossible de supprimer le compte. Vérifiez votre connexion et réessayez.",
+    "relayUnreachable": "Impossible de joindre le serveur d’association.",
+    "relayClosed": "La connexion au serveur d’association s’est fermée avant la fin.",
+    "pairingFailed": "Échec de l’association."
   }
 }

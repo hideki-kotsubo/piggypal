@@ -1,3 +1,4 @@
+import i18n from './i18n';
 import { useSyncExternalStore } from 'react';
 import { getDeviceId, getLocalUserId } from './identity';
 import { forgetRefreshToken, loadRefreshToken, saveRefreshToken, usesNativeRefreshToken } from './nativeRefreshToken';
@@ -199,7 +200,7 @@ export async function requestMagicLink(email: string): Promise<void> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }),
   });
-  if (!res.ok) throw new Error('Could not send the sign-in link — check the email address and try again.');
+  if (!res.ok) throw new Error(i18n.t('errors.sendLink'));
   localStorage.setItem(PENDING_SENT_AT_KEY, String(Date.now()));
 }
 
@@ -256,7 +257,7 @@ export async function verifyMagicLink(token: string): Promise<VerifyResult> {
   const res = await apiFetch(`/api/auth/verify?${params}`);
   if (!res.ok) {
     const body = await res.json().catch(() => ({}) as { error?: string });
-    throw new Error(body.error ?? 'That sign-in link is invalid or has expired.');
+    throw new Error(body.error ?? i18n.t('errors.linkInvalid'));
   }
   return adoptSession((await res.json()) as VerifyResult);
 }
@@ -273,7 +274,7 @@ export async function verifyMagicCode(email: string, code: string): Promise<Veri
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}) as { error?: string });
-    throw new Error(body.error ?? 'That code is invalid or has expired.');
+    throw new Error(body.error ?? i18n.t('errors.codeInvalid'));
   }
   return adoptSession((await res.json()) as VerifyResult);
 }
@@ -294,7 +295,7 @@ export function parseDeviceLinkPayload(text: string): string | null {
 // The signed-in side: a fresh single-use code, valid for a few minutes.
 export async function startDeviceLink(): Promise<{ token: string; expiresAt: string }> {
   const res = await authedFetch('/api/auth/device-link/start', { method: 'POST' });
-  if (!res?.ok) throw new Error('Could not create a code — check your connection and try again.');
+  if (!res?.ok) throw new Error(i18n.t('errors.createCode'));
   return res.json();
 }
 
@@ -308,7 +309,7 @@ export async function claimDeviceLink(token: string): Promise<VerifyResult> {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}) as { error?: string });
-    throw new Error(body.error ?? 'That code has expired or was already used.');
+    throw new Error(body.error ?? i18n.t('errors.codeUsed'));
   }
   return adoptSession((await res.json()) as VerifyResult);
 }
@@ -317,7 +318,7 @@ export async function claimDeviceLink(token: string): Promise<VerifyResult> {
 // revoked). Online-only by nature; throws so the caller can say so.
 export async function revokeDevice(deviceId: string): Promise<void> {
   const res = await authedFetch(`/api/auth/devices/${encodeURIComponent(deviceId)}/revoke`, { method: 'POST' });
-  if (!res?.ok) throw new Error("Couldn't sign that device out — check your connection and try again.");
+  if (!res?.ok) throw new Error(i18n.t('errors.signOutDevice'));
 }
 
 // docs/72 D257 — deletes the account and all its synced data on the server.
@@ -336,12 +337,12 @@ export async function deleteAccount(): Promise<void> {
       body: JSON.stringify(refreshToken ? { refreshToken } : {}),
     });
   } catch {
-    throw new Error("Couldn't reach Flowtab. Check your connection and try again.");
+    throw new Error(i18n.t('errors.unreachable'));
   }
-  if (!res) throw new Error('Sign in again on this device to delete the account.');
+  if (!res) throw new Error(i18n.t('errors.signInToDelete'));
   if (!res.ok) {
     const body = await res.json().catch(() => ({}) as { error?: string });
-    throw new Error(body.error ?? "Couldn't delete the account. Check your connection and try again.");
+    throw new Error(body.error ?? i18n.t('errors.deleteAccount'));
   }
   accessToken = null;
   await forgetRefreshToken();

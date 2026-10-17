@@ -530,5 +530,19 @@
     "logged": "Logged",
     "skipped": "Skipped",
     "markPaid": "Mark paid"
+  },
+  "errors": {
+    "sendLink": "Could not send the sign-in link — check the email address and try again.",
+    "linkInvalid": "That sign-in link is invalid or has expired.",
+    "codeInvalid": "That code is invalid or has expired.",
+    "createCode": "Could not create a code — check your connection and try again.",
+    "codeUsed": "That code has expired or was already used.",
+    "signOutDevice": "Couldn't sign that device out — check your connection and try again.",
+    "unreachable": "Couldn't reach Flowtab. Check your connection and try again.",
+    "signInToDelete": "Sign in again on this device to delete the account.",
+    "deleteAccount": "Couldn't delete the account. Check your connection and try again.",
+    "relayUnreachable": "Could not reach the relay.",
+    "relayClosed": "Relay connection closed before pairing finished.",
+    "pairingFailed": "Pairing failed."
   }
 }

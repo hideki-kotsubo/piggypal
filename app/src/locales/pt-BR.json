@@ -552,5 +552,19 @@
     "logged": "Registrados",
     "skipped": "Pulado",
     "markPaid": "Marcar como pago"
+  },
+  "errors": {
+    "sendLink": "Não foi possível enviar o link de acesso — confira o e-mail e tente novamente.",
+    "linkInvalid": "Esse link de acesso é inválido ou expirou.",
+    "codeInvalid": "Esse código é inválido ou expirou.",
+    "createCode": "Não foi possível criar um código — confira sua conexão e tente novamente.",
+    "codeUsed": "Esse código expirou ou já foi usado.",
+    "signOutDevice": "Não foi possível desconectar esse dispositivo — confira sua conexão e tente novamente.",
+    "unreachable": "Não foi possível falar com o Flowtab. Confira sua conexão e tente novamente.",
+    "signInToDelete": "Entre novamente neste dispositivo para excluir a conta.",
+    "deleteAccount": "Não foi possível excluir a conta. Confira sua conexão e tente novamente.",
+    "relayUnreachable": "Não foi possível alcançar o servidor de pareamento.",
+    "relayClosed": "A conexão com o servidor de pareamento fechou antes de terminar.",
+    "pairingFailed": "Falha no pareamento."
   }
 }

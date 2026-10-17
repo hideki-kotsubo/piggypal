@@ -552,5 +552,19 @@
     "logged": "Registrados",
     "skipped": "Omitido",
     "markPaid": "Marcar como pagado"
+  },
+  "errors": {
+    "sendLink": "No se pudo enviar el enlace de acceso: revisa el correo e inténtalo de nuevo.",
+    "linkInvalid": "Ese enlace de acceso no es válido o venció.",
+    "codeInvalid": "Ese código no es válido o venció.",
+    "createCode": "No se pudo crear un código: revisa tu conexión e inténtalo de nuevo.",
+    "codeUsed": "Ese código venció o ya se usó.",
+    "signOutDevice": "No se pudo cerrar la sesión de ese dispositivo: revisa tu conexión e inténtalo de nuevo.",
+    "unreachable": "No se pudo conectar con Flowtab. Revisa tu conexión e inténtalo de nuevo.",
+    "signInToDelete": "Inicia sesión de nuevo en este dispositivo para eliminar la cuenta.",
+    "deleteAccount": "No se pudo eliminar la cuenta. Revisa tu conexión e inténtalo de nuevo.",
+    "relayUnreachable": "No se pudo conectar con el servidor de vinculación.",
+    "relayClosed": "La conexión con el servidor de vinculación se cerró antes de terminar.",
+    "pairingFailed": "Falló la vinculación."
   }
 }
