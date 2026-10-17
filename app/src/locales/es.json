@@ -567,7 +567,8 @@
     "deleteAccount": "No se pudo eliminar la cuenta. Revisa tu conexión e inténtalo de nuevo.",
     "relayUnreachable": "No se pudo conectar con el servidor de vinculación.",
     "relayClosed": "La conexión con el servidor de vinculación se cerró antes de terminar.",
-    "pairingFailed": "Falló la vinculación."
+    "pairingFailed": "Falló la vinculación.",
+    "notOwner": "Solo quien creó la cuenta puede eliminarla."
   },
   "seedCategory": {
     "cat-food": "Comida y Supermercado",

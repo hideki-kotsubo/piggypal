@@ -193,12 +193,30 @@ const CODE_TTL_MS = 15 * 60 * 1000;
 // installed instance handles its own mailto links in practice, and the
 // only way this code can show "signed in as ___" without changing
 // docs/41's already-tested response shape.
+// docs/73 D271: the API answers user-facing failures with a stable `code`
+// next to its English `error`; the app shows its own translated text for
+// the codes it knows, else the caller's translated fallback — never the
+// server's English sentence.
+const SERVER_ERROR_KEYS: Record<string, string> = {
+  link_invalid: 'errors.linkInvalid',
+  code_invalid: 'errors.codeInvalid',
+  device_link_expired: 'errors.codeUsed',
+  sign_in_again: 'errors.signInToDelete',
+  not_owner: 'errors.notOwner',
+};
+
+async function serverError(res: Response, fallbackKey: string): Promise<Error> {
+  const body = (await res.json().catch(() => ({}))) as { code?: string };
+  return new Error(i18n.t((body.code && SERVER_ERROR_KEYS[body.code]) || fallbackKey));
+}
+
 export async function requestMagicLink(email: string): Promise<void> {
   localStorage.setItem(PENDING_EMAIL_KEY, email);
   const res = await apiFetch('/api/auth/request-link', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email }),
+    // The sign-in email comes back in this language (docs/73 D271).
+    body: JSON.stringify({ email, language: i18n.language }),
   });
   if (!res.ok) throw new Error(i18n.t('errors.sendLink'));
   localStorage.setItem(PENDING_SENT_AT_KEY, String(Date.now()));
@@ -256,8 +274,7 @@ export async function verifyMagicLink(token: string): Promise<VerifyResult> {
   const params = new URLSearchParams({ token, localUserId: getLocalUserId(), deviceId: getDeviceId() });
   const res = await apiFetch(`/api/auth/verify?${params}`);
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}) as { error?: string });
-    throw new Error(body.error ?? i18n.t('errors.linkInvalid'));
+    throw await serverError(res, 'errors.linkInvalid');
   }
   return adoptSession((await res.json()) as VerifyResult);
 }
@@ -273,8 +290,7 @@ export async function verifyMagicCode(email: string, code: string): Promise<Veri
     body: JSON.stringify({ email, code, localUserId: getLocalUserId(), deviceId: getDeviceId() }),
   });
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}) as { error?: string });
-    throw new Error(body.error ?? i18n.t('errors.codeInvalid'));
+    throw await serverError(res, 'errors.codeInvalid');
   }
   return adoptSession((await res.json()) as VerifyResult);
 }
@@ -308,8 +324,7 @@ export async function claimDeviceLink(token: string): Promise<VerifyResult> {
     body: JSON.stringify({ token, localUserId: getLocalUserId(), deviceId: getDeviceId() }),
   });
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}) as { error?: string });
-    throw new Error(body.error ?? i18n.t('errors.codeUsed'));
+    throw await serverError(res, 'errors.codeUsed');
   }
   return adoptSession((await res.json()) as VerifyResult);
 }
@@ -341,8 +356,7 @@ export async function deleteAccount(): Promise<void> {
   }
   if (!res) throw new Error(i18n.t('errors.signInToDelete'));
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}) as { error?: string });
-    throw new Error(body.error ?? i18n.t('errors.deleteAccount'));
+    throw await serverError(res, 'errors.deleteAccount');
   }
   accessToken = null;
   await forgetRefreshToken();

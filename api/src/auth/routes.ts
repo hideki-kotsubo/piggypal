@@ -4,6 +4,7 @@ import { pool } from '../db.js';
 import { signAccessToken } from '../jwt.js';
 import { generateOpaqueToken, generateSignInCode, hashToken, hashesMatch } from './crypto.js';
 import { sendMagicLinkEmail } from './email.js';
+import { emailLanguage } from './emailTemplates.js';
 import { isDeletedAccount, requireAccessToken, type AuthedRequest } from './middleware.js';
 
 export const authRouter = Router();
@@ -122,7 +123,7 @@ authRouter.post('/request-link', async (req, res) => {
 
   const appBaseUrl = process.env.APP_BASE_URL || 'http://localhost:3001';
   const verifyUrl = `${appBaseUrl}/auth/verify?token=${encodeURIComponent(token)}`;
-  await sendMagicLinkEmail(email, verifyUrl, code);
+  await sendMagicLinkEmail(email, verifyUrl, code, emailLanguage(req.body?.language));
 
   res.json({ ok: true });
 });
@@ -210,7 +211,7 @@ authRouter.get('/verify', async (req, res) => {
     const link = linkResult.rows[0];
     if (!link) {
       await client.query('ROLLBACK');
-      res.status(400).json({ error: 'Invalid or expired link' });
+      res.status(400).json({ error: 'Invalid or expired link', code: 'link_invalid' });
       return;
     }
     await completeSignIn(client, req, res, link, localUserId, deviceId);
@@ -262,7 +263,7 @@ authRouter.post('/verify-code', async (req, res) => {
         );
       }
       await client.query('COMMIT');
-      res.status(400).json({ error: 'Invalid or expired code' });
+      res.status(400).json({ error: 'Invalid or expired code', code: 'code_invalid' });
       return;
     }
     await completeSignIn(client, req, res, link, localUserId, deviceId);
@@ -442,7 +443,7 @@ authRouter.post('/device-link/claim', async (req, res) => {
     const code = codeResult.rows[0];
     if (!code) {
       await client.query('ROLLBACK');
-      res.status(400).json({ error: 'That code has expired or was already used. Show a new one on the other device.' });
+      res.status(400).json({ error: 'That code has expired or was already used. Show a new one on the other device.', code: 'device_link_expired' });
       return;
     }
     await client.query('UPDATE device_link_codes SET claimed_at = now() WHERE id = $1', [code.id]);
@@ -505,7 +506,7 @@ authRouter.post('/delete-account', requireAccessToken, async (req: AuthedRequest
   const userId = req.userId!;
   const presentedToken = presentedRefreshToken(req);
   if (!presentedToken) {
-    res.status(401).json({ error: 'Sign in again on this device to delete the account.' });
+    res.status(401).json({ error: 'Sign in again on this device to delete the account.', code: 'sign_in_again' });
     return;
   }
 
@@ -519,7 +520,7 @@ authRouter.post('/delete-account', requireAccessToken, async (req: AuthedRequest
     const deviceId = session.rows[0]?.device_id;
     if (!deviceId) {
       await client.query('ROLLBACK');
-      res.status(401).json({ error: 'Sign in again on this device to delete the account.' });
+      res.status(401).json({ error: 'Sign in again on this device to delete the account.', code: 'sign_in_again' });
       return;
     }
     const device = await client.query<{ profile_id: string }>('SELECT profile_id FROM devices WHERE id = $1 AND user_id = $2', [
@@ -528,7 +529,7 @@ authRouter.post('/delete-account', requireAccessToken, async (req: AuthedRequest
     ]);
     if (device.rows[0]?.profile_id !== userId) {
       await client.query('ROLLBACK');
-      res.status(403).json({ error: 'Only the account owner can delete the account.' });
+      res.status(403).json({ error: 'Only the account owner can delete the account.', code: 'not_owner' });
       return;
     }
 

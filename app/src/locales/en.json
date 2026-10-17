@@ -545,7 +545,8 @@
     "deleteAccount": "Couldn't delete the account. Check your connection and try again.",
     "relayUnreachable": "Could not reach the relay.",
     "relayClosed": "Relay connection closed before pairing finished.",
-    "pairingFailed": "Pairing failed."
+    "pairingFailed": "Pairing failed.",
+    "notOwner": "Only the person who created the account can delete it."
   },
   "seedCategory": {
     "cat-food": "Food & Groceries",

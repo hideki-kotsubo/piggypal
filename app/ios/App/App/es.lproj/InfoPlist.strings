@@ -1,0 +1,4 @@
+/* docs/73 D271 — Info.plist's permission prompts in Spanish (es-419 falls back here). */
+"NSCameraUsageDescription" = "Flowtab usa la cámara para escanear el código QR cuando vinculas otro dispositivo.";
+"NSMicrophoneUsageDescription" = "Flowtab usa el micrófono para que puedas decir un gasto en lugar de escribirlo.";
+"NSSpeechRecognitionUsageDescription" = "Flowtab convierte lo que dices en texto para completar el gasto y que lo confirmes.";

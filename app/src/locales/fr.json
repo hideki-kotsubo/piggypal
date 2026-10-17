@@ -568,7 +568,8 @@
     "deleteAccount": "Impossible de supprimer le compte. Vérifiez votre connexion et réessayez.",
     "relayUnreachable": "Impossible de joindre le serveur d’association.",
     "relayClosed": "La connexion au serveur d’association s’est fermée avant la fin.",
-    "pairingFailed": "Échec de l’association."
+    "pairingFailed": "Échec de l’association.",
+    "notOwner": "Seule la personne qui a créé le compte peut le supprimer."
   },
   "seedCategory": {
     "cat-food": "Alimentation et Courses",

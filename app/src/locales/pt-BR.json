@@ -567,7 +567,8 @@
     "deleteAccount": "Não foi possível excluir a conta. Confira sua conexão e tente novamente.",
     "relayUnreachable": "Não foi possível alcançar o servidor de pareamento.",
     "relayClosed": "A conexão com o servidor de pareamento fechou antes de terminar.",
-    "pairingFailed": "Falha no pareamento."
+    "pairingFailed": "Falha no pareamento.",
+    "notOwner": "Só quem criou a conta pode excluí-la."
   },
   "seedCategory": {
     "cat-food": "Alimentação e Mercado",
