@@ -1,8 +1,9 @@
 # 73 — Multi-language UI and voice (en, pt-BR, es, fr)
 
-2026-10-16. Planned with the user the same day. Phases 1-3 (UI text,
-translations, starter names) built the same day on branch `feat/i18n`;
-see "Phase 1 status" and "Phases 2-3 status" below. Not released.
+2026-10-16. Planned with the user the same day. All six phases built the
+same day: 1-3 on `feat/i18n` (merged to `main`, not yet released), 4-6 on
+`feat/i18n-voice-parser`. See the status sections below. Not released;
+nothing native has run on a device yet.
 
 ## Why, and what this reopens
 
@@ -265,6 +266,90 @@ pt-BR, es and fr text at once.
 - `guessDeviceLabel()`'s generic fallbacks are translated when created.
   The value is saved and shown to other household members as-is,
   same as any device name.
+
+## Phases 4-6 status (2026-10-16)
+
+**Voice (phase 4).**
+- `lib/voiceLanguage.ts`: the Voice language setting (`flowtab:voice-language`,
+  removed for "Same as app"), `speechTagFor()` and `currentSpeechTag()`.
+  Settings shows the section only where voice entry exists.
+- D268 refined while building: a variant picked by region (pt-BR, es-ES,
+  fr-CA) is sent exactly as picked. Only a base language (en, es, fr)
+  takes the device's region, and never the other variant's (an es-ES
+  phone with "Latinoamérica" picked still gets es-MX).
+- D269 settled for iOS: `@capacitor-community/speech-recognition` 7.0.1
+  ships no `Package.swift`, so it can't join this Swift Package Manager
+  iOS project (docs/52). The Android app uses it (it builds against the
+  app's own SDK 36 settings); iOS keeps WebKit's recognizer.
+  `capacitor.config.ts`'s `ios.includePlugins` lists every other plugin,
+  so new iOS plugins must be added there too. `cap update` for both
+  platforms was run here: Android gained the plugin, iOS's
+  `Package.swift` is unchanged.
+- `speechInput.ts`: Android goes through the plugin (permission check,
+  `start({ language, popup: false })`), web and iOS through Web Speech
+  with `lang` set. The plugin's error texts map onto Web Speech's
+  codes, and EntryZone now says why voice stopped (permission,
+  language not available, network, not understood); "no speech" and
+  "aborted" stay silent. Android has no separate "language not
+  supported" error, so that case shows "Couldn't catch that".
+- Checked in headless Chromium with a stubbed recognizer: UI in
+  English, voice set to Português, the recognizer received `pt-BR` and
+  "quarenta e cinco no mercado ontem" became $45 / Groceries /
+  yesterday.
+
+**Parser (phase 5).**
+- `lib/parserVocab.ts`: one pack per language (numbers, joiners,
+  articles, today/yesterday/day-before words, "last <weekday>"
+  patterns, months and date shape, income words, merchant connectors,
+  edge fillers, starter-category keywords, reserved words). D270's
+  conflict rule as built: the input language's pack goes first, and
+  its `reserved` words drop other languages' readings: es reserves
+  "no", fr "sept", pt "dos"/"des", en "once".
+- `parseUtterance` takes `language`, `categoryAliases` and
+  `accountAliases`. EntryZone passes the voice language for speech and
+  the UI language for typing, plus `starterCategoryAliases()` /
+  `starterAccountAliases()` from `starterLabels.ts` (every language's
+  starter names, for never-renamed rows only). The parser itself
+  still imports no React or i18n.
+- Built-in pack keywords match starter category ids directly, so
+  existing installs get Spanish/French keywords without reseeding
+  `category_keywords`. Pack keywords and aliases match whole words
+  (accent-aware); the user's own names and saved keywords keep the old
+  substring matching.
+- Two behaviour fixes found while writing the tests: an article
+  ("um café cinco", "un café cinco") is no longer read as the amount 1
+  when another number word is present, and a group plus its own
+  subcategory ("transporte uber") resolves to the subcategory instead
+  of counting as ambiguous.
+- Dates: each language's own shape is tried first ("15 de marzo 30" is
+  the 15th, not English-style "marzo 30"). The French "16 août" shape
+  only accepts French month names.
+- `parser.test.ts`: 24 tests, the first tests the parser has had,
+  across en/pt/es/fr plus the conflict rules.
+
+**Outside the app (phase 6).**
+- API: `POST /api/auth/request-link` takes `language`;
+  `api/src/auth/emailTemplates.ts` has the email in en/pt/es/fr
+  (regional variants share their base), English for anything else.
+  User-facing auth errors now carry a stable `code` (`link_invalid`,
+  `code_invalid`, `device_link_expired`, `sign_in_again`,
+  `not_owner`) next to the English `error`. Checked by rendering
+  every language with tsx; the API has no test runner.
+- App: sends `i18n.language` with the link request, and `auth.ts`'s
+  `serverError()` shows translated text for known codes and the
+  caller's translated fallback otherwise. It never shows the server's
+  English sentence.
+- iOS: `InfoPlist.strings` in `pt-BR.lproj`, `es.lproj` and `fr.lproj`
+  for the camera, microphone and speech prompts, registered in
+  `project.pbxproj` (variant group, Resources phase, `knownRegions`).
+  Checked by parsing the project with the `xcode` npm package; not yet
+  built in Xcode.
+- Android: nothing to add. Its permission dialogs are system text in
+  the phone's language, and the only app string is "Flowtab".
+
+**Not verified yet (needs a phone):** the Android plugin actually
+recognizing speech, the iOS prompts appearing translated, and a real
+email send in each language.
 
 ### Glossary
 

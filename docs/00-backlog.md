@@ -24,10 +24,15 @@ it needs doing.
   - [x] Phase 3: pt-BR/es/fr (+ es-ES, fr-CA) translations;
         `categoryLabel()` and starter-account labels (D266/D267); docs/51
         wordmark phrases (2026-10-16, done together with phase 2).
-  - [ ] Phase 4: Voice language setting, regional tags, native speech
-        plugin (check Capacitor 8 support first).
-  - [ ] Phase 5: parser language packs + per-language tests (D270).
-  - [ ] Phase 6: magic-link email and native permission strings (D271).
+  - [x] Phase 4: Voice language setting, regional tags, native speech
+        plugin on Android only, since the plugin has no Package.swift for
+        the SPM iOS project (2026-10-16).
+  - [x] Phase 5: parser language packs + per-language tests (D270,
+        2026-10-16).
+  - [x] Phase 6: magic-link email and iOS permission strings (D271,
+        2026-10-16). Ships an api release too.
+  - [ ] User, on a phone: Android voice through the plugin, iOS prompts
+        in Portuguese/Spanish/French, a real sign-in email per language.
   - [ ] User: review pt-BR; find native reviewers for es and fr.
   - Ships app + api + native builds.
   - Added 2026-10-16.
@@ -79,9 +84,9 @@ it needs doing.
 
 - [ ] Test voice entry and QR pairing on a real device in the native
       apps (docs/62): iOS should prompt for mic, speech and camera once,
-      then never again; Android should prompt for mic and camera. If
-      speech doesn't work in Android's WebView, add a native speech plugin
-      (e.g. `@capacitor-community/speech-recognition`).
+      then never again; Android should prompt for mic and camera. Android
+      voice now goes through `@capacitor-community/speech-recognition`
+      (docs/73 phase 4) instead of the WebView.
 
 - [ ] Speech/typed parse preview shows the (possibly defaulted) account
       but can't change it — the only way is to save, then edit the

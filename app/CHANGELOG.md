@@ -29,6 +29,16 @@ Flowtab now speaks your language.
   same account can each use a different language. Categories you've
   renamed or created stay exactly as you wrote them.
 - Dates and amounts are written the way your region writes them.
+- **Voice language** in Settings: speak in a different language from
+  the app's, for example the app in English while you say
+  "quarenta e cinco no mercado".
+- Typing or saying what you spent now understands **Spanish and French**
+  too, alongside English and Portuguese ("treinta y cinco en el súper",
+  "trente-cinq euros de courses hier").
+- **Voice entry on Android** now uses the phone's own speech
+  recognition.
+- The sign-in email and the iPhone permission prompts are in your
+  language.
 
 ## 0.5.0 — 2026-10-16
 
