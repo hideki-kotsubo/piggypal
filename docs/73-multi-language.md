@@ -226,7 +226,7 @@ pt-BR, es and fr text at once.
   (`format.ts`, `syncNow.ts`'s last-synced text, `schedules.ts`'s
   `describeCadence`, `household.ts`, `manualMerge.ts`, `settings.ts`'s
   generic device names, `auth.ts`/`relayClient.ts` error messages), is
-  translated. About 640 keys per language.
+  translated: 526 keys in `en.json` (the other base languages have a few more because of their extra plural forms).
 - Not translated on purpose: errors that come back from the server
   (`body.error`, phase 6), debugging-only errors ("Not signed in.",
   "Unexpected relay message"), the changelog (docs/59 D226), and
