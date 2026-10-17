@@ -16,7 +16,7 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
-## Unreleased
+## 0.6.0 — 2026-10-17
 
 Flowtab now speaks your language.
 
