@@ -18,7 +18,7 @@ How to write an entry (docs/59):
 
 
 
-## Unreleased
+## 0.7.0 — 2026-10-16
 
 - **"Dollars" means dollars.** Saying "15 dollars" or typing "$15" no
   longer falls back to your account's currency (like reais). Flowtab
