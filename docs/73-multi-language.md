@@ -414,6 +414,11 @@ person said dollars.
   language mid-listen aborts and restarts in the new language; a
   session counter in EntryZone ignores the aborted session's late
   callbacks.
+  The quick menu lists only the six languages, with no "Same as app"
+  (user's call, 2026-10-16): while voice follows the app, the app
+  language's chip is highlighted, and picking a chip sets that
+  language explicitly. Settings keeps "Same as app" as the default and
+  the way back to it.
 - **Snacks keywords** in all four packs (ice cream, sorvete, picolé,
   helado, botanas, glace, crème glacée, grignotines…).
 - **Empty names**, found from the same screenshot ("Cash —", no
