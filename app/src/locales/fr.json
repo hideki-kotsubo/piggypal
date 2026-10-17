@@ -37,7 +37,9 @@
     "add": "Ajouter",
     "cancel": "Annuler",
     "remove": "Retirer",
-    "name": "Nom"
+    "name": "Nom",
+    "edit": "Modifier",
+    "save": "Enregistrer"
   },
   "nav": {
     "insights": "Analyses",
@@ -69,7 +71,23 @@
   "transaction": {
     "title": "Opération",
     "missing": "Cette opération a été supprimée ou n’existe pas.",
-    "splitCount": "Réparti · {{count}}"
+    "splitCount": "Réparti · {{count}}",
+    "delete": "Supprimer l’opération",
+    "confirmDelete": "Supprimer cette opération ? Impossible d’annuler depuis ici.",
+    "splitStartFailed": "Impossible de répartir. Si l’appli était déjà ouverte avant aujourd’hui, rechargez la page — voir la console pour les détails.",
+    "splitCancelFailed": "Impossible d’annuler la répartition — voir la console pour les détails.",
+    "noAccount": "Cette opération n’a pas de compte — choisissez-en un pour corriger.",
+    "removeLeg": "Retirer cette part",
+    "addLeg": "+ ajouter un autre compte",
+    "cancelSplit": "Annuler la répartition",
+    "split": "Répartir entre comptes",
+    "paidBy": "Payé par",
+    "loggedBy": "Enregistré par {{name}}",
+    "date": "Date",
+    "time": "Heure",
+    "note": "Note",
+    "location": "Lieu",
+    "optional": "facultatif…"
   },
   "deviceLink": {
     "scanTitle": "Scanner un code",
@@ -206,5 +224,53 @@
   },
   "picker": {
     "more": "+ {{count}} de plus"
+  },
+  "transactions": {
+    "title": "Opérations",
+    "findDuplicates": "Trouver les doublons",
+    "searchPlaceholder": "rechercher notes et lieux…",
+    "count_one": "{{count}} opération",
+    "count_other": "{{count}} opérations",
+    "count_many": "{{count}} opérations",
+    "noMatches": "Aucune opération ne correspond à ces filtres.",
+    "empty": "Rien d’enregistré pour l’instant."
+  },
+  "filter": {
+    "category": "Catégorie",
+    "account": "Compte",
+    "location": "Lieu",
+    "dateRange": "Période",
+    "custom": "Personnalisée",
+    "allCategories": "Toutes les catégories",
+    "allAccounts": "Tous les comptes",
+    "anyLocation": "Tous les lieux",
+    "allDates": "Toutes les dates",
+    "thisWeek": "Cette semaine",
+    "thisMonth": "Ce mois-ci",
+    "lastMonth": "Le mois dernier",
+    "from": "Du",
+    "to": "Au"
+  },
+  "entry": {
+    "addAccountFirst": "Ajoutez d’abord un compte, puis enregistrez votre première opération",
+    "noAmount": "Montant introuvable — reformulez ou touchez + ci-dessous",
+    "added": "Ajouté",
+    "addedToInbox": "Ajouté à la boîte de réception — à catégoriser",
+    "addTransaction": "Ajouter une opération",
+    "placeholder": "écrivez ou dites ce que vous avez dépensé…",
+    "listeningPlaceholder": "écoute…",
+    "listening": "Écoute en cours",
+    "startVoice": "Démarrer la saisie vocale",
+    "stopVoice": "Arrêter la saisie vocale",
+    "understood": "compris",
+    "amount": "Montant",
+    "category": "Catégorie",
+    "when": "Quand",
+    "account": "Compte",
+    "merchant": "Commerçant",
+    "defaultCurrency": "devise par défaut",
+    "default": "par défaut",
+    "uncategorizedToInbox": "Sans catégorie — va dans la boîte de réception",
+    "guessed": "deviné — modifiez si c’est faux"
   }
 }

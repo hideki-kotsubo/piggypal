@@ -37,7 +37,9 @@
     "add": "Agregar",
     "cancel": "Cancelar",
     "remove": "Quitar",
-    "name": "Nombre"
+    "name": "Nombre",
+    "edit": "Editar",
+    "save": "Guardar"
   },
   "nav": {
     "insights": "Análisis",
@@ -69,7 +71,23 @@
   "transaction": {
     "title": "Movimiento",
     "missing": "Este movimiento fue eliminado o no existe.",
-    "splitCount": "Dividido · {{count}}"
+    "splitCount": "Dividido · {{count}}",
+    "delete": "Eliminar movimiento",
+    "confirmDelete": "¿Eliminar este movimiento? No se puede deshacer desde aquí.",
+    "splitStartFailed": "No se pudo iniciar la división. Si la app ya estaba abierta desde antes de hoy, intenta recargar la página; consulta la consola para más detalles.",
+    "splitCancelFailed": "No se pudo cancelar la división; consulta la consola para más detalles.",
+    "noAccount": "Este movimiento no tiene cuenta: elige una para corregirlo.",
+    "removeLeg": "Quitar esta parte",
+    "addLeg": "+ agregar otra cuenta",
+    "cancelSplit": "Cancelar división",
+    "split": "Dividir entre cuentas",
+    "paidBy": "Pagado por",
+    "loggedBy": "Registrado por {{name}}",
+    "date": "Fecha",
+    "time": "Hora",
+    "note": "Nota",
+    "location": "Lugar",
+    "optional": "opcional…"
   },
   "deviceLink": {
     "scanTitle": "Escanear código",
@@ -205,5 +223,53 @@
   },
   "picker": {
     "more": "+ {{count}} más"
+  },
+  "transactions": {
+    "title": "Movimientos",
+    "findDuplicates": "Buscar duplicados",
+    "searchPlaceholder": "buscar notas y lugares…",
+    "count_one": "{{count}} movimiento",
+    "count_other": "{{count}} movimientos",
+    "count_many": "{{count}} movimientos",
+    "noMatches": "Ningún movimiento coincide con estos filtros.",
+    "empty": "Aún no hay nada registrado."
+  },
+  "filter": {
+    "category": "Categoría",
+    "account": "Cuenta",
+    "location": "Lugar",
+    "dateRange": "Período",
+    "custom": "Personalizado",
+    "allCategories": "Todas las categorías",
+    "allAccounts": "Todas las cuentas",
+    "anyLocation": "Cualquier lugar",
+    "allDates": "Todas las fechas",
+    "thisWeek": "Esta semana",
+    "thisMonth": "Este mes",
+    "lastMonth": "Mes pasado",
+    "from": "Desde",
+    "to": "Hasta"
+  },
+  "entry": {
+    "addAccountFirst": "Agrega una cuenta primero y luego registra tu primer movimiento",
+    "noAmount": "No encontré un monto: intenta decirlo de otra forma o toca + abajo",
+    "added": "Agregado",
+    "addedToInbox": "Agregado a tu bandeja de entrada: necesita categoría",
+    "addTransaction": "Agregar movimiento",
+    "placeholder": "escribe o di lo que gastaste…",
+    "listeningPlaceholder": "escuchando…",
+    "listening": "Escuchando",
+    "startVoice": "Iniciar entrada por voz",
+    "stopVoice": "Detener entrada por voz",
+    "understood": "entendido",
+    "amount": "Monto",
+    "category": "Categoría",
+    "when": "Cuándo",
+    "account": "Cuenta",
+    "merchant": "Comercio",
+    "defaultCurrency": "moneda predeterminada",
+    "default": "predeterminado",
+    "uncategorizedToInbox": "Sin categoría: va a tu bandeja de entrada",
+    "guessed": "suposición: edita si está mal"
   }
 }

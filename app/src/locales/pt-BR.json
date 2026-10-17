@@ -37,7 +37,9 @@
     "add": "Adicionar",
     "cancel": "Cancelar",
     "remove": "Remover",
-    "name": "Nome"
+    "name": "Nome",
+    "edit": "Editar",
+    "save": "Salvar"
   },
   "nav": {
     "insights": "Análises",
@@ -69,7 +71,23 @@
   "transaction": {
     "title": "Lançamento",
     "missing": "Este lançamento foi excluído ou não existe.",
-    "splitCount": "Dividido · {{count}}"
+    "splitCount": "Dividido · {{count}}",
+    "delete": "Excluir lançamento",
+    "confirmDelete": "Excluir este lançamento? Não dá para desfazer daqui.",
+    "splitStartFailed": "Não foi possível iniciar a divisão. Se o app já estava aberto antes de hoje, tente recarregar a página — veja o console para detalhes.",
+    "splitCancelFailed": "Não foi possível cancelar a divisão — veja o console para detalhes.",
+    "noAccount": "Este lançamento não tem conta — escolha uma para corrigir.",
+    "removeLeg": "Remover esta parte",
+    "addLeg": "+ adicionar outra conta",
+    "cancelSplit": "Cancelar divisão",
+    "split": "Dividir entre contas",
+    "paidBy": "Pago por",
+    "loggedBy": "Registrado por {{name}}",
+    "date": "Data",
+    "time": "Hora",
+    "note": "Nota",
+    "location": "Local",
+    "optional": "opcional…"
   },
   "deviceLink": {
     "scanTitle": "Escanear código",
@@ -205,5 +223,53 @@
   },
   "picker": {
     "more": "+ {{count}} mais"
+  },
+  "transactions": {
+    "title": "Lançamentos",
+    "findDuplicates": "Encontrar duplicados",
+    "searchPlaceholder": "buscar notas e locais…",
+    "count_one": "{{count}} lançamento",
+    "count_other": "{{count}} lançamentos",
+    "count_many": "{{count}} lançamentos",
+    "noMatches": "Nenhum lançamento corresponde a esses filtros.",
+    "empty": "Nada registrado ainda."
+  },
+  "filter": {
+    "category": "Categoria",
+    "account": "Conta",
+    "location": "Local",
+    "dateRange": "Período",
+    "custom": "Personalizado",
+    "allCategories": "Todas as categorias",
+    "allAccounts": "Todas as contas",
+    "anyLocation": "Qualquer local",
+    "allDates": "Todas as datas",
+    "thisWeek": "Esta semana",
+    "thisMonth": "Este mês",
+    "lastMonth": "Mês passado",
+    "from": "De",
+    "to": "Até"
+  },
+  "entry": {
+    "addAccountFirst": "Adicione uma conta primeiro e depois registre seu primeiro lançamento",
+    "noAmount": "Não encontrei um valor — tente dizer de outro jeito ou toque em + abaixo",
+    "added": "Adicionado",
+    "addedToInbox": "Adicionado à caixa de entrada — precisa de categoria",
+    "addTransaction": "Adicionar lançamento",
+    "placeholder": "digite ou fale o que você gastou…",
+    "listeningPlaceholder": "ouvindo…",
+    "listening": "Ouvindo",
+    "startVoice": "Iniciar entrada por voz",
+    "stopVoice": "Parar entrada por voz",
+    "understood": "entendido",
+    "amount": "Valor",
+    "category": "Categoria",
+    "when": "Quando",
+    "account": "Conta",
+    "merchant": "Estabelecimento",
+    "defaultCurrency": "moeda padrão",
+    "default": "padrão",
+    "uncategorizedToInbox": "Sem categoria — vai para a caixa de entrada",
+    "guessed": "palpite — edite se estiver errado"
   }
 }

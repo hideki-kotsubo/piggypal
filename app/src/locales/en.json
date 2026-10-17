@@ -34,7 +34,9 @@
     "add": "Add",
     "cancel": "Cancel",
     "remove": "Remove",
-    "name": "Name"
+    "name": "Name",
+    "edit": "Edit",
+    "save": "Save"
   },
   "nav": {
     "insights": "Insights",
@@ -64,7 +66,23 @@
   "transaction": {
     "title": "Transaction",
     "missing": "This transaction was deleted or doesn't exist.",
-    "splitCount": "Split · {{count}}"
+    "splitCount": "Split · {{count}}",
+    "delete": "Delete transaction",
+    "confirmDelete": "Delete this transaction? This can't be undone from here.",
+    "splitStartFailed": "Could not start the split. If this app was already open before today, try reloading the page — see console for details.",
+    "splitCancelFailed": "Could not cancel the split — see console for details.",
+    "noAccount": "This transaction has no account set — pick one to fix it.",
+    "removeLeg": "Remove this leg",
+    "addLeg": "+ add another account",
+    "cancelSplit": "Cancel split",
+    "split": "Split across accounts",
+    "paidBy": "Paid by",
+    "loggedBy": "Logged by {{name}}",
+    "date": "Date",
+    "time": "Time",
+    "note": "Note",
+    "location": "Location",
+    "optional": "optional…"
   },
   "deviceLink": {
     "scanTitle": "Scan a code",
@@ -192,5 +210,52 @@
   },
   "picker": {
     "more": "+ {{count}} more"
+  },
+  "transactions": {
+    "title": "Transactions",
+    "findDuplicates": "Find duplicates",
+    "searchPlaceholder": "search notes & locations…",
+    "count_one": "{{count}} transaction",
+    "count_other": "{{count}} transactions",
+    "noMatches": "No transactions match these filters.",
+    "empty": "Nothing logged yet."
+  },
+  "filter": {
+    "category": "Category",
+    "account": "Account",
+    "location": "Location",
+    "dateRange": "Date range",
+    "custom": "Custom",
+    "allCategories": "All categories",
+    "allAccounts": "All accounts",
+    "anyLocation": "Any location",
+    "allDates": "All dates",
+    "thisWeek": "This week",
+    "thisMonth": "This month",
+    "lastMonth": "Last month",
+    "from": "From",
+    "to": "To"
+  },
+  "entry": {
+    "addAccountFirst": "Add an account first, then log your first transaction",
+    "noAmount": "Couldn't find an amount — try rephrasing, or tap + below",
+    "added": "Added",
+    "addedToInbox": "Added to your inbox — needs a category",
+    "addTransaction": "Add a transaction",
+    "placeholder": "type or say what you spent…",
+    "listeningPlaceholder": "listening…",
+    "listening": "Listening",
+    "startVoice": "Start voice input",
+    "stopVoice": "Stop voice input",
+    "understood": "understood",
+    "amount": "Amount",
+    "category": "Category",
+    "when": "When",
+    "account": "Account",
+    "merchant": "Merchant",
+    "defaultCurrency": "default currency",
+    "default": "default",
+    "uncategorizedToInbox": "Uncategorized — goes to your inbox",
+    "guessed": "guessed — edit if wrong"
   }
 }
