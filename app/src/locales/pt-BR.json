@@ -111,7 +111,8 @@
     "name": "Nome",
     "edit": "Editar",
     "save": "Salvar",
-    "ok": "OK"
+    "ok": "OK",
+    "cancelLower": "cancelar"
   },
   "nav": {
     "insights": "Análises",
@@ -291,7 +292,34 @@
     "removedName": "{{name}} (removido)"
   },
   "accounts": {
-    "shared": "Compartilhada"
+    "shared": "Compartilhada",
+    "title": "Contas",
+    "mergeDuplicates": "Juntar duplicadas",
+    "add": "Adicionar conta",
+    "pickKeeper": "Toque em uma linha para mantê-la como original",
+    "pickDuplicates": "Agora toque nas duplicadas de “{{name}}” para juntar",
+    "willMerge_one": "{{count}} será juntada em “{{name}}”",
+    "willMerge_other": "{{count}} serão juntadas em “{{name}}”",
+    "willMerge_many": "{{count}} serão juntadas em “{{name}}”",
+    "changeKeeper": "Trocar original",
+    "reviewMerge": "Revisar junção",
+    "mergeInto": "Juntar {{count}} em “{{name}}”",
+    "keeping": "Mantendo: {{name}}",
+    "nothingChanges": "Nada muda nesta.",
+    "foldingIn": "Juntando: {{name}}",
+    "movesTo": "{{transactions}} vão para “{{name}}”. Esta conta será excluída.",
+    "ownerWarning": "⚠ Pertence a {{from}} — juntar passa para {{to}}.",
+    "merge": "Juntar {{count}}",
+    "new": "Nova conta",
+    "empty": "Nenhuma conta ainda — toque em + para adicionar.",
+    "archived": "Arquivadas ({{count}})",
+    "noActivity": "sem movimentação",
+    "institution": "Instituição",
+    "institutionPlaceholder": "Itaú, Nubank, Wise…",
+    "namePlaceholder": "Visa, Conta corrente, Viagem…",
+    "kind": "Tipo",
+    "owner": "Dono",
+    "archive": "Arquivar conta"
   },
   "picker": {
     "more": "+ {{count}} mais"
@@ -398,5 +426,11 @@
     "enterCode": "Digite o código mostrado no outro dispositivo.",
     "connect": "Conectar",
     "scanInstead": "Escanear um código em vez disso"
+  },
+  "accountKind": {
+    "checking": "Conta corrente",
+    "credit": "Crédito",
+    "cash": "Dinheiro",
+    "savings": "Poupança"
   }
 }

@@ -104,7 +104,8 @@
     "name": "Name",
     "edit": "Edit",
     "save": "Save",
-    "ok": "OK"
+    "ok": "OK",
+    "cancelLower": "cancel"
   },
   "nav": {
     "insights": "Insights",
@@ -274,7 +275,33 @@
     "removedName": "{{name}} (removed)"
   },
   "accounts": {
-    "shared": "Shared"
+    "shared": "Shared",
+    "title": "Accounts",
+    "mergeDuplicates": "Merge duplicates",
+    "add": "Add account",
+    "pickKeeper": "Tap a row to keep as the original",
+    "pickDuplicates": "Now tap any duplicates of \"{{name}}\" to fold in",
+    "willMerge_one": "{{count}} will merge into \"{{name}}\"",
+    "willMerge_other": "{{count}} will merge into \"{{name}}\"",
+    "changeKeeper": "Change keeper",
+    "reviewMerge": "Review merge",
+    "mergeInto": "Merge {{count}} into \"{{name}}\"",
+    "keeping": "Keeping: {{name}}",
+    "nothingChanges": "Nothing changes on this one.",
+    "foldingIn": "Folding in: {{name}}",
+    "movesTo": "{{transactions}} move to \"{{name}}\". This account will be deleted.",
+    "ownerWarning": "⚠ Owned by {{from}} — merging reassigns it to {{to}}.",
+    "merge": "Merge {{count}}",
+    "new": "New account",
+    "empty": "No accounts yet — tap + to add one.",
+    "archived": "Archived ({{count}})",
+    "noActivity": "no activity yet",
+    "institution": "Institution",
+    "institutionPlaceholder": "TD, Itaú, Wise…",
+    "namePlaceholder": "Visa, Checking, Trip Fund…",
+    "kind": "Kind",
+    "owner": "Owner",
+    "archive": "Archive account"
   },
   "picker": {
     "more": "+ {{count}} more"
@@ -379,5 +406,11 @@
     "enterCode": "Enter the code shown on the other device.",
     "connect": "Connect",
     "scanInstead": "Scan a code instead"
+  },
+  "accountKind": {
+    "checking": "Checking",
+    "credit": "Credit",
+    "cash": "Cash",
+    "savings": "Savings"
   }
 }

@@ -111,7 +111,8 @@
     "name": "Nom",
     "edit": "Modifier",
     "save": "Enregistrer",
-    "ok": "OK"
+    "ok": "OK",
+    "cancelLower": "annuler"
   },
   "nav": {
     "insights": "Analyses",
@@ -292,7 +293,34 @@
     "removedName": "{{name}} (retiré)"
   },
   "accounts": {
-    "shared": "Partagé"
+    "shared": "Partagé",
+    "title": "Comptes",
+    "mergeDuplicates": "Fusionner les doublons",
+    "add": "Ajouter un compte",
+    "pickKeeper": "Touchez une ligne à garder comme originale",
+    "pickDuplicates": "Touchez maintenant les doublons de « {{name}} » à fusionner",
+    "willMerge_one": "{{count}} sera fusionné dans « {{name}} »",
+    "willMerge_other": "{{count}} seront fusionnés dans « {{name}} »",
+    "willMerge_many": "{{count}} seront fusionnés dans « {{name}} »",
+    "changeKeeper": "Changer l’original",
+    "reviewMerge": "Vérifier la fusion",
+    "mergeInto": "Fusionner {{count}} dans « {{name}} »",
+    "keeping": "Conservé : {{name}}",
+    "nothingChanges": "Rien ne change pour celui-ci.",
+    "foldingIn": "Fusionné : {{name}}",
+    "movesTo": "{{transactions}} passent dans « {{name}} ». Ce compte sera supprimé.",
+    "ownerWarning": "⚠ Appartient à {{from}} — la fusion le réattribue à {{to}}.",
+    "merge": "Fusionner {{count}}",
+    "new": "Nouveau compte",
+    "empty": "Aucun compte pour l’instant — touchez + pour en ajouter un.",
+    "archived": "Archivés ({{count}})",
+    "noActivity": "aucune activité",
+    "institution": "Établissement",
+    "institutionPlaceholder": "Desjardins, BNP, Wise…",
+    "namePlaceholder": "Visa, Compte chèques, Voyage…",
+    "kind": "Type",
+    "owner": "Propriétaire",
+    "archive": "Archiver le compte"
   },
   "picker": {
     "more": "+ {{count}} de plus"
@@ -399,5 +427,11 @@
     "enterCode": "Saisissez le code affiché sur l’autre appareil.",
     "connect": "Connecter",
     "scanInstead": "Scanner un code à la place"
+  },
+  "accountKind": {
+    "checking": "Compte chèques",
+    "credit": "Crédit",
+    "cash": "Espèces",
+    "savings": "Épargne"
   }
 }

@@ -111,7 +111,8 @@
     "name": "Nombre",
     "edit": "Editar",
     "save": "Guardar",
-    "ok": "Aceptar"
+    "ok": "Aceptar",
+    "cancelLower": "cancelar"
   },
   "nav": {
     "insights": "Análisis",
@@ -291,7 +292,34 @@
     "removedName": "{{name}} (quitado)"
   },
   "accounts": {
-    "shared": "Compartida"
+    "shared": "Compartida",
+    "title": "Cuentas",
+    "mergeDuplicates": "Combinar duplicadas",
+    "add": "Agregar cuenta",
+    "pickKeeper": "Toca una fila para conservarla como original",
+    "pickDuplicates": "Ahora toca los duplicados de “{{name}}” para combinarlos",
+    "willMerge_one": "{{count}} se combinará con “{{name}}”",
+    "willMerge_other": "{{count}} se combinarán con “{{name}}”",
+    "willMerge_many": "{{count}} se combinarán con “{{name}}”",
+    "changeKeeper": "Cambiar original",
+    "reviewMerge": "Revisar combinación",
+    "mergeInto": "Combinar {{count}} con “{{name}}”",
+    "keeping": "Se conserva: {{name}}",
+    "nothingChanges": "Nada cambia en esta.",
+    "foldingIn": "Se combina: {{name}}",
+    "movesTo": "{{transactions}} pasan a “{{name}}”. Esta cuenta se eliminará.",
+    "ownerWarning": "⚠ Pertenece a {{from}}: al combinar pasa a {{to}}.",
+    "merge": "Combinar {{count}}",
+    "new": "Nueva cuenta",
+    "empty": "Aún no hay cuentas: toca + para agregar una.",
+    "archived": "Archivadas ({{count}})",
+    "noActivity": "sin actividad",
+    "institution": "Institución",
+    "institutionPlaceholder": "BBVA, Santander, Wise…",
+    "namePlaceholder": "Visa, Cuenta corriente, Viaje…",
+    "kind": "Tipo",
+    "owner": "Propietario",
+    "archive": "Archivar cuenta"
   },
   "picker": {
     "more": "+ {{count}} más"
@@ -398,5 +426,11 @@
     "enterCode": "Escribe el código que se muestra en el otro dispositivo.",
     "connect": "Conectar",
     "scanInstead": "Escanear un código en su lugar"
+  },
+  "accountKind": {
+    "checking": "Cuenta corriente",
+    "credit": "Crédito",
+    "cash": "Efectivo",
+    "savings": "Ahorros"
   }
 }
