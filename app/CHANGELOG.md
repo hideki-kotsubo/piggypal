@@ -17,7 +17,7 @@ How to write an entry (docs/59):
 -->
 
 
-## Unreleased
+## 0.6.1 — 2026-10-16
 
 - **Voice entry on iPhone no longer freezes** after an attempt that
   didn't catch anything; the next tap starts fresh. If nothing is
