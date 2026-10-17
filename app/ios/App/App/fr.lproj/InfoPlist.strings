@@ -1,0 +1,4 @@
+/* docs/73 D271 — Info.plist's permission prompts in French (fr-CA falls back here). */
+"NSCameraUsageDescription" = "Flowtab utilise l’appareil photo pour scanner le code QR lorsque vous associez un autre appareil.";
+"NSMicrophoneUsageDescription" = "Flowtab utilise le micro pour que vous puissiez dire une dépense au lieu de la taper.";
+"NSSpeechRecognitionUsageDescription" = "Flowtab transforme ce que vous dites en texte pour remplir la dépense, que vous confirmez ensuite.";

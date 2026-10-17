@@ -15,6 +15,7 @@
     "release:ios": "node scripts/sync-native-version.mjs ios && npx cap sync ios"
   },
   "dependencies": {
+    "@capacitor-community/speech-recognition": "^7.0.1",
     "@capacitor-community/sqlite": "^8.1.1",
     "@capacitor/android": "^8.5.1",
     "@capacitor/app": "^8.1.1",

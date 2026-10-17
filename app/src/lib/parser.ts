@@ -1,4 +1,5 @@
 import type { Account, Category } from './types';
+import { mergedMap, mergedWords, orderedPacks, type LanguagePack } from './parserVocab';
 
 // docs/16 — Tier 1 (docs/04): a pure, on-device, closed-vocabulary rule
 // parser. No React/store imports, no network. Never guesses between two
@@ -27,6 +28,11 @@ import type { Account, Category } from './types';
 // (docs/16 D150) — e.g. "coffee with Sarah 5" recognizes the amount and
 // category, and leaves "with Sarah" as unrecognized leftover for the
 // caller to keep as a note instead of silently discarding it.
+//
+// docs/73 D270: vocabulary lives in per-language packs (parserVocab.ts),
+// all active for every utterance; `ctx.language` (the voice language for
+// speech, the UI language for typed text) decides which pack wins when
+// two languages read the same word differently.
 
 export interface ParserContext {
   categories: Category[];
@@ -34,6 +40,14 @@ export interface ParserContext {
   accounts: Account[];
   merchants: string[];
   now: Date;
+  // BCP 47 tag of the language the utterance is most likely in.
+  language?: string;
+  // Extra names for a category or account — the caller passes starter
+  // names in every language (starterLabels.ts, docs/73 D266/D267), so
+  // "épicerie" finds the starter Groceries category even though its
+  // stored name is English.
+  categoryAliases?: { categoryId: string; alias: string }[];
+  accountAliases?: { accountId: string; alias: string }[];
 }
 
 export interface ParseResult {
@@ -55,6 +69,14 @@ export interface ParseResult {
 type Span = [number, number];
 
 const WORD = '[a-zà-ÿ]+';
+
+// Whole-word search, accent-aware (JS's \b treats "é" as a non-word
+// character, so "café\b" never matches). Returns the match index or -1.
+function findWord(textLower: string, phrase: string): number {
+  const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, 'u').exec(textLower);
+  return match ? match.index : -1;
+}
 
 // ---- amount ----
 
@@ -93,61 +115,91 @@ function extractDigitAmount(text: string, spans: Span[]): number | null {
   return null;
 }
 
-// Small bilingual fallback for when speech-to-text or typed input spells
-// numbers out ("quarenta e cinco", "forty five") instead of using digits —
-// whole-dollar amounts only, no cents from word form. 1-19 + tens, plus
-// simple "<tens> e/and <ones>" compounds.
-const NUMBER_WORDS: Record<string, number> = {
-  zero: 0,
-  one: 1, um: 1, uma: 1,
-  two: 2, dois: 2, duas: 2,
-  three: 3, três: 3, tres: 3,
-  four: 4, quatro: 4,
-  five: 5, cinco: 5,
-  six: 6, seis: 6,
-  seven: 7, sete: 7,
-  eight: 8, oito: 8,
-  nine: 9, nove: 9,
-  ten: 10, dez: 10,
-  eleven: 11, onze: 11,
-  twelve: 12, doze: 12,
-  thirteen: 13, treze: 13,
-  fourteen: 14, quatorze: 14, catorze: 14,
-  fifteen: 15, quinze: 15,
-  sixteen: 16, dezesseis: 16,
-  seventeen: 17, dezessete: 17,
-  eighteen: 18, dezoito: 18,
-  nineteen: 19, dezenove: 19,
-  twenty: 20, vinte: 20,
-  thirty: 30, trinta: 30,
-  forty: 40, quarenta: 40,
-  fifty: 50, cinquenta: 50,
-  sixty: 60, sessenta: 60,
-  seventy: 70, setenta: 70,
-  eighty: 80, oitenta: 80,
-  ninety: 90, noventa: 90,
-};
+// Fallback for when speech-to-text or typed input spells numbers out
+// ("quarenta e cinco", "forty five", "treinta y cinco", "soixante-dix")
+// instead of using digits — whole amounts only, no cents from word form.
+// Units, teens and tens from every language pack, "<tens> and <units>"
+// compounds, plus French's dix-sept, soixante-dix and quatre-vingt(-dix).
 
-function extractWordAmount(tokens: RegExpMatchArray[], spans: Span[]): number | null {
-  for (let i = 0; i < tokens.length; i++) {
-    const word = tokens[i][0];
-    const value = NUMBER_WORDS[word];
-    if (value === undefined) continue;
-    const start = tokens[i].index!;
-    if (value >= 20 && value % 10 === 0) {
-      let j = i + 1;
-      if (tokens[j]?.[0] === 'e' || tokens[j]?.[0] === 'and') j++;
-      const nextWord = tokens[j]?.[0];
-      const next = nextWord !== undefined ? NUMBER_WORDS[nextWord] : undefined;
-      if (next !== undefined && next < 10) {
-        spans.push([start, tokens[j].index! + tokens[j][0].length]);
-        return value + next;
-      }
-    }
-    spans.push([start, start + word.length]);
-    return value;
+interface WordNumber {
+  value: number;
+  start: number;
+  end: number;
+  isArticle: boolean;
+}
+
+function readWordNumber(
+  tokens: RegExpMatchArray[],
+  i: number,
+  numbers: Record<string, number>,
+  joiners: string[],
+  articles: string[],
+): WordNumber | null {
+  const at = (k: number) => tokens[k]?.[0];
+  const num = (k: number) => {
+    const w = at(k);
+    return w !== undefined && w in numbers ? numbers[w] : undefined;
+  };
+  let value = num(i);
+  if (value === undefined) return null;
+  const start = tokens[i].index!;
+  let last = i;
+
+  // quatre-vingt(s) = 80
+  if (at(i) === 'quatre' && (at(i + 1) === 'vingt' || at(i + 1) === 'vingts')) {
+    value = 80;
+    last = i + 1;
   }
-  return null;
+  // French teens past 16: dix-sept/huit/neuf
+  const teen = (k: number): [number, number] | null => {
+    if (num(k) === 10 && at(k) === 'dix') {
+      const unit = num(k + 1);
+      if (unit !== undefined && unit >= 7 && unit <= 9) return [10 + unit, k + 1];
+    }
+    const v = num(k);
+    return v !== undefined && v < 20 ? [v, k] : null;
+  };
+  if (value === 10 && at(i) === 'dix') {
+    const t = teen(i);
+    if (t) [value, last] = t;
+  }
+  // Tens followed by a unit (or, after soixante/quatre-vingt, a teen).
+  if (value >= 20 && value % 10 === 0 && value < 100) {
+    let j = last + 1;
+    if (joiners.includes(at(j) ?? '')) j++;
+    const allowsTeen = value === 60 || value === 80;
+    const t = teen(j);
+    if (t && (t[0] < 10 || allowsTeen) && t[0] > 0) {
+      value += t[0];
+      last = t[1];
+    }
+  }
+  const lastToken = tokens[last];
+  return {
+    value,
+    start,
+    end: lastToken.index! + lastToken[0].length,
+    isArticle: last === i && articles.includes(at(i)!),
+  };
+}
+
+function extractWordAmount(tokens: RegExpMatchArray[], spans: Span[], language: string | undefined): number | null {
+  const numbers = mergedMap(language, (p) => p.numbers);
+  const joiners = mergedWords(language, (p) => p.numberJoiners);
+  const articles = mergedWords(language, (p) => p.articles);
+  const found: WordNumber[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const n = readWordNumber(tokens, i, numbers, joiners, articles);
+    if (!n) continue;
+    found.push(n);
+    while (i + 1 < tokens.length && tokens[i + 1].index! < n.end) i++;
+  }
+  // "um café cinco reais" — the "one" is an article, not the amount,
+  // whenever some other number word is there to be the amount.
+  const pick = found.find((n) => !n.isArticle) ?? found[0];
+  if (!pick) return null;
+  spans.push([pick.start, pick.end]);
+  return pick.value;
 }
 
 // ---- currency (explicit markers only — never inferred from amount size
@@ -155,7 +207,7 @@ function extractWordAmount(tokens: RegExpMatchArray[], spans: Span[]): number | 
 
 const CURRENCY_MARKERS: [RegExp, string][] = [
   [/r\$/i, 'BRL'], [/\breais?\b/i, 'BRL'], [/\breal\b/i, 'BRL'],
-  [/¥/, 'JPY'], [/\bienes?\b/i, 'JPY'], [/\byen(?:es)?\b/i, 'JPY'],
+  [/¥/, 'JPY'], [/\bienes?\b/i, 'JPY'], [/\byen(?:es|s)?\b/i, 'JPY'],
   [/€/, 'EUR'], [/\beuros?\b/i, 'EUR'],
   [/us\$/i, 'USD'], [/\busd\b/i, 'USD'], [/\bdólares?\b/i, 'USD'], [/\bdolares?\b/i, 'USD'],
   [/\bcad\b/i, 'CAD'], [/c\$/i, 'CAD'],
@@ -174,16 +226,6 @@ function extractCurrency(text: string, spans: Span[]): string | null {
 
 // ---- relative date (closed set only — defaults to `now` in the caller
 // when this returns null) ----
-
-const WEEKDAY_INDEX: Record<string, number> = {
-  sunday: 0, domingo: 0,
-  monday: 1, segunda: 1,
-  tuesday: 2, terça: 2, terca: 2,
-  wednesday: 3, quarta: 3,
-  thursday: 4, quinta: 4,
-  friday: 5, sexta: 5,
-  saturday: 6, sábado: 6, sabado: 6,
-};
 
 function pad(n: number): string {
   return String(n).padStart(2, '0');
@@ -208,80 +250,92 @@ function lastWeekday(now: Date, targetDow: number): Date {
 // separate `resolveTimeOfDay` pass then overrides hours/minutes if the
 // utterance also named a clock time, so "August 16th at 5:25pm" and
 // "August 16th" (no time given) both resolve sensibly from the same base.
-function resolveRelativeOrAbsoluteDate(textLower: string, now: Date, spans: Span[]): Date | null {
-  const today = new RegExp(`\\b(hoje|today)\\b`).exec(textLower);
+function firstWordMatch(textLower: string, words: string[]): [number, number] | null {
+  let best: [number, number] | null = null;
+  for (const w of words) {
+    const idx = findWord(textLower, w);
+    if (idx !== -1 && (!best || idx < best[0])) best = [idx, idx + w.length];
+  }
+  return best;
+}
+
+function resolveRelativeOrAbsoluteDate(textLower: string, now: Date, spans: Span[], language: string | undefined): Date | null {
+  const today = firstWordMatch(textLower, mergedWords(language, (p) => p.today));
   if (today) {
-    spans.push([today.index, today.index + today[0].length]);
+    spans.push(today);
     return new Date(now);
   }
-  const anteontem = new RegExp(`\\banteontem\\b`).exec(textLower);
-  if (anteontem) {
-    spans.push([anteontem.index, anteontem.index + anteontem[0].length]);
+  // Before "yesterday": "antes de ayer" / "avant-hier" contain it.
+  const dayBefore = firstWordMatch(textLower, mergedWords(language, (p) => p.dayBeforeYesterday));
+  if (dayBefore) {
+    spans.push(dayBefore);
     return shiftDays(now, 2);
   }
-  const ontem = new RegExp(`\\b(ontem|yesterday)\\b`).exec(textLower);
-  if (ontem) {
-    spans.push([ontem.index, ontem.index + ontem[0].length]);
+  const yesterday = firstWordMatch(textLower, mergedWords(language, (p) => p.yesterday));
+  if (yesterday) {
+    spans.push(yesterday);
     return shiftDays(now, 1);
   }
 
-  const lastEn = textLower.match(new RegExp(`\\blast\\s+(${WORD})\\b`));
-  if (lastEn && lastEn[1] in WEEKDAY_INDEX) {
-    spans.push([lastEn.index!, lastEn.index! + lastEn[0].length]);
-    return lastWeekday(now, WEEKDAY_INDEX[lastEn[1]]);
+  const weekdays = mergedMap(language, (p) => p.weekdays);
+  for (const { pack } of orderedPacks(language)) {
+    for (const source of pack.lastWeekday) {
+      const match = textLower.match(new RegExp(source));
+      if (match && match[1] in weekdays) {
+        spans.push([match.index!, match.index! + match[0].length]);
+        return lastWeekday(now, weekdays[match[1]]);
+      }
+    }
   }
 
-  const passadaPt =
-    textLower.match(new RegExp(`\\b(${WORD})\\s+passad[ao]\\b`)) ?? textLower.match(new RegExp(`\\búltim[ao]\\s+(${WORD})\\b`));
-  if (passadaPt && passadaPt[1] in WEEKDAY_INDEX) {
-    spans.push([passadaPt.index!, passadaPt.index! + passadaPt[0].length]);
-    return lastWeekday(now, WEEKDAY_INDEX[passadaPt[1]]);
-  }
-
-  return resolveAbsoluteDate(textLower, now, spans);
+  return resolveAbsoluteDate(textLower, now, spans, language);
 }
 
-// ---- absolute date (docs/16 D151): "<Month> <day>[, <year>]" (English)
-// or "<day> de <Month>[ de <year>]" (Portuguese). Year defaults to `now`'s
-// — closed set of month names, bilingual, same shape as the rest of this
-// file's vocab lists, not open-ended date parsing.
-const MONTH_INDEX: Record<string, number> = {
-  january: 0, jan: 0, janeiro: 0,
-  february: 1, feb: 1, fevereiro: 1,
-  march: 2, mar: 2, março: 2, marco: 2,
-  april: 3, apr: 3, abril: 3,
-  may: 4, maio: 4,
-  june: 5, jun: 5, junho: 5,
-  july: 6, jul: 6, julho: 6,
-  august: 7, aug: 7, agosto: 7,
-  september: 8, sep: 8, sept: 8, setembro: 8,
-  october: 9, oct: 9, outubro: 9,
-  november: 10, nov: 10, novembro: 10,
-  december: 11, dec: 11, dezembro: 11,
-};
-const MONTH_NAMES = Object.keys(MONTH_INDEX).join('|');
+// ---- absolute date (docs/16 D151): "<Month> <day>[, <year>]" (English),
+// "<day> de <Month>[ de <year>]" (Portuguese, Spanish) or
+// "<day>[er] <Month>[ <year>]" (French). Year defaults to `now`'s — closed
+// set of month names per language pack, not open-ended date parsing. The
+// English and "de" shapes accept every non-French month name (as before
+// docs/73, when English and Portuguese names shared one list); the French
+// shape only French names, so "uber 12 jan" stays an amount.
+function monthPattern(names: string[]): string {
+  return [...names].sort((a, b) => b.length - a.length).join('|');
+}
 
-function resolveAbsoluteDate(textLower: string, now: Date, spans: Span[]): Date | null {
-  const en = new RegExp(`\\b(${MONTH_NAMES})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?,?(?:\\s+(\\d{4}))?\\b`).exec(textLower);
-  if (en) {
-    const day = Number(en[2]);
-    if (day >= 1 && day <= 31) {
-      spans.push([en.index, en.index + en[0].length]);
-      const year = en[3] ? Number(en[3]) : now.getFullYear();
-      return new Date(year, MONTH_INDEX[en[1]], day, now.getHours(), now.getMinutes(), now.getSeconds());
-    }
+function resolveAbsoluteDate(textLower: string, now: Date, spans: Span[], language: string | undefined): Date | null {
+  const months = mergedMap(language, (p) => p.months);
+  const styled = (style: LanguagePack['dateStyle']) =>
+    monthPattern(
+      orderedPacks(language)
+        .filter(({ pack }) => (style === 'dayMonth' ? pack.dateStyle === 'dayMonth' : pack.dateStyle !== 'dayMonth'))
+        .flatMap(({ pack }) => Object.keys(pack.months))
+        .filter((m) => m in months),
+    );
+  const at = (day: number, monthName: string, yearText: string | undefined) =>
+    new Date(yearText ? Number(yearText) : now.getFullYear(), months[monthName], day, now.getHours(), now.getMinutes(), now.getSeconds());
+  const nonFrench = styled('monthDay');
+  const french = styled('dayMonth');
+
+  // Each shape: regex, and which groups hold [day, month, year].
+  const shapes: Record<LanguagePack['dateStyle'], [RegExp, [number, number, number]] | null> = {
+    monthDay: [new RegExp(`\\b(${nonFrench})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?,?(?:\\s+(\\d{4}))?\\b`), [2, 1, 3]],
+    dayDeMonth: [new RegExp(`\\b(\\d{1,2})\\s+de\\s+(${nonFrench})(?:\\s+de\\s+(\\d{4}))?\\b`), [1, 2, 3]],
+    dayMonth: french ? [new RegExp(`\\b(\\d{1,2})(?:er)?\\s+(${french})\\.?(?:\\s+(\\d{4}))?(?![\\p{L}])`, 'u'), [1, 2, 3]] : null,
+  };
+  // The input language's own shape first: "15 de marzo 30" is the 15th,
+  // not English-style "marzo 30".
+  const order = [...new Set([orderedPacks(language)[0].pack.dateStyle, 'monthDay', 'dayDeMonth', 'dayMonth'] as const)];
+  for (const style of order) {
+    const shape = shapes[style];
+    if (!shape) continue;
+    const [re, [d, m, y]] = shape;
+    const match = re.exec(textLower);
+    if (!match) continue;
+    const dayOfMonth = Number(match[d]);
+    if (dayOfMonth < 1 || dayOfMonth > 31) continue;
+    spans.push([match.index, match.index + match[0].length]);
+    return at(dayOfMonth, match[m], match[y]);
   }
-
-  const pt = new RegExp(`\\b(\\d{1,2})\\s+de\\s+(${MONTH_NAMES})(?:\\s+de\\s+(\\d{4}))?\\b`).exec(textLower);
-  if (pt) {
-    const day = Number(pt[1]);
-    if (day >= 1 && day <= 31) {
-      spans.push([pt.index, pt.index + pt[0].length]);
-      const year = pt[3] ? Number(pt[3]) : now.getFullYear();
-      return new Date(year, MONTH_INDEX[pt[2]], day, now.getHours(), now.getMinutes(), now.getSeconds());
-    }
-  }
-
   return null;
 }
 
@@ -308,8 +362,8 @@ function resolveTimeOfDay(textLower: string, spans: Span[]): { hours: number; mi
   return { hours, minutes };
 }
 
-function resolveDate(textLower: string, now: Date, spans: Span[]): string | null {
-  const base = resolveRelativeOrAbsoluteDate(textLower, now, spans);
+function resolveDate(textLower: string, now: Date, spans: Span[], language: string | undefined): string | null {
+  const base = resolveRelativeOrAbsoluteDate(textLower, now, spans, language);
   const time = resolveTimeOfDay(textLower, spans);
   if (!base && !time) return null;
 
@@ -320,25 +374,50 @@ function resolveDate(textLower: string, now: Date, spans: Span[]): string | null
 
 // ---- category (never-guess: exactly one distinct match, else null) ----
 
+// Two kinds of vocabulary: the user's own (category names, saved
+// keywords) keeps its original substring matching; the built-in language
+// packs and starter aliases (docs/73) match whole words only, since they
+// carry short words like "bus" or "resto" that must not fire inside
+// longer ones.
 function matchCategory(textLower: string, ctx: ParserContext, spans: Span[]): string | null {
-  const vocab = new Map<string, string>();
-  for (const k of ctx.keywords) vocab.set(k.keyword.toLowerCase(), k.categoryId);
+  const vocab = new Map<string, { categoryId: string; wholeWord: boolean }>();
+  for (const k of ctx.keywords) vocab.set(k.keyword.toLowerCase(), { categoryId: k.categoryId, wholeWord: false });
   for (const c of ctx.categories) {
     const key = c.name.toLowerCase();
-    if (!vocab.has(key)) vocab.set(key, c.id);
+    if (!vocab.has(key)) vocab.set(key, { categoryId: c.id, wholeWord: false });
   }
+  const active = new Set(ctx.categories.filter((c) => !c.archived).map((c) => c.id));
+  for (const a of ctx.categoryAliases ?? []) {
+    const key = a.alias.toLowerCase();
+    if (!vocab.has(key)) vocab.set(key, { categoryId: a.categoryId, wholeWord: true });
+  }
+  for (const { pack } of orderedPacks(ctx.language)) {
+    for (const [categoryId, words] of Object.entries(pack.categoryKeywords)) {
+      if (!active.has(categoryId)) continue;
+      for (const w of words) if (!vocab.has(w)) vocab.set(w, { categoryId, wholeWord: true });
+    }
+  }
+  const find = (keyword: string, wholeWord: boolean) => (wholeWord ? findWord(textLower, keyword) : textLower.indexOf(keyword));
+
   const matched = new Set<string>();
-  for (const [keyword, categoryId] of vocab) {
-    if (textLower.includes(keyword)) matched.add(categoryId);
+  for (const [keyword, { categoryId, wholeWord }] of vocab) {
+    if (find(keyword, wholeWord) !== -1) matched.add(categoryId);
+  }
+  // A group and its own subcategory both matching ("transporte uber")
+  // means the subcategory, not an ambiguity.
+  for (const id of [...matched]) {
+    const parentId = ctx.categories.find((c) => c.id === id)?.parentId;
+    if (parentId && matched.has(parentId)) matched.delete(parentId);
   }
   if (matched.size !== 1) return null;
   const categoryId = [...matched][0];
-  // Every keyword that resolved to the winning category counts as
-  // recognized text, not just the first one found — "mercado" and
-  // "grocery" both appearing shouldn't leave one of them as leftover.
-  for (const [keyword, id] of vocab) {
-    if (id !== categoryId) continue;
-    const idx = textLower.indexOf(keyword);
+  // Every keyword that resolved to the winning category (or its group)
+  // counts as recognized text, not just the first one found — "mercado"
+  // and "grocery" both appearing shouldn't leave one of them as leftover.
+  const winnerParent = ctx.categories.find((c) => c.id === categoryId)?.parentId;
+  for (const [keyword, { categoryId: id, wholeWord }] of vocab) {
+    if (id !== categoryId && id !== winnerParent) continue;
+    const idx = find(keyword, wholeWord);
     if (idx !== -1) spans.push([idx, idx + keyword.length]);
   }
   return categoryId;
@@ -364,13 +443,22 @@ function matchAccount(textLower: string, ctx: ParserContext, spans: Span[]): str
   if (disambiguated.length > 1) return null;
 
   // Otherwise, bare name only — ambiguous ("Visa" at two institutions,
-  // doc04's own example) unless exactly one account matches.
+  // doc04's own example) unless exactly one account matches. A starter
+  // account's name in other languages counts too ("dinheiro" for the
+  // starter Cash account, docs/73 D267), whole words only.
   const byName = ctx.accounts.filter((a) => textLower.includes(a.name.toLowerCase()));
-  const distinctIds = new Set(byName.map((a) => a.id));
+  const byAlias = (ctx.accountAliases ?? []).filter((a) => findWord(textLower, a.alias.toLowerCase()) !== -1);
+  const distinctIds = new Set([...byName.map((a) => a.id), ...byAlias.map((a) => a.accountId)]);
   if (distinctIds.size !== 1) return null;
-  const nameIdx = textLower.indexOf(byName[0].name.toLowerCase());
-  if (nameIdx !== -1) spans.push([nameIdx, nameIdx + byName[0].name.length]);
-  return byName[0].id;
+  if (byName.length > 0) {
+    const nameIdx = textLower.indexOf(byName[0].name.toLowerCase());
+    if (nameIdx !== -1) spans.push([nameIdx, nameIdx + byName[0].name.length]);
+    return byName[0].id;
+  }
+  const alias = byAlias[0].alias.toLowerCase();
+  const aliasIdx = findWord(textLower, alias);
+  spans.push([aliasIdx, aliasIdx + alias.length]);
+  return byAlias[0].accountId;
 }
 
 // ---- merchant (docs/16 D150): closed-vocabulary against merchants the
@@ -415,8 +503,11 @@ interface MerchantGuess {
   leadIn: string;
 }
 
-function guessNewMerchant(text: string, spans: Span[]): MerchantGuess | null {
-  const match = /\b(?:at|no|na)\s+([^\s,]+)/i.exec(text);
+function guessNewMerchant(text: string, spans: Span[], language: string | undefined): MerchantGuess | null {
+  // "at" / "no", "na" / "en" / "chez", "au" — minus any the input language
+  // reserves (Spanish "no" is "not", never "in the").
+  const connectors = mergedWords(language, (p) => p.merchantConnectors).join('|');
+  const match = new RegExp(`(?<![\\p{L}\\p{N}])(?:${connectors})\\s+([^\\s,]+)`, 'iu').exec(text);
   if (!match || match.index === undefined) return null;
   const raw = match[1];
   const candidate = raw.replace(/[.,]+$/, '');
@@ -436,13 +527,8 @@ function guessNewMerchant(text: string, spans: Span[]): MerchantGuess | null {
 
 // ---- direction ----
 
-const INCOME_TRIGGERS = [
-  'recebi', 'salário', 'salario', 'salary', 'deposit', 'depósito', 'deposito',
-  'received', 'got paid', 'paycheck', 'income',
-];
-
-function matchDirection(textLower: string, spans: Span[]): 'expense' | 'income' {
-  for (const w of INCOME_TRIGGERS) {
+function matchDirection(textLower: string, spans: Span[], language: string | undefined): 'expense' | 'income' {
+  for (const w of mergedWords(language, (p) => p.incomeTriggers)) {
     const idx = textLower.indexOf(w);
     if (idx !== -1) {
       spans.push([idx, idx + w.length]);
@@ -465,15 +551,13 @@ function matchDirection(textLower: string, spans: Span[]): 'expense' | 'income' 
 // "...Can on at ." Trimmed from the outside in only (never mid-string,
 // where a leftover "at"/"on" might be genuinely meaningful, e.g. as part
 // of the merchant guess's own lead-in).
-const EDGE_FILLER_WORDS = new Set(['at', 'on', 'in', 'de', 'em', 'no', 'na']);
-
 // `protect`, when given, is a phrase ("at amazon.CA") that must never be
 // eaten by the trim even where one of its own words (typically the
 // leading "at"/"no"/"na") would otherwise look like edge noise — found by
 // exact word-run position, not by exempting the word everywhere, so an
 // unrelated "at" elsewhere in the leftover is still trimmed normally.
-function trimLeftoverEdges(s: string, protect: string | null): string {
-  const isEdgeNoise = (w: string) => EDGE_FILLER_WORDS.has(w.toLowerCase()) || /^[.,;:!?]+$/.test(w);
+function trimLeftoverEdges(s: string, protect: string | null, fillers: Set<string>): string {
+  const isEdgeNoise = (w: string) => fillers.has(w.toLowerCase()) || /^[.,;:!?]+$/.test(w);
   const words = s.split(' ');
   const protectWords = protect ? protect.split(' ') : [];
 
@@ -494,7 +578,8 @@ function trimLeftoverEdges(s: string, protect: string | null): string {
   return words.slice(lo, hi).join(' ');
 }
 
-function computeUnrecognized(text: string, spans: Span[], protect: string | null): string | null {
+function computeUnrecognized(text: string, spans: Span[], protect: string | null, language: string | undefined): string | null {
+  const fillers = new Set(mergedWords(language, (p) => p.edgeFillers));
   const sorted = [...spans].sort((a, b) => a[0] - b[0]);
   let leftover = '';
   let cursor = 0;
@@ -503,7 +588,7 @@ function computeUnrecognized(text: string, spans: Span[], protect: string | null
     cursor = Math.max(cursor, end);
   }
   leftover += text.slice(cursor);
-  const cleaned = trimLeftoverEdges(leftover.replace(/\s+/g, ' ').trim(), protect);
+  const cleaned = trimLeftoverEdges(leftover.replace(/\s+/g, ' ').trim(), protect, fillers);
   return cleaned || null;
 }
 
@@ -516,13 +601,13 @@ export function parseUtterance(text: string, ctx: ParserContext): ParseResult {
 
   // Date/time first (see extractDigitAmount's comment): both can contain
   // digit sequences that would otherwise be mistaken for the amount.
-  const occurredAt = resolveDate(textLower, ctx.now, spans);
+  const occurredAt = resolveDate(textLower, ctx.now, spans, ctx.language);
 
   const digitAmount = extractDigitAmount(text, spans);
-  const wordAmount = digitAmount === null ? extractWordAmount(tokens, spans) : null;
+  const wordAmount = digitAmount === null ? extractWordAmount(tokens, spans, ctx.language) : null;
   const amountCents = digitAmount !== null ? digitAmount : wordAmount !== null ? wordAmount * 100 : null;
 
-  const direction = matchDirection(textLower, spans);
+  const direction = matchDirection(textLower, spans, ctx.language);
   const currency = extractCurrency(text, spans);
   const categoryId = matchCategory(textLower, ctx, spans);
   const accountId = matchAccount(textLower, ctx, spans);
@@ -530,7 +615,7 @@ export function parseUtterance(text: string, ctx: ParserContext): ParseResult {
   // Only try a guess once every other field (including the date/time/tz
   // spans above) has had its say — guessNewMerchant skips any token that
   // overlaps text something else already claimed.
-  const guess = confirmedMerchant === null ? guessNewMerchant(text, spans) : null;
+  const guess = confirmedMerchant === null ? guessNewMerchant(text, spans, ctx.language) : null;
 
   return {
     amountCents,
@@ -541,6 +626,6 @@ export function parseUtterance(text: string, ctx: ParserContext): ParseResult {
     accountId,
     merchant: confirmedMerchant ?? guess?.merchant ?? null,
     merchantGuessed: confirmedMerchant === null && guess !== null,
-    unrecognized: computeUnrecognized(text, spans, guess?.leadIn ?? null),
+    unrecognized: computeUnrecognized(text, spans, guess?.leadIn ?? null, ctx.language),
   };
 }

@@ -12,6 +12,8 @@
 // dependency (just fetch, already global) and matches this adapter's
 // existing shape closer than pulling in nodemailer would.
 
+import { magicLinkEmail, type EmailLanguage } from './emailTemplates.js';
+
 const SMTP2GO_SEND_URL = 'https://api.smtp2go.com/v3/email/send';
 
 interface Smtp2goResponse {
@@ -22,10 +24,15 @@ interface Smtp2goResponse {
   };
 }
 
-export async function sendMagicLinkEmail(email: string, verifyUrl: string, code: string): Promise<void> {
+export async function sendMagicLinkEmail(
+  email: string,
+  verifyUrl: string,
+  code: string,
+  language: EmailLanguage = 'en',
+): Promise<void> {
   const apiKey = process.env.SMTP2GO_API_KEY;
   if (!apiKey) {
-    console.log(`[auth] magic link for ${email}: ${verifyUrl} (code ${code})`);
+    console.log(`[auth] magic link for ${email} (${language}): ${verifyUrl} (code ${code})`);
     return;
   }
 
@@ -34,16 +41,8 @@ export async function sendMagicLinkEmail(email: string, verifyUrl: string, code:
     throw new Error('SMTP2GO_FROM_ADDRESS is not set — required once SMTP2GO_API_KEY is configured (see .env.example)');
   }
 
-  // verifyUrl's token segment is base64url (A-Za-z0-9-_ only, generated
-  // by crypto.ts), the code is six digits, and appBaseUrl is an env var,
-  // not user input — safe to interpolate directly into the HTML body with
-  // no escaping.
-  //
-  // docs/56 D204: the code is the only way to sign in an iOS home-screen
-  // app (a tapped link always opens Safari, whose storage is separate),
-  // so the email says so explicitly rather than leaving the code as an
-  // unexplained extra.
-  const spacedCode = `${code.slice(0, 3)} ${code.slice(3)}`;
+  // Copy and HTML-safety notes live in emailTemplates.ts (docs/73 D271).
+  const message = magicLinkEmail(verifyUrl, code, language);
   const response = await fetch(SMTP2GO_SEND_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -51,9 +50,9 @@ export async function sendMagicLinkEmail(email: string, verifyUrl: string, code:
       api_key: apiKey,
       to: [email],
       sender,
-      subject: 'Sign in to Flowtab',
-      text_body: `Tap the link below to sign in to Flowtab:\n\n${verifyUrl}\n\nOr enter this code in the app: ${spacedCode}\n\nUsing Flowtab from your home screen on iPhone or iPad? Don't tap the link — open the app and enter the code instead.\n\nThe link and code expire in 15 minutes. If you didn't request this, you can ignore it.`,
-      html_body: `<p>Tap the link below to sign in to Flowtab:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p><p>Or enter this code in the app:</p><p style="font-size:28px;font-weight:600;letter-spacing:4px;font-family:ui-monospace,Menlo,Consolas,monospace">${spacedCode}</p><p>Using Flowtab from your home screen on iPhone or iPad? Don't tap the link — open the app and enter the code instead.</p><p>The link and code expire in 15 minutes. If you didn't request this, you can ignore it.</p>`,
+      subject: message.subject,
+      text_body: message.text,
+      html_body: message.html,
     }),
   });
 

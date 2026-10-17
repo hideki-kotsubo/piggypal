@@ -89,7 +89,9 @@
     "addToHome": "Adicionar o Flowtab à tela de início",
     "iosSteps": "No Safari, toque no botão Compartilhar <icon>(□↑)</icon> e escolha <strong>Adicionar à Tela de Início</strong>. O Flowtab vai abrir pelo próprio ícone, em tela cheia e off-line.",
     "about": "Sobre o Flowtab",
-    "accountDeletedNoticeAnon": "A conta foi excluída pelo dono, então este dispositivo foi desconectado. Tudo o que está nele continua aqui e funcionando, só não sincroniza mais."
+    "accountDeletedNoticeAnon": "A conta foi excluída pelo dono, então este dispositivo foi desconectado. Tudo o que está nele continua aqui e funcionando, só não sincroniza mais.",
+    "voiceLanguage": "Idioma da voz",
+    "voiceSameAsApp": "Igual ao app · {{language}}"
   },
   "occurrence": {
     "today": "Hoje",
@@ -565,7 +567,8 @@
     "deleteAccount": "Não foi possível excluir a conta. Confira sua conexão e tente novamente.",
     "relayUnreachable": "Não foi possível alcançar o servidor de pareamento.",
     "relayClosed": "A conexão com o servidor de pareamento fechou antes de terminar.",
-    "pairingFailed": "Falha no pareamento."
+    "pairingFailed": "Falha no pareamento.",
+    "notOwner": "Só quem criou a conta pode excluí-la."
   },
   "seedCategory": {
     "cat-food": "Alimentação e Mercado",
@@ -616,5 +619,11 @@
   "device": {
     "android": "Dispositivo Android",
     "generic": "Este dispositivo"
+  },
+  "voice": {
+    "permission": "A entrada por voz precisa de acesso ao microfone e ao reconhecimento de fala — permita nos ajustes do aparelho.",
+    "languageUnsupported": "A entrada por voz em {{language}} não está disponível neste dispositivo. Mude em Configurações → Idioma da voz.",
+    "network": "A entrada por voz precisa de conexão agora — tente de novo ou digite.",
+    "failed": "Não entendi — tente de novo ou digite."
   }
 }

@@ -13,6 +13,17 @@
 // browser vendor's own cloud service — this isn't genuinely offline
 // speech-to-text, just free of *our* AI cost. A fully offline in-browser
 // model is a much bigger undertaking, out of scope here.
+//
+// docs/73 D269: the Android app uses the native recognizer instead
+// (@capacitor-community/speech-recognition), since Android's WebView has
+// no Web Speech. The iOS app keeps WebKit's (the plugin can't join its
+// Swift Package Manager project, see capacitor.config.ts). Both paths
+// listen in the Voice language setting's language (voiceLanguage.ts) and
+// report errors with the Web Speech API's codes.
+
+import { Capacitor } from '@capacitor/core';
+import { SpeechRecognition as NativeSpeech } from '@capacitor-community/speech-recognition';
+import { currentSpeechTag } from './voiceLanguage';
 
 interface SpeechRecognitionResultLike {
   0: { transcript: string };
@@ -38,8 +49,10 @@ function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
+const isNativeSpeech = () => Capacitor.getPlatform() === 'android';
+
 export function isSpeechInputSupported(): boolean {
-  return typeof window !== 'undefined' && getSpeechRecognitionCtor() !== null;
+  return typeof window !== 'undefined' && (isNativeSpeech() || getSpeechRecognitionCtor() !== null);
 }
 
 export interface SpeechInputHandlers {
@@ -62,10 +75,7 @@ function configuredRecognition(handlers: SpeechInputHandlers): SpeechRecognition
   const Ctor = getSpeechRecognitionCtor();
   if (!Ctor) return null;
   const recognition = sharedRecognition ?? new Ctor();
-  // No language toggle exists yet (docs/09 is spec-only) — navigator.language
-  // is a best-effort default, genuinely imperfect if the OS locale doesn't
-  // match what the user actually speaks. Revisit once docs/09 ships.
-  recognition.lang = navigator.language;
+  recognition.lang = currentSpeechTag();
   recognition.interimResults = false;
   recognition.maxAlternatives = 1;
   recognition.onresult = (event) => {
@@ -95,7 +105,53 @@ function configuredRecognition(handlers: SpeechInputHandlers): SpeechRecognition
 // limitation, not something either reuse-the-instance or prime-with-
 // getUserMedia can fix from the web side).
 
+// The plugin's Android error texts (its SpeechRecognition.java), mapped
+// onto the Web Speech API's error codes so callers handle one set.
+function nativeErrorCode(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err);
+  if (/permission/i.test(message)) return 'not-allowed';
+  if (/network|server/i.test(message)) return 'network';
+  if (/no match|no speech/i.test(message)) return 'no-speech';
+  if (/not available/i.test(message)) return 'service-not-allowed';
+  return 'unknown';
+}
+
+function startNativeSpeech(handlers: SpeechInputHandlers): { stop: () => void; abort: () => void } {
+  let aborted = false;
+  void (async () => {
+    try {
+      let permission = (await NativeSpeech.checkPermissions()).speechRecognition;
+      if (permission !== 'granted') permission = (await NativeSpeech.requestPermissions()).speechRecognition;
+      if (permission !== 'granted') {
+        handlers.onError?.('not-allowed');
+        return;
+      }
+      const { matches } = await NativeSpeech.start({
+        language: currentSpeechTag(),
+        maxResults: 1,
+        partialResults: false,
+        popup: false,
+      });
+      if (aborted) return;
+      if (matches?.[0]) handlers.onResult(matches[0]);
+      else handlers.onError?.('no-speech');
+    } catch (err) {
+      if (!aborted) handlers.onError?.(nativeErrorCode(err));
+    } finally {
+      handlers.onEnd?.();
+    }
+  })();
+  return {
+    stop: () => void NativeSpeech.stop(),
+    abort: () => {
+      aborted = true;
+      void NativeSpeech.stop();
+    },
+  };
+}
+
 export function startSpeechInput(handlers: SpeechInputHandlers): { stop: () => void; abort: () => void } | null {
+  if (isNativeSpeech()) return startNativeSpeech(handlers);
   let recognition = configuredRecognition(handlers);
   if (!recognition) return null;
   try {

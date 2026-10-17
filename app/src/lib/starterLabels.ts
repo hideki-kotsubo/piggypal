@@ -39,3 +39,20 @@ export function accountName(account: { name: string; kind?: AccountKind }): stri
   const key = `accountKind.${account.kind}`;
   return isStarterName(key, account.name) ? i18n.t(key) : account.name;
 }
+
+// docs/73 D270 — every language's starter names, as extra names the
+// parser can match ("épicerie", "dinheiro"), but only for rows that were
+// never renamed: a renamed category is found by the name the user gave it.
+export function starterCategoryAliases(categories: { id: string; name: string }[]): { categoryId: string; alias: string }[] {
+  return categories.flatMap((c) => {
+    const key = `seedCategory.${c.id}`;
+    return isStarterName(key, c.name) ? [...labelsInEveryLanguage(key)].map((alias) => ({ categoryId: c.id, alias })) : [];
+  });
+}
+
+export function starterAccountAliases(accounts: { id: string; name: string; kind: AccountKind }[]): { accountId: string; alias: string }[] {
+  return accounts.flatMap((a) => {
+    const key = `accountKind.${a.kind}`;
+    return isStarterName(key, a.name) ? [...labelsInEveryLanguage(key)].map((alias) => ({ accountId: a.id, alias })) : [];
+  });
+}

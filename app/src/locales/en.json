@@ -82,7 +82,9 @@
     "addToHome": "Add Flowtab to your Home Screen",
     "iosSteps": "In Safari, tap the Share button <icon>(□↑)</icon>, then choose <strong>Add to Home Screen</strong>. Flowtab will open from its own icon, full screen and offline.",
     "about": "About Flowtab",
-    "accountDeletedNoticeAnon": "The account was deleted by its owner, so this device is signed out. Everything on it is still here and keeps working, it just doesn't sync anymore."
+    "accountDeletedNoticeAnon": "The account was deleted by its owner, so this device is signed out. Everything on it is still here and keeps working, it just doesn't sync anymore.",
+    "voiceLanguage": "Voice language",
+    "voiceSameAsApp": "Same as app · {{language}}"
   },
   "occurrence": {
     "today": "Today",
@@ -543,7 +545,8 @@
     "deleteAccount": "Couldn't delete the account. Check your connection and try again.",
     "relayUnreachable": "Could not reach the relay.",
     "relayClosed": "Relay connection closed before pairing finished.",
-    "pairingFailed": "Pairing failed."
+    "pairingFailed": "Pairing failed.",
+    "notOwner": "Only the person who created the account can delete it."
   },
   "seedCategory": {
     "cat-food": "Food & Groceries",
@@ -594,5 +597,11 @@
   "device": {
     "android": "Android device",
     "generic": "This device"
+  },
+  "voice": {
+    "permission": "Voice entry needs microphone and speech recognition access — allow it in your device settings.",
+    "languageUnsupported": "Voice entry in {{language}} isn't available on this device. Change it in Settings → Voice language.",
+    "network": "Voice entry needs a connection right now — try again, or type it.",
+    "failed": "Couldn't catch that — try again, or type it."
   }
 }
