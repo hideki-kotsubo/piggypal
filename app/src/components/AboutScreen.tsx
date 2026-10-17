@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import changelogSource from '../../CHANGELOG.md?raw';
 import {
   type ChangelogEntry,
@@ -24,12 +25,13 @@ function Inline({ text }: { text: string }) {
 }
 
 function ChangelogItem({ entry }: { entry: ChangelogEntry }) {
+  const { t } = useTranslation();
   return (
     <div className="changelog-entry">
       <div className="changelog-heading">
         <span className="changelog-version">{entry.version}</span>
         {entry.date && <span className="changelog-date">{formatEntryDate(entry.date)}</span>}
-        {entry.version === UNRELEASED && <span className="changelog-date">dev preview</span>}
+        {entry.version === UNRELEASED && <span className="changelog-date">{t('about.devPreview')}</span>}
       </div>
       {entry.intro.map((p, i) => (
         <p key={i}><Inline text={p} /></p>
@@ -46,37 +48,32 @@ function ChangelogItem({ entry }: { entry: ChangelogEntry }) {
 }
 
 export function AboutScreen() {
+  const { t } = useTranslation();
   return (
     <main className="home">
       <div className="app-bar">
-        <Link to="/settings" className="back-link">← Back</Link>
-        <span className="wordmark">About</span>
+        <Link to="/settings" className="back-link">← {t('common.back')}</Link>
+        <span className="wordmark">{t('about.title')}</span>
         <span style={{ width: '3rem' }} />
       </div>
 
-      <p className="about-text">
-        Flowtab is a simple, light, private budgeting app — you just type or
-        say what you spent.
-      </p>
-      <p className="about-text">
-        Built by Hideki Kotsubo, an independent software developer based in
-        Vancouver, Canada.
-      </p>
+      <p className="about-text">{t('about.pitch')}</p>
+      <p className="about-text">{t('about.author')}</p>
 
       <div className="accounts-list">
         <a href="mailto:hideki.kotsubo@gmail.com" className="settings-row">
-          <span>Contact</span>
+          <span>{t('about.contact')}</span>
           <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>hideki.kotsubo@gmail.com</span>
         </a>
         <div className="settings-row settings-row-static">
-          <span>Version</span>
+          <span>{t('about.version')}</span>
           <span style={{ color: 'var(--ink-faint)' }}>{APP_VERSION} ({APP_COMMIT})</span>
         </div>
       </div>
 
       {RECENT_CHANGES.length > 0 && (
         <>
-          <div className="section-label">What's new</div>
+          <div className="section-label">{t('about.whatsNew')}</div>
           {RECENT_CHANGES.map((entry) => (
             <ChangelogItem key={entry.version} entry={entry} />
           ))}

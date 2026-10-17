@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
 import { formatAmount } from '../lib/format';
 
@@ -9,6 +10,7 @@ const DAYS = 30;
 
 export function TrendSparkline() {
   const store = useStore();
+  const { t } = useTranslation();
 
   // Local date construction, not toISOString() — that's UTC and would
   // shift which day a purchase near midnight lands on.
@@ -23,11 +25,11 @@ export function TrendSparkline() {
   }
 
   const spendByDay = new Map<string, number>();
-  for (const t of store.transactions) {
-    if (t.deletedAt || t.currency !== PRIMARY_CURRENCY || t.amountCents >= 0) continue;
+  for (const tx of store.transactions) {
+    if (tx.deletedAt || tx.currency !== PRIMARY_CURRENCY || tx.amountCents >= 0) continue;
     // occurredAt now carries a time too — group by its date portion only.
-    const day = t.occurredAt.slice(0, 10);
-    spendByDay.set(day, (spendByDay.get(day) ?? 0) + -t.amountCents);
+    const day = tx.occurredAt.slice(0, 10);
+    spendByDay.set(day, (spendByDay.get(day) ?? 0) + -tx.amountCents);
   }
 
   const values = days.map((d) => spendByDay.get(d) ?? 0);
@@ -48,7 +50,7 @@ export function TrendSparkline() {
   return (
     <div className="trend-card">
       <div className="trend-head">
-        <span className="t">Last {DAYS} days ({PRIMARY_CURRENCY})</span>
+        <span className="t">{t('insights.lastDays', { count: DAYS, currency: PRIMARY_CURRENCY })}</span>
         <span className="v">{formatAmount(total, PRIMARY_CURRENCY)}</span>
       </div>
       <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">

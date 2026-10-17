@@ -1,12 +1,14 @@
 import { addDays } from './schedules';
+import i18n, { uiLocale } from './i18n';
+import { accountName, categoryLabel } from './starterLabels';
+import type { AccountKind } from './types';
 
 // docs/09: number formatting keyed to UI language, currency symbol keyed to
-// the transaction's own currency — independent axes. UI language is
-// hardcoded to en-CA for now; docs/09's language switcher isn't built yet.
-const UI_LOCALE = 'en-CA';
+// the transaction's own currency — independent axes. The locale comes from
+// i18n.ts (docs/73 D265): UI language plus the device's region.
 
 export function formatAmount(cents: number, currency: string): string {
-  return new Intl.NumberFormat(UI_LOCALE, {
+  return new Intl.NumberFormat(uiLocale(), {
     style: 'currency',
     currency,
     currencyDisplay: 'narrowSymbol',
@@ -24,10 +26,10 @@ export function formatRelativeDate(occurredAt: string): string {
   const dateAtMidnight = new Date(date);
   dateAtMidnight.setHours(0, 0, 0, 0);
   const days = Math.round((today.getTime() - dateAtMidnight.getTime()) / 86_400_000);
-  if (days === 0) return 'today';
-  if (days === 1) return 'yesterday';
-  if (days < 7) return `${days} days ago`;
-  return new Intl.DateTimeFormat(UI_LOCALE, { month: 'short', day: 'numeric' }).format(date);
+  if (days === 0) return i18n.t('date.today');
+  if (days === 1) return i18n.t('date.yesterday');
+  if (days < 7) return i18n.t('date.daysAgo', { count: days });
+  return new Intl.DateTimeFormat(uiLocale(), { month: 'short', day: 'numeric' }).format(date);
 }
 
 export interface DayGroup<T> {
@@ -55,7 +57,7 @@ export function groupByDay<T extends { occurredAt: string }>(items: T[]): DayGro
 }
 
 export function formatTime(occurredAt: string): string {
-  return new Intl.DateTimeFormat(UI_LOCALE, { hour: 'numeric', minute: '2-digit' }).format(new Date(occurredAt));
+  return new Intl.DateTimeFormat(uiLocale(), { hour: 'numeric', minute: '2-digit' }).format(new Date(occurredAt));
 }
 
 // docs/46 D169 — for the sign-in merge review's "which is more recent"
@@ -66,8 +68,8 @@ export function formatTime(occurredAt: string): string {
 // always is. Epoch (NEVER_UPDATED, store.tsx) reads as "never" rather
 // than a real, misleadingly precise 1970 date.
 export function formatDateTime(iso: string): string {
-  if (iso === '1970-01-01T00:00:00.000Z') return 'never';
-  return new Intl.DateTimeFormat(UI_LOCALE, {
+  if (iso === '1970-01-01T00:00:00.000Z') return i18n.t('date.never');
+  return new Intl.DateTimeFormat(uiLocale(), {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(iso));
@@ -97,8 +99,9 @@ export function nowUtc(): string {
 // docs/12 D61 — institution disambiguates same-named accounts at different
 // banks ("TD — Checking" vs "Itaú — Checking"); falls back to the bare name
 // when institution isn't set.
-export function accountLabel(account: { institution: string | null; name: string }): string {
-  return account.institution ? `${account.institution} — ${account.name}` : account.name;
+export function accountLabel(account: { institution: string | null; name: string; kind?: AccountKind }): string {
+  const name = accountName(account);
+  return account.institution ? `${account.institution} — ${name}` : name;
 }
 
 // A note-less transaction's category is more useful as the list-row title
@@ -106,21 +109,21 @@ export function accountLabel(account: { institution: string | null; name: string
 // entries that are neither (e.g. Inbox items, always category-less there).
 export function transactionTitle(
   transaction: { note: string | null },
-  category: { name: string } | null | undefined,
+  category: { id: string; name: string } | null | undefined,
 ): string {
-  return transaction.note ?? category?.name ?? 'Uncategorized';
+  return transaction.note ?? (category ? categoryLabel(category) : i18n.t('category.uncategorized'));
 }
 
 // docs/57 — "Today", "Tomorrow", "Oct 15" for a scheduled-payment date. A
 // schedule date has no time part ("YYYY-MM-DD"), so it never goes through
 // the occurredAt-oriented helpers above.
 export function formatOccurrenceDate(date: string, today: string): string {
-  if (date === today) return 'Today';
-  if (date === addDays(today, 1)) return 'Tomorrow';
-  if (date === addDays(today, -1)) return 'Yesterday';
+  if (date === today) return i18n.t('occurrence.today');
+  if (date === addDays(today, 1)) return i18n.t('occurrence.tomorrow');
+  if (date === addDays(today, -1)) return i18n.t('occurrence.yesterday');
   const [y, m, d] = date.split('-').map(Number);
   const sameYear = date.slice(0, 4) === today.slice(0, 4);
-  return new Intl.DateTimeFormat(UI_LOCALE, { month: 'short', day: 'numeric', ...(sameYear ? {} : { year: 'numeric' }) }).format(
+  return new Intl.DateTimeFormat(uiLocale(), { month: 'short', day: 'numeric', ...(sameYear ? {} : { year: 'numeric' }) }).format(
     new Date(y, m - 1, d),
   );
 }
@@ -132,10 +135,10 @@ export function formatOccurrenceDate(date: string, today: string): string {
 // differently, not both collapse to "today".
 export function formatTimeAgo(iso: string): string {
   const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+  if (minutes < 1) return i18n.t('date.justNow');
+  if (minutes < 60) return i18n.t('date.minutesAgo', { count: minutes });
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  if (hours < 24) return i18n.t('date.hoursAgo', { count: hours });
   const days = Math.round(hours / 24);
-  return `${days} day${days === 1 ? '' : 's'} ago`;
+  return i18n.t('date.daysAgo', { count: days });
 }

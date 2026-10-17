@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import QrScanner from 'qr-scanner';
+import { useTranslation } from 'react-i18next';
 
 // Shared by docs/25's P2P pairing (PairingScreen) and docs/71's QR device
 // linking (DeviceLinkScreen, ScanDeviceLinkScreen).
@@ -21,6 +22,7 @@ export function QrCanvas({ payload }: { payload: string }) {
 }
 
 export function QrScanStep({ caption, onResult }: { caption: string; onResult: (text: string) => void }) {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const onResultRef = useRef(onResult);
   onResultRef.current = onResult;
@@ -67,7 +69,7 @@ export function QrScanStep({ caption, onResult }: { caption: string; onResult: (
       },
       { highlightScanRegion: true, highlightCodeOutline: true },
     );
-    scanner.start().catch(() => setError('Camera access is needed to scan a code.'));
+    scanner.start().catch(() => setError(t('qr.cameraNeeded')));
 
     return () => {
       // qr-scanner's plain stop()/destroy() defer the actual camera-track

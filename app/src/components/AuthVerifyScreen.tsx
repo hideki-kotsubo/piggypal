@@ -1,5 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import i18n from '../lib/i18n';
 import { connectSync, db } from '../lib/db';
 import { formatDateTime, nowUtc } from '../lib/format';
 import { getLocalUserId } from '../lib/identity';
@@ -7,6 +9,7 @@ import { isUntouchedSeedAccount, referencedAccountIds } from '../lib/seed';
 import { claimDeviceLink, fetchServerSnapshot, takePendingEmail, useAuthAccount, verifyMagicCode, verifyMagicLink } from '../lib/auth';
 import { isIosDevice, isRunningInstalled } from '../lib/installPrompt';
 import { useStore } from '../lib/store';
+import { accountName, categoryLabel } from '../lib/starterLabels';
 import { matchAccounts, matchCategories, resolveAccountRewrites, resolveCategoryRewrites } from '../lib/mergeMatch';
 import type {
   AccountManualCandidate,
@@ -75,7 +78,7 @@ function initialStep(token: string | null, state: unknown): Step {
   if (typeof codeState?.deviceLink === 'string') {
     return { kind: 'confirm', credential: { via: 'device-link', token: codeState.deviceLink } };
   }
-  if (!token) return { kind: 'error', message: 'This link is missing its sign-in token.' };
+  if (!token) return { kind: 'error', message: i18n.t('auth.missingToken') };
   return { kind: 'confirm', credential: { via: 'link', token } };
 }
 
@@ -83,6 +86,7 @@ export function AuthVerifyScreen() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const store = useStore();
   const [, setAuthAccount] = useAuthAccount();
   const [step, setStep] = useState<Step>(() => initialStep(searchParams.get('token'), location.state));
@@ -191,11 +195,11 @@ export function AuthVerifyScreen() {
       // fire on the actual signup moment, never a repeat sign-in on an
       // already-established device — this profile's id is a primary key.
       if (result.isNewUser) {
-        store.addProfile({ id: getLocalUserId(), displayName: 'You', updatedAt: nowUtc(), deletedAt: null });
+        store.addProfile({ id: getLocalUserId(), displayName: t('auth.defaultName'), updatedAt: nowUtc(), deletedAt: null });
       }
       await finish(result.userId);
     } catch (err) {
-      setStep({ kind: 'error', message: err instanceof Error ? err.message : 'Sign-in failed.' });
+      setStep({ kind: 'error', message: err instanceof Error ? err.message : t('auth.failed') });
     }
   }
 
@@ -279,7 +283,7 @@ export function AuthVerifyScreen() {
       setResolutions({});
       setStep({ kind: 'merge-review', userId, picked, categoryMatch, accountMatch, discardAccountIds });
     } catch (err) {
-      setStep({ kind: 'error', message: err instanceof Error ? err.message : 'Could not check your account.' });
+      setStep({ kind: 'error', message: err instanceof Error ? err.message : t('auth.checkFailed') });
     }
   }
 
@@ -328,7 +332,7 @@ export function AuthVerifyScreen() {
   return (
     <main className="home">
       <div className="app-bar">
-        <span className="wordmark">Sign in</span>
+        <span className="wordmark">{t('auth.title')}</span>
       </div>
 
       {step.kind === 'confirm' && (
@@ -339,14 +343,11 @@ export function AuthVerifyScreen() {
               tap-to-confirm step (docs/45) means nothing is consumed yet, so
               the code from the same email still works in the app. */}
           {step.credential.via === 'link' && isIosDevice() && !isRunningInstalled() && (
-            <p className="qr-caption">
-              Using Flowtab from your home screen? Don't sign in here — open the app and enter the 6-digit code from
-              the email instead.
-            </p>
+            <p className="qr-caption">{t('auth.iosHomeScreenHint')}</p>
           )}
-          <p className="qr-caption">Tap below to finish signing in{isIosDevice() && !isRunningInstalled() ? ' in this browser' : ''}.</p>
+          <p className="qr-caption">{isIosDevice() && !isRunningInstalled() ? t('auth.tapToFinishBrowser') : t('auth.tapToFinish')}</p>
           <button className="save-btn" onClick={() => void confirmSignIn(step.credential)}>
-            Sign in
+            {t('auth.title')}
           </button>
         </div>
       )}
@@ -356,8 +357,8 @@ export function AuthVerifyScreen() {
           <div className="spinner" aria-hidden="true" />
           <p className="qr-caption">
             {step.kind === 'verifying'
-              ? 'Signing you in…'
-              : "Downloading your account — this can take a moment on a real account's worth of data."}
+              ? t('auth.signingIn')
+              : t('auth.downloading')}
           </p>
         </div>
       )}
@@ -373,7 +374,7 @@ export function AuthVerifyScreen() {
 
       {step.kind === 'merge-review' && (
         <div className="merge-review">
-          <p className="section-label">A few things need your call</p>
+          <p className="section-label">{t('auth.needsCall')}</p>
           <div className="merge-conflicts">
             {step.categoryMatch.manual.map((m) => (
               <CategoryConflict
@@ -397,7 +398,7 @@ export function AuthVerifyScreen() {
             disabled={!allManualResolved(step)}
             onClick={() => void applyAndFinish(step.userId, step.picked, step.categoryMatch, step.accountMatch, step.discardAccountIds, resolutions)}
           >
-            Continue
+            {t('auth.continue')}
           </button>
         </div>
       )}
@@ -405,7 +406,7 @@ export function AuthVerifyScreen() {
       {step.kind === 'done' && (
         <div className="qr-stage">
           <div className="confirm-check">✓</div>
-          <p className="qr-caption">Signed in. Sync will continue in the background.</p>
+          <p className="qr-caption">{t('auth.signedIn')}</p>
           {/* A plain browser tab is the case where this device might also
               have a separate home-screen icon. docs/56 corrects docs/54 on
               what that means: on Android/desktop Chrome the installed app
@@ -414,17 +415,12 @@ export function AuthVerifyScreen() {
               only this browser is signed in. */}
           {!isRunningInstalled() &&
             (isIosDevice() ? (
-              <p className="qr-caption">
-                This signed in this browser only. If you use Flowtab from your home screen, sign in there too — it
-                keeps its own separate sign-in on iPhone and iPad.
-              </p>
+              <p className="qr-caption">{t('auth.iosBrowserOnly')}</p>
             ) : (
-              <p className="qr-caption">
-                If you've added Flowtab to your home screen, you can close this tab and open it from there.
-              </p>
+              <p className="qr-caption">{t('auth.closeTab')}</p>
             ))}
           <button className="save-btn" onClick={() => navigate('/settings')}>
-            Done
+            {t('common.done')}
           </button>
         </div>
       )}
@@ -433,7 +429,7 @@ export function AuthVerifyScreen() {
         <div className="qr-stage">
           <p className="qr-caption">{step.message}</p>
           <button className="save-btn" onClick={() => navigate('/settings')}>
-            Back to Settings
+            {t('deleteAccount.backToSettings')}
           </button>
         </div>
       )}
@@ -457,19 +453,20 @@ function ProfilePicker({
   onPickNew: (displayName: string) => void;
   onDiscard: () => void;
 }) {
+  const { t } = useTranslation();
   const [addingNew, setAddingNew] = useState(false);
   const [newName, setNewName] = useState('');
 
   if (addingNew) {
     return (
       <div className="qr-stage">
-        <p className="qr-caption">What's their name?</p>
-        <input className="text-input" placeholder="e.g. Wife" value={newName} onChange={(e) => setNewName(e.target.value)} />
+        <p className="qr-caption">{t('auth.theirName')}</p>
+        <input className="text-input" placeholder={t('auth.namePlaceholder')} value={newName} onChange={(e) => setNewName(e.target.value)} />
         <button className="save-btn" disabled={!newName.trim()} onClick={() => onPickNew(newName.trim())}>
-          Continue
+          {t('auth.continue')}
         </button>
         <button className="chip ghost" onClick={() => setAddingNew(false)}>
-          Back
+          {t('common.back')}
         </button>
       </div>
     );
@@ -478,16 +475,18 @@ function ProfilePicker({
   return (
     <div className="qr-stage">
       <p className="qr-caption">
-        This device already has {step.existingAccounts} account{step.existingAccounts === 1 ? '' : 's'} and{' '}
-        {step.existingTransactions} transaction{step.existingTransactions === 1 ? '' : 's'}. Whose device is this?
+        {t('auth.whoseDevice', {
+          accounts: t('pairing.accounts', { count: step.existingAccounts }),
+          transactions: t('transactions.count', { count: step.existingTransactions }),
+        })}
       </p>
       {step.profiles.map((p) => (
         <button key={p.id} className="save-btn" onClick={() => onPickExisting(p)}>
-          This is {p.displayName}'s device
+          {t('auth.thisIsDeviceOf', { name: p.displayName })}
         </button>
       ))}
       <button className="chip ghost" onClick={() => setAddingNew(true)}>
-        Someone new
+        {t('auth.someoneNew')}
       </button>
       {/* docs/05 D14, unchanged from before: typing this email and
           tapping the magic link IS the explicit "this is me" signal —
@@ -495,7 +494,7 @@ function ProfilePicker({
           whose only "existing data" is seedIfEmpty()'s own demo
           placeholders, nothing worth reconciling either way. */}
       <button className="text-link" onClick={onDiscard}>
-        Discard this device's data & sign in
+        {t('auth.discard')}
       </button>
     </div>
   );
@@ -516,28 +515,29 @@ function CategoryConflict({
   resolution: ManualResolution | undefined;
   onResolve: (r: ManualResolution) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="merge-conflict">
-      <p className="merge-conflict-title">"{conflict.local.name}" vs. "{conflict.server.name}"</p>
-      <p className="merge-conflict-detail">Both are categorized under a different parent — probably not the same thing, but worth a glance.</p>
+      <p className="merge-conflict-title">"{categoryLabel(conflict.local)}" vs. "{categoryLabel(conflict.server)}"</p>
+      <p className="merge-conflict-detail">{t('auth.categoryConflictDetail')}</p>
       <div className="parse-fields">
         <div className="parse-field">
-          <span className="k">Yours</span>
-          <span className="v">{conflict.local.name}</span>
-          <span className="defaulted">edited {formatDateTime(conflict.local.updatedAt)}</span>
+          <span className="k">{t('auth.yours')}</span>
+          <span className="v">{categoryLabel(conflict.local)}</span>
+          <span className="defaulted">{t('auth.edited', { date: formatDateTime(conflict.local.updatedAt) })}</span>
         </div>
         <div className="parse-field">
-          <span className="k">Theirs</span>
-          <span className="v">{conflict.server.name}</span>
-          <span className="defaulted">edited {formatDateTime(conflict.server.updatedAt)}</span>
+          <span className="k">{t('auth.theirs')}</span>
+          <span className="v">{categoryLabel(conflict.server)}</span>
+          <span className="defaulted">{t('auth.edited', { date: formatDateTime(conflict.server.updatedAt) })}</span>
         </div>
       </div>
       <div className="chip-row">
         <button className={`chip ${resolution === 'local' ? 'picked' : ''}`} onClick={() => onResolve('local')}>
-          Keep mine
+          {t('auth.keepMine')}
         </button>
         <button className={`chip ${resolution === 'server' ? 'picked' : ''}`} onClick={() => onResolve('server')}>
-          Keep theirs
+          {t('auth.keepTheirs')}
         </button>
       </div>
     </div>
@@ -553,30 +553,31 @@ function AccountConflict({
   resolution: ManualResolution | undefined;
   onResolve: (r: ManualResolution) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="merge-conflict">
       <p className="merge-conflict-title">
-        "{conflict.local.institution ?? ''} {conflict.local.name}" vs. "{conflict.server.institution ?? ''} {conflict.server.name}"
+        "{conflict.local.institution ?? ''} {accountName(conflict.local)}" vs. "{conflict.server.institution ?? ''} {accountName(conflict.server)}"
       </p>
-      <p className="merge-conflict-detail">Same name, different account type — probably not the same account, but worth a glance.</p>
+      <p className="merge-conflict-detail">{t('auth.accountConflictDetail')}</p>
       <div className="parse-fields">
         <div className="parse-field">
-          <span className="k">Yours</span>
-          <span className="v">{conflict.local.kind}</span>
-          <span className="defaulted">edited {formatDateTime(conflict.local.updatedAt)}</span>
+          <span className="k">{t('auth.yours')}</span>
+          <span className="v">{t(`accountKind.${conflict.local.kind}`)}</span>
+          <span className="defaulted">{t('auth.edited', { date: formatDateTime(conflict.local.updatedAt) })}</span>
         </div>
         <div className="parse-field">
-          <span className="k">Theirs</span>
-          <span className="v">{conflict.server.kind}</span>
-          <span className="defaulted">edited {formatDateTime(conflict.server.updatedAt)}</span>
+          <span className="k">{t('auth.theirs')}</span>
+          <span className="v">{t(`accountKind.${conflict.server.kind}`)}</span>
+          <span className="defaulted">{t('auth.edited', { date: formatDateTime(conflict.server.updatedAt) })}</span>
         </div>
       </div>
       <div className="chip-row">
         <button className={`chip ${resolution === 'local' ? 'picked' : ''}`} onClick={() => onResolve('local')}>
-          Keep mine
+          {t('auth.keepMine')}
         </button>
         <button className={`chip ${resolution === 'server' ? 'picked' : ''}`} onClick={() => onResolve('server')}>
-          Keep theirs
+          {t('auth.keepTheirs')}
         </button>
       </div>
     </div>

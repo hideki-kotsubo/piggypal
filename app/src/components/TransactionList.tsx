@@ -1,6 +1,8 @@
 import { Fragment, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
+import { categoryLabel } from '../lib/starterLabels';
 import { accountLabel, formatAmount, formatTime, groupByDay, transactionTitle } from '../lib/format';
 import {
   filterTransactions,
@@ -16,16 +18,17 @@ import { hasHousehold, personLabel, useHouseholdPeers } from '../lib/household';
 import { PayerBadge } from './PayerBadge';
 
 const MERCHANT_CAP = 8;
-const DATE_PRESETS: { id: DatePreset; label: string }[] = [
-  { id: 'week', label: 'This week' },
-  { id: 'month', label: 'This month' },
-  { id: 'lastMonth', label: 'Last month' },
+const DATE_PRESETS: { id: DatePreset; labelKey: string }[] = [
+  { id: 'week', labelKey: 'filter.thisWeek' },
+  { id: 'month', labelKey: 'filter.thisMonth' },
+  { id: 'lastMonth', labelKey: 'filter.lastMonth' },
 ];
 
 type FilterKey = 'category' | 'account' | 'merchant' | 'date';
 
 export function TransactionList() {
   const store = useStore();
+  const { t } = useTranslation();
   const peers = useHouseholdPeers();
   const showPayerBadge = hasHousehold(peers);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -59,7 +62,7 @@ export function TransactionList() {
   }
 
   const all = [...store.transactions]
-    .filter((t) => !t.deletedAt)
+    .filter((tx) => !tx.deletedAt)
     .sort((a, b) => (a.occurredAt < b.occurredAt ? 1 : -1));
   const filtered = filterTransactions(all, filters);
   const totals = totalsByCurrency(filtered);
@@ -96,16 +99,20 @@ export function TransactionList() {
 
   const selectedCategory = filters.categoryId ? store.categories.find((c) => c.id === filters.categoryId) : undefined;
   const selectedAccount = filters.accountId ? store.accounts.find((a) => a.id === filters.accountId) : undefined;
-  const dateTriggerLabel = activePreset ? activePreset.label : filters.dateFrom || filters.dateTo ? 'Custom' : 'Date range';
+  const dateTriggerLabel = activePreset
+    ? t(activePreset.labelKey)
+    : filters.dateFrom || filters.dateTo
+      ? t('filter.custom')
+      : t('filter.dateRange');
 
   return (
     <main className="home">
       <div className="app-bar">
-        <Link to="/" className="back-link">← Back</Link>
-        <span className="wordmark">Transactions</span>
+        <Link to="/" className="back-link">← {t('common.back')}</Link>
+        <span className="wordmark">{t('transactions.title')}</span>
         <div className="app-bar-actions">
           {all.length >= 2 && (
-            <Link to="/transactions/duplicates" className="icon-btn" aria-label="Find duplicates" data-testid="find-duplicates-btn">
+            <Link to="/transactions/duplicates" className="icon-btn" aria-label={t('transactions.findDuplicates')} data-testid="find-duplicates-btn">
               ⇄
             </Link>
           )}
@@ -119,7 +126,7 @@ export function TransactionList() {
             <path d="M9 9L12 12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
           </svg>
           <input
-            placeholder="search notes & locations…"
+            placeholder={t('transactions.searchPlaceholder')}
             value={filters.q}
             onChange={(e) => setParam('q', e.target.value)}
           />
@@ -136,14 +143,14 @@ export function TransactionList() {
             categories"/"Any location"/etc, already the first option there. */}
         <div className="pill-row filter-trigger-row">
           <button className={`pill-tap ${selectedCategory ? 'active' : ''}`} onClick={() => toggleFilter('category')}>
-            {selectedCategory?.name ?? 'Category'} ▾
+            {selectedCategory ? categoryLabel(selectedCategory) : t('filter.category')} ▾
           </button>
           <button className={`pill-tap ${selectedAccount ? 'active' : ''}`} onClick={() => toggleFilter('account')}>
-            {selectedAccount ? accountLabel(selectedAccount) : 'Account'} ▾
+            {selectedAccount ? accountLabel(selectedAccount) : t('filter.account')} ▾
           </button>
           {rankedMerchants.length > 0 && (
             <button className={`pill-tap ${filters.merchant ? 'active' : ''}`} onClick={() => toggleFilter('merchant')}>
-              {filters.merchant ?? 'Location'} ▾
+              {filters.merchant ?? t('filter.location')} ▾
             </button>
           )}
           <button className={`pill-tap ${filters.dateFrom || filters.dateTo ? 'active' : ''}`} onClick={() => toggleFilter('date')}>
@@ -154,7 +161,7 @@ export function TransactionList() {
         {openFilter === 'category' && (
           <div className="chip-row">
             <button className={`chip ${!filters.categoryId ? 'picked' : ''}`} onClick={() => { setParam('category', null); setOpenFilter(null); }}>
-              All categories
+              {t('filter.allCategories')}
             </button>
           </div>
         )}
@@ -165,7 +172,7 @@ export function TransactionList() {
         {openFilter === 'account' && (
           <div className="chip-row">
             <button className={`chip ${!filters.accountId ? 'picked' : ''}`} onClick={() => { setParam('account', null); setOpenFilter(null); }}>
-              All accounts
+              {t('filter.allAccounts')}
             </button>
             {store.rankedAccounts().map((a) => (
               <button
@@ -182,7 +189,7 @@ export function TransactionList() {
         {openFilter === 'merchant' && (
           <div className="chip-row">
             <button className={`chip ${!filters.merchant ? 'picked' : ''}`} onClick={() => { setParam('merchant', null); setOpenFilter(null); }}>
-              Any location
+              {t('filter.anyLocation')}
             </button>
             {merchantChips.map((m) => (
               <button
@@ -195,7 +202,7 @@ export function TransactionList() {
             ))}
             {merchantHiddenCount > 0 && (
               <button className="chip ghost" onClick={() => setMerchantExpanded(true)}>
-                + {merchantHiddenCount} more
+                {t('picker.more', { count: merchantHiddenCount })}
               </button>
             )}
           </div>
@@ -205,21 +212,21 @@ export function TransactionList() {
           <>
             <div className="chip-row">
               <button className={`chip ${!filters.dateFrom && !filters.dateTo ? 'picked' : ''}`} onClick={clearDateRange}>
-                All dates
+                {t('filter.allDates')}
               </button>
               {DATE_PRESETS.map((p) => (
                 <button key={p.id} className={`chip ${isPresetActive(p.id) ? 'picked' : ''}`} onClick={() => pickPreset(p.id)}>
-                  {p.label}
+                  {t(p.labelKey)}
                 </button>
               ))}
               <button className={`chip ${showCustomInputs ? 'picked' : ''}`} onClick={() => setCustomDateOpen((o) => !o)}>
-                Custom
+                {t('filter.custom')}
               </button>
             </div>
             {showCustomInputs && (
               <div className="field-pair">
                 <label className="field-label">
-                  From
+                  {t('filter.from')}
                   <input
                     className="text-input"
                     type="date"
@@ -228,7 +235,7 @@ export function TransactionList() {
                   />
                 </label>
                 <label className="field-label">
-                  To
+                  {t('filter.to')}
                   <input
                     className="text-input"
                     type="date"
@@ -244,15 +251,15 @@ export function TransactionList() {
 
       {filtered.length > 0 && (
         <div className="totals-row">
-          <span>{filtered.length} transaction{filtered.length === 1 ? '' : 's'}</span>
-          {totals.map((t) => (
-            <b key={t.currency}>{formatAmount(t.cents, t.currency)}</b>
+          <span>{t('transactions.count', { count: filtered.length })}</span>
+          {totals.map((tx) => (
+            <b key={tx.currency}>{formatAmount(tx.cents, tx.currency)}</b>
           ))}
         </div>
       )}
 
       {filtered.length === 0 ? (
-        <p className="empty-note">{filtersActive ? 'No transactions match these filters.' : 'Nothing logged yet.'}</p>
+        <p className="empty-note">{filtersActive ? t('transactions.noMatches') : t('transactions.empty')}</p>
       ) : (
         <div className="recent" style={{ marginTop: '0.5rem' }}>
           {groupByDay(filtered).map((group) => (
@@ -260,40 +267,40 @@ export function TransactionList() {
               <div className="day-label">
                 <span>{group.label}</span>
                 <span className="day-subtotal">
-                  {totalsByCurrency(group.items).map((t, i) => (
-                    <span key={t.currency}>{i > 0 && ' · '}{formatAmount(t.cents, t.currency)}</span>
+                  {totalsByCurrency(group.items).map((tx, i) => (
+                    <span key={tx.currency}>{i > 0 && ' · '}{formatAmount(tx.cents, tx.currency)}</span>
                   ))}
                 </span>
               </div>
               <div className="day-card">
-                {group.items.map((t) => {
-                  const category = store.categories.find((c) => c.id === t.categoryId);
-                  const account = store.accounts.find((a) => a.id === t.accountId);
+                {group.items.map((tx) => {
+                  const category = store.categories.find((c) => c.id === tx.categoryId);
+                  const account = store.accounts.find((a) => a.id === tx.accountId);
                   // docs/50 — a split transaction has no single account;
                   // show how many legs it's split across instead of the
                   // misleading '—' fallback (it has 2+ accounts, not zero).
                   const accountSegment =
-                    t.accountId === null
-                      ? `Split · ${store.transactionSplits.filter((s) => s.transactionId === t.id).length}`
+                    tx.accountId === null
+                      ? t('transaction.splitCount', { count: store.transactionSplits.filter((s) => s.transactionId === tx.id).length })
                       : account
                         ? accountLabel(account)
                         : '—';
                   return (
-                    <Link key={t.id} to={`/transactions/${t.id}`} className="tx-row tx-row-tappable">
+                    <Link key={tx.id} to={`/transactions/${tx.id}`} className="tx-row tx-row-tappable">
                       <div className="tx-left">
                         {showPayerBadge && (
-                          <PayerBadge label={personLabel(t.paidByUserId, peers, store.profiles)} mine={t.paidByUserId === getLocalUserId()} />
+                          <PayerBadge label={personLabel(tx.paidByUserId, peers, store.profiles)} mine={tx.paidByUserId === getLocalUserId()} />
                         )}
                         <div className="tx-main">
-                          <span className="tx-note">{transactionTitle(t, category)}</span>
+                          <span className="tx-note">{transactionTitle(tx, category)}</span>
                           {/* day-label above already carries the date — just time here, still genuinely new info */}
                           <span className="tx-meta">
-                            {category?.name ?? 'Uncategorized'} · {formatTime(t.occurredAt)} · {accountSegment}
+                            {category ? categoryLabel(category) : t('category.uncategorized')} · {formatTime(tx.occurredAt)} · {accountSegment}
                           </span>
                         </div>
                       </div>
-                      <span className={`tx-amt ${t.amountCents < 0 ? 'out' : 'in'}`}>
-                        {formatAmount(t.amountCents, t.currency)}
+                      <span className={`tx-amt ${tx.amountCents < 0 ? 'out' : 'in'}`}>
+                        {formatAmount(tx.amountCents, tx.currency)}
                       </span>
                     </Link>
                   );

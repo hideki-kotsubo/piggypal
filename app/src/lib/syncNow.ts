@@ -1,3 +1,4 @@
+import i18n from './i18n';
 import type { SyncStatus } from '@powersync/web';
 import { useEffect, useState } from 'react';
 import { formatDateTime, formatTime } from './format';
@@ -39,14 +40,14 @@ export function waitForSync(source: StatusSource, before: number, idleMs: number
 // D249: absolute, not "3 hours ago" — "did my phone get yesterday's
 // changes?" is answered by a clock time, not a distance.
 export function formatLastSynced(at: Date | undefined, now = new Date()): string {
-  if (!at) return 'never';
-  if (now.getTime() - at.getTime() < 60_000) return 'just now';
+  if (!at) return i18n.t('date.never');
+  if (now.getTime() - at.getTime() < 60_000) return i18n.t('date.justNow');
   const startOfToday = new Date(now);
   startOfToday.setHours(0, 0, 0, 0);
   const startOfYesterday = new Date(startOfToday.getTime() - 86_400_000);
   const iso = at.toISOString();
-  if (at >= startOfToday) return `today ${formatTime(iso)}`;
-  if (at >= startOfYesterday) return `yesterday ${formatTime(iso)}`;
+  if (at >= startOfToday) return i18n.t('date.todayAt', { time: formatTime(iso) });
+  if (at >= startOfYesterday) return i18n.t('date.yesterdayAt', { time: formatTime(iso) });
   return formatDateTime(iso);
 }
 

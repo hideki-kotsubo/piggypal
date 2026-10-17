@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
 import { accountLabel, formatAmount, formatOccurrenceDate } from '../lib/format';
 import {
@@ -35,6 +36,7 @@ function perOccurrenceLabel(rule: ScheduledPayment): string {
 export function OccurrenceRow({ rule, occ, today }: { rule: ScheduledPayment; occ: Occurrence; today: string }) {
   const store = useStore();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const overdueDays = occ.date < today ? Math.round((Date.parse(today) - Date.parse(occ.date)) / 86_400_000) : 0;
 
@@ -55,7 +57,7 @@ export function OccurrenceRow({ rule, occ, today }: { rule: ScheduledPayment; oc
         <span className="tx-note">{occurrenceNote(rule, occ)}</span>
         <span className={`tx-meta ${overdueDays > 0 ? 'schedule-overdue' : ''}`}>
           {formatOccurrenceDate(occ.date, today)}
-          {overdueDays > 0 && ` · ${overdueDays} day${overdueDays === 1 ? '' : 's'} overdue`}
+          {overdueDays > 0 && ` · ${t('schedules.overdue', { count: overdueDays })}`}
         </span>
       </div>
       <div className="schedule-occ-right">
@@ -65,10 +67,10 @@ export function OccurrenceRow({ rule, occ, today }: { rule: ScheduledPayment; oc
         </span>
         <div className="chip-row schedule-occ-actions">
           <button className="chip ghost" disabled={busy} onClick={() => void post(true)}>
-            Skip
+            {t('schedules.skip')}
           </button>
           <button className="chip picked" disabled={busy} onClick={() => void post(false)}>
-            Paid
+            {t('schedules.paid')}
           </button>
         </div>
       </div>
@@ -79,6 +81,7 @@ export function OccurrenceRow({ rule, occ, today }: { rule: ScheduledPayment; oc
 export function SchedulesScreen() {
   const store = useStore();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [archivedOpen, setArchivedOpen] = useState(false);
   const today = todayLocal();
   const posted = postedKeys(store.transactions);
@@ -100,14 +103,16 @@ export function SchedulesScreen() {
     const meta = [
       describeCadence(rule),
       rule.paused
-        ? 'Paused'
+        ? t('schedules.paused')
         : dueCount.get(rule.id)
-          ? `${dueCount.get(rule.id)} due`
+          ? t('schedules.dueCount', { count: dueCount.get(rule.id) })
           : next
-            ? `next ${formatOccurrenceDate(next.date, today)}`
-            : 'no more payments',
-      rule.kind === 'installment' && left !== null && next ? `${rule.occurrenceCount! - next.number + 1} of ${rule.occurrenceCount} left` : null,
-      rule.autoPost ? 'Auto' : null,
+            ? t('schedules.next', { date: formatOccurrenceDate(next.date, today) })
+            : t('schedules.noMore'),
+      rule.kind === 'installment' && left !== null && next
+        ? t('schedules.left', { left: rule.occurrenceCount! - next.number + 1, total: rule.occurrenceCount })
+        : null,
+      rule.autoPost ? t('schedules.auto') : null,
       account ? accountLabel(account) : null,
     ].filter(Boolean);
     return (
@@ -124,10 +129,10 @@ export function SchedulesScreen() {
   return (
     <main className="home">
       <div className="app-bar">
-        <Link to="/" className="back-link">← Back</Link>
-        <span className="wordmark">Scheduled</span>
+        <Link to="/" className="back-link">← {t('common.back')}</Link>
+        <span className="wordmark">{t('schedules.title')}</span>
         <div className="app-bar-actions">
-          <button className="icon-btn" aria-label="Add scheduled payment" onClick={() => navigate('/schedules/new')}>
+          <button className="icon-btn" aria-label={t('schedules.add')} onClick={() => navigate('/schedules/new')}>
             +
           </button>
         </div>
@@ -135,7 +140,7 @@ export function SchedulesScreen() {
 
       {due.length > 0 && (
         <section className="schedule-list">
-          <div className="section-label">Due</div>
+          <div className="section-label">{t('schedules.due')}</div>
           <div className="day-card">
             {due.map((o) => (
               <OccurrenceRow key={`${o.scheduleId}:${o.date}`} rule={byId.get(o.scheduleId)!} occ={o} today={today} />
@@ -146,7 +151,7 @@ export function SchedulesScreen() {
 
       {upcoming.length > 0 && (
         <section className="schedule-list">
-          <div className="section-label">Next {UPCOMING_DAYS} days</div>
+          <div className="section-label">{t('schedules.nextDays', { count: UPCOMING_DAYS })}</div>
           <div className="day-card">
             {upcoming.map((o) => (
               <OccurrenceRow key={`${o.scheduleId}:${o.date}`} rule={byId.get(o.scheduleId)!} occ={o} today={today} />
@@ -156,11 +161,9 @@ export function SchedulesScreen() {
       )}
 
       <section className="schedule-list">
-        <div className="section-label">Schedules</div>
+        <div className="section-label">{t('schedules.schedules')}</div>
         {active.length === 0 ? (
-          <p className="empty-note">
-            Nothing scheduled yet — tap + to add rent, tuition, a lease, or an installment purchase.
-          </p>
+          <p className="empty-note">{t('schedules.empty')}</p>
         ) : (
           <div className="day-card">{active.map(renderRule)}</div>
         )}
@@ -169,7 +172,7 @@ export function SchedulesScreen() {
       {archived.length > 0 && (
         <div className="account-group">
           <button className="group-header" onClick={() => setArchivedOpen((o) => !o)}>
-            <span>Stopped ({archived.length})</span>
+            <span>{t('schedules.stopped', { count: archived.length })}</span>
             <span className="group-count">{archivedOpen ? '▾' : '›'}</span>
           </button>
           {archivedOpen && <div className="schedule-list day-card">{archived.map(renderRule)}</div>}

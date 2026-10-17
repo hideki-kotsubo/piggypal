@@ -1,3 +1,4 @@
+import i18n from './i18n';
 import { getLocalUserId } from './identity';
 import { usePairedPeers } from './peers';
 import { effectiveDeviceLabel } from './settings';
@@ -59,11 +60,11 @@ export function personLabel(userId: string, peers: PairedPeer[], profiles: Profi
     return profiles.find((p) => p.id === userId)?.displayName ?? effectiveDeviceLabel();
   }
   const removed = profiles.find((p) => p.id === userId && p.deletedAt);
-  if (removed) return `${removed.displayName} (removed)`;
+  if (removed) return i18n.t('household.removedName', { name: removed.displayName });
   return (
     otherMembers(peers).find((p) => p.id === userId)?.label ??
     profiles.find((p) => p.id === userId)?.displayName ??
-    'Household member'
+    i18n.t('household.member')
   );
 }
 
@@ -130,7 +131,7 @@ export function useHouseholdPeers(): PairedPeer[] {
     .filter((id) => !known.has(id))
     .map((id) => ({
       id,
-      label: profileNameById.get(id) ?? 'Household member',
+      label: profileNameById.get(id) ?? i18n.t('household.member'),
       lastSyncedAt: '',
       identityMode: 'someone-else',
     }));

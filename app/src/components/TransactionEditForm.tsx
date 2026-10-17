@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
+import { categoryLabel } from '../lib/starterLabels';
 import { AccountCurrencyPicker } from './AccountCurrencyPicker';
 import { AmountKeypad } from './AmountKeypad';
 import { CategoryPicker } from './CategoryPicker';
@@ -24,6 +26,7 @@ function combine(date: string, time: string): string {
 // RecentList (Home's preview) — same expand-in-place edit panel either way.
 export function TransactionEditForm({ transaction, onDone }: { transaction: Transaction; onDone: () => void }) {
   const store = useStore();
+  const { t } = useTranslation();
   const peers = useHouseholdPeers();
   const showHousehold = hasHousehold(peers);
   const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
@@ -116,7 +119,7 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
   }
 
   function remove() {
-    if (!window.confirm('Delete this transaction? This can\'t be undone from here.')) return;
+    if (!window.confirm(t('transaction.confirmDelete'))) return;
     store.deleteTransaction(transaction.id);
     onDone();
   }
@@ -143,7 +146,7 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
       { id: crypto.randomUUID(), accountId: alternative?.id ?? currentAccountId, amountCents: 0 },
     ]).catch((err) => {
       console.error('flowtab: startSplit failed', err);
-      window.alert('Could not start the split. If this app was already open before today, try reloading the page — see console for details.');
+      window.alert(t('transaction.splitStartFailed'));
     });
   }
 
@@ -161,7 +164,7 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
     setAmountCentsLocal(legsTotal);
     store.endSplit(transaction.id, largest?.accountId ?? store.rankedAccounts()[0]?.id ?? '').catch((err) => {
       console.error('flowtab: endSplit failed', err);
-      window.alert('Could not cancel the split — see console for details.');
+      window.alert(t('transaction.splitCancelFailed'));
     });
   }
 
@@ -224,7 +227,7 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
   return (
     <div className="account-form">
       <div className="form-actions edit-form-top-actions">
-        <button className="text-link delete-link" onClick={remove}>Delete transaction</button>
+        <button className="text-link delete-link" onClick={remove}>{t('transaction.delete')}</button>
       </div>
 
       <AccountCurrencyPicker
@@ -260,7 +263,7 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
         // Never leave the account genuinely unset with no way back.
         <div className="split-editor">
           <p className="split-remaining-note">
-            This transaction has no account set — pick one to fix it.
+            {t('transaction.noAccount')}
           </p>
           <AccountCurrencyPicker
             accountId={null}
@@ -289,7 +292,7 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
               {legs.length > 2 && (
                 <button
                   className="split-leg-remove"
-                  aria-label="Remove this leg"
+                  aria-label={t('transaction.removeLeg')}
                   onClick={() => {
                     if (openLegId === leg.id) setOpenLegId(null);
                     store.removeTransactionSplit(leg.id);
@@ -313,18 +316,18 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
           ))}
 
           {canAddLeg && (
-            <button className="text-link" onClick={addLeg}>+ add another account</button>
+            <button className="text-link" onClick={addLeg}>{t('transaction.addLeg')}</button>
           )}
 
-          <button className="text-link delete-link" onClick={cancelSplit}>Cancel split</button>
+          <button className="text-link delete-link" onClick={cancelSplit}>{t('transaction.cancelSplit')}</button>
         </div>
       ) : (
-        <button className="text-link" onClick={beginSplit}>Split across accounts</button>
+        <button className="text-link" onClick={beginSplit}>{t('transaction.split')}</button>
       )}
 
       <div>
         <button className="pill-tap" onClick={() => setCategoryPickerOpen((o) => !o)}>
-          {category?.name ?? 'Uncategorized'} ▾
+          {category ? categoryLabel(category) : t('category.uncategorized')} ▾
         </button>
         {categoryPickerOpen && (
           <CategoryPicker
@@ -339,7 +342,7 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
 
       {showHousehold && (
         <div>
-          <div className="field-label">Paid by</div>
+          <div className="field-label">{t('transaction.paidBy')}</div>
           <div className="chip-row">
             {householdMembers(peers, store.profiles).map((m) => (
               <button
@@ -359,13 +362,13 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
               user-editable transaction date, not a log-time), so this is
               deliberately narrower than docs/26's mockup rather than
               fabricating a time that isn't real. */}
-          <p className="provenance">Logged by {personLabel(transaction.createdByUserId, peers, store.profiles)}</p>
+          <p className="provenance">{t('transaction.loggedBy', { name: personLabel(transaction.createdByUserId, peers, store.profiles) })}</p>
         </div>
       )}
 
       <div className="field-pair">
         <label className="field-label">
-          Date
+          {t('transaction.date')}
           <input
             className="text-input"
             type="date"
@@ -383,7 +386,7 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
         </label>
 
         <label className="field-label">
-          Time
+          {t('transaction.time')}
           <input
             className="text-input"
             type="time"
@@ -397,7 +400,7 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
       </div>
 
       <label className="field-label">
-        Note
+        {t('transaction.note')}
         <input
           className="text-input"
           value={noteStr}
@@ -410,10 +413,10 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
       </label>
 
       <label className="field-label">
-        Location
+        {t('transaction.location')}
         <input
           className="text-input"
-          placeholder="optional…"
+          placeholder={t('transaction.optional')}
           value={merchantStr}
           onChange={(e) => {
             const v = e.target.value;
@@ -445,7 +448,7 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
           instead of the only affordance being an app-bar back arrow that
           doesn't look like a save action. */}
       <div className="form-actions">
-        <button className="save-btn" onClick={onDone}>Done</button>
+        <button className="save-btn" onClick={onDone}>{t('common.done')}</button>
       </div>
     </div>
   );

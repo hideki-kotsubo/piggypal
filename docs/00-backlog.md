@@ -14,6 +14,24 @@ it needs doing.
 
 ## ⚪ Next
 
+- [ ] **Multi-language UI and voice (en, pt-BR, es, fr)**. Plan in docs/73
+      (D261-D271). Branch `feat/i18n`. Reopens docs/09 D31/D32 at the
+      user's request (2026-10-16).
+  - [x] Phase 1: i18next setup, language setting + Settings picker,
+        `format.ts` follows the UI locale, key-parity test (2026-10-16).
+  - [x] Phase 2: move every UI string into `en.json`, screen by screen
+        (2026-10-16).
+  - [x] Phase 3: pt-BR/es/fr (+ es-ES, fr-CA) translations;
+        `categoryLabel()` and starter-account labels (D266/D267); docs/51
+        wordmark phrases (2026-10-16, done together with phase 2).
+  - [ ] Phase 4: Voice language setting, regional tags, native speech
+        plugin (check Capacitor 8 support first).
+  - [ ] Phase 5: parser language packs + per-language tests (D270).
+  - [ ] Phase 6: magic-link email and native permission strings (D271).
+  - [ ] User: review pt-BR; find native reviewers for es and fr.
+  - Ships app + api + native builds.
+  - Added 2026-10-16.
+
 - [ ] **iOS App Store release** — full plan in docs/66. Blockers:
   - [x] In-app account deletion (App Review 5.1.1(v)), owner only,
         this device keeps its data: docs/72 D257 (2026-10-15).
@@ -271,7 +289,8 @@ it needs doing.
       more general. Likely connects to the also-open "new report types"
       half of the Insights-screen item above rather than being fully
       separate. Not designed further than this.
-- [ ] Spanish support: speech recognition + Tier 1 parser vocabulary, and
+- [ ] **Superseded by docs/73 (2026-10-16)**, kept for history.
+      Spanish support: speech recognition + Tier 1 parser vocabulary, and
       an explicit, user-selectable UI language (not just auto-detected) —
       flagged 2026-08-23, not yet scoped. **Flag, not a silent change**:
       this reopens two decisions docs/09 already locked — D31 ("full

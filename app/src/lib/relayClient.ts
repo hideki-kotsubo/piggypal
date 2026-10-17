@@ -1,3 +1,4 @@
+import i18n from './i18n';
 import { answerOffer, completeOffer, startOffer } from './pairing';
 import type { AnswerSession, OfferSession } from './pairing';
 
@@ -74,16 +75,16 @@ function connectRelay(): Promise<RelayConnection> {
       else buffered.push(msg as Record<string, unknown>);
     });
     ws.addEventListener('error', () => {
-      fail(new Error('Could not reach the relay.'));
-      reject(new Error('Could not reach the relay.'));
+      fail(new Error(i18n.t('errors.relayUnreachable')));
+      reject(new Error(i18n.t('errors.relayUnreachable')));
     });
-    ws.addEventListener('close', () => fail(new Error('Relay connection closed before pairing finished.')));
+    ws.addEventListener('close', () => fail(new Error(i18n.t('errors.relayClosed'))));
   });
 }
 
 async function expectOrThrow(conn: RelayConnection, type: string): Promise<Record<string, unknown>> {
   const msg = await conn.next();
-  if (msg.type === 'error') throw new Error(typeof msg.message === 'string' ? msg.message : 'Pairing failed.');
+  if (msg.type === 'error') throw new Error(typeof msg.message === 'string' ? msg.message : i18n.t('errors.pairingFailed'));
   if (msg.type !== type) throw new Error(`Unexpected relay message: ${String(msg.type)}`);
   return msg;
 }

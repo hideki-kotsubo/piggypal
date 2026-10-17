@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
+import { categoryLabel } from '../lib/starterLabels';
 import { accountLabel, formatAmount, formatRelativeDate, nowLocal, nowUtc } from '../lib/format';
 import { getLocalUserId } from '../lib/identity';
 import { markFreshBlank } from '../lib/freshBlankTransactions';
@@ -35,6 +37,7 @@ interface Preview {
 export function EntryZone({ onSubmitted }: Props) {
   const store = useStore();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [typedText, setTypedText] = useState('');
   const [preview, setPreview] = useState<Preview | null>(null);
   const [listening, setListening] = useState(false);
@@ -63,7 +66,7 @@ export function EntryZone({ onSubmitted }: Props) {
     // this reason itself instead, so it survives the route change.
     if (store.accounts.length === 0) {
       navigate('/accounts', {
-        state: { openCreate: true, reason: 'Add an account first, then log your first transaction' },
+        state: { openCreate: true, reason: t('entry.addAccountFirst') },
       });
       return;
     }
@@ -112,7 +115,7 @@ export function EntryZone({ onSubmitted }: Props) {
     // Same zero-accounts guard as startBlank() above.
     if (store.accounts.length === 0) {
       navigate('/accounts', {
-        state: { openCreate: true, reason: 'Add an account first, then log your first transaction' },
+        state: { openCreate: true, reason: t('entry.addAccountFirst') },
       });
       return;
     }
@@ -126,7 +129,7 @@ export function EntryZone({ onSubmitted }: Props) {
     });
 
     if (result.amountCents === null) {
-      onSubmitted("Couldn't find an amount — try rephrasing, or tap + below");
+      onSubmitted(t('entry.noAmount'));
       return;
     }
 
@@ -180,7 +183,7 @@ export function EntryZone({ onSubmitted }: Props) {
     setPreview(null);
     setTypedText('');
     onSubmitted(
-      preview.categoryId ? 'Added' : 'Added to your inbox — needs a category',
+      preview.categoryId ? t('entry.added') : t('entry.addedToInbox'),
       () => store.deleteTransaction(tx.id),
     );
   }
@@ -226,14 +229,14 @@ export function EntryZone({ onSubmitted }: Props) {
     <div className="entry-zone">
       <form onSubmit={submitTyped}>
         <div className="entry-input-row">
-          <button type="button" className="add-btn" onClick={startBlank} aria-label="Add a transaction">
+          <button type="button" className="add-btn" onClick={startBlank} aria-label={t('entry.addTransaction')}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M7 1V13M1 7H13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
             </svg>
           </button>
           <input
             className="entry-input"
-            placeholder={listening ? 'listening…' : 'type or say what you spent…'}
+            placeholder={listening ? t('entry.listeningPlaceholder') : t('entry.placeholder')}
             value={typedText}
             onChange={(e) => editText(e.target.value)}
           />
@@ -242,7 +245,7 @@ export function EntryZone({ onSubmitted }: Props) {
               type="button"
               className={`mic-btn ${listening ? 'listening' : ''}`}
               onClick={toggleVoice}
-              aria-label={listening ? 'Stop voice input' : 'Start voice input'}
+              aria-label={listening ? t('entry.stopVoice') : t('entry.startVoice')}
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <rect x="5" y="1" width="4" height="7" rx="2" stroke="currentColor" strokeWidth="1.3" />
@@ -253,58 +256,63 @@ export function EntryZone({ onSubmitted }: Props) {
           )}
           {/* The pulsing ring and the placeholder are both purely visual —
               this is the same state for anyone using a screen reader. */}
-          <span className="sr-only" role="status">{listening ? 'Listening' : ''}</span>
+          <span className="sr-only" role="status">{listening ? t('entry.listening') : ''}</span>
         </div>
 
         {preview && (
           <div className="parse-preview">
-            <p className="parse-label">understood</p>
+            <p className="parse-label">{t('entry.understood')}</p>
             <div className="parse-fields">
               <div className="parse-field">
-                <span className="k">Amount</span>
+                <span className="k">{t('entry.amount')}</span>
                 <span className="v">{formatAmount(preview.amountCents, preview.currency)}</span>
-                {!preview.currencyParsed && <span className="defaulted">default currency</span>}
+                {!preview.currencyParsed && <span className="defaulted">{t('entry.defaultCurrency')}</span>}
               </div>
               <div className="parse-field">
-                <span className="k">Category</span>
+                <span className="k">{t('entry.category')}</span>
                 {preview.categoryId ? (
-                  <span className="v">{store.categories.find((c) => c.id === preview.categoryId)?.name}</span>
+                  <span className="v">
+                    {(() => {
+                      const category = store.categories.find((c) => c.id === preview.categoryId);
+                      return category ? categoryLabel(category) : '';
+                    })()}
+                  </span>
                 ) : (
-                  <span className="v v-warn">Uncategorized — goes to your inbox</span>
+                  <span className="v v-warn">{t('entry.uncategorizedToInbox')}</span>
                 )}
               </div>
               <div className="parse-field">
-                <span className="k">When</span>
+                <span className="k">{t('entry.when')}</span>
                 <span className="v">{formatRelativeDate(preview.occurredAt)}</span>
-                {!preview.dateParsed && <span className="defaulted">default</span>}
+                {!preview.dateParsed && <span className="defaulted">{t('entry.default')}</span>}
               </div>
               <div className="parse-field">
-                <span className="k">Account</span>
+                <span className="k">{t('entry.account')}</span>
                 <span className="v">
                   {(() => {
                     const account = store.accounts.find((a) => a.id === preview.accountId);
                     return account ? accountLabel(account) : '—';
                   })()}
                 </span>
-                {!preview.accountParsed && <span className="defaulted">default</span>}
+                {!preview.accountParsed && <span className="defaulted">{t('entry.default')}</span>}
               </div>
               {preview.merchant && (
                 <div className="parse-field">
-                  <span className="k">Merchant</span>
+                  <span className="k">{t('entry.merchant')}</span>
                   <span className="v">{preview.merchant}</span>
-                  {preview.merchantGuessed && <span className="defaulted">guessed — edit if wrong</span>}
+                  {preview.merchantGuessed && <span className="defaulted">{t('entry.guessed')}</span>}
                 </div>
               )}
             </div>
             <div className="parse-actions">
               <button type="button" className="chip ghost" onClick={() => setPreview(null)}>
-                Edit
+                {t('common.edit')}
               </button>
               <button type="button" className="parse-confirm" onClick={confirmPreview}>
                 <svg width="13" height="10" viewBox="0 0 13 10" fill="none" aria-hidden="true">
                   <path d="M1 5L4.5 8.5L12 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                Save
+                {t('common.save')}
               </button>
             </div>
           </div>

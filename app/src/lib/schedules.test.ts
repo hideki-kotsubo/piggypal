@@ -14,6 +14,7 @@ import {
   uuidv5,
 } from './schedules';
 import type { ScheduledPayment } from './types';
+import i18n from './i18n';
 
 function rule(overrides: Partial<ScheduledPayment>): ScheduledPayment {
   return {
@@ -182,6 +183,22 @@ describe('labels', () => {
     expect(describeCadence(rule({ anchorDate: '2026-01-31' }))).toBe('Monthly on the 31st (or last day)');
     expect(describeCadence(rule({ freq: 'weekly', intervalCount: 2, anchorDate: '2026-10-23' }))).toBe('Every 2 weeks on Friday');
     expect(describeCadence(rule({ freq: 'yearly', anchorDate: '2026-03-15' }))).toBe('Yearly on Mar 15');
+  });
+
+  it('describes cadence in other UI languages (docs/73)', async () => {
+    try {
+      await i18n.changeLanguage('pt-BR');
+      expect(describeCadence(rule({}))).toBe('Mensal, no dia 1');
+      expect(describeCadence(rule({ freq: 'weekly', anchorDate: '2026-10-23' }))).toBe('Semanal, sexta-feira');
+      await i18n.changeLanguage('fr');
+      expect(describeCadence(rule({}))).toBe('Chaque mois le 1er');
+      expect(describeCadence(rule({ anchorDate: '2026-01-31' }))).toBe('Chaque mois le 31 (ou dernier jour)');
+      expect(describeCadence(rule({ freq: 'yearly', intervalCount: 2, anchorDate: '2026-03-15' }))).toBe('Tous les 2 ans le 15 mars');
+      await i18n.changeLanguage('es');
+      expect(describeCadence(rule({ freq: 'weekly', intervalCount: 2, anchorDate: '2026-10-23' }))).toBe('Cada 2 semanas, los viernes');
+    } finally {
+      await i18n.changeLanguage('en');
+    }
   });
 });
 

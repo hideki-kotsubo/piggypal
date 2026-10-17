@@ -1,5 +1,7 @@
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { useStore } from '../lib/store';
+import { accountName } from '../lib/starterLabels';
 import { ACCOUNT_PICKER_SCALE_THRESHOLD, useAccountPickerMode } from '../lib/settings';
 import { accountLabel } from '../lib/format';
 import { personLabel, useHouseholdPeers } from '../lib/household';
@@ -57,7 +59,7 @@ function accountsNeedingOwnerLabel(accounts: Account[]): Set<string> {
 // Wise" rather than losing its disambiguation to the institution-only
 // shortcut.
 function flatChipLabel(a: Account, institutionCounts: Map<string, number>, ownerPrefix: string | null): string {
-  const base = !a.institution ? a.name : (institutionCounts.get(a.institution) ?? 0) > 1 ? accountLabel(a) : a.institution;
+  const base = !a.institution ? accountName(a) : (institutionCounts.get(a.institution) ?? 0) > 1 ? accountLabel(a) : a.institution;
   return ownerPrefix ? `${ownerPrefix} — ${base}` : base;
 }
 
@@ -78,6 +80,7 @@ function countByInstitution(accounts: Account[]): Map<string, number> {
 // creates anything.
 export function AccountCurrencyPicker({ accountId, currency, onChange, showAccount = true, showCurrency = true }: Props) {
   const store = useStore();
+  const { t } = useTranslation();
   const peers = useHouseholdPeers();
   const [pickerOpen, setPickerOpen] = useState<'account' | 'currency' | null>(null);
   const [pickerMode] = useAccountPickerMode();
@@ -90,7 +93,7 @@ export function AccountCurrencyPicker({ accountId, currency, onChange, showAccou
   const institutionCounts = countByInstitution(ranked);
   const needsOwnerLabel = accountsNeedingOwnerLabel(ranked);
   const ownerPrefixFor = (a: Account): string | null =>
-    needsOwnerLabel.has(a.id) ? (a.ownerUserId ? personLabel(a.ownerUserId, peers, store.profiles) : 'Shared') : null;
+    needsOwnerLabel.has(a.id) ? (a.ownerUserId ? personLabel(a.ownerUserId, peers, store.profiles) : t('accounts.shared')) : null;
 
   const overThreshold = ranked.length > ACCOUNT_PICKER_SCALE_THRESHOLD;
   const grouped = overThreshold && pickerMode === 'grouped';
@@ -191,7 +194,7 @@ export function AccountCurrencyPicker({ accountId, currency, onChange, showAccou
                           className={`chip ${a.id === accountId ? 'picked' : ''}`}
                           onClick={() => pickAccount(a)}
                         >
-                          {ownerPrefixFor(a) ? `${ownerPrefixFor(a)} — ${a.name}` : a.name}
+                          {ownerPrefixFor(a) ? `${ownerPrefixFor(a)} — ${accountName(a)}` : accountName(a)}
                         </button>
                       ))}
                     </div>
@@ -225,7 +228,7 @@ export function AccountCurrencyPicker({ accountId, currency, onChange, showAccou
               ))}
               {flatHiddenCount > 0 && (
                 <button className="chip ghost" onClick={() => setCappedExpanded(true)}>
-                  + {flatHiddenCount} more
+                  {t('picker.more', { count: flatHiddenCount })}
                 </button>
               )}
             </>

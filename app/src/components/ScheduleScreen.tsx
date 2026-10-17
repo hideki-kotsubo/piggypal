@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
+import { categoryLabel } from '../lib/starterLabels';
 import { totalsByCurrency } from '../lib/filterTransactions';
 import { formatAmount, formatOccurrenceDate, nowUtc } from '../lib/format';
 import {
@@ -18,10 +20,10 @@ import { AmountKeypad } from './AmountKeypad';
 import { CategoryPicker } from './CategoryPicker';
 import { OccurrenceRow } from './SchedulesScreen';
 
-const FREQS: { value: ScheduleFreq; label: string }[] = [
-  { value: 'weekly', label: 'Weekly' },
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'yearly', label: 'Yearly' },
+const FREQS: { value: ScheduleFreq; labelKey: string }[] = [
+  { value: 'weekly', labelKey: 'schedule.weekly' },
+  { value: 'monthly', labelKey: 'schedule.monthly' },
+  { value: 'yearly', labelKey: 'schedule.yearly' },
 ];
 
 // docs/57 D210 — the fields that decide *when* occurrences fall. Changing
@@ -37,17 +39,18 @@ const COMING_UP = 3;
 export function ScheduleScreen() {
   const { id } = useParams();
   const store = useStore();
+  const { t } = useTranslation();
   if (id === 'new') return <ScheduleEditor rule={null} />;
   const rule = store.scheduledPayments.find((r) => r.id === id && !r.deletedAt);
   if (!rule) {
     return (
       <main className="home">
         <div className="app-bar">
-          <Link to="/schedules" className="back-link">← Back</Link>
-          <span className="wordmark">Scheduled</span>
+          <Link to="/schedules" className="back-link">← {t('common.back')}</Link>
+          <span className="wordmark">{t('schedules.title')}</span>
           <span style={{ width: '3rem' }} />
         </div>
-        <p className="empty-note">This schedule doesn't exist.</p>
+        <p className="empty-note">{t('schedule.missing')}</p>
       </main>
     );
   }
@@ -62,6 +65,7 @@ function parsePositiveInt(v: string): number | null {
 function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
   const store = useStore();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const isNew = rule === null;
   const today = todayLocal();
 
@@ -99,7 +103,7 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
   const posted = postedKeys(store.transactions);
   const history = rule
     ? store.transactions
-        .filter((t) => t.scheduleId === rule.id)
+        .filter((tx) => tx.scheduleId === rule.id)
         .sort((a, b) => ((a.occurrenceDate ?? '') < (b.occurrenceDate ?? '') ? 1 : -1))
     : [];
   const lastLoggedDate = history[0]?.occurrenceDate ?? null;
@@ -134,13 +138,13 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
       else (rest as Record<string, unknown>)[k] = v;
     }
     if (Object.keys(timing).length > 0) {
-      setTimingDraft((t) => {
+      setTimingDraft((prev) => {
         // The split needs a start date after the last logged payment —
         // default it to the next open one so a bare frequency change is
         // immediately applicable.
         const anchorDefault =
-          t.anchorDate ?? timing.anchorDate ?? nextOpenOccurrence(rule, posted, addDays(lastLoggedDate ?? today, 1))?.date ?? today;
-        return { ...t, anchorDate: anchorDefault, ...timing };
+          prev.anchorDate ?? timing.anchorDate ?? nextOpenOccurrence(rule, posted, addDays(lastLoggedDate ?? today, 1))?.date ?? today;
+        return { ...prev, anchorDate: anchorDefault, ...timing };
       });
     }
     if (Object.keys(rest).length > 0) store.updateScheduledPayment(rule.id, rest);
@@ -162,16 +166,16 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
 
   function saveNew() {
     const name = nameStr.trim();
-    if (!name) return setError('Give it a name.');
-    if (draft.amountCents === 0) return setError('Enter an amount.');
-    if (!draft.accountId) return setError('Pick an account.');
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(draft.anchorDate)) return setError('Pick the first payment date.');
+    if (!name) return setError(t('schedule.errName'));
+    if (draft.amountCents === 0) return setError(t('schedule.errAmount'));
+    if (!draft.accountId) return setError(t('schedule.errAccount'));
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(draft.anchorDate)) return setError(t('schedule.errFirstDate'));
     if (draft.kind === 'installment') {
-      if (!draft.occurrenceCount || draft.occurrenceCount < 2) return setError('An installment plan needs 2 or more installments.');
-      if (draft.startIndex > draft.occurrenceCount) return setError(`The first one here can't be past #${draft.occurrenceCount}.`);
+      if (!draft.occurrenceCount || draft.occurrenceCount < 2) return setError(t('schedule.errInstallments'));
+      if (draft.startIndex > draft.occurrenceCount) return setError(t('schedule.errStartIndex', { count: draft.occurrenceCount }));
     }
-    if (endMode === 'date' && !draft.endDate) return setError('Pick an end date, or choose "Never".');
-    if (endMode === 'count' && !draft.occurrenceCount) return setError('Enter how many payments, or choose "Never".');
+    if (endMode === 'date' && !draft.endDate) return setError(t('schedule.errEndDate'));
+    if (endMode === 'count' && !draft.occurrenceCount) return setError(t('schedule.errCount'));
     const id = crypto.randomUUID();
     store.addScheduledPayment({ ...draft, id, name, note: noteStr.trim() || null, updatedAt: nowUtc() });
     navigate(`/schedules/${id}`, { replace: true });
@@ -179,9 +183,9 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
 
   // docs/57 D217 — what a delete will take with it: only payments still
   // live (skipped ones are already deleted), totalled per currency.
-  const livePayments = history.filter((t) => !t.deletedAt);
+  const livePayments = history.filter((tx) => !tx.deletedAt);
   const liveTotals = totalsByCurrency(livePayments)
-    .map((t) => formatAmount(Math.abs(t.cents), t.currency))
+    .map((tx) => formatAmount(Math.abs(tx.cents), tx.currency))
     .join(' + ');
 
   async function confirmDelete() {
@@ -193,7 +197,7 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
   async function applyTiming() {
     if (!rule || !view.anchorDate) return;
     if (lastLoggedDate && view.anchorDate <= lastLoggedDate) {
-      setError(`Start the new timing after the last logged payment (${formatOccurrenceDate(lastLoggedDate, today)}).`);
+      setError(t('schedule.errTimingStart', { date: formatOccurrenceDate(lastLoggedDate, today) }));
       return;
     }
     const { anchorDate, ...rest } = timingDraft;
@@ -229,18 +233,18 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
   return (
     <main className="home">
       <div className="app-bar">
-        <Link to="/schedules" className="back-link">← Back</Link>
-        <span className="wordmark">{isNew ? 'New schedule' : 'Schedule'}</span>
+        <Link to="/schedules" className="back-link">← {t('common.back')}</Link>
+        <span className="wordmark">{isNew ? t('schedule.new') : t('schedule.title')}</span>
         <span style={{ width: '3rem' }} />
       </div>
 
       <div className="transaction-screen-content">
         <div className="account-form">
           <label className="field-label">
-            Name
+            {t('common.name')}
             <input
               className="text-input"
-              placeholder="Rent, Tuition, Car lease, TV 10x…"
+              placeholder={t('schedule.namePlaceholder')}
               value={nameStr}
               onChange={(e) => {
                 setNameStr(e.target.value);
@@ -251,10 +255,10 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
 
           <div className="chip-row">
             <button className={`chip ${view.kind === 'recurring' ? 'picked' : ''}`} onClick={() => setKind('recurring')}>
-              Recurring
+              {t('schedule.recurring')}
             </button>
             <button className={`chip ${view.kind === 'installment' ? 'picked' : ''}`} onClick={() => setKind('installment')}>
-              Installments
+              {t('schedule.installments')}
             </button>
           </div>
 
@@ -266,7 +270,7 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
             }
           />
 
-          <div className="field-label">{view.kind === 'installment' ? 'Total of the purchase' : 'Amount each time'}</div>
+          <div className="field-label">{view.kind === 'installment' ? t('schedule.purchaseTotal') : t('schedule.amountEach')}</div>
           <AmountKeypad
             amountCents={Math.abs(amountLocal)}
             currency={view.currency}
@@ -285,7 +289,7 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
           {view.kind === 'installment' && (
             <div className="field-pair">
               <label className="field-label">
-                Installments
+                {t('schedule.installments')}
                 <input
                   className="text-input"
                   inputMode="numeric"
@@ -298,7 +302,7 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
                 />
               </label>
               <label className="field-label">
-                First one here is #
+                {t('schedule.firstHereIs')}
                 <input
                   className="text-input"
                   inputMode="numeric"
@@ -314,17 +318,17 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
           {perInstallment !== null && firstInstallment !== null && (
             <p className="field-hint">
               {view.occurrenceCount} × {formatAmount(perInstallment, view.currency)}
-              {firstInstallment !== perInstallment && ` (first one ${formatAmount(firstInstallment, view.currency)})`}
-              {view.startIndex > 1 && ` — starting at ${view.startIndex}/${view.occurrenceCount}, earlier ones already paid`}
+              {firstInstallment !== perInstallment && t('schedule.firstOne', { amount: formatAmount(firstInstallment, view.currency) })}
+              {view.startIndex > 1 && t('schedule.startingAt', { index: view.startIndex, total: view.occurrenceCount })}
             </p>
           )}
 
           <div>
-            <div className="field-label">Repeats</div>
+            <div className="field-label">{t('schedule.repeats')}</div>
             <div className="chip-row">
               {FREQS.map((f) => (
                 <button key={f.value} className={`chip ${view.freq === f.value ? 'picked' : ''}`} onClick={() => commit({ freq: f.value })}>
-                  {f.label}
+                  {t(f.labelKey)}
                 </button>
               ))}
             </div>
@@ -332,7 +336,7 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
 
           <div className="field-pair">
             <label className="field-label">
-              Every
+              {t('schedule.every')}
               <input
                 className="text-input"
                 inputMode="numeric"
@@ -345,7 +349,7 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
               />
             </label>
             <label className="field-label">
-              {stagesTiming && Object.keys(timingDraft).length > 0 ? 'New timing starts' : 'First payment'}
+              {stagesTiming && Object.keys(timingDraft).length > 0 ? t('schedule.newTimingStarts') : t('schedule.firstPayment')}
               <input
                 className="text-input"
                 type="date"
@@ -363,12 +367,12 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
 
           {stagesTiming && Object.keys(timingDraft).length > 0 && (
             <div className="merge-conflict">
-              <p className="merge-conflict-title">Change timing from {formatOccurrenceDate(view.anchorDate, today)}?</p>
+              <p className="merge-conflict-title">{t('schedule.changeTimingFrom', { date: formatOccurrenceDate(view.anchorDate, today) })}</p>
               <p className="merge-conflict-detail">
-                Payments already logged stay as they are; from that date on it becomes {describeCadence(view).toLowerCase()}.
+                {t('schedule.changeTimingDetail', { cadence: describeCadence(view).toLowerCase() })}
               </p>
               <div className="chip-row">
-                <button className="save-btn" onClick={() => void applyTiming()}>Apply</button>
+                <button className="save-btn" onClick={() => void applyTiming()}>{t('schedule.apply')}</button>
                 <button
                   className="chip ghost"
                   onClick={() => {
@@ -377,7 +381,7 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
                     setError(null);
                   }}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
               </div>
             </div>
@@ -385,11 +389,11 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
 
           {view.kind === 'recurring' && (
             <div>
-              <div className="field-label">Ends</div>
+              <div className="field-label">{t('schedule.ends')}</div>
               <div className="chip-row">
-                <button className={`chip ${endMode === 'never' ? 'picked' : ''}`} onClick={() => setEnd('never')}>Never</button>
-                <button className={`chip ${endMode === 'date' ? 'picked' : ''}`} onClick={() => setEnd('date')}>On a date</button>
-                <button className={`chip ${endMode === 'count' ? 'picked' : ''}`} onClick={() => setEnd('count')}>After N payments</button>
+                <button className={`chip ${endMode === 'never' ? 'picked' : ''}`} onClick={() => setEnd('never')}>{t('schedule.never')}</button>
+                <button className={`chip ${endMode === 'date' ? 'picked' : ''}`} onClick={() => setEnd('date')}>{t('schedule.onDate')}</button>
+                <button className={`chip ${endMode === 'count' ? 'picked' : ''}`} onClick={() => setEnd('count')}>{t('schedule.afterN')}</button>
               </div>
               {endMode === 'date' && (
                 <input
@@ -417,41 +421,41 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
           )}
 
           <div>
-            <div className="field-label">Amount</div>
+            <div className="field-label">{t('schedule.amount')}</div>
             <div className="chip-row">
               <button
                 className={`chip ${view.amountMode === 'fixed' ? 'picked' : ''}`}
                 onClick={() => commit({ amountMode: 'fixed' })}
               >
-                Same every time
+                {t('schedule.sameEveryTime')}
               </button>
               <button
                 className={`chip ${view.amountMode === 'estimated' ? 'picked' : ''}`}
                 onClick={() => commit({ amountMode: 'estimated', autoPost: false })}
               >
-                Varies
+                {t('schedule.varies')}
               </button>
             </div>
             {view.amountMode === 'estimated' && (
-              <p className="field-hint">Marking one paid opens it so you can type the real amount.</p>
+              <p className="field-hint">{t('schedule.variesHint')}</p>
             )}
           </div>
 
           {view.amountMode === 'fixed' && (
             <label className="schedule-toggle">
               <input type="checkbox" checked={view.autoPost} onChange={(e) => commit({ autoPost: e.target.checked })} />
-              <span>Log it automatically when due</span>
+              <span>{t('schedule.autoLog')}</span>
             </label>
           )}
           {view.amountMode === 'fixed' && view.autoPost && isNew && view.anchorDate < today && (
             <p className="field-hint">
-              Every payment since {formatOccurrenceDate(view.anchorDate, today)} will be logged as soon as you save.
+              {t('schedule.backfillHint', { date: formatOccurrenceDate(view.anchorDate, today) })}
             </p>
           )}
 
           <div>
             <button className="pill-tap" onClick={() => setCategoryOpen((o) => !o)}>
-              {category?.name ?? 'Uncategorized'} ▾
+              {category ? categoryLabel(category) : t('category.uncategorized')} ▾
             </button>
             {categoryOpen && (
               <CategoryPicker
@@ -466,7 +470,7 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
 
           {store.profiles.length > 1 && (
             <div>
-              <div className="field-label">Paid by</div>
+              <div className="field-label">{t('transaction.paidBy')}</div>
               <div className="chip-row">
                 {store.profiles.map((p) => (
                   <button
@@ -482,10 +486,10 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
           )}
 
           <label className="field-label">
-            Note on each payment
+            {t('schedule.noteEach')}
             <input
               className="text-input"
-              placeholder={nameStr || 'Defaults to the name'}
+              placeholder={nameStr || t('schedule.noteDefault')}
               value={noteStr}
               onChange={(e) => {
                 setNoteStr(e.target.value);
@@ -495,10 +499,10 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
           </label>
 
           <label className="field-label">
-            Location
+            {t('transaction.location')}
             <input
               className="text-input"
-              placeholder="optional…"
+              placeholder={t('transaction.optional')}
               value={merchantStr}
               onChange={(e) => {
                 const v = e.target.value;
@@ -528,20 +532,20 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
 
           {isNew ? (
             <div className="form-actions">
-              <button className="save-btn" onClick={saveNew}>Save schedule</button>
+              <button className="save-btn" onClick={saveNew}>{t('schedule.save')}</button>
             </div>
           ) : (
             <div className="form-actions">
               {!rule.archived && (
                 <button className="text-link" onClick={() => commit({ paused: !rule.paused })}>
-                  {rule.paused ? 'Resume' : 'Pause'}
+                  {rule.paused ? t('schedule.resume') : t('schedule.pause')}
                 </button>
               )}
               <button className="text-link" onClick={() => commit({ archived: !rule.archived })}>
-                {rule.archived ? 'Restore' : 'Stop this schedule'}
+                {rule.archived ? t('schedule.restore') : t('schedule.stop')}
               </button>
               <button className="text-link delete-link" onClick={() => setConfirmingDelete(true)}>
-                Delete schedule
+                {t('schedule.delete')}
               </button>
             </div>
           )}
@@ -550,21 +554,21 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
             <div className="merge-conflict">
               <p className="merge-conflict-title">
                 {livePayments.length === 0
-                  ? `Delete "${rule.name}"?`
-                  : `Delete "${rule.name}" and its ${livePayments.length} logged payment${livePayments.length === 1 ? '' : 's'}?`}
+                  ? t('schedule.confirmDelete', { name: rule.name })
+                  : t('schedule.confirmDeleteWithPayments', { name: rule.name, count: livePayments.length })}
               </p>
               <p className="merge-conflict-detail">
                 {livePayments.length === 0
-                  ? "Nothing has been logged from it yet, so nothing else changes."
-                  : `${liveTotals} will be removed from your transactions, balances and budgets.`}
-                {' '}To keep what's logged and just end it, use “Stop this schedule” instead.
+                  ? t('schedule.nothingLogged')
+                  : t('schedule.willBeRemoved', { totals: liveTotals })}
+                {' '}{t('schedule.useStopInstead')}
               </p>
               <div className="chip-row">
                 <button className="save-btn schedule-delete-btn" onClick={() => void confirmDelete()}>
-                  Delete
+                  {t('schedule.deleteBtn')}
                 </button>
                 <button className="chip ghost" onClick={() => setConfirmingDelete(false)}>
-                  Cancel
+                  {t('common.cancel')}
                 </button>
               </div>
             </div>
@@ -573,7 +577,7 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
 
         {coming.length > 0 && (
           <section>
-            <div className="section-label">Coming up</div>
+            <div className="section-label">{t('schedule.comingUp')}</div>
             <div className="day-card">
               {coming.map((o) => (
                 <OccurrenceRow key={o.date} rule={rule!} occ={o} today={today} />
@@ -584,29 +588,29 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
 
         {history.length > 0 && (
           <section>
-            <div className="section-label">Logged</div>
+            <div className="section-label">{t('schedule.logged')}</div>
             <div className="day-card">
-              {history.map((t) =>
-                t.deletedAt ? (
-                  <div className="tx-row" key={t.id}>
+              {history.map((tx) =>
+                tx.deletedAt ? (
+                  <div className="tx-row" key={tx.id}>
                     <div className="tx-main">
-                      <span className="tx-note">{t.note}</span>
-                      <span className="tx-meta">{formatOccurrenceDate(t.occurrenceDate ?? '', today)} · Skipped</span>
+                      <span className="tx-note">{tx.note}</span>
+                      <span className="tx-meta">{formatOccurrenceDate(tx.occurrenceDate ?? '', today)} · {t('schedule.skipped')}</span>
                     </div>
                     {/* A skip is a soft-deleted posted row (D210), so
                         undoing it can only make it paid — it can't go
                         back to "open" without a hard delete. */}
-                    <button className="chip ghost" onClick={() => store.updateTransaction(t.id, { deletedAt: null })}>
-                      Mark paid
+                    <button className="chip ghost" onClick={() => store.updateTransaction(tx.id, { deletedAt: null })}>
+                      {t('schedule.markPaid')}
                     </button>
                   </div>
                 ) : (
-                  <Link key={t.id} to={`/transactions/${t.id}`} className="tx-row tx-row-tappable">
+                  <Link key={tx.id} to={`/transactions/${tx.id}`} className="tx-row tx-row-tappable">
                     <div className="tx-main">
-                      <span className="tx-note">{t.note}</span>
-                      <span className="tx-meta">{formatOccurrenceDate(t.occurrenceDate ?? '', today)}</span>
+                      <span className="tx-note">{tx.note}</span>
+                      <span className="tx-meta">{formatOccurrenceDate(tx.occurrenceDate ?? '', today)}</span>
                     </div>
-                    <span className={`tx-amt ${t.amountCents < 0 ? 'out' : 'in'}`}>{formatAmount(t.amountCents, t.currency)}</span>
+                    <span className={`tx-amt ${tx.amountCents < 0 ? 'out' : 'in'}`}>{formatAmount(tx.amountCents, tx.currency)}</span>
                   </Link>
                 ),
               )}

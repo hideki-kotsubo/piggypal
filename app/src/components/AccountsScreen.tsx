@@ -1,6 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import i18n from '../lib/i18n';
 import { Link, useLocation } from 'react-router-dom';
 import { useStore } from '../lib/store';
+import { accountName } from '../lib/starterLabels';
 import { accountLabel, formatAmount, nowUtc } from '../lib/format';
 import { getLocalUserId } from '../lib/identity';
 import { hasHousehold, personLabel, useHouseholdPeers } from '../lib/household';
@@ -11,12 +14,7 @@ import type { Account, AccountKind } from '../lib/types';
 // fields directly — the kind list is fixed (D53's layout), not derived
 // from usage. No currency, no savings goal — see Account.
 const ACCOUNT_KINDS: AccountKind[] = ['checking', 'credit', 'cash', 'savings'];
-const KIND_LABELS: Record<AccountKind, string> = {
-  checking: 'Checking',
-  credit: 'Credit',
-  cash: 'Cash',
-  savings: 'Savings',
-};
+const kindLabel = (kind: AccountKind) => i18n.t(`accountKind.${kind}`);
 
 // institutionSnapshot freezes the editing row's grouping key for the
 // duration of the edit session (see effectiveInstitution below) — without
@@ -36,6 +34,7 @@ type MergeState =
 
 export function AccountsScreen() {
   const store = useStore();
+  const { t } = useTranslation();
   const location = useLocation();
   // EntryZone routes here with this when a real zero-accounts user tries
   // to log a transaction before adding their first account — jumps
@@ -53,7 +52,7 @@ export function AccountsScreen() {
   // has, no layout change.
   const showOwner = hasHousehold(peers);
   const ownerPrefix = (a: Account) =>
-    showOwner ? (a.ownerUserId ? personLabel(a.ownerUserId, peers, store.profiles) : 'Shared') : null;
+    showOwner ? (a.ownerUserId ? personLabel(a.ownerUserId, peers, store.profiles) : t('accounts.shared')) : null;
 
   const active = store.accounts.filter((a) => !a.archived);
   const archived = store.accounts.filter((a) => a.archived);
@@ -70,10 +69,10 @@ export function AccountsScreen() {
       if (!cur || occurredAt > cur) map.set(accountId, occurredAt);
     };
     const activeById = new Map<string, string>();
-    for (const t of store.transactions) {
-      if (t.deletedAt) continue;
-      activeById.set(t.id, t.occurredAt);
-      if (t.accountId !== null) bump(t.accountId, t.occurredAt);
+    for (const tx of store.transactions) {
+      if (tx.deletedAt) continue;
+      activeById.set(tx.id, tx.occurredAt);
+      if (tx.accountId !== null) bump(tx.accountId, tx.occurredAt);
     }
     for (const s of store.transactionSplits) {
       const occurredAt = activeById.get(s.transactionId);
@@ -173,12 +172,12 @@ export function AccountsScreen() {
   }
 
   const txCountForAccount = (accountId: string) =>
-    store.transactions.filter((t) => !t.deletedAt && t.accountId === accountId).length;
+    store.transactions.filter((tx) => !tx.deletedAt && tx.accountId === accountId).length;
 
   function renderRow(account: Account, showInstitutionInLabel: boolean) {
     const isEditing = openPanel?.type === 'edit' && openPanel.id === account.id;
     const balances = store.balancesFor(account.id);
-    const label = showInstitutionInLabel ? accountLabel(account) : account.name;
+    const label = showInstitutionInLabel ? accountLabel(account) : accountName(account);
     const owner = ownerPrefix(account);
 
     if (mergeState.step === 'picking') {
@@ -193,18 +192,18 @@ export function AccountsScreen() {
         >
           <div className="account-row-top">
             <span className="account-name">
-              {isSurvivor && <span className="merge-badge">Keeper</span>}
+              {isSurvivor && <span className="merge-badge">{t('duplicates.keeper')}</span>}
               {!isSurvivor && mergeState.survivorId !== null && (
                 <span className="merge-check">{isPicked ? '✓' : '○'}</span>
               )}
               {owner && <span className="owner-prefix">{owner} — </span>}
               {label}
             </span>
-            <span className="account-kind">{KIND_LABELS[account.kind]}</span>
+            <span className="account-kind">{kindLabel(account.kind)}</span>
           </div>
           <div className="account-balances">
             {balances.length === 0 ? (
-              <span className="balance-line empty">no activity yet</span>
+              <span className="balance-line empty">{t('accounts.noActivity')}</span>
             ) : (
               balances.map((b) => (
                 <span className="balance-line" key={b.currency}>
@@ -225,11 +224,11 @@ export function AccountsScreen() {
               {owner && <span className="owner-prefix">{owner} — </span>}
               {label}
             </span>
-            <span className="account-kind">{KIND_LABELS[account.kind]}</span>
+            <span className="account-kind">{kindLabel(account.kind)}</span>
           </div>
           <div className="account-balances">
             {balances.length === 0 ? (
-              <span className="balance-line empty">no activity yet</span>
+              <span className="balance-line empty">{t('accounts.noActivity')}</span>
             ) : (
               balances.map((b) => (
                 <span className="balance-line" key={b.currency}>
@@ -251,16 +250,16 @@ export function AccountsScreen() {
   return (
     <main className="home">
       <div className="app-bar">
-        <Link to="/settings" className="back-link">← Back</Link>
-        <span className="wordmark">Accounts</span>
+        <Link to="/settings" className="back-link">← {t('common.back')}</Link>
+        <span className="wordmark">{t('accounts.title')}</span>
         <div className="app-bar-actions">
           {mergeState.step === 'off' && active.length >= 2 && (
-            <button className="icon-btn" aria-label="Merge duplicates" onClick={toggleMergeMode}>⇄</button>
+            <button className="icon-btn" aria-label={t('accounts.mergeDuplicates')} onClick={toggleMergeMode}>⇄</button>
           )}
           {mergeState.step === 'off' && (
             <button
               className="icon-btn"
-              aria-label="Add account"
+              aria-label={t('accounts.add')}
               onClick={() => setOpenPanel((p) => (p?.type === 'create' ? null : { type: 'create' }))}
             >
               +
@@ -276,17 +275,17 @@ export function AccountsScreen() {
             <div className="merge-toolbar">
               <span>
                 {!survivor
-                  ? 'Tap a row to keep as the original'
+                  ? t('accounts.pickKeeper')
                   : mergeState.loserIds.size === 0
-                    ? `Now tap any duplicates of "${accountLabel(survivor)}" to fold in`
-                    : `${mergeState.loserIds.size} will merge into "${accountLabel(survivor)}"`}
+                    ? t('accounts.pickDuplicates', { name: accountLabel(survivor) })
+                    : t('accounts.willMerge', { count: mergeState.loserIds.size, name: accountLabel(survivor) })}
               </span>
               <div className="chip-row">
-                {survivor && <button className="chip ghost" onClick={changeKeeper}>Change keeper</button>}
+                {survivor && <button className="chip ghost" onClick={changeKeeper}>{t('accounts.changeKeeper')}</button>}
                 {survivor && mergeState.loserIds.size > 0 && (
-                  <button className="save-btn" onClick={reviewMerge}>Review merge</button>
+                  <button className="save-btn" onClick={reviewMerge}>{t('accounts.reviewMerge')}</button>
                 )}
-                <button className="chip ghost" onClick={() => setMergeState({ step: 'off' })}>Cancel</button>
+                <button className="chip ghost" onClick={() => setMergeState({ step: 'off' })}>{t('common.cancel')}</button>
               </div>
             </div>
           );
@@ -299,39 +298,41 @@ export function AccountsScreen() {
           const flagged = new Set(crossOwnerLosers(survivor, losers).map((a) => a.id));
           return (
             <div className="merge-review">
-              <p className="section-label">Merge {losers.length} into "{accountLabel(survivor)}"</p>
+              <p className="section-label">{t('accounts.mergeInto', { count: losers.length, name: accountLabel(survivor) })}</p>
               <div className="merge-conflicts">
                 <div className="merge-conflict">
-                  <p className="merge-conflict-title">Keeping: {accountLabel(survivor)}</p>
-                  <p className="merge-conflict-detail">Nothing changes on this one.</p>
+                  <p className="merge-conflict-title">{t('accounts.keeping', { name: accountLabel(survivor) })}</p>
+                  <p className="merge-conflict-detail">{t('accounts.nothingChanges')}</p>
                 </div>
                 {losers.map((loser) => {
                   const n = txCountForAccount(loser.id);
                   return (
                     <div className="merge-conflict" key={loser.id}>
-                      <p className="merge-conflict-title">Folding in: {accountLabel(loser)}</p>
+                      <p className="merge-conflict-title">{t('accounts.foldingIn', { name: accountLabel(loser) })}</p>
                       <p className="merge-conflict-detail">
-                        {n} transaction{n === 1 ? '' : 's'} move to "{accountLabel(survivor)}". This account will be deleted.
+                        {t('accounts.movesTo', { transactions: t('transactions.count', { count: n }), name: accountLabel(survivor) })}
                       </p>
                       {flagged.has(loser.id) && (
                         <p className="merge-conflict-detail merge-conflict-warning">
-                          ⚠ Owned by {loser.ownerUserId ? personLabel(loser.ownerUserId, peers, store.profiles) : 'Shared'} — merging
-                          reassigns it to {survivor.ownerUserId ? personLabel(survivor.ownerUserId, peers, store.profiles) : 'Shared'}.
+                          {t('accounts.ownerWarning', {
+                            from: loser.ownerUserId ? personLabel(loser.ownerUserId, peers, store.profiles) : t('accounts.shared'),
+                            to: survivor.ownerUserId ? personLabel(survivor.ownerUserId, peers, store.profiles) : t('accounts.shared'),
+                          })}
                         </p>
                       )}
                     </div>
                   );
                 })}
               </div>
-              <button className="save-btn" onClick={() => void confirmMerge()}>Merge {losers.length}</button>
-              <button className="chip ghost" onClick={() => setMergeState({ step: 'off' })}>Cancel</button>
+              <button className="save-btn" onClick={() => void confirmMerge()}>{t('accounts.merge', { count: losers.length })}</button>
+              <button className="chip ghost" onClick={() => setMergeState({ step: 'off' })}>{t('common.cancel')}</button>
             </div>
           );
         })()}
 
       {openPanel?.type === 'create' && (
         <section className="account-create">
-          <div className="section-label">New account</div>
+          <div className="section-label">{t('accounts.new')}</div>
           {redirectState?.reason && <p className="empty-note">{redirectState.reason}</p>}
           <AccountForm account={null} onDone={() => setOpenPanel(null)} />
         </section>
@@ -355,7 +356,7 @@ export function AccountsScreen() {
           {ungrouped.map((a) => renderRow(a, true))}
 
           {active.length === 0 && !openPanel && (
-            <p className="empty-note">No accounts yet — tap + to add one.</p>
+            <p className="empty-note">{t('accounts.empty')}</p>
           )}
         </div>
       )}
@@ -363,7 +364,7 @@ export function AccountsScreen() {
       {mergeState.step === 'off' && archived.length > 0 && (
         <div className="account-group">
           <button className="group-header" onClick={() => setArchivedOpen((o) => !o)}>
-            <span>Archived ({archived.length})</span>
+            <span>{t('accounts.archived', { count: archived.length })}</span>
             <span className="group-count">{archivedOpen ? '▾' : '›'}</span>
           </button>
           {archivedOpen &&
@@ -374,7 +375,7 @@ export function AccountsScreen() {
                     {ownerPrefix(a) && <span className="owner-prefix">{ownerPrefix(a)} — </span>}
                     {accountLabel(a)}
                   </span>
-                  <span className="account-kind">{KIND_LABELS[a.kind]}</span>
+                  <span className="account-kind">{kindLabel(a.kind)}</span>
                 </div>
                 <div className="account-balances">
                   {store.balancesFor(a.id).map((b) => (
@@ -395,6 +396,7 @@ export function AccountsScreen() {
 // editing an existing account (account set) and creating one (account null).
 function AccountForm({ account, onDone }: { account: Account | null; onDone: () => void }) {
   const store = useStore();
+  const { t } = useTranslation();
   const peers = useHouseholdPeers();
   const isNew = account === null;
 
@@ -418,7 +420,7 @@ function AccountForm({ account, onDone }: { account: Account | null; onDone: () 
   // through an async DB round-trip (PowerSync live query), so binding the
   // input's value directly to them snaps the cursor to the end on every
   // keystroke once that round-trip resolves.
-  const [nameStr, setNameStr] = useState(() => current.name);
+  const [nameStr, setNameStr] = useState(() => (isNew ? current.name : accountName(current)));
   const [institutionStr, setInstitutionStr] = useState(() => current.institution ?? '');
 
   function commit(patch: Partial<Account>) {
@@ -441,10 +443,10 @@ function AccountForm({ account, onDone }: { account: Account | null; onDone: () 
   return (
     <div className="account-form">
       <label className="field-label">
-        Institution
+        {t('accounts.institution')}
         <input
           className="text-input"
-          placeholder="TD, Itaú, Wise…"
+          placeholder={t('accounts.institutionPlaceholder')}
           value={institutionStr}
           onChange={(e) => {
             const v = e.target.value;
@@ -455,10 +457,10 @@ function AccountForm({ account, onDone }: { account: Account | null; onDone: () 
       </label>
 
       <label className="field-label">
-        Name
+        {t('common.name')}
         <input
           className="text-input"
-          placeholder="Visa, Checking, Trip Fund…"
+          placeholder={t('accounts.namePlaceholder')}
           value={nameStr}
           onChange={(e) => {
             const v = e.target.value;
@@ -469,12 +471,12 @@ function AccountForm({ account, onDone }: { account: Account | null; onDone: () 
       </label>
 
       <div>
-        <div className="field-label">Kind</div>
+        <div className="field-label">{t('accounts.kind')}</div>
         <button
           className="pill-tap"
           onClick={() => setPickerOpen(pickerOpen === 'kind' ? null : 'kind')}
         >
-          {KIND_LABELS[current.kind]} ▾
+          {kindLabel(current.kind)} ▾
         </button>
         {pickerOpen === 'kind' && (
           <div className="chip-row">
@@ -487,7 +489,7 @@ function AccountForm({ account, onDone }: { account: Account | null; onDone: () 
                   setPickerOpen(null);
                 }}
               >
-                {KIND_LABELS[k]}
+                {kindLabel(k)}
               </button>
             ))}
           </div>
@@ -504,9 +506,9 @@ function AccountForm({ account, onDone }: { account: Account | null; onDone: () 
           account they already own keeps showing their name, marked. */}
       {store.profiles.filter((p) => !p.deletedAt).length > 1 && (
         <div>
-          <div className="field-label">Owner</div>
+          <div className="field-label">{t('accounts.owner')}</div>
           <button className="pill-tap" onClick={() => setPickerOpen(pickerOpen === 'owner' ? null : 'owner')}>
-            {current.ownerUserId ? personLabel(current.ownerUserId, peers, store.profiles) : 'Shared'} ▾
+            {current.ownerUserId ? personLabel(current.ownerUserId, peers, store.profiles) : t('accounts.shared')} ▾
           </button>
           {pickerOpen === 'owner' && (
             <div className="chip-row">
@@ -517,7 +519,7 @@ function AccountForm({ account, onDone }: { account: Account | null; onDone: () 
                   setPickerOpen(null);
                 }}
               >
-                Shared
+                {t('accounts.shared')}
               </button>
               {store.profiles
                 .filter((p) => !p.deletedAt)
@@ -542,15 +544,15 @@ function AccountForm({ account, onDone }: { account: Account | null; onDone: () 
         {isNew ? (
           <>
             <button className="chip ghost" onClick={onDone}>
-              cancel
+              {t('common.cancelLower')}
             </button>
             <button className="save-btn" onClick={saveNew}>
-              Add account
+              {t('accounts.add')}
             </button>
           </>
         ) : (
           <button className="text-link archive-link" onClick={archive}>
-            Archive account
+            {t('accounts.archive')}
           </button>
         )}
       </div>

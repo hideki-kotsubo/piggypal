@@ -1,4 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { isFreshBlank } from '../lib/freshBlankTransactions';
 import { useStore } from '../lib/store';
 import { TransactionEditForm } from './TransactionEditForm';
@@ -14,8 +15,9 @@ import { TransactionEditForm } from './TransactionEditForm';
 export function TransactionScreen() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const store = useStore();
-  const transaction = store.transactions.find((t) => t.id === id && !t.deletedAt);
+  const transaction = store.transactions.find((tx) => tx.id === id && !tx.deletedAt);
 
   // Quick-add (docs/19) inserts a blank $0 row immediately so this screen has
   // something to edit. Every other entry path requires a nonzero amount
@@ -42,8 +44,8 @@ export function TransactionScreen() {
   return (
     <main className="home">
       <div className="app-bar">
-        <button className="back-link" onClick={finish}>← Back</button>
-        <span className="wordmark">Transaction</span>
+        <button className="back-link" onClick={finish}>← {t('common.back')}</button>
+        <span className="wordmark">{t('transaction.title')}</span>
         <span style={{ width: '3rem' }} />
       </div>
 
@@ -55,7 +57,7 @@ export function TransactionScreen() {
           <TransactionEditForm transaction={transaction} onDone={finish} />
         </div>
       ) : (
-        <p className="empty-note">This transaction was deleted or doesn't exist.</p>
+        <p className="empty-note">{t('transaction.missing')}</p>
       )}
     </main>
   );

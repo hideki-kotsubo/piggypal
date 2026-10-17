@@ -1,4 +1,5 @@
 import type { ScheduledPayment, Transaction } from './types';
+import i18n, { uiLocale } from './i18n';
 
 // docs/57 — everything about a scheduled payment that isn't storage: when
 // its occurrences fall, what each one costs, which are still open, and the
@@ -214,27 +215,27 @@ export function occurrenceOccurredAt(date: string): string {
   return `${date}T12:00:00`;
 }
 
-const ORDINAL_EN = (n: number) => {
-  const s = ['th', 'st', 'nd', 'rd'];
-  const v = n % 100;
-  return n + (s[(v - 20) % 10] || s[v] || s[0]);
-};
-const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-// "Monthly on the 1st", "Every 2 weeks on Friday", "Yearly on Mar 15".
+// "Monthly on the 1st", "Every 2 weeks on Friday", "Yearly on Mar 15" —
+// or the UI language's equivalent (docs/73). Weekday and month names come
+// from Intl; day ordinals ("1st", French "1er") from i18next's ordinal
+// plural keys.
 export function describeCadence(rule: Pick<ScheduledPayment, 'freq' | 'intervalCount' | 'anchorDate'>): string {
   const [y, m, d] = parts(rule.anchorDate);
-  const n = Math.max(1, rule.intervalCount);
+  const count = Math.max(1, rule.intervalCount);
+  const date = new Date(Date.UTC(y, m - 1, d));
   switch (rule.freq) {
     case 'weekly': {
-      const weekday = WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
-      return `${n === 1 ? 'Weekly' : `Every ${n} weeks`} on ${weekday}`;
+      const weekday = new Intl.DateTimeFormat(uiLocale(), { weekday: 'long', timeZone: 'UTC' }).format(date);
+      return i18n.t('cadence.weekly', { count, weekday });
     }
-    case 'yearly':
-      return `${n === 1 ? 'Yearly' : `Every ${n} years`} on ${MONTHS[m - 1]} ${d}`;
-    default:
-      return `${n === 1 ? 'Monthly' : `Every ${n} months`} on the ${d >= 29 ? `${ORDINAL_EN(d)} (or last day)` : ORDINAL_EN(d)}`;
+    case 'yearly': {
+      const monthDay = new Intl.DateTimeFormat(uiLocale(), { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(date);
+      return i18n.t('cadence.yearly', { count, date: monthDay });
+    }
+    default: {
+      const ordinal = i18n.t('cadence.day', { count: d, ordinal: true });
+      return i18n.t('cadence.monthly', { count, day: d >= 29 ? i18n.t('cadence.orLastDay', { day: ordinal }) : ordinal });
+    }
   }
 }
 
