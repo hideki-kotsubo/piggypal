@@ -293,26 +293,21 @@ export function EntryZone({ onSubmitted }: Props) {
     <div className="entry-zone">
       <form onSubmit={submitTyped}>
         {/* In the card's flow rather than a floating popover: .entry-zone
-            clips overflow, and the docked card grows upward anyway. */}
+            clips overflow, and the docked card grows upward anyway. No
+            "Same as app" here: this menu picks a language for right now,
+            and the app's language is already one of the chips (highlighted
+            while voice follows it). Settings keeps "Same as app" as the
+            default and the way back to it. */}
         {isSpeechInputSupported() && voiceMenuOpen && (
           <div className="voice-lang-menu" role="menu">
-            <button
-              type="button"
-              role="menuitemradio"
-              aria-checked={voicePreference === 'app'}
-              className={`chip ${voicePreference === 'app' ? 'picked' : ''}`}
-              onClick={() => pickVoiceLanguage('app')}
-            >
-              {t('settings.voiceSameAsApp', { language: LANGUAGES.find((l) => l.tag === i18n.language)?.label })}
-            </button>
             {LANGUAGES.map((l) => (
               <button
                 type="button"
                 role="menuitemradio"
-                aria-checked={voicePreference === l.tag}
+                aria-checked={voiceTag === l.tag}
                 key={l.tag}
                 lang={l.tag}
-                className={`chip ${voicePreference === l.tag ? 'picked' : ''}`}
+                className={`chip ${voiceTag === l.tag ? 'picked' : ''}`}
                 onClick={() => pickVoiceLanguage(l.tag)}
               >
                 {l.label}
