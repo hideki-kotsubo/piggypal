@@ -29,6 +29,8 @@ How to write an entry (docs/59):
   "Understood" panel.
 - **Voice language from Home**: tap the small language chip next to the
   mic (EN, PT, FR…). Switch even while it's listening.
+- **CA$ and US$**: once you use more than one dollar currency, amounts
+  say which dollar they are instead of a plain "$".
 - Ice cream, sorvete, helado and glace now go to **Snacks**.
 - Fixed: an account with an empty name was picked for every typed or
   spoken entry.

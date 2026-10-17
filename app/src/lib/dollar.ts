@@ -6,7 +6,17 @@ import { useState } from 'react';
 // Now the caller (EntryZone) picks a dollar currency, shown as a guess in
 // the parse preview so it can be changed before saving.
 
-export const DOLLAR_CURRENCIES = ['CAD', 'USD', 'AUD', 'NZD', 'SGD', 'HKD'];
+// Explicit symbols for when "$" alone would be ambiguous (formatAmount).
+export const DOLLAR_SYMBOLS: Record<string, string> = {
+  CAD: 'CA$',
+  USD: 'US$',
+  AUD: 'A$',
+  NZD: 'NZ$',
+  SGD: 'S$',
+  HKD: 'HK$',
+};
+
+export const DOLLAR_CURRENCIES = Object.keys(DOLLAR_SYMBOLS);
 
 export type DollarPreference = 'CAD' | 'USD';
 

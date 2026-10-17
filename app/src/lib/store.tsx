@@ -5,7 +5,7 @@ import { connectSync, db } from './db';
 import { clearAuthAccount, getAuthAccount } from './auth';
 import { clearLocalUserId, getDeviceId, getLocalUserId, setLocalUserId } from './identity';
 import { clearPairedPeers } from './peers';
-import { nowUtc } from './format';
+import { nowUtc, setDollarCurrenciesInUse } from './format';
 import { computeBalances } from './balances';
 import type { AccountRewrite, CategoryRewrite } from './mergeMatch';
 import { effectiveDeviceLabel } from './settings';
@@ -1660,6 +1660,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
     };
   }, [state]);
+
+  // docs/73 D273 — formatAmount spells dollars out (CA$/US$) once more
+  // than one dollar currency is in use. Set here, before children render,
+  // so the first paint already matches.
+  setDollarCurrenciesInUse([
+    ...state.transactions.filter((tx) => !tx.deletedAt).map((tx) => tx.currency),
+    ...state.budgets.map((b) => b.currency),
+    ...state.scheduledPayments.filter((r) => !r.deletedAt).map((r) => r.currency),
+  ]);
 
   if (!ready) return <AppSkeleton />;
 

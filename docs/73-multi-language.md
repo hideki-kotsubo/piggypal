@@ -425,9 +425,16 @@ person said dollars.
   started in pt-BR and restarted in en-US after switching mid-listen;
   "15 dollars in ice cream" became a guessed dollar under Snacks; the
   pill changed it to USD and it saved. 195 tests.
-- Noticed, not changed: amounts use `currencyDisplay: 'narrowSymbol'`,
-  so CAD and USD both show as "$" in lists. Fine for one dollar, unclear
-  for someone using both. Proposed to the user as a follow-up.
+- **D273** (the user said yes, same day): amounts used `narrowSymbol`,
+  so CAD and USD both showed as "$". Once more than one dollar currency
+  is in use on the device (transactions, budgets, scheduled payments),
+  `formatAmount()` swaps the symbol for an explicit one (CA$, US$, A$,
+  NZ$, S$, HK$, `DOLLAR_SYMBOLS` in `lib/dollar.ts`) through
+  `formatToParts`, so each locale keeps its own order and spacing
+  ("US$ 15,00" pt-BR, "15,00 CA$" fr). With a single dollar currency it
+  stays "$". StoreProvider calls `setDollarCurrenciesInUse()` before
+  rendering its children. Checked in headless Chromium: "-$15.00" with
+  one CAD entry, then "-US$20.00 · -CA$15.00" after adding a USD one.
 
 ### Glossary
 
@@ -463,3 +470,4 @@ One word per concept, so the same thing reads the same everywhere:
 | D270 | The parser's vocabulary is split into per-language packs (en, pt, es, fr), all active for every input. On conflicting words the voice language's pack wins for voice input, the UI language's pack for typed input. | Full es/fr parsing (user, 2026-10-16) without breaking typed input in other languages, and with a rule for words like "no", "de", "sept". |
 | D271 | The first release also translates the magic-link email (the app sends its language with the sign-in request) and the native permission prompts. Store listings and the website come later. | Users see the email and the permission prompts in their first minutes; store copy is a separate effort. |
 | D272 | "Dollars", "bucks" or a bare "$" with no country is some dollar: the account's usual currency if it's a dollar, else the most recently used dollar, else the per-device Dollars ($) mean setting (CAD on a Canadian region, else USD). Shown as a guess in the preview, changeable there. A bare "$" means nothing in Spanish (pesos) and USD in Portuguese speech. Reopens docs/10's "bare dollar stays ambiguous". | A real entry said "dollars" and saved as reais; picking among dollars, visibly, beats a confidently wrong currency. |
+| D273 | Once more than one dollar currency is in use on the device, every dollar amount shows its explicit symbol (CA$, US$…); with one, plain "$" as before. | Someone spending in CAD and USD couldn't tell "$15" entries apart. |
