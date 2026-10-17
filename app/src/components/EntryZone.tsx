@@ -112,7 +112,7 @@ export function EntryZone({ onSubmitted }: Props) {
   // writing suits both paths, so both go through it.
   // `language`: what the text is most likely in — the voice language for
   // speech, the UI language for typing (docs/73 D270).
-  function buildPreview(rawText: string, language: string) {
+  function buildPreview(rawText: string, language: string, fromSpeech = false) {
     const text = rawText.trim();
     if (!text) return;
 
@@ -131,6 +131,7 @@ export function EntryZone({ onSubmitted }: Props) {
       merchants: store.rankedMerchants(),
       now: new Date(),
       language,
+      fromSpeech,
       categoryAliases: starterCategoryAliases(store.categories),
       accountAliases: starterAccountAliases(store.accounts),
     });
@@ -222,18 +223,19 @@ export function EntryZone({ onSubmitted }: Props) {
     const handle = startSpeechInput({
       onResult: (transcript) => {
         setTypedText(transcript);
-        buildPreview(transcript, voiceLanguage());
+        buildPreview(transcript, voiceLanguage(), true);
       },
       onError: (error) => {
         setListening(false);
-        // docs/73: say why voice stopped, except when nothing was said or
-        // the user cancelled.
+        // docs/73: always say why voice stopped, except when the user
+        // cancelled — a silent stop read as a frozen app on iPhone.
         if (error === 'not-allowed' || error === 'service-not-allowed') onSubmitted(t('voice.permission'));
         else if (error === 'language-not-supported') {
           const language = LANGUAGES.find((l) => l.tag === voiceLanguage())?.label ?? voiceLanguage();
           onSubmitted(t('voice.languageUnsupported', { language }));
         } else if (error === 'network') onSubmitted(t('voice.network'));
-        else if (error !== 'no-speech' && error !== 'aborted') onSubmitted(t('voice.failed'));
+        else if (error === 'no-speech') onSubmitted(t('voice.noSpeech'));
+        else if (error !== 'aborted') onSubmitted(t('voice.failed'));
       },
       onEnd: () => setListening(false),
     });

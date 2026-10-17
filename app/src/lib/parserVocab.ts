@@ -35,6 +35,12 @@ export interface LanguagePack {
   // installs get them without reseeding category_keywords.
   categoryKeywords: Record<string, string[]>;
   reserved: string[];
+  // What a bare "$" means in this language's speech-to-text output, if
+  // anything. iOS's Portuguese dictation writes "cem dólares" as "$100"
+  // (reais come out as "R$"), so there "$" can only be dollars. Not set
+  // where "$" is genuinely ambiguous: English (USD/CAD), Spanish (pesos in
+  // Mexico), French (CAD in Canada). Typed text never uses it.
+  speechDollar?: string;
 }
 
 const W = '([a-zà-ÿ]+)';
@@ -113,6 +119,7 @@ export const PACKS: Record<PackId, LanguagePack> = {
       'cat-salary': ['salário', 'salario'],
     },
     reserved: ['dos', 'des'],
+    speechDollar: 'USD',
   },
 
   es: {
