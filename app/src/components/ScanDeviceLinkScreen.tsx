@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { parseDeviceLinkPayload } from '../lib/auth';
 import { QrScanStep } from './Qr';
 
@@ -10,6 +11,7 @@ import { QrScanStep } from './Qr';
 // whose device this is.
 export function ScanDeviceLinkScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
   // Remounts the scanner for another try — QrScanStep handles one decode.
   const [attempt, setAttempt] = useState(0);
@@ -17,8 +19,8 @@ export function ScanDeviceLinkScreen() {
   return (
     <main className="home">
       <div className="app-bar">
-        <Link to="/settings" className="back-link">← Back</Link>
-        <span className="wordmark">Scan a code</span>
+        <Link to="/settings" className="back-link">← {t('common.back')}</Link>
+        <span className="wordmark">{t('deviceLink.scanTitle')}</span>
         <span style={{ width: '3rem' }} />
       </div>
 
@@ -32,17 +34,17 @@ export function ScanDeviceLinkScreen() {
               setAttempt((n) => n + 1);
             }}
           >
-            Try again
+            {t('common.tryAgain')}
           </button>
         </div>
       ) : (
         <QrScanStep
           key={attempt}
-          caption="On a device that's already signed in, open Settings → Household → Add a device, then point the camera at the code."
+          caption={t('deviceLink.scanCaption')}
           onResult={(text) => {
             const token = parseDeviceLinkPayload(text);
             if (!token) {
-              setError("That isn't a Flowtab sign-in code. Use the one from Household → Add a device.");
+              setError(t('deviceLink.notACode'));
               return;
             }
             navigate('/auth/verify', { replace: true, state: { deviceLink: token } });

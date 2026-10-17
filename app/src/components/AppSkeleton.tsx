@@ -5,13 +5,16 @@
 // whichever screen the app happens to cold-open into. Mirrors Home's own
 // shape (app-bar + a "Recent" day-card of rows) since that's overwhelmingly
 // the common case, rather than trying to match every possible route.
+import { useTranslation } from 'react-i18next';
+
 export function AppSkeleton() {
+  const { t } = useTranslation();
   return (
-    <div className="home" aria-busy="true" aria-label="Loading your data">
+    <div className="home" aria-busy="true" aria-label={t('home.loading')}>
       <div className="app-bar">
         <span className="wordmark">Flowtab</span>
       </div>
-      <div className="section-label">Recent</div>
+      <div className="section-label">{t('home.recent')}</div>
       <div className="recent">
         <div className="day-card">
           {[0, 1, 2].map((i) => (

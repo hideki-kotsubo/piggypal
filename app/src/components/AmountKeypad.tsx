@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { formatAmount } from '../lib/format';
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
 // number-entry experience should be identical whether you're logging a new
 // transaction or fixing an existing one.
 export function AmountKeypad({ amountCents, currency, direction, onDigit, onBackspace, onToggleDirection }: Props) {
+  const { t } = useTranslation();
   return (
     <>
       <div className="amount-preview">{formatAmount(amountCents, currency)}</div>
@@ -24,7 +26,7 @@ export function AmountKeypad({ amountCents, currency, direction, onDigit, onBack
         ))}
         <button className="key" onClick={onBackspace}>⌫</button>
         <button className="key" onClick={() => onDigit('0')}>0</button>
-        <button className="key done" onClick={onToggleDirection} title="Toggle expense/income">
+        <button className="key done" onClick={onToggleDirection} title={t('keypad.toggleDirection')}>
           {direction === 'expense' ? '−' : '+'}
         </button>
       </div>

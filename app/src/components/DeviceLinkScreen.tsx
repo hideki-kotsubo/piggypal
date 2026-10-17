@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Trans, useTranslation } from 'react-i18next';
 import { deviceLinkPayload, startDeviceLink } from '../lib/auth';
 import { useStore } from '../lib/store';
 import { QrCanvas } from './Qr';
@@ -17,6 +18,7 @@ type State =
 export function DeviceLinkScreen() {
   const store = useStore();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [state, setState] = useState<State>({ kind: 'loading' });
   const [attempt, setAttempt] = useState(0);
   const [now, setNow] = useState(() => Date.now());
@@ -38,7 +40,7 @@ export function DeviceLinkScreen() {
         if (!cancelled) setState({ kind: 'showing', token, expiresAt: new Date(expiresAt).getTime() });
       })
       .catch((err: unknown) => {
-        if (!cancelled) setState({ kind: 'error', message: err instanceof Error ? err.message : 'Could not create a code.' });
+        if (!cancelled) setState({ kind: 'error', message: err instanceof Error ? err.message : t('deviceLink.createFailed') });
       });
     return () => {
       cancelled = true;
@@ -48,9 +50,9 @@ export function DeviceLinkScreen() {
   useEffect(() => {
     if (state.kind !== 'showing') return;
     const timer = setInterval(() => {
-      const t = Date.now();
-      setNow(t);
-      if (t >= state.expiresAt) setState({ kind: 'expired' });
+      const current = Date.now();
+      setNow(current);
+      if (current >= state.expiresAt) setState({ kind: 'expired' });
     }, 1000);
     return () => clearInterval(timer);
   }, [state]);
@@ -58,8 +60,8 @@ export function DeviceLinkScreen() {
   return (
     <main className="home">
       <div className="app-bar">
-        <Link to="/settings/household" className="back-link">← Back</Link>
-        <span className="wordmark">Add a device</span>
+        <Link to="/settings/household" className="back-link">← {t('common.back')}</Link>
+        <span className="wordmark">{t('deviceLink.title')}</span>
         <span style={{ width: '3rem' }} />
       </div>
 
@@ -67,9 +69,9 @@ export function DeviceLinkScreen() {
         {added ? (
           <>
             <div className="confirm-check">✓</div>
-            <p className="qr-caption">“{added.label}” is signed in to this account.</p>
+            <p className="qr-caption">{t('deviceLink.added', { label: added.label })}</p>
             <button className="save-btn" onClick={() => navigate('/settings/household')}>
-              Done
+              {t('common.done')}
             </button>
           </>
         ) : state.kind === 'loading' ? (
@@ -78,18 +80,17 @@ export function DeviceLinkScreen() {
           <>
             <QrCanvas payload={deviceLinkPayload(state.token)} />
             <p className="qr-caption">
-              On the new device, open Flowtab → Settings → <b>Scan a code from a signed-in device</b>, and point it
-              here. Anyone who can see this code can join your account, so only show it to people in your household.
+              <Trans i18nKey="deviceLink.instructions" components={{ b: <b /> }} />
             </p>
             <p className="device-link-countdown">
-              Works once · expires in {formatCountdown(Math.max(0, state.expiresAt - now))}
+              {t('deviceLink.countdown', { time: formatCountdown(Math.max(0, state.expiresAt - now)) })}
             </p>
           </>
         ) : (
           <>
-            <p className="qr-caption">{state.kind === 'expired' ? 'That code expired.' : state.message}</p>
+            <p className="qr-caption">{state.kind === 'expired' ? t('deviceLink.expired') : state.message}</p>
             <button className="save-btn" onClick={() => setAttempt((n) => n + 1)}>
-              Show a new code
+              {t('deviceLink.newCode')}
             </button>
           </>
         )}

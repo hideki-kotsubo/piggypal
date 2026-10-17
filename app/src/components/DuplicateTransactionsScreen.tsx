@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
 import { findDuplicateGroups, type DuplicateGroup } from '../lib/duplicateTransactions';
 import { accountLabel, formatAmount, formatDateTime, formatRelativeDate, transactionTitle } from '../lib/format';
@@ -14,6 +15,7 @@ import { accountLabel, formatAmount, formatDateTime, formatRelativeDate, transac
 // soft-deleted, this useMemo reruns and the group naturally drops out.
 export function DuplicateTransactionsScreen() {
   const store = useStore();
+  const { t } = useTranslation();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   // No default keeper heuristic — docs/04's original dedupe guard was
   // explicitly "never silently drop" a candidate; each group requires an
@@ -39,20 +41,20 @@ export function DuplicateTransactionsScreen() {
   async function confirmGroup(group: DuplicateGroup) {
     const keeperId = keepers[group.key];
     if (!keeperId) return;
-    const loserIds = group.transactions.filter((t) => t.id !== keeperId).map((t) => t.id);
+    const loserIds = group.transactions.filter((tx) => tx.id !== keeperId).map((tx) => tx.id);
     await store.deleteTransactions(loserIds);
   }
 
   return (
     <main className="home">
       <div className="app-bar">
-        <Link to="/transactions" className="back-link">← Back</Link>
-        <span className="wordmark">Find duplicates</span>
+        <Link to="/transactions" className="back-link">← {t('common.back')}</Link>
+        <span className="wordmark">{t('duplicates.title')}</span>
         <span style={{ width: '3rem' }} />
       </div>
 
       {groups.length === 0 ? (
-        <p className="empty-note">No likely duplicates found.</p>
+        <p className="empty-note">{t('duplicates.none')}</p>
       ) : (
         <div className="merge-review">
           <div className="merge-conflicts">
@@ -63,45 +65,48 @@ export function DuplicateTransactionsScreen() {
                 <div className="merge-conflict" key={group.key} data-testid="duplicate-group">
                   <p className="merge-conflict-title dup-group-title">
                     <span>
-                      {group.transactions.length} transactions · {formatAmount(first.amountCents, first.currency)} ·{' '}
-                      {formatRelativeDate(first.occurredAt)}
+                      {t('duplicates.groupSummary', {
+                        count: group.transactions.length,
+                        amount: formatAmount(first.amountCents, first.currency),
+                        date: formatRelativeDate(first.occurredAt),
+                      })}
                     </span>
                     <span
                       className={`dup-tier-badge tier-${group.confidence}`}
                       data-testid="duplicate-tier-badge"
                     >
-                      {group.confidence === 'high' ? 'Likely duplicate' : 'Possible duplicate'}
+                      {group.confidence === 'high' ? t('duplicates.likely') : t('duplicates.possible')}
                     </span>
                   </p>
                   <div>
-                    {group.transactions.map((t) => {
-                      const category = store.categories.find((c) => c.id === t.categoryId);
-                      const account = store.accounts.find((a) => a.id === t.accountId);
-                      const isKeeper = keeperId === t.id;
+                    {group.transactions.map((tx) => {
+                      const category = store.categories.find((c) => c.id === tx.categoryId);
+                      const account = store.accounts.find((a) => a.id === tx.accountId);
+                      const isKeeper = keeperId === tx.id;
                       const cls = isKeeper ? 'picked-survivor' : keeperId ? 'picked-duplicate' : '';
                       return (
                         <button
-                          key={t.id}
+                          key={tx.id}
                           className={`tx-row tx-row-tappable ${cls}`}
                           data-testid="duplicate-row"
                           data-keeper={isKeeper}
-                          onClick={() => selectKeeper(group.key, t.id)}
+                          onClick={() => selectKeeper(group.key, tx.id)}
                         >
                           <div className="tx-left">
                             <div className="tx-main">
                               <span className="tx-note">
-                                {isKeeper && <span className="merge-badge">Keeper</span>}
+                                {isKeeper && <span className="merge-badge">{t('duplicates.keeper')}</span>}
                                 {!isKeeper && keeperId !== null && <span className="merge-check">○</span>}
-                                {transactionTitle(t, category)}
+                                {transactionTitle(tx, category)}
                               </span>
                               <span className="tx-meta">
-                                {category?.name ?? 'Uncategorized'} · {formatDateTime(t.occurredAt)} ·{' '}
+                                {category?.name ?? t('category.uncategorized')} · {formatDateTime(tx.occurredAt)} ·{' '}
                                 {account ? accountLabel(account) : '—'}
                               </span>
                             </div>
                           </div>
-                          <span className={`tx-amt ${t.amountCents < 0 ? 'out' : 'in'}`}>
-                            {formatAmount(t.amountCents, t.currency)}
+                          <span className={`tx-amt ${tx.amountCents < 0 ? 'out' : 'in'}`}>
+                            {formatAmount(tx.amountCents, tx.currency)}
                           </span>
                         </button>
                       );
@@ -109,7 +114,7 @@ export function DuplicateTransactionsScreen() {
                   </div>
                   <div className="chip-row">
                     <button className="chip ghost" data-testid="dismiss-group" onClick={() => dismissGroup(group.key)}>
-                      Not a duplicate
+                      {t('duplicates.notDuplicate')}
                     </button>
                     <button
                       className="save-btn"
@@ -117,7 +122,7 @@ export function DuplicateTransactionsScreen() {
                       disabled={!keeperId}
                       onClick={() => void confirmGroup(group)}
                     >
-                      Keep 1, delete {group.transactions.length - 1}
+                      {t('duplicates.confirm', { count: group.transactions.length - 1 })}
                     </button>
                   </div>
                 </div>

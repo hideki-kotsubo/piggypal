@@ -1,5 +1,6 @@
 import { Fragment } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
 import { accountLabel, formatAmount, groupByDay, transactionTitle } from '../lib/format';
 import { totalsByCurrency } from '../lib/filterTransactions';
@@ -11,10 +12,11 @@ const PREVIEW_COUNT = 5;
 
 export function RecentList() {
   const store = useStore();
+  const { t } = useTranslation();
   const peers = useHouseholdPeers();
   const showPayerBadge = hasHousehold(peers);
   const active = [...store.transactions]
-    .filter((t) => !t.deletedAt)
+    .filter((tx) => !tx.deletedAt)
     .sort((a, b) => (a.occurredAt < b.occurredAt ? 1 : -1));
   const recent = active.slice(0, PREVIEW_COUNT);
 
@@ -30,53 +32,53 @@ export function RecentList() {
   if (recent.length === 0) {
     return (
       <section>
-        <div className="section-label">Recent</div>
-        <p className="empty-note">Nothing logged yet — try the entry box above.</p>
+        <div className="section-label">{t('home.recent')}</div>
+        <p className="empty-note">{t('home.empty')}</p>
       </section>
     );
   }
 
   return (
     <section>
-      <div className="section-label">Recent</div>
+      <div className="section-label">{t('home.recent')}</div>
       <div className="recent">
         {groupByDay(recent).map((group) => (
           <Fragment key={group.label}>
             <div className="day-label">
               <span>{group.label}</span>
               <span className="day-subtotal">
-                {(fullDayTotals.get(group.label) ?? []).map((t, i) => (
-                  <span key={t.currency}>{i > 0 && ' · '}{formatAmount(t.cents, t.currency)}</span>
+                {(fullDayTotals.get(group.label) ?? []).map((total, i) => (
+                  <span key={total.currency}>{i > 0 && ' · '}{formatAmount(total.cents, total.currency)}</span>
                 ))}
               </span>
             </div>
             <div className="day-card">
-              {group.items.map((t) => {
-                const account = store.accounts.find((a) => a.id === t.accountId);
-                const category = store.categories.find((c) => c.id === t.categoryId);
+              {group.items.map((tx) => {
+                const account = store.accounts.find((a) => a.id === tx.accountId);
+                const category = store.categories.find((c) => c.id === tx.categoryId);
                 // docs/50 — a split transaction has no single account; show
                 // how many legs it's split across instead of the
                 // misleading '—' fallback (it has 2+ accounts, not zero).
                 const accountSegment =
-                  t.accountId === null
-                    ? `Split · ${store.transactionSplits.filter((s) => s.transactionId === t.id).length}`
+                  tx.accountId === null
+                    ? t('transaction.splitCount', { count: store.transactionSplits.filter((s) => s.transactionId === tx.id).length })
                     : account
                       ? accountLabel(account)
                       : '—';
                 return (
-                  <Link key={t.id} to={`/transactions/${t.id}`} className="tx-row tx-row-tappable">
+                  <Link key={tx.id} to={`/transactions/${tx.id}`} className="tx-row tx-row-tappable">
                     <div className="tx-left">
                       {showPayerBadge && (
-                        <PayerBadge label={personLabel(t.paidByUserId, peers, store.profiles)} mine={t.paidByUserId === getLocalUserId()} />
+                        <PayerBadge label={personLabel(tx.paidByUserId, peers, store.profiles)} mine={tx.paidByUserId === getLocalUserId()} />
                       )}
                       <div className="tx-main">
-                        <span className="tx-note">{transactionTitle(t, category)}</span>
+                        <span className="tx-note">{transactionTitle(tx, category)}</span>
                         {/* day-label above already carries the date — just the account here */}
                         <span className="tx-meta">{accountSegment}</span>
                       </div>
                     </div>
-                    <span className={`tx-amt ${t.amountCents < 0 ? 'out' : 'in'}`}>
-                      {formatAmount(t.amountCents, t.currency)}
+                    <span className={`tx-amt ${tx.amountCents < 0 ? 'out' : 'in'}`}>
+                      {formatAmount(tx.amountCents, tx.currency)}
                     </span>
                   </Link>
                 );
@@ -86,7 +88,7 @@ export function RecentList() {
         ))}
       </div>
       {active.length > PREVIEW_COUNT && (
-        <Link to="/transactions" className="see-all">see all →</Link>
+        <Link to="/transactions" className="see-all">{t('home.seeAll')}</Link>
       )}
     </section>
   );

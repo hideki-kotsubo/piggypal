@@ -27,5 +27,108 @@
   },
   "category": {
     "uncategorized": "Sin categoría"
+  },
+  "common": {
+    "back": "Volver",
+    "undo": "Deshacer",
+    "noNote": "Sin nota",
+    "tryAgain": "Intentar de nuevo",
+    "done": "Listo"
+  },
+  "nav": {
+    "insights": "Análisis",
+    "settings": "Configuración",
+    "inbox": "Bandeja de entrada"
+  },
+  "banner": {
+    "inbox_one": "{{count}} movimiento necesita categoría",
+    "inbox_other": "{{count}} movimientos necesitan categoría",
+    "inbox_many": "{{count}} movimientos necesitan categoría",
+    "due_one": "Un pago programado pendiente",
+    "due_other": "{{count}} pagos programados pendientes",
+    "due_many": "{{count}} pagos programados pendientes",
+    "accountDeleted": "Tu cuenta fue eliminada: este dispositivo ahora funciona sin sincronización",
+    "sessionExpired": "Sincronización en pausa: inicia sesión de nuevo para sincronizar tus movimientos"
+  },
+  "home": {
+    "loading": "Cargando tus datos",
+    "recent": "Recientes",
+    "empty": "Aún no hay nada registrado: prueba el cuadro de entrada de arriba.",
+    "seeAll": "ver todo →"
+  },
+  "keypad": {
+    "toggleDirection": "Cambiar gasto/ingreso"
+  },
+  "inbox": {
+    "empty": "Nada necesita categoría."
+  },
+  "transaction": {
+    "title": "Movimiento",
+    "missing": "Este movimiento fue eliminado o no existe.",
+    "splitCount": "Dividido · {{count}}"
+  },
+  "deviceLink": {
+    "scanTitle": "Escanear código",
+    "scanCaption": "En un dispositivo con la sesión ya iniciada, abre Configuración → Hogar → Agregar dispositivo y apunta la cámara al código.",
+    "notACode": "Ese no es un código de acceso de Flowtab. Usa el de Hogar → Agregar dispositivo.",
+    "title": "Agregar dispositivo",
+    "createFailed": "No se pudo crear un código.",
+    "added": "“{{label}}” inició sesión en esta cuenta.",
+    "instructions": "En el nuevo dispositivo, abre Flowtab → Configuración → <b>Escanear un código de un dispositivo con sesión iniciada</b> y apúntalo aquí. Cualquiera que vea este código puede unirse a tu cuenta, así que muéstralo solo a personas de tu hogar.",
+    "countdown": "Un solo uso · vence en {{time}}",
+    "expired": "Ese código venció.",
+    "newCode": "Mostrar un código nuevo"
+  },
+  "qr": {
+    "cameraNeeded": "Se necesita acceso a la cámara para escanear el código."
+  },
+  "insights": {
+    "lastDays_one": "Último {{count}} día ({{currency}})",
+    "lastDays_other": "Últimos {{count}} días ({{currency}})",
+    "lastDays_many": "Últimos {{count}} días ({{currency}})",
+    "thisMonth": "Este mes",
+    "scheduled": "+ {{amount}} programado"
+  },
+  "about": {
+    "title": "Acerca de",
+    "pitch": "Flowtab es una app de presupuesto simple, ligera y privada: solo escribe o di lo que gastaste.",
+    "author": "Creado por Hideki Kotsubo, desarrollador de software independiente con base en Vancouver, Canadá.",
+    "contact": "Contacto",
+    "version": "Versión",
+    "whatsNew": "Novedades",
+    "devPreview": "vista previa de desarrollo"
+  },
+  "deleteAccount": {
+    "title": "Eliminar cuenta",
+    "failed": "No se pudo eliminar la cuenta.",
+    "doneText": "Tu cuenta y sus datos sincronizados se eliminaron de nuestros servidores. Tu presupuesto sigue en este dispositivo y Flowtab sigue funcionando aquí sin cuenta.",
+    "backToSettings": "Volver a Configuración",
+    "notSignedIn": "No iniciaste sesión, así que no hay ninguna cuenta para eliminar.",
+    "notOwner": "Solo {{owner}} puede eliminarla, porque borra los datos de todo el hogar. Pídeselo, o cierra sesión para dejar de sincronizar en este dispositivo.",
+    "ownerFallback": "la persona que creó esta cuenta",
+    "warning": "Esto elimina de forma permanente la cuenta <strong>{{email}}</strong> y todo lo sincronizado en ella de nuestros servidores. No se puede deshacer.",
+    "sharedHousehold": "Es un hogar compartido: los datos también se eliminan para <strong>{{names}}</strong>.",
+    "otherDevices_one": "Tu otro dispositivo cerrará sesión. Un dispositivo que esté en línea ahora también puede perder su copia.",
+    "otherDevices_other": "Los otros {{count}} dispositivos cerrarán sesión. Un dispositivo que esté en línea ahora también puede perder su copia.",
+    "otherDevices_many": "Los otros {{count}} dispositivos cerrarán sesión. Un dispositivo que esté en línea ahora también puede perder su copia.",
+    "thisDeviceKeeps": "Este dispositivo conserva sus datos y sigue funcionando sin cuenta.",
+    "confirmWord": "ELIMINAR",
+    "typeToConfirm": "Escribe {{word}} para confirmar",
+    "deleting": "Eliminando…",
+    "offline": "Estás sin conexión. Para eliminar la cuenta necesitas conexión."
+  },
+  "duplicates": {
+    "title": "Buscar duplicados",
+    "none": "No se encontraron posibles duplicados.",
+    "groupSummary_one": "{{count}} movimiento · {{amount}} · {{date}}",
+    "groupSummary_other": "{{count}} movimientos · {{amount}} · {{date}}",
+    "groupSummary_many": "{{count}} movimientos · {{amount}} · {{date}}",
+    "likely": "Probable duplicado",
+    "possible": "Posible duplicado",
+    "keeper": "Conservar",
+    "notDuplicate": "No es duplicado",
+    "confirm_one": "Conservar 1, eliminar {{count}}",
+    "confirm_other": "Conservar 1, eliminar {{count}}",
+    "confirm_many": "Conservar 1, eliminar {{count}}"
   }
 }

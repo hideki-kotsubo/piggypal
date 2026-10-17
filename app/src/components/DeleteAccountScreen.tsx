@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Trans, useTranslation } from 'react-i18next';
 import { deleteAccount, useAuthAccount } from '../lib/auth';
 import { connectSync, disconnectSync } from '../lib/db';
 import { getDeviceId, getLocalUserId } from '../lib/identity';
 import { useOnline } from '../lib/syncNow';
 import { useStore } from '../lib/store';
 
-const CONFIRM_WORD = 'DELETE';
+// The English word always works too, so nobody gets stuck on a
+// translation they can't type.
+const CONFIRM_WORD_EN = 'DELETE';
 
 // docs/72 D257 — App Review 5.1.1(v): delete the account from inside the
 // app. One account is the whole household (docs/48), so this removes the
@@ -15,9 +18,12 @@ const CONFIRM_WORD = 'DELETE';
 // carries on without an account, like signing out.
 export function DeleteAccountScreen() {
   const store = useStore();
+  const { t } = useTranslation();
+  const confirmWord = t('deleteAccount.confirmWord');
   const [authAccount, setAuthAccount] = useAuthAccount();
   const online = useOnline();
   const [typed, setTyped] = useState('');
+  const typedWord = typed.trim().toUpperCase();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -36,7 +42,7 @@ export function DeleteAccountScreen() {
     try {
       await deleteAccount();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't delete the account.");
+      setError(err instanceof Error ? err.message : t('deleteAccount.failed'));
       setBusy(false);
       void connectSync();
       return;
@@ -48,52 +54,44 @@ export function DeleteAccountScreen() {
   return (
     <main className="home">
       <div className="app-bar">
-        <Link to="/settings" className="back-link">← Back</Link>
-        <span className="wordmark">Delete account</span>
+        <Link to="/settings" className="back-link">← {t('common.back')}</Link>
+        <span className="wordmark">{t('deleteAccount.title')}</span>
         <span style={{ width: '3rem' }} />
       </div>
 
       {done ? (
         <div className="settings-field">
-          <p className="delete-account-text">
-            Your account and its synced data are deleted from our servers. Your budget is still on this device, and
-            Flowtab keeps working here without an account.
-          </p>
+          <p className="delete-account-text">{t('deleteAccount.doneText')}</p>
           <Link to="/settings" className="save-btn delete-account-done">
-            Back to Settings
+            {t('deleteAccount.backToSettings')}
           </Link>
         </div>
       ) : !authAccount ? (
-        <p className="empty-note">You're not signed in, so there's no account to delete.</p>
+        <p className="empty-note">{t('deleteAccount.notSignedIn')}</p>
       ) : !isOwner ? (
         <div className="settings-field">
           <p className="delete-account-text">
-            Only {ownerName ?? 'the person who created this account'} can delete it, because it deletes the data for
-            everyone in the household. Ask them, or sign out to stop syncing on this device.
+            {t('deleteAccount.notOwner', { owner: ownerName ?? t('deleteAccount.ownerFallback') })}
           </p>
         </div>
       ) : (
         <div className="settings-field">
           <p className="delete-account-text">
-            This permanently deletes the account <strong>{authAccount.email}</strong> and everything synced to it
-            from our servers. It can't be undone.
+            <Trans i18nKey="deleteAccount.warning" values={{ email: authAccount.email }} components={{ strong: <strong /> }} />
           </p>
           <ul className="delete-account-list">
             {others.length > 0 && (
               <li>
-                It's a shared household: the data is deleted for <strong>{others.join(', ')}</strong> too.
+                <Trans i18nKey="deleteAccount.sharedHousehold" values={{ names: others.join(', ') }} components={{ strong: <strong /> }} />
               </li>
             )}
             {otherDevices > 0 && (
-              <li>
-                {otherDevices === 1 ? 'Your other device is' : `All ${otherDevices} other devices are`} signed out. A
-                device that's online right now may also lose its copy.
-              </li>
+              <li>{t('deleteAccount.otherDevices', { count: otherDevices })}</li>
             )}
-            <li>This device keeps its data and keeps working without an account.</li>
+            <li>{t('deleteAccount.thisDeviceKeeps')}</li>
           </ul>
           <label className="field-label">
-            Type {CONFIRM_WORD} to confirm
+            {t('deleteAccount.typeToConfirm', { word: confirmWord })}
             <input
               className="text-input"
               autoCapitalize="characters"
@@ -104,12 +102,12 @@ export function DeleteAccountScreen() {
           </label>
           <button
             className="save-btn delete-account-btn"
-            disabled={typed.trim().toUpperCase() !== CONFIRM_WORD || busy || !online}
+            disabled={(typedWord !== confirmWord && typedWord !== CONFIRM_WORD_EN) || busy || !online}
             onClick={() => void handleDelete()}
           >
-            {busy ? 'Deleting…' : 'Delete account'}
+            {busy ? t('deleteAccount.deleting') : t('deleteAccount.title')}
           </button>
-          {!online && <p className="qr-caption">You're offline. Deleting the account needs a connection.</p>}
+          {!online && <p className="qr-caption">{t('deleteAccount.offline')}</p>}
           {error && <p className="household-error delete-account-error">{error}</p>}
         </div>
       )}

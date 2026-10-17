@@ -27,5 +27,108 @@
   },
   "category": {
     "uncategorized": "Sans catégorie"
+  },
+  "common": {
+    "back": "Retour",
+    "undo": "Annuler",
+    "noNote": "Sans note",
+    "tryAgain": "Réessayer",
+    "done": "Terminé"
+  },
+  "nav": {
+    "insights": "Analyses",
+    "settings": "Paramètres",
+    "inbox": "Boîte de réception"
+  },
+  "banner": {
+    "inbox_one": "{{count}} opération à catégoriser",
+    "inbox_other": "{{count}} opérations à catégoriser",
+    "inbox_many": "{{count}} opérations à catégoriser",
+    "due_one": "Un paiement programmé à régler",
+    "due_other": "{{count}} paiements programmés à régler",
+    "due_many": "{{count}} paiements programmés à régler",
+    "accountDeleted": "Votre compte a été supprimé — cet appareil fonctionne désormais sans synchronisation",
+    "sessionExpired": "Synchronisation en pause — reconnectez-vous pour synchroniser vos opérations"
+  },
+  "home": {
+    "loading": "Chargement de vos données",
+    "recent": "Récentes",
+    "empty": "Rien d’enregistré pour l’instant — essayez la zone de saisie ci-dessus.",
+    "seeAll": "tout voir →"
+  },
+  "keypad": {
+    "toggleDirection": "Basculer dépense/revenu"
+  },
+  "inbox": {
+    "empty": "Rien à catégoriser."
+  },
+  "transaction": {
+    "title": "Opération",
+    "missing": "Cette opération a été supprimée ou n’existe pas.",
+    "splitCount": "Réparti · {{count}}"
+  },
+  "deviceLink": {
+    "scanTitle": "Scanner un code",
+    "scanCaption": "Sur un appareil déjà connecté, ouvrez Paramètres → Foyer → Ajouter un appareil, puis pointez la caméra vers le code.",
+    "notACode": "Ce n’est pas un code de connexion Flowtab. Utilisez celui de Foyer → Ajouter un appareil.",
+    "title": "Ajouter un appareil",
+    "createFailed": "Impossible de créer un code.",
+    "added": "« {{label}} » est connecté à ce compte.",
+    "instructions": "Sur le nouvel appareil, ouvrez Flowtab → Paramètres → <b>Scanner le code d’un appareil connecté</b>, puis pointez-le ici. Toute personne qui voit ce code peut rejoindre votre compte : ne le montrez qu’aux membres de votre foyer.",
+    "countdown": "Usage unique · expire dans {{time}}",
+    "expired": "Ce code a expiré.",
+    "newCode": "Afficher un nouveau code"
+  },
+  "qr": {
+    "cameraNeeded": "L’accès à la caméra est nécessaire pour scanner un code."
+  },
+  "insights": {
+    "lastDays_one": "Dernier {{count}} jour ({{currency}})",
+    "lastDays_other": "{{count}} derniers jours ({{currency}})",
+    "lastDays_many": "{{count}} derniers jours ({{currency}})",
+    "thisMonth": "Ce mois-ci",
+    "scheduled": "+ {{amount}} programmé"
+  },
+  "about": {
+    "title": "À propos",
+    "pitch": "Flowtab est une appli de budget simple, légère et privée — il suffit d’écrire ou de dire ce que vous avez dépensé.",
+    "author": "Conçu par Hideki Kotsubo, développeur de logiciels indépendant établi à Vancouver, au Canada.",
+    "contact": "Contact",
+    "version": "Version",
+    "whatsNew": "Nouveautés",
+    "devPreview": "aperçu de développement"
+  },
+  "deleteAccount": {
+    "title": "Supprimer le compte",
+    "failed": "Impossible de supprimer le compte.",
+    "doneText": "Votre compte et ses données synchronisées ont été supprimés de nos serveurs. Votre budget reste sur cet appareil, et Flowtab continue de fonctionner ici sans compte.",
+    "backToSettings": "Retour aux paramètres",
+    "notSignedIn": "Vous n’êtes pas connecté, il n’y a donc aucun compte à supprimer.",
+    "notOwner": "Ce compte ne peut être supprimé que par {{owner}}, car cela efface les données de tout le foyer. Demandez-le-lui, ou déconnectez-vous pour arrêter la synchronisation sur cet appareil.",
+    "ownerFallback": "la personne qui l’a créé",
+    "warning": "Cela supprime définitivement le compte <strong>{{email}}</strong> et tout ce qui y est synchronisé de nos serveurs. C’est irréversible.",
+    "sharedHousehold": "C’est un foyer partagé : les données sont aussi supprimées pour <strong>{{names}}</strong>.",
+    "otherDevices_one": "Votre autre appareil est déconnecté. Un appareil en ligne à ce moment peut aussi perdre sa copie.",
+    "otherDevices_other": "Les {{count}} autres appareils sont déconnectés. Un appareil en ligne à ce moment peut aussi perdre sa copie.",
+    "otherDevices_many": "Les {{count}} autres appareils sont déconnectés. Un appareil en ligne à ce moment peut aussi perdre sa copie.",
+    "thisDeviceKeeps": "Cet appareil garde ses données et continue de fonctionner sans compte.",
+    "confirmWord": "SUPPRIMER",
+    "typeToConfirm": "Tapez {{word}} pour confirmer",
+    "deleting": "Suppression…",
+    "offline": "Vous êtes hors ligne. La suppression du compte nécessite une connexion."
+  },
+  "duplicates": {
+    "title": "Trouver les doublons",
+    "none": "Aucun doublon probable trouvé.",
+    "groupSummary_one": "{{count}} opération · {{amount}} · {{date}}",
+    "groupSummary_other": "{{count}} opérations · {{amount}} · {{date}}",
+    "groupSummary_many": "{{count}} opérations · {{amount}} · {{date}}",
+    "likely": "Doublon probable",
+    "possible": "Doublon possible",
+    "keeper": "À garder",
+    "notDuplicate": "Pas un doublon",
+    "confirm_one": "Garder 1, supprimer {{count}}",
+    "confirm_other": "Garder 1, supprimer {{count}}",
+    "confirm_many": "Garder 1, supprimer {{count}}"
   }
 }

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
 import { accountLabel, formatAmount, formatRelativeDate, formatTime } from '../lib/format';
 
@@ -14,32 +15,33 @@ import { accountLabel, formatAmount, formatRelativeDate, formatTime } from '../l
 // done-state bookkeeping needed, same as the list this now matches.
 export function InboxScreen() {
   const store = useStore();
+  const { t } = useTranslation();
   const items = store.transactions.filter((t) => !t.deletedAt && !t.categoryId);
 
   return (
     <main className="home">
       <div className="app-bar">
-        <Link to="/" className="back-link">← Back</Link>
-        <span className="wordmark">Inbox</span>
+        <Link to="/" className="back-link">← {t('common.back')}</Link>
+        <span className="wordmark">{t('nav.inbox')}</span>
         <span style={{ width: '3rem' }} />
       </div>
 
       {items.length === 0 ? (
-        <p className="empty-note">Nothing needs a category.</p>
+        <p className="empty-note">{t('inbox.empty')}</p>
       ) : (
         <div className="recent" style={{ marginTop: '0.5rem' }}>
-          {items.map((t) => {
-            const account = store.accounts.find((a) => a.id === t.accountId);
+          {items.map((tx) => {
+            const account = store.accounts.find((a) => a.id === tx.accountId);
             return (
-              <Link key={t.id} to={`/transactions/${t.id}`} className="tx-row tx-row-tappable">
+              <Link key={tx.id} to={`/transactions/${tx.id}`} className="tx-row tx-row-tappable">
                 <div className="tx-main">
-                  <span className="tx-note">{t.aiRaw ?? t.note ?? 'No note'}</span>
+                  <span className="tx-note">{tx.aiRaw ?? tx.note ?? t('common.noNote')}</span>
                   <span className="tx-meta">
-                    {formatRelativeDate(t.occurredAt)}, {formatTime(t.occurredAt)} · {account ? accountLabel(account) : '—'}
+                    {formatRelativeDate(tx.occurredAt)}, {formatTime(tx.occurredAt)} · {account ? accountLabel(account) : '—'}
                   </span>
                 </div>
-                <span className={`tx-amt ${t.amountCents < 0 ? 'out' : 'in'}`}>
-                  {formatAmount(t.amountCents, t.currency)}
+                <span className={`tx-amt ${tx.amountCents < 0 ? 'out' : 'in'}`}>
+                  {formatAmount(tx.amountCents, tx.currency)}
                 </span>
               </Link>
             );

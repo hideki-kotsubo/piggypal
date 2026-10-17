@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
 import { dueOccurrences, postedKeys, todayLocal } from '../lib/schedules';
 
@@ -8,13 +9,14 @@ import { dueOccurrences, postedKeys, todayLocal } from '../lib/schedules';
 // linger here — the store posts those as soon as they're due.
 export function DueBanner() {
   const store = useStore();
+  const { t } = useTranslation();
   const count = dueOccurrences(store.scheduledPayments, postedKeys(store.transactions), todayLocal()).length;
   if (count === 0) return null;
 
   return (
     <Link to="/schedules" className="inbox-banner">
       <div className="inbox-badge">{count}</div>
-      <p>{count === 1 ? 'A scheduled payment is' : `${count} scheduled payments are`} due</p>
+      <p>{t('banner.due', { count })}</p>
       <span className="inbox-chevron">›</span>
     </Link>
   );

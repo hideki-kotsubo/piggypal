@@ -24,5 +24,102 @@
   },
   "category": {
     "uncategorized": "Uncategorized"
+  },
+  "common": {
+    "back": "Back",
+    "undo": "Undo",
+    "noNote": "No note",
+    "tryAgain": "Try again",
+    "done": "Done"
+  },
+  "nav": {
+    "insights": "Insights",
+    "settings": "Settings",
+    "inbox": "Inbox"
+  },
+  "banner": {
+    "inbox_one": "{{count}} entry needs a category",
+    "inbox_other": "{{count}} entries need a category",
+    "due_one": "A scheduled payment is due",
+    "due_other": "{{count}} scheduled payments are due",
+    "accountDeleted": "Your account was deleted — this device now works without sync",
+    "sessionExpired": "Sync paused — sign in again to sync your entries"
+  },
+  "home": {
+    "loading": "Loading your data",
+    "recent": "Recent",
+    "empty": "Nothing logged yet — try the entry box above.",
+    "seeAll": "see all →"
+  },
+  "keypad": {
+    "toggleDirection": "Toggle expense/income"
+  },
+  "inbox": {
+    "empty": "Nothing needs a category."
+  },
+  "transaction": {
+    "title": "Transaction",
+    "missing": "This transaction was deleted or doesn't exist.",
+    "splitCount": "Split · {{count}}"
+  },
+  "deviceLink": {
+    "scanTitle": "Scan a code",
+    "scanCaption": "On a device that's already signed in, open Settings → Household → Add a device, then point the camera at the code.",
+    "notACode": "That isn't a Flowtab sign-in code. Use the one from Household → Add a device.",
+    "title": "Add a device",
+    "createFailed": "Could not create a code.",
+    "added": "“{{label}}” is signed in to this account.",
+    "instructions": "On the new device, open Flowtab → Settings → <b>Scan a code from a signed-in device</b>, and point it here. Anyone who can see this code can join your account, so only show it to people in your household.",
+    "countdown": "Works once · expires in {{time}}",
+    "expired": "That code expired.",
+    "newCode": "Show a new code"
+  },
+  "qr": {
+    "cameraNeeded": "Camera access is needed to scan a code."
+  },
+  "insights": {
+    "lastDays_one": "Last {{count}} day ({{currency}})",
+    "lastDays_other": "Last {{count}} days ({{currency}})",
+    "thisMonth": "This month",
+    "scheduled": "+ {{amount}} scheduled"
+  },
+  "about": {
+    "title": "About",
+    "pitch": "Flowtab is a simple, light, private budgeting app — you just type or say what you spent.",
+    "author": "Built by Hideki Kotsubo, an independent software developer based in Vancouver, Canada.",
+    "contact": "Contact",
+    "version": "Version",
+    "whatsNew": "What's new",
+    "devPreview": "dev preview"
+  },
+  "deleteAccount": {
+    "title": "Delete account",
+    "failed": "Couldn't delete the account.",
+    "doneText": "Your account and its synced data are deleted from our servers. Your budget is still on this device, and Flowtab keeps working here without an account.",
+    "backToSettings": "Back to Settings",
+    "notSignedIn": "You're not signed in, so there's no account to delete.",
+    "notOwner": "Only {{owner}} can delete it, because it deletes the data for everyone in the household. Ask them, or sign out to stop syncing on this device.",
+    "ownerFallback": "the person who created this account",
+    "warning": "This permanently deletes the account <strong>{{email}}</strong> and everything synced to it from our servers. It can't be undone.",
+    "sharedHousehold": "It's a shared household: the data is deleted for <strong>{{names}}</strong> too.",
+    "otherDevices_one": "Your other device is signed out. A device that's online right now may also lose its copy.",
+    "otherDevices_other": "All {{count}} other devices are signed out. A device that's online right now may also lose its copy.",
+    "thisDeviceKeeps": "This device keeps its data and keeps working without an account.",
+    "confirmWord": "DELETE",
+    "typeToConfirm": "Type {{word}} to confirm",
+    "deleting": "Deleting…",
+    "offline": "You're offline. Deleting the account needs a connection."
+  },
+  "duplicates": {
+    "title": "Find duplicates",
+    "none": "No likely duplicates found.",
+    "groupSummary_one": "{{count}} transaction · {{amount}} · {{date}}",
+    "groupSummary_other": "{{count}} transactions · {{amount}} · {{date}}",
+    "likely": "Likely duplicate",
+    "possible": "Possible duplicate",
+    "keeper": "Keeper",
+    "notDuplicate": "Not a duplicate",
+    "confirm_one": "Keep 1, delete {{count}}",
+    "confirm_other": "Keep 1, delete {{count}}"
   }
 }

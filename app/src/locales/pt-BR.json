@@ -27,5 +27,108 @@
   },
   "category": {
     "uncategorized": "Sem categoria"
+  },
+  "common": {
+    "back": "Voltar",
+    "undo": "Desfazer",
+    "noNote": "Sem nota",
+    "tryAgain": "Tentar novamente",
+    "done": "Concluir"
+  },
+  "nav": {
+    "insights": "Análises",
+    "settings": "Configurações",
+    "inbox": "Caixa de entrada"
+  },
+  "banner": {
+    "inbox_one": "{{count}} lançamento precisa de categoria",
+    "inbox_other": "{{count}} lançamentos precisam de categoria",
+    "inbox_many": "{{count}} lançamentos precisam de categoria",
+    "due_one": "Um pagamento agendado pendente",
+    "due_other": "{{count}} pagamentos agendados pendentes",
+    "due_many": "{{count}} pagamentos agendados pendentes",
+    "accountDeleted": "Sua conta foi excluída — este dispositivo agora funciona sem sincronização",
+    "sessionExpired": "Sincronização pausada — entre novamente para sincronizar seus lançamentos"
+  },
+  "home": {
+    "loading": "Carregando seus dados",
+    "recent": "Recentes",
+    "empty": "Nada registrado ainda — experimente a caixa de entrada acima.",
+    "seeAll": "ver tudo →"
+  },
+  "keypad": {
+    "toggleDirection": "Alternar despesa/receita"
+  },
+  "inbox": {
+    "empty": "Nada precisa de categoria."
+  },
+  "transaction": {
+    "title": "Lançamento",
+    "missing": "Este lançamento foi excluído ou não existe.",
+    "splitCount": "Dividido · {{count}}"
+  },
+  "deviceLink": {
+    "scanTitle": "Escanear código",
+    "scanCaption": "Em um dispositivo já conectado, abra Configurações → Família → Adicionar dispositivo e aponte a câmera para o código.",
+    "notACode": "Esse não é um código de acesso do Flowtab. Use o de Família → Adicionar dispositivo.",
+    "title": "Adicionar dispositivo",
+    "createFailed": "Não foi possível criar um código.",
+    "added": "“{{label}}” está conectado a esta conta.",
+    "instructions": "No novo dispositivo, abra Flowtab → Configurações → <b>Escanear código de um dispositivo conectado</b> e aponte para cá. Quem vir este código pode entrar na sua conta, então mostre só para pessoas da sua família.",
+    "countdown": "Uso único · expira em {{time}}",
+    "expired": "Esse código expirou.",
+    "newCode": "Mostrar novo código"
+  },
+  "qr": {
+    "cameraNeeded": "É preciso permitir o acesso à câmera para escanear o código."
+  },
+  "insights": {
+    "lastDays_one": "Último {{count}} dia ({{currency}})",
+    "lastDays_other": "Últimos {{count}} dias ({{currency}})",
+    "lastDays_many": "Últimos {{count}} dias ({{currency}})",
+    "thisMonth": "Este mês",
+    "scheduled": "+ {{amount}} agendado"
+  },
+  "about": {
+    "title": "Sobre",
+    "pitch": "O Flowtab é um app de orçamento simples, leve e privado — é só digitar ou falar o que você gastou.",
+    "author": "Criado por Hideki Kotsubo, desenvolvedor de software independente em Vancouver, Canadá.",
+    "contact": "Contato",
+    "version": "Versão",
+    "whatsNew": "Novidades",
+    "devPreview": "prévia de desenvolvimento"
+  },
+  "deleteAccount": {
+    "title": "Excluir conta",
+    "failed": "Não foi possível excluir a conta.",
+    "doneText": "Sua conta e os dados sincronizados foram excluídos dos nossos servidores. Seu orçamento continua neste dispositivo, e o Flowtab segue funcionando aqui sem conta.",
+    "backToSettings": "Voltar para Configurações",
+    "notSignedIn": "Você não está conectado, então não há conta para excluir.",
+    "notOwner": "Só {{owner}} pode excluí-la, porque isso apaga os dados de todos da família. Peça a essa pessoa, ou saia para parar de sincronizar neste dispositivo.",
+    "ownerFallback": "a pessoa que criou esta conta",
+    "warning": "Isso exclui permanentemente a conta <strong>{{email}}</strong> e tudo o que foi sincronizado nela dos nossos servidores. Não dá para desfazer.",
+    "sharedHousehold": "É uma família compartilhada: os dados também são excluídos para <strong>{{names}}</strong>.",
+    "otherDevices_one": "Seu outro dispositivo será desconectado. Um dispositivo que estiver on-line agora também pode perder a cópia dele.",
+    "otherDevices_other": "Todos os outros {{count}} dispositivos serão desconectados. Um dispositivo que estiver on-line agora também pode perder a cópia dele.",
+    "otherDevices_many": "Todos os outros {{count}} dispositivos serão desconectados. Um dispositivo que estiver on-line agora também pode perder a cópia dele.",
+    "thisDeviceKeeps": "Este dispositivo mantém os dados e continua funcionando sem conta.",
+    "confirmWord": "EXCLUIR",
+    "typeToConfirm": "Digite {{word}} para confirmar",
+    "deleting": "Excluindo…",
+    "offline": "Você está off-line. Excluir a conta precisa de conexão."
+  },
+  "duplicates": {
+    "title": "Encontrar duplicados",
+    "none": "Nenhum provável duplicado encontrado.",
+    "groupSummary_one": "{{count}} lançamento · {{amount}} · {{date}}",
+    "groupSummary_other": "{{count}} lançamentos · {{amount}} · {{date}}",
+    "groupSummary_many": "{{count}} lançamentos · {{amount}} · {{date}}",
+    "likely": "Provável duplicado",
+    "possible": "Possível duplicado",
+    "keeper": "Manter",
+    "notDuplicate": "Não é duplicado",
+    "confirm_one": "Manter 1, excluir {{count}}",
+    "confirm_other": "Manter 1, excluir {{count}}",
+    "confirm_many": "Manter 1, excluir {{count}}"
   }
 }

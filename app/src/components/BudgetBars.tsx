@@ -1,9 +1,11 @@
+import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
 import { formatAmount } from '../lib/format';
 import { committedForMonth, postedKeys } from '../lib/schedules';
 
 export function BudgetBars() {
   const store = useStore();
+  const { t } = useTranslation();
   // Local date construction, not toISOString() — that's UTC and would land
   // on the wrong month for anyone in a positive-UTC-offset timezone (local
   // midnight minus the offset rolls back into the previous UTC day).
@@ -13,11 +15,11 @@ export function BudgetBars() {
   // docs/10 D40: one bar per (category, currency) that has a budget or spend
   // this month — never merged across currencies.
   const spendByKey = new Map<string, number>();
-  for (const t of store.transactions) {
-    if (t.deletedAt || !t.categoryId || t.amountCents >= 0) continue;
-    if (!t.occurredAt.startsWith(monthStart.slice(0, 7))) continue;
-    const key = `${t.categoryId}:${t.currency}`;
-    spendByKey.set(key, (spendByKey.get(key) ?? 0) + -t.amountCents);
+  for (const tx of store.transactions) {
+    if (tx.deletedAt || !tx.categoryId || tx.amountCents >= 0) continue;
+    if (!tx.occurredAt.startsWith(monthStart.slice(0, 7))) continue;
+    const key = `${tx.categoryId}:${tx.currency}`;
+    spendByKey.set(key, (spendByKey.get(key) ?? 0) + -tx.amountCents);
   }
 
   // docs/57 D213 — open scheduled payments still to come this month,
@@ -38,7 +40,7 @@ export function BudgetBars() {
 
   return (
     <section>
-      <div className="section-label">This month</div>
+      <div className="section-label">{t('insights.thisMonth')}</div>
       {rows.map((r) => {
         const pct = r.amountCents > 0 ? Math.min(100, (r.spent / r.amountCents) * 100) : 0;
         const committedPct = r.amountCents > 0 ? Math.min(100 - pct, (r.committed / r.amountCents) * 100) : 0;
@@ -59,7 +61,7 @@ export function BudgetBars() {
               )}
             </div>
             {r.committed > 0 && (
-              <div className="budget-committed-note">+ {formatAmount(r.committed, r.currency)} scheduled</div>
+              <div className="budget-committed-note">{t('insights.scheduled', { amount: formatAmount(r.committed, r.currency) })}</div>
             )}
           </div>
         );

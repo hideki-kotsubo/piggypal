@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { EntryZone } from './components/EntryZone';
 import { DueBanner } from './components/DueBanner';
 import { InboxBanner } from './components/InboxBanner';
@@ -14,6 +15,7 @@ interface ToastState {
 }
 
 export default function App() {
+  const { t } = useTranslation();
   const [toast, setToast] = useState<ToastState | null>(null);
   const household = hasHousehold(useHouseholdPeers());
   // Re-picked each time Home mounts (a fresh app open, or navigating back
@@ -24,8 +26,8 @@ export default function App() {
 
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 5000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setToast(null), 5000);
+    return () => clearTimeout(timer);
   }, [toast]);
 
   function showToast(message: string, onUndo?: () => void) {
@@ -37,8 +39,8 @@ export default function App() {
       <div className="app-bar">
         <span className="wordmark">{wordmark}</span>
         <div className="app-bar-actions">
-          <Link to="/insights" className="icon-btn" aria-label="Insights">▤</Link>
-          <Link to="/settings" className="kebab" aria-label="Settings">
+          <Link to="/insights" className="icon-btn" aria-label={t('nav.insights')}>▤</Link>
+          <Link to="/settings" className="kebab" aria-label={t('nav.settings')}>
             <span /><span /><span />
           </Link>
         </div>
@@ -70,7 +72,7 @@ export default function App() {
                 setToast(null);
               }}
             >
-              Undo
+              {t('common.undo')}
             </button>
           )}
         </div>
