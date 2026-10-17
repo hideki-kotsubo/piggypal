@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../lib/store';
-import { useTranslation } from 'react-i18next';
-import { LANGUAGES, useLanguagePreference } from '../lib/i18n';
+import { Trans, useTranslation } from 'react-i18next';
+import i18n, { LANGUAGES, useLanguagePreference } from '../lib/i18n';
 import { ACCOUNT_PICKER_SCALE_THRESHOLD, guessDeviceLabel, useAccountPickerMode, useDeviceLabel, useThemeMode } from '../lib/settings';
 import { usePairedPeers } from '../lib/peers';
 import { hasHousehold, householdMembers, useHouseholdPeers } from '../lib/household';
@@ -121,7 +121,7 @@ export function SettingsScreen() {
       setLinkState('sent');
     } catch (err) {
       setLinkState('error');
-      setLinkError(err instanceof Error ? err.message : 'Could not send the link.');
+      setLinkError(err instanceof Error ? err.message : t('settings.sendFailed'));
     }
   }
 
@@ -141,9 +141,7 @@ export function SettingsScreen() {
 
   function resetData() {
     if (
-      !window.confirm(
-        'Erase all local data and reload with fresh seed data? This deletes every account, category, transaction, and budget on this device, and forgets every paired device.',
-      )
+      !window.confirm(t('settings.resetConfirm'))
     ) {
       return;
     }
@@ -153,63 +151,66 @@ export function SettingsScreen() {
   return (
     <main className="home">
       <div className="app-bar">
-        <Link to="/" className="back-link">← Back</Link>
-        <span className="wordmark">Settings</span>
+        <Link to="/" className="back-link">← {t('common.back')}</Link>
+        <span className="wordmark">{t('nav.settings')}</span>
         <span style={{ width: '3rem' }} />
       </div>
 
       <div className="accounts-list">
         <Link to="/accounts" className="settings-row">
-          <span>Accounts</span>
+          <span>{t('settings.accounts')}</span>
           <span className="settings-row-arrow">›</span>
         </Link>
         <Link to="/categories" className="settings-row">
-          <span>Categories</span>
+          <span>{t('settings.categories')}</span>
           <span className="settings-row-arrow">›</span>
         </Link>
         <Link to="/schedules" className="settings-row">
-          <span>Scheduled payments</span>
+          <span>{t('settings.scheduledPayments')}</span>
           <span className="settings-row-arrow">›</span>
         </Link>
       </div>
 
-      <div className="section-label">Account</div>
+      <div className="section-label">{t('settings.account')}</div>
       {/* docs/72 D260 — signed out because the owner deleted the account
           on another device. */}
       {!authAccount && deletedNotice !== null && (
         <div className="settings-field account-deleted-note">
           <p className="delete-account-text">
-            The account{deletedNotice && <> <strong>{deletedNotice}</strong></>} was deleted by its owner, so this
-            device is signed out. Everything on it is still here and keeps working, it just doesn't sync anymore.
+            {deletedNotice ? (
+              <Trans i18nKey="settings.accountDeletedNotice" values={{ email: deletedNotice }} components={{ strong: <strong /> }} />
+            ) : (
+              t('settings.accountDeletedNoticeAnon')
+            )}
           </p>
           <button type="button" className="chip ghost" onClick={() => setDeletedNotice(null)}>
-            OK
+            {t('common.ok')}
           </button>
         </div>
       )}
       {authAccount ? (
         <div className="accounts-list">
           <div className="settings-row settings-row-static">
-            <span>Signed in as</span>
-            <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>{authAccount.email || '(this device)'}</span>
+            <span>{t('settings.signedInAs')}</span>
+            <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>{authAccount.email || t('settings.thisDeviceFallback')}</span>
           </div>
           <div className="settings-row settings-row-static">
-            <span>Cloud sync</span>
+            <span>{t('settings.cloudSync')}</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>
                 {syncing
                   ? downloadProgress
-                    ? `Downloading… ${Math.round(downloadProgress.downloadedFraction * 100)}%`
-                    : 'Syncing…'
+                    ? t('settings.downloading', { percent: Math.round(downloadProgress.downloadedFraction * 100) })
+                    : t('settings.syncing')
                   : sessionExpired
-                    ? 'Signed out on this device'
+                    ? t('settings.signedOutHere')
                     : !online
-                      ? "You're offline"
+                      ? t('settings.offline')
                       : syncStatus.connected
-                        ? 'Connected'
+                        ? t('settings.connected')
                         : syncStatus.connecting
-                          ? 'Connecting…'
-                          : 'Not connected'}
+                          ? t('settings.connecting')
+                          : t('settings.notConnected')}
               </span>
               {/* Available whether or not the status says connected — a
                   real report found the connection can silently stall
@@ -223,14 +224,14 @@ export function SettingsScreen() {
                   disabled={!online && !sessionExpired}
                   onClick={() => void handleSyncNow()}
                 >
-                  {sessionExpired ? 'Sign in again' : syncStatus.connected ? 'Sync now' : 'Reconnect'}
+                  {sessionExpired ? t('settings.signInAgain') : syncStatus.connected ? t('settings.syncNow') : t('settings.reconnect')}
                 </button>
               )}
             </span>
           </div>
           {!sessionExpired && (
             <div className="settings-row settings-row-static">
-              <span>Last synced</span>
+              <span>{t('settings.lastSynced')}</span>
               <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>
                 {formatLastSynced(syncStatus.lastSyncedAt)}
               </span>
@@ -238,9 +239,9 @@ export function SettingsScreen() {
           )}
           {pendingUploads > 0 && (
             <div className="settings-row settings-row-static">
-              <span>Waiting to upload</span>
+              <span>{t('settings.waitingUpload')}</span>
               <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>
-                {pendingUploads} change{pendingUploads === 1 ? '' : 's'}
+                {t('settings.changes', { count: pendingUploads })}
               </span>
             </div>
           )}
@@ -248,12 +249,12 @@ export function SettingsScreen() {
               tooltip for debugging, not shown as the message. */}
           {!syncing && (syncResult === 'still-running' || (syncResult === 'error' && syncError)) && (
             <div className="settings-row settings-row-static">
-              <span>Sync</span>
+              <span>{t('settings.sync')}</span>
               <span
                 title={syncResult === 'error' ? syncError?.message : undefined}
                 style={{ color: syncResult === 'error' ? 'var(--warn)' : 'var(--ink-faint)', fontSize: '0.85rem' }}
               >
-                {syncResult === 'error' ? "Didn't finish, retrying" : 'Still running in the background'}
+                {syncResult === 'error' ? t('settings.syncRetrying') : t('settings.syncBackground')}
               </span>
             </div>
           )}
@@ -262,28 +263,28 @@ export function SettingsScreen() {
               here instead of silently vanishing from view. */}
           {skippedSyncOps.length > 0 && (
             <div className="settings-row settings-row-static">
-              <span>Sync</span>
+              <span>{t('settings.sync')}</span>
               <span style={{ color: 'var(--warn)', fontSize: '0.85rem' }}>
-                {skippedSyncOps.length} item{skippedSyncOps.length === 1 ? '' : 's'} didn't sync
+                {t('settings.skipped', { count: skippedSyncOps.length })}
               </span>
             </div>
           )}
           <button className="settings-row settings-row-danger" onClick={() => void handleSignOut()}>
-            <span>Sign out</span>
+            <span>{t('settings.signOut')}</span>
           </button>
           {/* docs/72 D257 — App Review 5.1.1(v). */}
           <Link to="/settings/delete-account" className="settings-row settings-row-danger">
-            <span>Delete account</span>
+            <span>{t('settings.deleteAccount')}</span>
             <span className="settings-row-arrow">›</span>
           </Link>
         </div>
       ) : linkState === 'sent' ? (
         <div className="settings-field signin-code">
           <p className="qr-caption">
-            We sent a sign-in link and a 6-digit code to {emailInput.trim()}. Tap the link, or enter the code here.
+            {t('settings.codeSent', { email: emailInput.trim() })}
           </p>
           <label className="field-label">
-            Code from the email
+            {t('settings.codeLabel')}
             <input
               className="text-input"
               inputMode="numeric"
@@ -299,21 +300,21 @@ export function SettingsScreen() {
           </label>
           <div className="signin-code-actions">
             <button className="save-btn" onClick={submitCode} disabled={codeDigits.length !== 6}>
-              Sign in
+              {t('settings.signIn')}
             </button>
             <button type="button" className="chip ghost" onClick={useDifferentEmail}>
-              Use a different email
+              {t('settings.differentEmail')}
             </button>
           </div>
         </div>
       ) : (
         <div className="settings-field">
           <label className="field-label">
-            Enable cloud sync & AI entry
+            {t('settings.enableSync')}
             <input
               className="text-input"
               type="email"
-              placeholder="you@example.com"
+              placeholder={t('settings.emailPlaceholder')}
               value={emailInput}
               onChange={(e) => setEmailInput(e.target.value)}
             />
@@ -323,21 +324,21 @@ export function SettingsScreen() {
             onClick={() => void sendMagicLink()}
             disabled={!emailInput.trim() || linkState === 'sending'}
           >
-            {linkState === 'sending' ? 'Sending…' : 'Send sign-in link'}
+            {linkState === 'sending' ? t('settings.sending') : t('settings.sendLink')}
           </button>
           {linkState === 'error' && <p className="qr-caption">{linkError}</p>}
           {/* docs/71 D255 — no email needed when another device is
               already signed in to the account. */}
           <Link to="/auth/scan" className="text-link signin-scan-link">
-            Scan a code from a signed-in device
+            {t('settings.scanCode')}
           </Link>
         </div>
       )}
 
-      <div className="section-label">Sync</div>
+      <div className="section-label">{t('settings.sync')}</div>
       <div className="settings-field">
         <label className="field-label">
-          This device's name
+          {t('settings.deviceName')}
           <input
             className="text-input"
             placeholder={guessDeviceLabel()}
@@ -355,14 +356,14 @@ export function SettingsScreen() {
       </div>
       <div className="accounts-list">
         <Link to="/settings/pair" className="settings-row">
-          <span>+ Connect a device</span>
+          <span>{t('settings.connectDevice')}</span>
           <span className="settings-row-arrow">›</span>
         </Link>
         {/* docs/71 — people and devices in one place (replaces the
             separate profiles screen, devices list and members list). */}
         {authAccount && (
           <Link to="/settings/household" className="settings-row">
-            <span>Household</span>
+            <span>{t('settings.household')}</span>
             <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>
               {householdSummary(store.profiles.filter((p) => !p.deletedAt).length, store.devices.length)}{' '}
               <span className="settings-row-arrow">›</span>
@@ -372,7 +373,7 @@ export function SettingsScreen() {
       </div>
       {peers.length > 0 && (
         <>
-          <div className="section-label">Paired devices</div>
+          <div className="section-label">{t('settings.pairedDevices')}</div>
           <div className="accounts-list">
             {/* Tappable, unlike the earlier static version — the whole
                 point of remembering a peer (docs/25 D138) is a lighter
@@ -382,7 +383,7 @@ export function SettingsScreen() {
             {peers.map((p) => (
               <Link key={p.id} to={`/settings/pair?peer=${encodeURIComponent(p.id)}`} className="settings-row">
                 <span>{p.label}</span>
-                <span style={{ color: 'var(--ink-faint)', fontSize: '0.8rem' }}>synced {formatTimeAgo(p.lastSyncedAt)}</span>
+                <span style={{ color: 'var(--ink-faint)', fontSize: '0.8rem' }}>{t('settings.synced', { time: formatTimeAgo(p.lastSyncedAt) })}</span>
               </Link>
             ))}
           </div>
@@ -397,14 +398,14 @@ export function SettingsScreen() {
               who the payer/owner badges elsewhere refer to. No invite/
               pair/leave actions here; that surface belongs to docs/25's
               pairing flow above, not this list. */}
-          <div className="section-label">Household</div>
+          <div className="section-label">{t('settings.household')}</div>
           <div className="accounts-list">
             {householdMembers(householdPeers, store.profiles).map((m) => (
               <div className="member-row" key={m.userId}>
                 <PayerBadge label={m.label} mine={m.isYou} className="member-badge" />
                 <span className="member-name">
                   {m.label}
-                  {m.isYou && <span className="member-you">you</span>}
+                  {m.isYou && <span className="member-you">{t('household.you')}</span>}
                 </span>
               </div>
             ))}
@@ -412,25 +413,25 @@ export function SettingsScreen() {
         </>
       )}
 
-      <div className="section-label">Appearance</div>
+      <div className="section-label">{t('settings.appearance')}</div>
       <div className="chip-row settings-chip-row">
         <button
           className={`chip ${themeMode === 'system' ? 'picked' : ''}`}
           onClick={() => setThemeMode('system')}
         >
-          System
+          {t('settings.themeSystem')}
         </button>
         <button
           className={`chip ${themeMode === 'light' ? 'picked' : ''}`}
           onClick={() => setThemeMode('light')}
         >
-          Light
+          {t('settings.themeLight')}
         </button>
         <button
           className={`chip ${themeMode === 'dark' ? 'picked' : ''}`}
           onClick={() => setThemeMode('dark')}
         >
-          Dark
+          {t('settings.themeDark')}
         </button>
       </div>
 
@@ -458,22 +459,22 @@ export function SettingsScreen() {
 
       {showPickerModeSetting && (
         <>
-          <div className="section-label">Account picker</div>
+          <div className="section-label">{t('settings.accountPicker')}</div>
           <div className="settings-row settings-row-static">
-            <span>When there's a lot of accounts, show them</span>
+            <span>{t('settings.accountPickerHint')}</span>
           </div>
           <div className="chip-row settings-chip-row">
             <button
               className={`chip ${pickerMode === 'grouped' ? 'picked' : ''}`}
               onClick={() => setPickerMode('grouped')}
             >
-              Grouped by institution
+              {t('settings.groupedByInstitution')}
             </button>
             <button
               className={`chip ${pickerMode === 'capped' ? 'picked' : ''}`}
               onClick={() => setPickerMode('capped')}
             >
-              Most-used, capped
+              {t('settings.mostUsed')}
             </button>
           </div>
         </>
@@ -482,10 +483,10 @@ export function SettingsScreen() {
       {/* Dev-stage only — see store.tsx's resetLocalData comment. Remove
           once this app has a real migration story instead of "wipe and
           reseed" as the answer to a schema change. */}
-      <div className="section-label">Developer</div>
+      <div className="section-label">{t('settings.developer')}</div>
       <div className="accounts-list">
         <button className="settings-row settings-row-danger" onClick={resetData}>
-          <span>Reset local data</span>
+          <span>{t('settings.resetData')}</span>
         </button>
       </div>
 
@@ -493,24 +494,23 @@ export function SettingsScreen() {
           the installed app itself and on browsers with no install path. */}
       {(install.mode === 'prompt' || install.mode === 'ios-instructions') && (
         <>
-          <div className="section-label">App</div>
+          <div className="section-label">{t('settings.app')}</div>
           <div className="accounts-list">
             {install.mode === 'prompt' ? (
               <button className="settings-row" onClick={() => void install.install()}>
-                <span>Install Flowtab</span>
+                <span>{t('settings.install')}</span>
                 <span className="settings-row-arrow">›</span>
               </button>
             ) : (
               <button className="settings-row" onClick={() => setShowIosInstallSteps((v) => !v)}>
-                <span>Add Flowtab to your Home Screen</span>
+                <span>{t('settings.addToHome')}</span>
                 <span className="settings-row-arrow">{showIosInstallSteps ? '⌄' : '›'}</span>
               </button>
             )}
           </div>
           {install.mode === 'ios-instructions' && showIosInstallSteps && (
             <p className="qr-caption install-steps">
-              In Safari, tap the Share button <span aria-hidden="true">(□↑)</span>, then choose{' '}
-              <strong>Add to Home Screen</strong>. Flowtab will open from its own icon, full screen and offline.
+              <Trans i18nKey="settings.iosSteps" components={{ icon: <span aria-hidden="true" />, strong: <strong /> }} />
             </p>
           )}
         </>
@@ -518,7 +518,7 @@ export function SettingsScreen() {
 
       <div className="accounts-list">
         <Link to="/about" className="settings-row">
-          <span>About Flowtab</span>
+          <span>{t('settings.about')}</span>
           <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>v{APP_VERSION}</span>
         </Link>
       </div>
@@ -528,5 +528,5 @@ export function SettingsScreen() {
 
 // "2 people · 3 devices" for the Household row.
 function householdSummary(people: number, devices: number): string {
-  return `${people} ${people === 1 ? 'person' : 'people'} · ${devices} device${devices === 1 ? '' : 's'}`;
+  return `${i18n.t('settings.people', { count: people })} · ${i18n.t('settings.devices', { count: devices })}`;
 }
