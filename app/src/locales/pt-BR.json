@@ -91,7 +91,9 @@
     "about": "Sobre o Flowtab",
     "accountDeletedNoticeAnon": "A conta foi excluída pelo dono, então este dispositivo foi desconectado. Tudo o que está nele continua aqui e funcionando, só não sincroniza mais.",
     "voiceLanguage": "Idioma da voz",
-    "voiceSameAsApp": "Igual ao app · {{language}}"
+    "voiceSameAsApp": "Igual ao app · {{language}}",
+    "dollarMeans": "Dólares ($) são",
+    "dollarHint": "Quando você fala “dólares” ou digita “$” sem dizer o país. A moeda em dólar da própria conta, ou a última que você usou, vem antes."
   },
   "occurrence": {
     "today": "Hoje",
@@ -372,7 +374,9 @@
     "defaultCurrency": "moeda padrão",
     "default": "padrão",
     "uncategorizedToInbox": "Sem categoria — vai para a caixa de entrada",
-    "guessed": "palpite — edite se estiver errado"
+    "guessed": "palpite — edite se estiver errado",
+    "dollarGuess": "qual dólar? toque para mudar",
+    "voiceLanguage": "Idioma da voz: {{language}}"
   },
   "pairing": {
     "startFailed": "Não foi possível iniciar o pareamento neste dispositivo.",

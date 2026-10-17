@@ -380,6 +380,55 @@ in Português:
   revives the mic on iOS. If iOS still stalls, the watchdog at least
   ends the session after 15 seconds with a message.
 
+## Dollars, preview pickers, voice chip (2026-10-16, after 0.6.1)
+
+Real report: voice set to English, "15 dollars in ice cream" (iOS wrote
+"$15 in ice cream") saved as R$ 15. English "dollars" wasn't a currency
+marker at all, and a bare "$" was deliberately ambiguous (docs/10). So
+the account's default, BRL, won, which is clearly wrong when the
+person said dollars.
+
+- **D272** (reopens docs/10's "a bare dollar stays ambiguous", agreed
+  with the user 2026-10-16): "dollars", "bucks" or a bare "$" with no
+  country is *some dollar*. The parser returns `dollarFamily: true`;
+  EntryZone resolves it as (1) the account's usual currency if it's
+  already a dollar, (2) else the dollar currency used most recently,
+  (3) else the per-device **Dollars ($) mean** setting (`lib/dollar.ts`,
+  `flowtab:default-dollar`; defaults to CAD on a Canadian device
+  region, USD otherwise). The preview marks it "which dollar? tap to
+  change". New explicit markers: canadian dollars / dollars canadiens /
+  dólares canadenses / canadienses → CAD; american / US dollars /
+  dollars américains / dólares americanos → USD. Plain "dólares" stays
+  USD. A bare "$" per language (`dollarSign` in each pack): pt typed =
+  some dollar, pt speech = USD (iOS dictation, see the fix above);
+  es = nothing (pesos); en and fr = some dollar.
+- **Preview pickers.** The "Understood" panel's currency and account
+  are `AccountCurrencyPicker` pills, so either can be fixed before
+  saving. This closes the 2026-10-06 backlog item. A currency that was
+  said or picked survives an account change; a defaulted one follows
+  the account. The picker's buttons now carry `type="button"` (inside
+  EntryZone's form they would have submitted it).
+- **Voice language chip** next to the mic (EN, PT, ES-ES, FR-CA…). It
+  opens the language list as a row inside the entry card; a floating
+  popover was clipped by `.entry-zone`'s `overflow: hidden`. Picking a
+  language mid-listen aborts and restarts in the new language; a
+  session counter in EntryZone ignores the aborted session's late
+  callbacks.
+- **Snacks keywords** in all four packs (ice cream, sorvete, picolé,
+  helado, botanas, glace, crème glacée, grignotines…).
+- **Empty names**, found from the same screenshot ("Cash —", no
+  "default" badge). An account whose name was cleared in the edit form
+  matched every entry, because every text contains "". The parser now
+  skips empty account, category and merchant names, and `accountLabel()`
+  shows just the institution when the name is empty.
+- Checked in headless Chromium with a stubbed recognizer: the session
+  started in pt-BR and restarted in en-US after switching mid-listen;
+  "15 dollars in ice cream" became a guessed dollar under Snacks; the
+  pill changed it to USD and it saved. 195 tests.
+- Noticed, not changed: amounts use `currencyDisplay: 'narrowSymbol'`,
+  so CAD and USD both show as "$" in lists. Fine for one dollar, unclear
+  for someone using both. Proposed to the user as a follow-up.
+
 ### Glossary
 
 One word per concept, so the same thing reads the same everywhere:
@@ -413,3 +462,4 @@ One word per concept, so the same thing reads the same everywhere:
 | D269 | The native apps use a native speech plugin, on Android at least; web keeps the Web Speech API. Whether iOS moves too follows the real-device test. | Android WebView most likely has no Web Speech. The plugin can also report which languages the device supports. |
 | D270 | The parser's vocabulary is split into per-language packs (en, pt, es, fr), all active for every input. On conflicting words the voice language's pack wins for voice input, the UI language's pack for typed input. | Full es/fr parsing (user, 2026-10-16) without breaking typed input in other languages, and with a rule for words like "no", "de", "sept". |
 | D271 | The first release also translates the magic-link email (the app sends its language with the sign-in request) and the native permission prompts. Store listings and the website come later. | Users see the email and the permission prompts in their first minutes; store copy is a separate effort. |
+| D272 | "Dollars", "bucks" or a bare "$" with no country is some dollar: the account's usual currency if it's a dollar, else the most recently used dollar, else the per-device Dollars ($) mean setting (CAD on a Canadian region, else USD). Shown as a guess in the preview, changeable there. A bare "$" means nothing in Spanish (pesos) and USD in Portuguese speech. Reopens docs/10's "bare dollar stays ambiguous". | A real entry said "dollars" and saved as reais; picking among dollars, visibly, beats a confidently wrong currency. |

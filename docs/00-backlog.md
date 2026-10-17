@@ -88,11 +88,12 @@ it needs doing.
       voice now goes through `@capacitor-community/speech-recognition`
       (docs/73 phase 4) instead of the WebView.
 
-- [ ] Speech/typed parse preview shows the (possibly defaulted) account
-      but can't change it — the only way is to save, then edit the
-      transaction. Add an account picker to the preview panel
-      (`EntryZone.tsx`), same pattern as tap-entry (D46). Noted
-      2026-10-06 while fixing the Cash-default bug.
+- [x] Speech/typed parse preview shows the (possibly defaulted) account
+      but can't change it. Done 2026-10-16 (docs/73 D272 section):
+      account and currency pickers in the preview panel.
+- [ ] Amounts show CAD and USD both as "$" (`formatAmount`'s
+      `narrowSymbol`). Consider "CA$"/"US$" when someone uses more than
+      one dollar currency. Proposed 2026-10-16, not decided.
 - [ ] Native mobile shell (docs/52, 2026-09-10): `app/android/` and
       `app/ios/` are scaffolded (Capacitor + `@powersync/capacitor`), but
       nothing native has actually been built or run — this sandbox has no

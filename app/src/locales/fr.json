@@ -91,7 +91,9 @@
     "about": "À propos de Flowtab",
     "accountDeletedNoticeAnon": "Le compte a été supprimé par son propriétaire, cet appareil est donc déconnecté. Tout ce qu’il contient est toujours là et fonctionne, mais ne se synchronise plus.",
     "voiceLanguage": "Langue de la voix",
-    "voiceSameAsApp": "Comme l’appli · {{language}}"
+    "voiceSameAsApp": "Comme l’appli · {{language}}",
+    "dollarMeans": "Les dollars ($) sont",
+    "dollarHint": "Quand vous dites « dollars » ou tapez « $ » sans préciser le pays. La devise en dollars du compte, ou la dernière utilisée, passe avant."
   },
   "occurrence": {
     "today": "Aujourd’hui",
@@ -373,7 +375,9 @@
     "defaultCurrency": "devise par défaut",
     "default": "par défaut",
     "uncategorizedToInbox": "Sans catégorie — va dans la boîte de réception",
-    "guessed": "deviné — modifiez si c’est faux"
+    "guessed": "deviné — modifiez si c’est faux",
+    "dollarGuess": "quel dollar ? touchez pour changer",
+    "voiceLanguage": "Langue de la voix : {{language}}"
   },
   "pairing": {
     "startFailed": "Impossible de lancer l’association sur cet appareil.",

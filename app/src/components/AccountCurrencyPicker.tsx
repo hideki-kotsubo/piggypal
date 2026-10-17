@@ -165,12 +165,12 @@ export function AccountCurrencyPicker({ accountId, currency, onChange, showAccou
     <>
       <div className="pill-row">
         {showAccount && (
-          <button className="pill-tap" onClick={() => setPickerOpen(pickerOpen === 'account' ? null : 'account')}>
+          <button type="button" className="pill-tap" onClick={() => setPickerOpen(pickerOpen === 'account' ? null : 'account')}>
             {account ? (ownerPrefixFor(account) ? `${ownerPrefixFor(account)} — ` : '') + accountLabel(account) : '—'} ▾
           </button>
         )}
         {showCurrency && (
-          <button className="pill-tap" onClick={() => setPickerOpen(pickerOpen === 'currency' ? null : 'currency')}>
+          <button type="button" className="pill-tap" onClick={() => setPickerOpen(pickerOpen === 'currency' ? null : 'currency')}>
             {currency} ▾
           </button>
         )}
@@ -184,12 +184,12 @@ export function AccountCurrencyPicker({ accountId, currency, onChange, showAccou
                 const isOpen = effectiveExpanded.has(g.institution);
                 return isOpen ? (
                   <div className="picker-group" key={g.institution}>
-                    <button className="picker-group-head" onClick={() => toggleInstitution(g.institution)}>
+                    <button type="button" className="picker-group-head" onClick={() => toggleInstitution(g.institution)}>
                       <span className="chev">▾</span> {g.institution}
                     </button>
                     <div className="chip-row">
                       {g.accounts.map((a) => (
-                        <button
+                        <button type="button"
                           key={a.id}
                           className={`chip ${a.id === accountId ? 'picked' : ''}`}
                           onClick={() => pickAccount(a)}
@@ -200,13 +200,13 @@ export function AccountCurrencyPicker({ accountId, currency, onChange, showAccou
                     </div>
                   </div>
                 ) : (
-                  <button className="chip" key={g.institution} onClick={() => toggleInstitution(g.institution)}>
+                  <button type="button" className="chip" key={g.institution} onClick={() => toggleInstitution(g.institution)}>
                     {g.institution} ▸ {g.accounts.length}
                   </button>
                 );
               })}
               {plainAccounts.map((a) => (
-                <button
+                <button type="button"
                   key={a.id}
                   className={`chip ${a.id === accountId ? 'picked' : ''}`}
                   onClick={() => pickAccount(a)}
@@ -218,7 +218,7 @@ export function AccountCurrencyPicker({ accountId, currency, onChange, showAccou
           ) : (
             <>
               {flatAccounts.map((a) => (
-                <button
+                <button type="button"
                   key={a.id}
                   className={`chip ${a.id === accountId ? 'picked' : ''}`}
                   onClick={() => pickAccount(a)}
@@ -227,7 +227,7 @@ export function AccountCurrencyPicker({ accountId, currency, onChange, showAccou
                 </button>
               ))}
               {flatHiddenCount > 0 && (
-                <button className="chip ghost" onClick={() => setCappedExpanded(true)}>
+                <button type="button" className="chip ghost" onClick={() => setCappedExpanded(true)}>
                   {t('picker.more', { count: flatHiddenCount })}
                 </button>
               )}
@@ -239,7 +239,7 @@ export function AccountCurrencyPicker({ accountId, currency, onChange, showAccou
       {showCurrency && pickerOpen === 'currency' && (
         <div className="chip-row">
           {currencyOptions.map((c) => (
-            <button
+            <button type="button"
               key={c}
               className={`chip ${c === currency ? 'picked' : ''}`}
               onClick={() => pickCurrency(c)}

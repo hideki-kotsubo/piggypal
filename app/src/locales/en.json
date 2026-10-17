@@ -84,7 +84,9 @@
     "about": "About Flowtab",
     "accountDeletedNoticeAnon": "The account was deleted by its owner, so this device is signed out. Everything on it is still here and keeps working, it just doesn't sync anymore.",
     "voiceLanguage": "Voice language",
-    "voiceSameAsApp": "Same as app · {{language}}"
+    "voiceSameAsApp": "Same as app · {{language}}",
+    "dollarMeans": "Dollars ($) mean",
+    "dollarHint": "When you say “dollars” or type “$” without a country. Your account's own dollar currency, or the last one you used, comes first."
   },
   "occurrence": {
     "today": "Today",
@@ -353,7 +355,9 @@
     "defaultCurrency": "default currency",
     "default": "default",
     "uncategorizedToInbox": "Uncategorized — goes to your inbox",
-    "guessed": "guessed — edit if wrong"
+    "guessed": "guessed — edit if wrong",
+    "dollarGuess": "which dollar? tap to change",
+    "voiceLanguage": "Voice language: {{language}}"
   },
   "pairing": {
     "startFailed": "Could not start pairing on this device.",

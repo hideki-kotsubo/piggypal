@@ -61,6 +61,10 @@ export interface ParseResult {
   accountId: string | null; // null = caller falls back to last-used
   merchant: string | null; // a confirmed match, or a guess — see merchantGuessed
   merchantGuessed: boolean; // true = guessNewMerchant's heuristic, not a confirmed ctx.merchants match
+  // docs/73 D272: "dollars" or a bare "$" with no country — some dollar
+  // currency, which one is the caller's to resolve. Only true when
+  // `currency` is null.
+  dollarFamily: boolean;
   unrecognized: string | null; // null = the whole utterance was recognized
 }
 
@@ -207,7 +211,12 @@ function extractWordAmount(tokens: RegExpMatchArray[], spans: Span[], language: 
 // ---- currency (explicit markers only — never inferred from amount size
 // or vocabulary, per docs/04) ----
 
+// Country-qualified dollars come first, so "dólares canadenses" is CAD
+// before the bare "dólares" rule (Portuguese and Latin American Spanish
+// usage: plain "dólares" means US dollars) can claim it.
 const CURRENCY_MARKERS: [RegExp, string][] = [
+  [/\b(?:canadian dollars?|dollars? canadiens?|d[óo]lar(?:es)? canadenses?|d[óo]lar(?:es)? canadienses?)(?![\p{L}])/iu, 'CAD'],
+  [/\b(?:american dollars?|u\.?s\.? dollars?|dollars? am[ée]ricains?|dollars? us|d[óo]lar(?:es)? americanos?|d[óo]lar(?:es)? estadunidenses?|d[óo]lar(?:es)? estadounidenses?)(?![\p{L}])/iu, 'USD'],
   [/r\$/i, 'BRL'], [/\breais?\b/i, 'BRL'], [/\breal\b/i, 'BRL'],
   [/¥/, 'JPY'], [/\bienes?\b/i, 'JPY'], [/\byen(?:es|s)?\b/i, 'JPY'],
   [/€/, 'EUR'], [/\beuros?\b/i, 'EUR'],
@@ -215,24 +224,33 @@ const CURRENCY_MARKERS: [RegExp, string][] = [
   [/\bcad\b/i, 'CAD'], [/c\$/i, 'CAD'],
 ];
 
-function extractCurrency(text: string, spans: Span[], ctx: ParserContext): string | null {
+// docs/73 D272: "dollars"/"bucks" with no country — a dollar, but which
+// one depends on the person (CAD in Vancouver, USD on a trip), so the
+// caller picks.
+const DOLLAR_WORDS = /\b(?:dollars?|bucks?)\b/i;
+
+function extractCurrency(text: string, spans: Span[], ctx: ParserContext): { currency: string | null; dollarFamily: boolean } {
   for (const [re, code] of CURRENCY_MARKERS) {
     const match = re.exec(text);
     if (match) {
       spans.push([match.index, match.index + match[0].length]);
-      return code;
+      return { currency: code, dollarFamily: false };
     }
   }
-  // No explicit marker matched, so any "$" left is bare. Only speech in a
-  // language whose dictation uses "$" for one currency gives it a meaning
-  // (docs/73, parserVocab.ts's speechDollar).
-  const speechDollar = ctx.fromSpeech ? orderedPacks(ctx.language)[0].pack.speechDollar : undefined;
-  const dollar = speechDollar ? text.indexOf('$') : -1;
-  if (speechDollar && dollar !== -1) {
-    spans.push([dollar, dollar + 1]);
-    return speechDollar;
+  const word = DOLLAR_WORDS.exec(text);
+  if (word) {
+    spans.push([word.index, word.index + word[0].length]);
+    return { currency: null, dollarFamily: true };
   }
-  return null;
+  // No explicit marker matched, so any "$" left is bare; what it means
+  // depends on the input language (parserVocab.ts's dollarSign).
+  const dollar = text.indexOf('$');
+  if (dollar === -1) return { currency: null, dollarFamily: false };
+  const sign = orderedPacks(ctx.language)[0].pack.dollarSign;
+  const meaning = ctx.fromSpeech ? sign.speech : sign.typed;
+  if (meaning === 'none') return { currency: null, dollarFamily: false };
+  spans.push([dollar, dollar + 1]);
+  return meaning === 'USD' ? { currency: 'USD', dollarFamily: false } : { currency: null, dollarFamily: true };
 }
 
 // ---- relative date (closed set only — defaults to `now` in the caller
@@ -397,6 +415,9 @@ function matchCategory(textLower: string, ctx: ParserContext, spans: Span[]): st
     const key = c.name.toLowerCase();
     if (!vocab.has(key)) vocab.set(key, { categoryId: c.id, wholeWord: false });
   }
+  // Same empty-string trap as matchAccount: a cleared name or keyword
+  // would match every text.
+  for (const key of [...vocab.keys()]) if (key.trim() === '') vocab.delete(key);
   const active = new Set(ctx.categories.filter((c) => !c.archived).map((c) => c.id));
   for (const a of ctx.categoryAliases ?? []) {
     const key = a.alias.toLowerCase();
@@ -437,11 +458,15 @@ function matchCategory(textLower: string, ctx: ParserContext, spans: Span[]): st
 // ---- account (exact-name match only, no fuzzy matching, per docs/04) ----
 
 function matchAccount(textLower: string, ctx: ParserContext, spans: Span[]): string | null {
+  // An empty name or institution is "contained" in every text, so an
+  // account whose name was cleared in the edit form used to match every
+  // entry (real report, 2026-10-16: "Cash —" picked with no "default").
+  const accounts = ctx.accounts.filter((a) => a.name.trim() !== '');
   // An institution+name pair both present is an explicit disambiguation
   // ("no Visa do TD") — trust it even if the bare name alone is shared by
   // another account.
-  const disambiguated = ctx.accounts.filter(
-    (a) => a.institution && textLower.includes(a.institution.toLowerCase()) && textLower.includes(a.name.toLowerCase()),
+  const disambiguated = accounts.filter(
+    (a) => a.institution?.trim() && textLower.includes(a.institution.toLowerCase()) && textLower.includes(a.name.toLowerCase()),
   );
   if (disambiguated.length === 1) {
     const account = disambiguated[0];
@@ -457,7 +482,7 @@ function matchAccount(textLower: string, ctx: ParserContext, spans: Span[]): str
   // doc04's own example) unless exactly one account matches. A starter
   // account's name in other languages counts too ("dinheiro" for the
   // starter Cash account, docs/73 D267), whole words only.
-  const byName = ctx.accounts.filter((a) => textLower.includes(a.name.toLowerCase()));
+  const byName = accounts.filter((a) => textLower.includes(a.name.toLowerCase()));
   const byAlias = (ctx.accountAliases ?? []).filter((a) => findWord(textLower, a.alias.toLowerCase()) !== -1);
   const distinctIds = new Set([...byName.map((a) => a.id), ...byAlias.map((a) => a.accountId)]);
   if (distinctIds.size !== 1) return null;
@@ -482,7 +507,7 @@ function matchAccount(textLower: string, ctx: ParserContext, spans: Span[]): str
 function matchMerchant(textLower: string, ctx: ParserContext, spans: Span[]): string | null {
   const matched = new Set<string>();
   for (const m of ctx.merchants) {
-    if (textLower.includes(m.toLowerCase())) matched.add(m);
+    if (m.trim() && textLower.includes(m.toLowerCase())) matched.add(m);
   }
   if (matched.size !== 1) return null;
   const merchant = [...matched][0];
@@ -619,7 +644,7 @@ export function parseUtterance(text: string, ctx: ParserContext): ParseResult {
   const amountCents = digitAmount !== null ? digitAmount : wordAmount !== null ? wordAmount * 100 : null;
 
   const direction = matchDirection(textLower, spans, ctx.language);
-  const currency = extractCurrency(text, spans, ctx);
+  const { currency, dollarFamily } = extractCurrency(text, spans, ctx);
   const categoryId = matchCategory(textLower, ctx, spans);
   const accountId = matchAccount(textLower, ctx, spans);
   const confirmedMerchant = matchMerchant(textLower, ctx, spans);
@@ -637,6 +662,7 @@ export function parseUtterance(text: string, ctx: ParserContext): ParseResult {
     accountId,
     merchant: confirmedMerchant ?? guess?.merchant ?? null,
     merchantGuessed: confirmedMerchant === null && guess !== null,
+    dollarFamily,
     unrecognized: computeUnrecognized(text, spans, guess?.leadIn ?? null, ctx.language),
   };
 }

@@ -35,12 +35,13 @@ export interface LanguagePack {
   // installs get them without reseeding category_keywords.
   categoryKeywords: Record<string, string[]>;
   reserved: string[];
-  // What a bare "$" means in this language's speech-to-text output, if
-  // anything. iOS's Portuguese dictation writes "cem dólares" as "$100"
-  // (reais come out as "R$"), so there "$" can only be dollars. Not set
-  // where "$" is genuinely ambiguous: English (USD/CAD), Spanish (pesos in
-  // Mexico), French (CAD in Canada). Typed text never uses it.
-  speechDollar?: string;
+  // What a bare "$" means, typed and in speech-to-text output: 'family' =
+  // some dollar (CAD, USD…), resolved by the caller (docs/73 D272);
+  // 'USD' = exactly that; 'none' = not a dollar at all. iOS's Portuguese
+  // dictation writes "cem dólares" as "$100" (reais come out as "R$"), so
+  // in Portuguese speech "$" is US dollars. In Spanish "$" is just as
+  // often pesos (Mexico, Argentina…), so it means nothing there.
+  dollarSign: { typed: 'family' | 'USD' | 'none'; speech: 'family' | 'USD' | 'none' };
 }
 
 const W = '([a-zà-ÿ]+)';
@@ -80,8 +81,10 @@ export const PACKS: Record<PackId, LanguagePack> = {
       'cat-health-pharmacy': ['pharmacy', 'drugstore'],
       'cat-recreation-movies': ['netflix', 'movie', 'movies', 'cinema'],
       'cat-salary': ['salary', 'paycheck'],
+      'cat-food-snacks': ['ice cream', 'snack', 'snacks', 'candy', 'chocolate'],
     },
     reserved: ['once'],
+    dollarSign: { typed: 'family', speech: 'family' },
   },
 
   pt: {
@@ -117,9 +120,10 @@ export const PACKS: Record<PackId, LanguagePack> = {
       'cat-health-pharmacy': ['farmácia', 'farmacia', 'remédio', 'remedio'],
       'cat-recreation-movies': ['cinema', 'netflix'],
       'cat-salary': ['salário', 'salario'],
+      'cat-food-snacks': ['sorvete', 'picolé', 'picole', 'lanche', 'lanchinho', 'chocolate', 'açaí', 'acai', 'pastel', 'salgado', 'coxinha'],
     },
     reserved: ['dos', 'des'],
-    speechDollar: 'USD',
+    dollarSign: { typed: 'family', speech: 'USD' },
   },
 
   es: {
@@ -159,8 +163,10 @@ export const PACKS: Record<PackId, LanguagePack> = {
       'cat-health-pharmacy': ['farmacia'],
       'cat-recreation-movies': ['cine', 'netflix'],
       'cat-salary': ['sueldo', 'salario', 'nómina', 'nomina'],
+      'cat-food-snacks': ['helado', 'paleta', 'botana', 'botanas', 'golosinas', 'chocolate', 'snack'],
     },
     reserved: ['no'],
+    dollarSign: { typed: 'none', speech: 'none' },
   },
 
   fr: {
@@ -197,8 +203,10 @@ export const PACKS: Record<PackId, LanguagePack> = {
       'cat-health-pharmacy': ['pharmacie'],
       'cat-recreation-movies': ['cinéma', 'cinema', 'netflix'],
       'cat-salary': ['salaire', 'paie'],
+      'cat-food-snacks': ['glace', 'crème glacée', 'creme glacee', 'grignotines', 'bonbons', 'chocolat', 'collation'],
     },
     reserved: ['sept'],
+    dollarSign: { typed: 'family', speech: 'family' },
   },
 };
 
