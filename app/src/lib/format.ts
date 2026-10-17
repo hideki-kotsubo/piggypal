@@ -2,17 +2,37 @@ import { addDays } from './schedules';
 import i18n, { uiLocale } from './i18n';
 import { accountName, categoryLabel } from './starterLabels';
 import type { AccountKind } from './types';
+import { DOLLAR_SYMBOLS } from './dollar';
 
 // docs/09: number formatting keyed to UI language, currency symbol keyed to
 // the transaction's own currency — independent axes. The locale comes from
 // i18n.ts (docs/73 D265): UI language plus the device's region.
 
+// Someone who uses CAD and USD can't tell "$15" apart, so once more than
+// one dollar currency is in use every dollar amount gets its explicit
+// symbol (CA$, US$…); with just one, it stays "$". Set by StoreProvider
+// from the data on this device (docs/73 D273).
+let explicitDollars = false;
+
+export function setDollarCurrenciesInUse(currencies: Iterable<string>): void {
+  const dollars = new Set<string>();
+  for (const c of currencies) if (c in DOLLAR_SYMBOLS) dollars.add(c);
+  explicitDollars = dollars.size > 1;
+}
+
 export function formatAmount(cents: number, currency: string): string {
-  return new Intl.NumberFormat(uiLocale(), {
+  const format = new Intl.NumberFormat(uiLocale(), {
     style: 'currency',
     currency,
     currencyDisplay: 'narrowSymbol',
-  }).format(cents / 100);
+  });
+  if (!explicitDollars || !(currency in DOLLAR_SYMBOLS)) return format.format(cents / 100);
+  // Only the symbol changes; the locale keeps its own order and spacing
+  // ("CA$ 15,00" in pt-BR, "15,00 CA$" in fr).
+  return format
+    .formatToParts(cents / 100)
+    .map((part) => (part.type === 'currency' ? DOLLAR_SYMBOLS[currency] : part.value))
+    .join('');
 }
 
 // `occurredAt` is a local date+time now ("YYYY-MM-DDTHH:MM:SS", no

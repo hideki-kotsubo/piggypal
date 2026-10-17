@@ -91,9 +91,8 @@ it needs doing.
 - [x] Speech/typed parse preview shows the (possibly defaulted) account
       but can't change it. Done 2026-10-16 (docs/73 D272 section):
       account and currency pickers in the preview panel.
-- [ ] Amounts show CAD and USD both as "$" (`formatAmount`'s
-      `narrowSymbol`). Consider "CA$"/"US$" when someone uses more than
-      one dollar currency. Proposed 2026-10-16, not decided.
+- [x] Amounts showed CAD and USD both as "$". Done 2026-10-16
+      (docs/73 D273): CA$/US$ once more than one dollar currency is used.
 - [ ] Native mobile shell (docs/52, 2026-09-10): `app/android/` and
       `app/ios/` are scaffolded (Capacitor + `@powersync/capacitor`), but
       nothing native has actually been built or run — this sandbox has no
