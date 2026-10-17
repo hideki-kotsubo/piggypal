@@ -9,5 +9,14 @@
     "cat-transport-fuel": "Essence",
     "cat-transport-rideshare": "Taxi et covoiturage",
     "cat-shopping": "Magasinage"
+  },
+  "settings": {
+    "codeLabel": "Code reçu par courriel"
+  },
+  "household": {
+    "addDeviceHint": "Ajouter un appareil affiche un code à scanner depuis le nouvel appareil — pas besoin de courriel. Pour synchroniser directement avec un appareil à proximité sans le nuage, utilisez Paramètres → Connecter un appareil."
+  },
+  "auth": {
+    "iosHomeScreenHint": "Vous utilisez Flowtab depuis l’écran d’accueil ? Ne vous connectez pas ici — ouvrez l’appli et saisissez le code à 6 chiffres du courriel."
   }
 }

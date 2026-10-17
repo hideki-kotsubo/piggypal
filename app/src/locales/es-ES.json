@@ -12,5 +12,60 @@
     "cat-recreation-hobbies": "Aficiones",
     "cat-recreation-events": "Eventos y Entradas",
     "cat-personal-childcare": "Guardería"
+  },
+  "settings": {
+    "addToHome": "Añadir Flowtab a tu pantalla de inicio",
+    "iosSteps": "En Safari, toca el botón Compartir <icon>(□↑)</icon> y elige <strong>Añadir a pantalla de inicio</strong>. Flowtab se abrirá desde su propio ícono, en pantalla completa y sin conexión."
+  },
+  "common": {
+    "add": "Añadir"
+  },
+  "transaction": {
+    "addLeg": "+ añadir otra cuenta"
+  },
+  "deviceLink": {
+    "scanCaption": "En un dispositivo con la sesión ya iniciada, abre Ajustes → Hogar → Añadir dispositivo y apunta la cámara al código.",
+    "notACode": "Ese no es un código de acceso de Flowtab. Usa el de Hogar → Añadir dispositivo.",
+    "title": "Añadir dispositivo",
+    "instructions": "En el nuevo dispositivo, abre Flowtab → Ajustes → <b>Escanear un código de un dispositivo con sesión iniciada</b> y apúntalo aquí. Cualquiera que vea este código puede unirse a tu cuenta, así que muéstralo solo a personas de tu hogar."
+  },
+  "deleteAccount": {
+    "backToSettings": "Volver a Ajustes"
+  },
+  "schedules": {
+    "add": "Añadir pago programado",
+    "empty": "Aún no hay nada programado: toca + para añadir el alquiler, la matrícula, un arrendamiento o una compra a plazos."
+  },
+  "household": {
+    "signInFirst": "Inicia sesión (Ajustes → Cuenta) para administrar las personas y los dispositivos de tu hogar.",
+    "addPerson": "+ Añadir persona",
+    "addDevice": "+ Añadir un dispositivo a esta cuenta",
+    "addDeviceHint": "Al añadir un dispositivo se muestra un código para escanear desde el nuevo dispositivo, sin necesidad de correo. Para sincronizar directamente con un dispositivo cercano sin la nube, usa Ajustes → Conectar un dispositivo."
+  },
+  "accounts": {
+    "add": "Añadir cuenta",
+    "empty": "Aún no hay cuentas: toca + para añadir una."
+  },
+  "entry": {
+    "added": "Añadido",
+    "addedToInbox": "Añadido a tu bandeja de entrada: necesita categoría",
+    "addTransaction": "Añadir movimiento"
+  },
+  "pairing": {
+    "ownDeviceSub": "Móvil, tableta, portátil: todo tuyo.",
+    "done": "Sincronizado con <b>{{peer}}</b>. Se añadieron {{categories}} categorías, {{accounts}} cuentas, {{transactions}} movimientos y {{budgets}} presupuestos{{updated}}."
+  },
+  "categories": {
+    "add": "Añadir categoría",
+    "addSub": "+ Añadir subcategoría",
+    "addBudget": "+ Añadir presupuesto"
+  },
+  "auth": {
+    "closeTab": "Si añadiste Flowtab a tu pantalla de inicio, puedes cerrar esta pestaña y abrirlo desde ahí."
+  },
+  "schedule": {
+    "errInstallments": "Un plan a plazos necesita 2 o más pagos.",
+    "namePlaceholder": "Alquiler, Matrícula, Renting del coche, TV a 10 plazos…",
+    "installments": "Pagos a plazos"
   }
 }

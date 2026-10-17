@@ -105,3 +105,15 @@ describe('fallback', () => {
     await i18n.changeLanguage('en');
   });
 });
+
+describe('wordmark phrases (docs/51, docs/73)', () => {
+  it('has a native pool for every UI language, regional variants sharing their base', async () => {
+    const { wordmarkPool } = await import('./wordmarkPhrases');
+    const pools = ['en', 'pt-BR', 'es', 'fr'].map((l) => wordmarkPool(l, false));
+    expect(new Set(pools.map((p) => p[0])).size).toBe(4);
+    for (const p of pools) expect(p.length).toBeGreaterThan(15);
+    expect(wordmarkPool('es-ES', true)).toEqual(wordmarkPool('es', true));
+    expect(wordmarkPool('fr-CA', false)).toEqual(wordmarkPool('fr', false));
+    expect(wordmarkPool('fr', true).length).toBeGreaterThan(wordmarkPool('fr', false).length);
+  });
+});

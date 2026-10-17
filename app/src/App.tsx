@@ -15,14 +15,14 @@ interface ToastState {
 }
 
 export default function App() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [toast, setToast] = useState<ToastState | null>(null);
   const household = hasHousehold(useHouseholdPeers());
   // Re-picked each time Home mounts (a fresh app open, or navigating back
   // to "/"), not on a timer — a finance app's header shouldn't be visibly
   // ticking. Only re-rolls again if `household` itself flips (e.g. store
   // data finishes loading after first paint), not on every render.
-  const wordmark = useMemo(() => pickWordmarkPhrase(household), [household]);
+  const wordmark = useMemo(() => pickWordmarkPhrase(i18n.language, household), [i18n.language, household]);
 
   useEffect(() => {
     if (!toast) return;
