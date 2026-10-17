@@ -16,6 +16,16 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
+
+## Unreleased
+
+- **Voice entry on iPhone no longer freezes** after an attempt that
+  didn't catch anything; the next tap starts fresh. If nothing is
+  heard, the app now says so instead of staying silent.
+- Saying an amount in **dollars** in Portuguese ("cem dólares em
+  combustível") now saves it in US dollars instead of the account's
+  currency.
+
 ## 0.6.0 — 2026-10-17
 
 Flowtab now speaks your language.
