@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { Trans, useTranslation } from 'react-i18next';
-import i18n, { LANGUAGES, useLanguagePreference } from '../lib/i18n';
+import i18n, { LANGUAGES, uiLocale, useLanguagePreference } from '../lib/i18n';
 import { isSpeechInputSupported } from '../lib/speechInput';
 import { useVoicePreference } from '../lib/voiceLanguage';
+import { useDollarPreference } from '../lib/dollar';
 import { ACCOUNT_PICKER_SCALE_THRESHOLD, guessDeviceLabel, useAccountPickerMode, useDeviceLabel, useThemeMode } from '../lib/settings';
 import { usePairedPeers } from '../lib/peers';
 import { hasHousehold, householdMembers, useHouseholdPeers } from '../lib/household';
@@ -34,6 +35,8 @@ export function SettingsScreen() {
   const { t } = useTranslation();
   const { preference: languagePreference, language, automaticLanguage, setPreference: setLanguagePreference } = useLanguagePreference();
   const [voicePreference, setVoicePreference] = useVoicePreference();
+  const [dollarPreference, setDollarPreference] = useDollarPreference();
+  const currencyNames = new Intl.DisplayNames([uiLocale()], { type: 'currency' });
   const [deviceLabel, setDeviceLabel] = useDeviceLabel();
   const [peers] = usePairedPeers();
   const householdPeers = useHouseholdPeers();
@@ -485,6 +488,23 @@ export function SettingsScreen() {
           </div>
         </>
       )}
+
+      {/* docs/73 D272 — what "dollars" / "$" means when no country is said. */}
+      <div className="section-label">{t('settings.dollarMeans')}</div>
+      <div className="settings-row settings-row-static">
+        <span>{t('settings.dollarHint')}</span>
+      </div>
+      <div className="chip-row settings-chip-row">
+        {(['CAD', 'USD'] as const).map((code) => (
+          <button
+            key={code}
+            className={`chip ${dollarPreference === code ? 'picked' : ''}`}
+            onClick={() => setDollarPreference(code)}
+          >
+            {currencyNames.of(code)} ({code})
+          </button>
+        ))}
+      </div>
 
       {showPickerModeSetting && (
         <>

@@ -17,6 +17,22 @@ How to write an entry (docs/59):
 -->
 
 
+
+## Unreleased
+
+- **"Dollars" means dollars.** Saying "15 dollars" or typing "$15" no
+  longer falls back to your account's currency (like reais). Flowtab
+  picks a dollar: your account's own, the last one you used, or the new
+  **Dollars ($) mean** setting (Canadian or US). Say "canadian dollars"
+  or "US dollars" to be exact.
+- **Change the currency and account before saving**: tap them in the
+  "Understood" panel.
+- **Voice language from Home**: tap the small language chip next to the
+  mic (EN, PT, FR…). Switch even while it's listening.
+- Ice cream, sorvete, helado and glace now go to **Snacks**.
+- Fixed: an account with an empty name was picked for every typed or
+  spoken entry.
+
 ## 0.6.1 — 2026-10-16
 
 - **Voice entry on iPhone no longer freezes** after an attempt that

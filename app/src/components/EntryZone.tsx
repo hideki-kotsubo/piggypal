@@ -3,13 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
 import { categoryLabel, starterAccountAliases, starterCategoryAliases } from '../lib/starterLabels';
-import { accountLabel, formatAmount, formatRelativeDate, nowLocal, nowUtc } from '../lib/format';
+import { formatAmount, formatRelativeDate, nowLocal, nowUtc } from '../lib/format';
 import { getLocalUserId } from '../lib/identity';
 import { markFreshBlank } from '../lib/freshBlankTransactions';
 import { parseUtterance } from '../lib/parser';
 import { isSpeechInputSupported, startSpeechInput } from '../lib/speechInput';
 import i18n, { LANGUAGES } from '../lib/i18n';
-import { voiceLanguage } from '../lib/voiceLanguage';
+import { useVoicePreference, voiceLanguage, type VoicePreference } from '../lib/voiceLanguage';
+import { readDollarPreference, resolveDollar } from '../lib/dollar';
+import { AccountCurrencyPicker } from './AccountCurrencyPicker';
 import type { Transaction } from '../lib/types';
 
 interface Props {
@@ -26,6 +28,9 @@ interface Preview {
   amountCents: number; // already signed by direction
   currency: string;
   currencyParsed: boolean;
+  // docs/73 D272 — "dollars"/"$" with no country, resolved to one dollar
+  // currency; shown as a guess the user can change.
+  currencyGuessed: boolean;
   accountId: string;
   accountParsed: boolean;
   categoryId: string | null;
@@ -44,6 +49,11 @@ export function EntryZone({ onSubmitted }: Props) {
   const [preview, setPreview] = useState<Preview | null>(null);
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<{ stop: () => void; abort: () => void } | null>(null);
+  // Each start gets a number; callbacks from an older session (late
+  // events after an abort-and-restart) are ignored.
+  const voiceSessionRef = useRef(0);
+  const [voicePreference, setVoicePreference] = useVoicePreference();
+  const [voiceMenuOpen, setVoiceMenuOpen] = useState(false);
 
   // docs/19: "+" used to open an inline amount-pad + category-chip panel
   // (tap a category chip to submit) before landing on the transaction's
@@ -142,11 +152,19 @@ export function EntryZone({ onSubmitted }: Props) {
     }
 
     const accountId = result.accountId ?? store.defaultAccountId();
+    const accountCurrency = store.defaultCurrencyFor(accountId);
+    const recentCurrencies = store.transactions
+      .filter((tx) => !tx.deletedAt)
+      .sort((a, b) => (a.occurredAt < b.occurredAt ? 1 : -1))
+      .map((tx) => tx.currency);
     setPreview({
       text,
       amountCents: result.direction === 'expense' ? -result.amountCents : result.amountCents,
-      currency: result.currency ?? store.defaultCurrencyFor(accountId),
+      currency:
+        result.currency ??
+        (result.dollarFamily ? resolveDollar(accountCurrency, recentCurrencies, readDollarPreference()) : accountCurrency),
       currencyParsed: result.currency !== null,
+      currencyGuessed: result.currency === null && result.dollarFamily,
       accountId,
       accountParsed: result.accountId !== null,
       categoryId: result.categoryId,
@@ -209,6 +227,7 @@ export function EntryZone({ onSubmitted }: Props) {
   // hands-free path. Feature-detected: the mic button doesn't render at all
   // when unsupported (e.g. desktop Firefox).
   function toggleVoice() {
+    setVoiceMenuOpen(false);
     if (listening) {
       // Give-up path: abort() cuts the mic immediately and discards
       // whatever's been captured, rather than stop()'s "deliver a final
@@ -216,16 +235,25 @@ export function EntryZone({ onSubmitted }: Props) {
       // don't want anything transcribed. Clearing `listening` here rather
       // than waiting on onEnd keeps the button responsive even on
       // browsers where onend fires late or not at all after an abort.
+      voiceSessionRef.current++;
       recognitionRef.current?.abort();
       setListening(false);
       return;
     }
+    startVoice();
+  }
+
+  function startVoice() {
+    const session = ++voiceSessionRef.current;
+    const current = () => voiceSessionRef.current === session;
     const handle = startSpeechInput({
       onResult: (transcript) => {
+        if (!current()) return;
         setTypedText(transcript);
         buildPreview(transcript, voiceLanguage(), true);
       },
       onError: (error) => {
+        if (!current()) return;
         setListening(false);
         // docs/73: always say why voice stopped, except when the user
         // cancelled — a silent stop read as a frozen app on iPhone.
@@ -237,16 +265,61 @@ export function EntryZone({ onSubmitted }: Props) {
         else if (error === 'no-speech') onSubmitted(t('voice.noSpeech'));
         else if (error !== 'aborted') onSubmitted(t('voice.failed'));
       },
-      onEnd: () => setListening(false),
+      onEnd: () => {
+        if (current()) setListening(false);
+      },
     });
     if (!handle) return;
     recognitionRef.current = handle;
     setListening(true);
   }
 
+  // docs/73 — switch the voice language from Home, before or while
+  // speaking. Mid-listen, the session restarts in the new language.
+  function pickVoiceLanguage(next: VoicePreference) {
+    setVoicePreference(next);
+    setVoiceMenuOpen(false);
+    if (listening) {
+      voiceSessionRef.current++;
+      recognitionRef.current?.abort();
+      startVoice();
+    }
+  }
+  const voiceTag = voicePreference === 'app' ? i18n.language : voicePreference;
+  const voiceShort = voiceTag === 'pt-BR' ? 'PT' : voiceTag.toUpperCase();
+  const voiceLabel = LANGUAGES.find((l) => l.tag === voiceTag)?.label ?? voiceTag;
+
   return (
     <div className="entry-zone">
       <form onSubmit={submitTyped}>
+        {/* In the card's flow rather than a floating popover: .entry-zone
+            clips overflow, and the docked card grows upward anyway. */}
+        {isSpeechInputSupported() && voiceMenuOpen && (
+          <div className="voice-lang-menu" role="menu">
+            <button
+              type="button"
+              role="menuitemradio"
+              aria-checked={voicePreference === 'app'}
+              className={`chip ${voicePreference === 'app' ? 'picked' : ''}`}
+              onClick={() => pickVoiceLanguage('app')}
+            >
+              {t('settings.voiceSameAsApp', { language: LANGUAGES.find((l) => l.tag === i18n.language)?.label })}
+            </button>
+            {LANGUAGES.map((l) => (
+              <button
+                type="button"
+                role="menuitemradio"
+                aria-checked={voicePreference === l.tag}
+                key={l.tag}
+                lang={l.tag}
+                className={`chip ${voicePreference === l.tag ? 'picked' : ''}`}
+                onClick={() => pickVoiceLanguage(l.tag)}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="entry-input-row">
           <button type="button" className="add-btn" onClick={startBlank} aria-label={t('entry.addTransaction')}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -259,6 +332,17 @@ export function EntryZone({ onSubmitted }: Props) {
             value={typedText}
             onChange={(e) => editText(e.target.value)}
           />
+          {isSpeechInputSupported() && (
+            <button
+              type="button"
+              className={`voice-lang-chip ${voiceMenuOpen ? 'open' : ''}`}
+              onClick={() => setVoiceMenuOpen((o) => !o)}
+              aria-label={t('entry.voiceLanguage', { language: voiceLabel })}
+              aria-expanded={voiceMenuOpen}
+            >
+              {voiceShort}
+            </button>
+          )}
           {isSpeechInputSupported() && (
             <button
               type="button"
@@ -282,10 +366,22 @@ export function EntryZone({ onSubmitted }: Props) {
           <div className="parse-preview">
             <p className="parse-label">{t('entry.understood')}</p>
             <div className="parse-fields">
+              {/* The currency and account were often only defaulted or
+                  guessed, so both can be changed right here before saving. */}
               <div className="parse-field">
                 <span className="k">{t('entry.amount')}</span>
+                <AccountCurrencyPicker
+                  accountId={preview.accountId}
+                  currency={preview.currency}
+                  showAccount={false}
+                  onChange={(_, currency) => setPreview({ ...preview, currency, currencyParsed: true, currencyGuessed: false })}
+                />
                 <span className="v">{formatAmount(preview.amountCents, preview.currency)}</span>
-                {!preview.currencyParsed && <span className="defaulted">{t('entry.defaultCurrency')}</span>}
+                {preview.currencyGuessed ? (
+                  <span className="defaulted">{t('entry.dollarGuess')}</span>
+                ) : (
+                  !preview.currencyParsed && <span className="defaulted">{t('entry.defaultCurrency')}</span>
+                )}
               </div>
               <div className="parse-field">
                 <span className="k">{t('entry.category')}</span>
@@ -307,12 +403,21 @@ export function EntryZone({ onSubmitted }: Props) {
               </div>
               <div className="parse-field">
                 <span className="k">{t('entry.account')}</span>
-                <span className="v">
-                  {(() => {
-                    const account = store.accounts.find((a) => a.id === preview.accountId);
-                    return account ? accountLabel(account) : '—';
-                  })()}
-                </span>
+                <AccountCurrencyPicker
+                  accountId={preview.accountId}
+                  currency={preview.currency}
+                  showCurrency={false}
+                  onChange={(accountId, accountCurrency) =>
+                    // A currency that was said or picked stays; a defaulted
+                    // one follows the new account.
+                    setPreview({
+                      ...preview,
+                      accountId,
+                      accountParsed: true,
+                      currency: preview.currencyParsed || preview.currencyGuessed ? preview.currency : accountCurrency,
+                    })
+                  }
+                />
                 {!preview.accountParsed && <span className="defaulted">{t('entry.default')}</span>}
               </div>
               {preview.merchant && (

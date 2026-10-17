@@ -181,6 +181,69 @@ describe('French', () => {
   });
 });
 
+// docs/73 D272 — real report: "15 dollars in ice cream" with voice in
+// English saved as R$ 15.
+describe('dollars', () => {
+  it('flags "dollars" and a bare "$" as some dollar, for the caller to resolve', () => {
+    for (const [text, lang, fromSpeech] of [
+      ['15 dollars in ice cream', 'en', true],
+      ['$15 in ice cream', 'en', true],
+      ['$15 ice cream', 'pt-BR', false],
+      ['15 bucks coffee', 'en', false],
+      ['15 dollars café', 'fr-CA', true],
+      ['15 $ café', 'fr-CA', false],
+    ] as const) {
+      const r = parse(text, lang, { fromSpeech });
+      expect(r.currency, text).toBeNull();
+      expect(r.dollarFamily, text).toBe(true);
+      expect(r.unrecognized ?? '', text).not.toMatch(/dollar|bucks|\$/);
+    }
+  });
+
+  it('reads country-qualified dollars exactly', () => {
+    expect(parse('20 canadian dollars coffee', 'en').currency).toBe('CAD');
+    expect(parse('20 US dollars coffee', 'en').currency).toBe('USD');
+    expect(parse('20 american dollars coffee', 'en').currency).toBe('USD');
+    expect(parse('20 dólares canadenses café', 'pt-BR').currency).toBe('CAD');
+    expect(parse('20 dólares canadienses café', 'es').currency).toBe('CAD');
+    expect(parse('20 dollars canadiens café', 'fr').currency).toBe('CAD');
+    expect(parse('20 dollars américains café', 'fr').currency).toBe('USD');
+    const r = parse('20 dólares café', 'pt-BR');
+    expect(r.currency).toBe('USD');
+    expect(r.dollarFamily).toBe(false);
+  });
+
+  it('leaves a bare "$" alone in Spanish, where it is often pesos', () => {
+    const r = parse('$150 helado', 'es', { fromSpeech: true });
+    expect(r.currency).toBeNull();
+    expect(r.dollarFamily).toBe(false);
+  });
+
+  it('files ice cream under Snacks in every language', () => {
+    expect(parse('15 dollars in ice cream', 'en').categoryId).toBe('cat-food-snacks');
+    expect(parse('15 sorvete', 'pt-BR').categoryId).toBe('cat-food-snacks');
+    expect(parse('15 helado', 'es').categoryId).toBe('cat-food-snacks');
+    expect(parse('15 crème glacée', 'fr-CA').categoryId).toBe('cat-food-snacks');
+  });
+});
+
+// Real report, 2026-10-16: an account whose name was cleared ("Cash —")
+// matched every entry.
+describe('empty names', () => {
+  it('never match', () => {
+    const blank: Account = { id: 'acc-blank', institution: 'Cash', name: '', kind: 'cash', archived: false, ownerUserId: null, updatedAt: '' };
+    const r = parse('15 coffee', 'en', {
+      accounts: [blank],
+      accountAliases: [],
+      categories: [...categories, { ...categories[0], id: 'cat-blank', name: '', parentId: null }],
+      merchants: ['', '  '],
+    });
+    expect(r.accountId).toBeNull();
+    expect(r.categoryId).toBe('cat-food-coffee');
+    expect(r.merchant).toBeNull();
+  });
+});
+
 describe('categories across languages (docs/73 D270)', () => {
   it('prefers a subcategory over its own group', () => {
     expect(parse('transporte uber 20', 'pt-BR').categoryId).toBe('cat-transport-rideshare');

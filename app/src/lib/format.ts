@@ -101,6 +101,7 @@ export function nowUtc(): string {
 // when institution isn't set.
 export function accountLabel(account: { institution: string | null; name: string; kind?: AccountKind }): string {
   const name = accountName(account);
+  if (!name.trim()) return account.institution ?? '';
   return account.institution ? `${account.institution} — ${name}` : name;
 }
 
