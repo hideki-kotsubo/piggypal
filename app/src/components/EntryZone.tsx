@@ -2,13 +2,13 @@ import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
-import { categoryLabel } from '../lib/starterLabels';
+import { categoryLabel, starterAccountAliases, starterCategoryAliases } from '../lib/starterLabels';
 import { accountLabel, formatAmount, formatRelativeDate, nowLocal, nowUtc } from '../lib/format';
 import { getLocalUserId } from '../lib/identity';
 import { markFreshBlank } from '../lib/freshBlankTransactions';
 import { parseUtterance } from '../lib/parser';
 import { isSpeechInputSupported, startSpeechInput } from '../lib/speechInput';
-import { LANGUAGES } from '../lib/i18n';
+import i18n, { LANGUAGES } from '../lib/i18n';
 import { voiceLanguage } from '../lib/voiceLanguage';
 import type { Transaction } from '../lib/types';
 
@@ -110,7 +110,9 @@ export function EntryZone({ onSubmitted }: Props) {
   // Enter-only submit without raising a keyboard, which defeats speaking
   // in the first place), and showing what the parser understood before
   // writing suits both paths, so both go through it.
-  function buildPreview(rawText: string) {
+  // `language`: what the text is most likely in — the voice language for
+  // speech, the UI language for typing (docs/73 D270).
+  function buildPreview(rawText: string, language: string) {
     const text = rawText.trim();
     if (!text) return;
 
@@ -128,6 +130,9 @@ export function EntryZone({ onSubmitted }: Props) {
       accounts: store.accounts,
       merchants: store.rankedMerchants(),
       now: new Date(),
+      language,
+      categoryAliases: starterCategoryAliases(store.categories),
+      accountAliases: starterAccountAliases(store.accounts),
     });
 
     if (result.amountCents === null) {
@@ -154,7 +159,7 @@ export function EntryZone({ onSubmitted }: Props) {
 
   function submitTyped(e: React.FormEvent) {
     e.preventDefault();
-    buildPreview(typedText);
+    buildPreview(typedText, i18n.language);
   }
 
   function confirmPreview() {
@@ -217,7 +222,7 @@ export function EntryZone({ onSubmitted }: Props) {
     const handle = startSpeechInput({
       onResult: (transcript) => {
         setTypedText(transcript);
-        buildPreview(transcript);
+        buildPreview(transcript, voiceLanguage());
       },
       onError: (error) => {
         setListening(false);
