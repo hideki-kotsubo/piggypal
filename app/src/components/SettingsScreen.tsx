@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../lib/store';
+import { useTranslation } from 'react-i18next';
+import { LANGUAGES, useLanguagePreference } from '../lib/i18n';
 import { ACCOUNT_PICKER_SCALE_THRESHOLD, guessDeviceLabel, useAccountPickerMode, useDeviceLabel, useThemeMode } from '../lib/settings';
 import { usePairedPeers } from '../lib/peers';
 import { hasHousehold, householdMembers, useHouseholdPeers } from '../lib/household';
@@ -27,6 +29,8 @@ export function SettingsScreen() {
   const store = useStore();
   const [pickerMode, setPickerMode] = useAccountPickerMode();
   const [themeMode, setThemeMode] = useThemeMode();
+  const { t } = useTranslation();
+  const { preference: languagePreference, automaticLanguage, setPreference: setLanguagePreference } = useLanguagePreference();
   const [deviceLabel, setDeviceLabel] = useDeviceLabel();
   const [peers] = usePairedPeers();
   const householdPeers = useHouseholdPeers();
@@ -428,6 +432,28 @@ export function SettingsScreen() {
         >
           Dark
         </button>
+      </div>
+
+      {/* docs/73 D262 — per device, never synced. Language names are
+          endonyms, so they stay readable whatever is picked. */}
+      <div className="section-label">{t('settings.language.title')}</div>
+      <div className="chip-row settings-chip-row">
+        <button
+          className={`chip ${languagePreference === 'auto' ? 'picked' : ''}`}
+          onClick={() => setLanguagePreference('auto')}
+        >
+          {t('settings.language.automatic', { language: LANGUAGES.find((l) => l.tag === automaticLanguage)?.label })}
+        </button>
+        {LANGUAGES.map((l) => (
+          <button
+            key={l.tag}
+            lang={l.tag}
+            className={`chip ${languagePreference === l.tag ? 'picked' : ''}`}
+            onClick={() => setLanguagePreference(l.tag)}
+          >
+            {l.label}
+          </button>
+        ))}
       </div>
 
       {showPickerModeSetting && (

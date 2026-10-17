@@ -1,7 +1,7 @@
 # 73 — Multi-language UI and voice (en, pt-BR, es, fr)
 
-2026-10-16. Planned with the user the same day. Phase 1 started on branch
-`feat/i18n`.
+2026-10-16. Planned with the user the same day. Phase 1 built the same day
+on branch `feat/i18n`; see "Phase 1 status" below.
 
 ## Why, and what this reopens
 
@@ -168,7 +168,7 @@ as fully reviewed.
 
 1. **Setup, no visible change.** Install `i18next` and `react-i18next`;
    create the locale files and i18n init; add the language setting
-   (`settings.ts`) and the Settings picker; make `format.ts` follow the UI
+   (`lib/i18n.ts`) and the Settings picker; make `format.ts` follow the UI
    locale; add a key-parity test.
 2. **Move all strings into `en.json`**, screen by screen. Mechanical; the
    app should look exactly the same in English afterwards.
@@ -184,6 +184,36 @@ run alongside 3.
 
 Releasing: this changes both `app/` and `api/` (phase 6), so it needs the
 full release, staging, prod-server and native store-build steps.
+
+## Phase 1 status (2026-10-16)
+
+- `app/src/lib/i18n.ts`: language list, `resolveLanguage()` (D262),
+  `formatLocaleFor()` (D265), the stored preference (`flowtab:language`,
+  removed when Automatic), synchronous i18next init imported from
+  `main.tsx` before first paint, and `useLanguagePreference()`. Sets
+  `<html lang>`.
+- `app/src/locales/*.json`: `en`, `pt-BR`, `es`, `fr` with the strings
+  moved so far; `es-ES` and `fr-CA` start empty and fall back to their
+  base language.
+- `format.ts` is fully translated: the Intl locale comes from
+  `uiLocale()`, and its literals (today/yesterday/N days ago, just
+  now/N minutes ago, Today/Tomorrow, never, Uncategorized) are i18n keys.
+- Settings has a Language section: "Automatic · <detected language>" plus
+  the six languages as chips.
+- `i18n.test.ts` (15 tests): key parity, required plural forms per
+  language from `Intl.PluralRules` (pt, es and fr all need `_many`), the
+  detection and locale rules, and the regional fallback. Checked that
+  the parity test fails when a key or a `_many` form is removed.
+- Checked in headless Chromium at 390px: device locales en-CA, pt-BR,
+  es-AR and fr-CA each pick the right Automatic language; picking
+  Français switches the label and `<html lang>` right away and survives a
+  reload; Automatic clears the stored value.
+- Screens that don't call `useTranslation()` yet don't re-render on a
+  language change. They pick it up when they next mount, which is fine
+  because routes remount on navigation. Phase 2 adds `useTranslation()`
+  to every screen, which removes this gap.
+- Library versions: i18next 26 and react-i18next 17. The older majors
+  declare a TypeScript ^5 peer and conflict with this repo's TS 6.
 
 ## Decisions
 

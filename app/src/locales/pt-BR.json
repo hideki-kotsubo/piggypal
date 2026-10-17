@@ -1,0 +1,31 @@
+{
+  "date": {
+    "today": "hoje",
+    "yesterday": "ontem",
+    "daysAgo_one": "há {{count}} dia",
+    "daysAgo_many": "há {{count}} de dias",
+    "daysAgo_other": "há {{count}} dias",
+    "never": "nunca",
+    "justNow": "agora mesmo",
+    "minutesAgo_one": "há {{count}} minuto",
+    "minutesAgo_many": "há {{count}} de minutos",
+    "minutesAgo_other": "há {{count}} minutos",
+    "hoursAgo_one": "há {{count}} hora",
+    "hoursAgo_many": "há {{count}} de horas",
+    "hoursAgo_other": "há {{count}} horas"
+  },
+  "settings": {
+    "language": {
+      "title": "Idioma",
+      "automatic": "Automático · {{language}}"
+    }
+  },
+  "occurrence": {
+    "today": "Hoje",
+    "tomorrow": "Amanhã",
+    "yesterday": "Ontem"
+  },
+  "category": {
+    "uncategorized": "Sem categoria"
+  }
+}

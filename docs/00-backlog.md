@@ -17,8 +17,8 @@ it needs doing.
 - [ ] **Multi-language UI and voice (en, pt-BR, es, fr)**. Plan in docs/73
       (D261-D271). Branch `feat/i18n`. Reopens docs/09 D31/D32 at the
       user's request (2026-10-16).
-  - [ ] Phase 1: i18next setup, language setting + Settings picker,
-        `format.ts` follows the UI locale, key-parity test.
+  - [x] Phase 1: i18next setup, language setting + Settings picker,
+        `format.ts` follows the UI locale, key-parity test (2026-10-16).
   - [ ] Phase 2: move every UI string into `en.json`, screen by screen.
   - [ ] Phase 3: pt-BR/es/fr (+ es-ES, fr-CA) translations;
         `categoryLabel()` and starter-account labels (D266/D267); docs/51
