@@ -351,6 +351,35 @@ pt-BR, es and fr text at once.
 recognizing speech, the iOS prompts appearing translated, and a real
 email send in each language.
 
+## Fixes from real-device testing (2026-10-16, after 0.6.0)
+
+The user tested the home-screen PWA on two iPhones (XR, 12) with the app
+in Português:
+
+- **Voice froze after a failed attempt.** After a session that heard
+  nothing, every later tap showed "listening" and never answered. The
+  cause: docs/16 D149's single reused `SpeechRecognition` instance stops
+  responding on iOS after a no-result session. `speechInput.ts` now runs
+  one session per tap. A session that ends without a result (nothing
+  heard, an error, or a new 15-second watchdog) discards the instance,
+  so the next tap starts a fresh one. A successful session or a cancel
+  the user tapped keeps the instance, so D149's "no repeat prompt"
+  still holds while things work. Late events from a discarded instance
+  are ignored. "Nothing heard" now shows "Didn't hear anything" instead
+  of the silence that read as a frozen app. `speechInput.test.ts`
+  covers this with a fake recognizer, including one that never answers.
+- **"cem dólares em combustível" saved as reais.** iOS's Portuguese
+  dictation writes it as "$100 em combustivel", and a bare "$" was
+  deliberately ambiguous (docs/10), so the account's BRL default won.
+  Packs now have `speechDollar`; Portuguese sets USD, since its
+  dictation writes reais as "R$". It applies only to speech
+  (`fromSpeech` from EntryZone). Typed "$" and other languages are
+  unchanged: Spanish "$" is pesos in Mexico, and French "100 $" is CAD
+  in Canada.
+- Not yet confirmed on a phone: that the fresh instance actually
+  revives the mic on iOS. If iOS still stalls, the watchdog at least
+  ends the session after 15 seconds with a message.
+
 ### Glossary
 
 One word per concept, so the same thing reads the same everywhere:
