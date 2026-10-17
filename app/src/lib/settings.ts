@@ -1,3 +1,4 @@
+import i18n from './i18n';
 import { useState } from 'react';
 import { migrateStorageKey } from './storageMigration';
 
@@ -75,10 +76,10 @@ export function guessDeviceLabel(): string {
   const ua = navigator.userAgent;
   if (/iPhone/.test(ua)) return 'iPhone';
   if (/iPad/.test(ua)) return 'iPad';
-  if (/Android/.test(ua)) return 'Android device';
+  if (/Android/.test(ua)) return i18n.t('device.android');
   if (/Macintosh/.test(ua)) return 'Mac';
   if (/Windows/.test(ua)) return 'Windows PC';
-  return 'This device';
+  return i18n.t('device.generic');
 }
 
 const DEVICE_LABEL_KEY = 'flowtab:device-label';

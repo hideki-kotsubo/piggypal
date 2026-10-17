@@ -1,7 +1,8 @@
 # 73 — Multi-language UI and voice (en, pt-BR, es, fr)
 
-2026-10-16. Planned with the user the same day. Phase 1 built the same day
-on branch `feat/i18n`; see "Phase 1 status" below.
+2026-10-16. Planned with the user the same day. Phases 1-3 (UI text,
+translations, starter names) built the same day on branch `feat/i18n`;
+see "Phase 1 status" and "Phases 2-3 status" below. Not released.
 
 ## Why, and what this reopens
 
@@ -214,6 +215,74 @@ full release, staging, prod-server and native store-build steps.
   to every screen, which removes this gap.
 - Library versions: i18next 26 and react-i18next 17. The older majors
   declare a TypeScript ^5 peer and conflict with this repo's TS 6.
+
+## Phases 2-3 status (2026-10-16)
+
+Done together rather than in sequence: the parity test (D264) fails as
+soon as a key exists only in English, so every key went in with its
+pt-BR, es and fr text at once.
+
+- Every screen and banner, plus the user-facing strings in `lib/`
+  (`format.ts`, `syncNow.ts`'s last-synced text, `schedules.ts`'s
+  `describeCadence`, `household.ts`, `manualMerge.ts`, `settings.ts`'s
+  generic device names, `auth.ts`/`relayClient.ts` error messages), is
+  translated. About 640 keys per language.
+- Not translated on purpose: errors that come back from the server
+  (`body.error`, phase 6), debugging-only errors ("Not signed in.",
+  "Unexpected relay message"), the changelog (docs/59 D226), and
+  `changelog.ts`'s en-US date format, which the website generator shares.
+- Sentences with bold parts use `<Trans>` with named tags, so
+  translators can move the bold part.
+- Delete-account confirmation word is translated (EXCLUIR / ELIMINAR /
+  SUPPRIMER); English DELETE is always accepted too.
+- `describeCadence` uses Intl weekday/month names and i18next ordinal
+  plurals for day numbers ("1st", French "1er"); the parity test checks
+  ordinal (`_ordinal_*`) forms against `Intl.PluralRules({ type:
+  'ordinal' })`.
+- D266/D267 built: `lib/starterLabels.ts` (`categoryLabel`,
+  `accountName`), used everywhere a category or account name is shown,
+  including `accountLabel()` and `transactionTitle()`. The category and
+  account edit forms start from the translated label and only write when
+  the user edits. `starterLabels.test.ts` checks the scenarios from the
+  user's requirement and that `en.json`'s starter labels equal
+  `seed.ts`'s names.
+- Home wordmark (docs/51 D190 closed): one natively written pool per
+  language in `wordmarkPhrases.ts`, not line-by-line translations;
+  regional variants share their base pool.
+- Regional files: es-ES has 29 overrides (Añadir for Agregar, Ajustes,
+  móvil, coche, a plazos, Apple's "Añadir a pantalla de inicio") plus
+  starter-name differences (IBI, Luz, Aparcamiento, Aficiones, Guardería,
+  Taxi y VTC…). fr-CA has "courriel" where the French base now says
+  "e-mail", plus starter names (Épicerie, Loyer/Hypothèque, Magasinage,
+  Essence…).
+- Checked in headless Chromium at 390px for en-CA, pt-BR, es-MX, es-ES,
+  fr-FR and fr-CA: 12 routes each, no raw keys in the page text, no page
+  errors, starter categories in each language, and a typed entry
+  ("45 mercado ontem") going through preview and save in Portuguese.
+- Native `<input type="date">` and the time picker follow the device's
+  own locale, not the app's. On a phone that's the system language;
+  nothing to do in the app.
+- `guessDeviceLabel()`'s generic fallbacks are translated when created.
+  The value is saved and shown to other household members as-is,
+  same as any device name.
+
+### Glossary
+
+One word per concept, so the same thing reads the same everywhere:
+
+| en | pt-BR | es | fr |
+|---|---|---|---|
+| transaction / entry | lançamento | movimiento | opération |
+| account | conta | cuenta | compte |
+| category | categoria | categoría | catégorie |
+| budget | orçamento | presupuesto | budget |
+| scheduled payment | pagamento agendado | pago programado | paiement programmé |
+| household | família | hogar | foyer |
+| device | dispositivo | dispositivo | appareil |
+| sign in / sign out | entrar / sair | iniciar / cerrar sesión | se connecter / se déconnecter |
+| expense / income | despesa / receita | gasto / ingreso | dépense / revenu |
+| sync | sincronização | sincronización | synchronisation |
+| Settings | Configurações | Configuración (es-ES Ajustes) | Paramètres |
 
 ## Decisions
 

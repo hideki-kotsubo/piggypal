@@ -590,5 +590,9 @@
     "cat-personal-education": "Education",
     "cat-personal-childcare": "Childcare",
     "cat-salary": "Salary"
+  },
+  "device": {
+    "android": "Android device",
+    "generic": "This device"
   }
 }
