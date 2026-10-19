@@ -86,8 +86,7 @@ API is paid. Ayrshare (one `POST /api/post` with `platforms`,
 `mediaUrls`, `scheduleDate`; Profile-Key per extra account) does this
 work for us. Swapping to Publer, Buffer or another service means rewriting
 `schedule()` in `publish.mts` and nothing else. Media must be at public
-https URLs: upload `marketing/out/posts/` to an Azure Storage container
-(see "Hosting the images") and set `MEDIA_BASE_URL`. **The adapter is
+https URLs: see "Hosting the images" (D281). **The adapter is
 untested**: no account existed when it was written. Do the first `--send`
 with one post and check it in Ayrshare's dashboard.
 
@@ -132,15 +131,49 @@ before anything else.
 
 ## Hosting the images
 
-Example with Azure Storage (the user's cloud). One-time setup: a storage
-account with a public-read container named `social`. Then, after each
-compose:
+**D281 — Images are served from `social.myflowtab.com`.** The scheduling
+API takes public `https://` links, not uploads, and the networks fetch the
+image from the link when posting. A subdomain on the production server
+serving a plain folder (no git checkout) keeps them apart from `website/`,
+so a website deploy can't remove them, gets its own cache and robots
+headers, and can move to a bucket or CDN later by changing DNS only.
+Generated images are never committed. Supersedes the Azure Storage
+example this section had before (2026-10-19).
+
+One-time setup on the production server:
+
+1. DNS: `social.myflowtab.com` → the production server.
+2. `mkdir -p /var/www/social` and an nginx server block:
+
+   ```
+   server {
+       server_name social.myflowtab.com;
+       root /var/www/social;
+       autoindex off;
+       location / {
+           try_files $uri =404;
+           add_header X-Robots-Tag "noindex" always;
+           add_header Cache-Control "public, max-age=31536000, immutable";
+       }
+   }
+   ```
+
+3. Certificate: `certbot --nginx -d social.myflowtab.com`. Plain http is
+   rejected by the networks.
+
+After each compose, from the machine that ran it:
 
 ```
-az storage blob upload-batch --account-name <account> --destination social --source marketing/out/posts --overwrite
+rsync -av marketing/out/posts/ <user>@<prod-server>:/var/www/social/
 ```
 
-`MEDIA_BASE_URL=https://<account>.blob.core.windows.net/social`
+`MEDIA_BASE_URL=https://social.myflowtab.com`. `publish.mts` checks every
+image with a HEAD request before scheduling.
+
+`immutable` means an image must never change at the same URL: to fix an
+image after uploading it, rename the post file (new id, new URL) or drop
+`immutable`. Posts already published don't matter, the networks keep
+their own copy. A domain move adds this host to docs/61's checklist.
 
 ## Release checklist addition
 
