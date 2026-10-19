@@ -270,4 +270,16 @@ describe('categories across languages (docs/73 D270)', () => {
   it('matches built-in keywords as whole words only', () => {
     expect(parse('20 business lunch', 'en').categoryId).toBe('cat-food-dining');
   });
+
+  it('never reads a keyword inside the amount', () => {
+    // "99" is a starter Rideshare keyword (the ride app); it used to match
+    // inside these prices and make them ambiguous.
+    expect(parse('netflix 16.99', 'en').categoryId).toBe('cat-recreation-movies');
+    expect(parse('coffee 9.99', 'en').categoryId).toBe('cat-food-coffee');
+    expect(parse('gasolina 199', 'pt-BR').categoryId).toBe('cat-transport-fuel');
+    // The ride app itself still matches when it isn't the amount.
+    const ride = parse('23,50 no 99', 'pt-BR');
+    expect(ride.amountCents).toBe(2350);
+    expect(ride.categoryId).toBe('cat-transport-rideshare');
+  });
 });
