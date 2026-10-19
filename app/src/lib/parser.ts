@@ -429,7 +429,21 @@ function matchCategory(textLower: string, ctx: ParserContext, spans: Span[]): st
       for (const w of words) if (!vocab.has(w)) vocab.set(w, { categoryId, wholeWord: true });
     }
   }
-  const find = (keyword: string, wholeWord: boolean) => (wholeWord ? findWord(textLower, keyword) : textLower.indexOf(keyword));
+  // Text already read as the amount or date can't also be a keyword: the
+  // starter keyword "99" (the ride app) used to match inside "16.99",
+  // making every price ending in 99 ambiguous with Rideshare.
+  const claimed = [...spans];
+  const free = (idx: number, len: number) => !claimed.some(([s, e]) => idx < e && idx + len > s);
+  const find = (keyword: string, wholeWord: boolean) => {
+    if (wholeWord) {
+      const idx = findWord(textLower, keyword);
+      return idx !== -1 && free(idx, keyword.length) ? idx : -1;
+    }
+    for (let idx = textLower.indexOf(keyword); idx !== -1; idx = textLower.indexOf(keyword, idx + 1)) {
+      if (free(idx, keyword.length)) return idx;
+    }
+    return -1;
+  };
 
   const matched = new Set<string>();
   for (const [keyword, { categoryId, wholeWord }] of vocab) {
