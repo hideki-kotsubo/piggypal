@@ -1,0 +1,7 @@
+{
+  "_comment": "docs/74 D273/D278: which account each language publishes to. null = no account yet, that language's approved posts are skipped. profileKeyEnv names the env var holding the scheduling service's profile key for a secondary account (unset = the main account). time is local post time in timeZone.",
+  "en": { "profileKeyEnv": null, "time": "09:00", "timeZone": "America/Vancouver" },
+  "pt-BR": null,
+  "es": null,
+  "fr": null
+}
