@@ -72,6 +72,9 @@ server and DNS:
   native apps' Associated Domains / App Links must name it too.
 - Old links: redirect the old domain to the new one, since magic-link
   emails already sent point at it.
+- `social.<domain>` (docs/74 D281): DNS, nginx block and certificate for
+  the new name, and `MEDIA_BASE_URL` for posts not yet scheduled. Keep the
+  old host serving: already-scheduled posts point at it until they go out.
 
 ## Verified
 
