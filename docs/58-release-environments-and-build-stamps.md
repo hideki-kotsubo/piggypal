@@ -37,7 +37,7 @@ traceability without any of that.
 | | Dev | Staging | Production |
 |---|---|---|---|
 | Where | this machine | this machine | its own server |
-| Domain | `app-beta.codexbase.dev` | `app.codexbase.dev` | `app.myflowtab.com` or `app.flowtab.it` (not decided) |
+| Domain | `app-beta.codexbase.dev` | `app.codexbase.dev` | `app.myflowtab.com` (final, docs/61 D282) |
 | Code | any branch | `main`, at the new tag | a release tag, checked out |
 
 A release goes: merge to `main` → `scripts/deploy-api.sh` /
