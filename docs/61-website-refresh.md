@@ -15,6 +15,7 @@ the old `piggypal` host. Refreshed 2026-10-09.
 | D231 | Pricing shows the free plan as what's real today and **Flowtab Sync** as "coming later", no price | Matches docs/01's free/paid split without claiming billing or AI entry that don't exist |
 | D232 | Every feature claim on the site must be true of the app today | The old page had drifted into describing mockups |
 | D233 | The website lives at `<domain>` and the app at `app.<domain>`. The domain is `myflowtab.com` today (app: `https://app.myflowtab.com/`), and may move to `flowtab.it` | One search-and-replace switches the repo (below); the user confirmed the convention 2026-10-09 |
+| D282 | **`myflowtab.com` is final** (2026-10-19, superseding D233's "may move to `flowtab.it`"). `noindex` removed from every page; each page has a canonical link to the bare domain; `robots.txt` and `sitemap.xml` added; the copy now says four languages, not two | `.it` is geo-targeted to Italy by search engines, reads as Italian (not one of the app's languages) and, as far as we know, requires EU/EEA residence to register; `.com` is neutral everywhere. flowtab.com/.app/.ca are owned by others. Deciding before the store listings and social bios go up avoids redirecting every one of them later |
 
 ## What the page is now
 
@@ -49,6 +50,8 @@ the old `piggypal` host. Refreshed 2026-10-09.
   `docs/logo/`, like the app's brand script (docs/60).
 
 ## Switching the domain
+
+Kept for reference: D282 settled on `myflowtab.com`.
 
 ```bash
 sed -i 's#app\.myflowtab\.com#app.NEW-DOMAIN#g; s#myflowtab\.com#NEW-DOMAIN#g' \
