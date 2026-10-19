@@ -12,9 +12,14 @@
     "build": "npm run build -w app && npm run build -w api",
     "postinstall": "node scripts/link-capacitor-plugins.mjs",
     "test": "npm run test -w app",
-    "changelog": "tsx scripts/build-changelog.mts"
+    "changelog": "tsx scripts/build-changelog.mts",
+    "social:screenshots": "tsx scripts/social/screenshots.mts",
+    "social:compose": "tsx scripts/social/compose.mts",
+    "social:from-changelog": "tsx scripts/social/from-changelog.mts",
+    "social:publish": "tsx scripts/social/publish.mts"
   },
   "devDependencies": {
+    "playwright": "^1.62.1",
     "tsx": "^4.23.11"
   },
   "allowScripts": {

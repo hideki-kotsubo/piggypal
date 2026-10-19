@@ -18,6 +18,11 @@ How to write an entry (docs/59):
 
 
 
+## Unreleased
+
+- Fixed: prices ending in 99, like "netflix 16.99" or "café 9,99",
+  went to your inbox as uncategorized instead of their category.
+
 ## 0.7.0 — 2026-10-16
 
 - **"Dollars" means dollars.** Saying "15 dollars" or typing "$15" no
