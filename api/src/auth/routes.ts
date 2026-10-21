@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from 'express';
+import { randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import { pool } from '../db.js';
 import { signAccessToken } from '../jwt.js';
@@ -154,7 +155,15 @@ async function completeSignIn(
     userId = existing.rows[0].id;
     isNewUser = false;
   } else {
-    userId = localUserId;
+    // docs/75 D285: a device that signed out keeping its data still
+    // carries that account's id (the owner's users.id, or a household
+    // member's profile id) — reusing it would collide with that row, so
+    // the new account gets a fresh one and the app sees userId !== its
+    // localUserId (its data belongs to another account).
+    const taken = await client.query('SELECT 1 FROM users WHERE id = $1 UNION ALL SELECT 1 FROM profiles WHERE id = $1', [
+      localUserId,
+    ]);
+    userId = taken.rows[0] ? randomUUID() : localUserId;
     isNewUser = true;
     await client.query('INSERT INTO users (id, email) VALUES ($1, $2)', [userId, link.email]);
     // docs/72 D260: the owner signing up again reuses the deleted id.

@@ -113,9 +113,63 @@ export function useAuthAccount(): [AuthAccount | null, (account: AuthAccount | n
   function setAccount(next: AuthAccount | null) {
     writeAuthAccount(next);
     if (!next) setSessionExpired(false);
-    if (next) setDeletedNotice(null);
+    if (next) {
+      setDeletedNotice(null);
+      // docs/75 D284: a finished sign-in either reconnected the kept
+      // account or erased its data on the way in.
+      setKeptData(null);
+    }
   }
   return [account, setAccount];
+}
+
+// docs/75 D283/D284 — "Disconnect and keep data": signed out, but this
+// device's rows still belong to that account on the server. Remembered so
+// signing in again can tell the same account (reconnect) from a different
+// one (erase first — merging would re-upload rows another account owns).
+// Not set for docs/72 D260's deleted account: its server rows are gone,
+// so its local data is unowned and merges like free-tier data.
+const KEPT_DATA_KEY = 'flowtab:kept-data-account';
+let keptDataRaw: string | null | undefined;
+const keptDataListeners = new Set<() => void>();
+let cachedKeptData: AuthAccount | null = null;
+
+export function getKeptData(): AuthAccount | null {
+  if (keptDataRaw === undefined) {
+    try {
+      keptDataRaw = localStorage.getItem(KEPT_DATA_KEY);
+    } catch {
+      keptDataRaw = null;
+    }
+    try {
+      cachedKeptData = keptDataRaw ? (JSON.parse(keptDataRaw) as AuthAccount) : null;
+    } catch {
+      cachedKeptData = null;
+    }
+  }
+  return cachedKeptData;
+}
+
+export function setKeptData(next: AuthAccount | null): void {
+  const raw = next ? JSON.stringify(next) : null;
+  if (getKeptData() === null && raw === null) return;
+  keptDataRaw = raw;
+  cachedKeptData = next;
+  try {
+    if (raw === null) localStorage.removeItem(KEPT_DATA_KEY);
+    else localStorage.setItem(KEPT_DATA_KEY, raw);
+  } catch {
+    // Without storage the marker can't outlive a reload; the sign-in
+    // screen's server-side check (D285) still catches the dangerous case.
+  }
+  for (const listener of keptDataListeners) listener();
+}
+
+export function useKeptData(): AuthAccount | null {
+  return useSyncExternalStore((listener) => {
+    keptDataListeners.add(listener);
+    return () => keptDataListeners.delete(listener);
+  }, getKeptData);
 }
 
 // docs/72 D260 — the account this device was signed in to was deleted from

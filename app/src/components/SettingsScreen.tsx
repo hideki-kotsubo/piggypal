@@ -18,9 +18,11 @@ import {
   getRecentPendingEmail,
   requestMagicLink,
   setDeletedNotice,
+  setKeptData,
   signOut,
   useAuthAccount,
   useDeletedNotice,
+  useKeptData,
   useSessionExpired,
 } from '../lib/auth';
 import { useInstallPrompt } from '../lib/installPrompt';
@@ -44,6 +46,8 @@ export function SettingsScreen() {
   const syncStatus = useSyncStatus();
   const sessionExpired = useSessionExpired();
   const deletedNotice = useDeletedNotice();
+  const keptData = useKeptData();
+  const [signOutOpen, setSignOutOpen] = useState(false);
   const skippedSyncOps = useSkippedSyncOps();
   const navigate = useNavigate();
   const install = useInstallPrompt();
@@ -75,11 +79,23 @@ export function SettingsScreen() {
   // way to sign out or force a fresh connection attempt — Settings just
   // showed "signed in as ___" next to a permanently "Not connected" cloud
   // sync with no recourse but clearing browser storage by hand.
-  async function handleSignOut() {
+  //
+  // docs/75 D283: signing out erases this device by default (the server
+  // keeps everything that synced); D284's "keep data" only disconnects,
+  // and remembers which account the data belongs to. The server sign-out
+  // goes first, while the refresh token is still there to revoke.
+  async function handleSignOut(keepData: boolean) {
+    if (!keepData) {
+      await signOut();
+      await store.resetLocalData();
+      return;
+    }
     const knownEmail = authAccount?.email ?? '';
     await disconnectSync();
     await signOut();
+    setKeptData(authAccount);
     setAuthAccount(null);
+    setSignOutOpen(false);
     setEmailInput(knownEmail);
   }
 
@@ -275,9 +291,31 @@ export function SettingsScreen() {
               </span>
             </div>
           )}
-          <button className="settings-row settings-row-danger" onClick={() => void handleSignOut()}>
+          <button className="settings-row settings-row-danger" onClick={() => setSignOutOpen((v) => !v)}>
             <span>{t('settings.signOut')}</span>
+            <span className="settings-row-arrow">{signOutOpen ? '⌄' : '›'}</span>
           </button>
+          {signOutOpen && (
+            <div className="settings-field signout-panel">
+              <p className="delete-account-text">{t('signOut.explain')}</p>
+              {/* D287 — erasing also drops the upload queue, so anything
+                  still waiting there would be lost for good. */}
+              {pendingUploads > 0 && (
+                <p className="delete-account-text signout-warn">{t('signOut.pending', { count: pendingUploads })}</p>
+              )}
+              {pendingUploads > 0 && online && !sessionExpired && (
+                <button type="button" className="chip ghost" disabled={syncing} onClick={() => void handleSyncNow()}>
+                  {syncing ? t('settings.syncing') : t('settings.syncNow')}
+                </button>
+              )}
+              <button className="save-btn delete-account-btn" onClick={() => void handleSignOut(false)}>
+                {t('signOut.erase')}
+              </button>
+              <button type="button" className="chip ghost signout-keep" onClick={() => void handleSignOut(true)}>
+                {t('signOut.keep')}
+              </button>
+            </div>
+          )}
           {/* docs/72 D257 — App Review 5.1.1(v). */}
           <Link to="/settings/delete-account" className="settings-row settings-row-danger">
             <span>{t('settings.deleteAccount')}</span>
@@ -315,6 +353,13 @@ export function SettingsScreen() {
         </div>
       ) : (
         <div className="settings-field">
+          {/* docs/75 D284/D285 — signed out keeping data: only that
+              account can pick it back up; any other one erases it first. */}
+          {keptData && (
+            <p className="delete-account-text">
+              {keptData.email ? t('signOut.keptNote', { email: keptData.email }) : t('signOut.keptNoteAnon')}
+            </p>
+          )}
           <label className="field-label">
             {t('settings.enableSync')}
             <input
@@ -325,13 +370,22 @@ export function SettingsScreen() {
               onChange={(e) => setEmailInput(e.target.value)}
             />
           </label>
-          <button
-            className="save-btn"
-            onClick={() => void sendMagicLink()}
-            disabled={!emailInput.trim() || linkState === 'sending'}
-          >
-            {linkState === 'sending' ? t('settings.sending') : t('settings.sendLink')}
-          </button>
+          {keptData?.email && emailInput.trim() && !sameEmail(emailInput, keptData.email) ? (
+            <>
+              <p className="delete-account-text signout-warn">{t('signOut.otherEmail', { email: keptData.email })}</p>
+              <button className="save-btn delete-account-btn" onClick={resetData}>
+                {t('signOut.eraseNow')}
+              </button>
+            </>
+          ) : (
+            <button
+              className="save-btn"
+              onClick={() => void sendMagicLink()}
+              disabled={!emailInput.trim() || linkState === 'sending'}
+            >
+              {linkState === 'sending' ? t('settings.sending') : t('settings.sendLink')}
+            </button>
+          )}
           {linkState === 'error' && <p className="qr-caption">{linkError}</p>}
           {/* docs/71 D255 — no email needed when another device is
               already signed in to the account. */}
@@ -573,6 +627,11 @@ export function SettingsScreen() {
       </div>
     </main>
   );
+}
+
+// Emails are stored lowercased by the server; typed ones may not be.
+function sameEmail(a: string, b: string): boolean {
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
 }
 
 // "2 people · 3 devices" for the Household row.

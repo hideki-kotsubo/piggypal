@@ -16,7 +16,16 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
+## Unreleased
 
+- **Signing out now erases Flowtab's data from this device.** Everything
+  that synced stays in your account and comes back when you sign in
+  again. To sign out but keep the data here, choose **Disconnect and
+  keep data**.
+- Before erasing, Flowtab tells you if some changes haven't synced yet.
+- Signing in to a different account on a device that still holds
+  another account's data now erases that data first, instead of mixing
+  the two accounts.
 
 ## 0.7.1 — 2026-10-19
 

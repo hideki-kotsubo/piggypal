@@ -6,7 +6,16 @@ import { connectSync, db } from '../lib/db';
 import { formatDateTime, nowUtc } from '../lib/format';
 import { getLocalUserId } from '../lib/identity';
 import { isUntouchedSeedAccount, referencedAccountIds } from '../lib/seed';
-import { claimDeviceLink, fetchServerSnapshot, takePendingEmail, useAuthAccount, verifyMagicCode, verifyMagicLink } from '../lib/auth';
+import {
+  claimDeviceLink,
+  fetchServerSnapshot,
+  getKeptData,
+  signOut,
+  takePendingEmail,
+  useAuthAccount,
+  verifyMagicCode,
+  verifyMagicLink,
+} from '../lib/auth';
 import { isIosDevice, isRunningInstalled } from '../lib/installPrompt';
 import { useStore } from '../lib/store';
 import { accountName, categoryLabel } from '../lib/starterLabels';
@@ -58,6 +67,7 @@ type Step =
   | { kind: 'confirm'; credential: Credential }
   | { kind: 'verifying' }
   | { kind: 'profile-picker'; userId: string; profiles: Profile[]; existingAccounts: number; existingTransactions: number }
+  | { kind: 'other-account'; userId: string; isNewUser: boolean; keptEmail: string | null }
   | { kind: 'syncing' }
   | {
       kind: 'merge-review';
@@ -142,6 +152,18 @@ export function AuthVerifyScreen() {
             ? await verifyMagicCode(credential.email, credential.code)
             : await claimDeviceLink(credential.token);
       claimedEmailRef.current = result.email ?? null;
+
+      // docs/75 D285: this device's data belongs to a different account
+      // that still exists — kept on sign-out (D284), or, for a device
+      // signed out before that marker existed, revealed by the server
+      // having to give a new account a fresh id (its localUserId was
+      // taken). Merging would re-upload rows that account owns, so the
+      // only way in is erasing them here first.
+      const kept = getKeptData();
+      if ((kept && kept.userId !== result.userId) || (result.isNewUser && result.userId !== getLocalUserId())) {
+        setStep({ kind: 'other-account', userId: result.userId, isNewUser: result.isNewUser, keptEmail: kept?.email ?? null });
+        return;
+      }
 
       // docs/05 D14: only the second-device-joins-an-existing-account
       // case can possibly need the picker/merge sequence below — a
@@ -323,6 +345,26 @@ export function AuthVerifyScreen() {
     await finish(userId);
   }
 
+  // docs/75 D285 — a brand-new account has nothing to download, so it
+  // gets the starter data and its owner profile, like any first sign-up.
+  async function eraseOtherAccountAndFinish(userId: string, isNewUser: boolean) {
+    setStep({ kind: 'syncing' });
+    try {
+      await store.discardAndAdoptAccountId(userId, { seedStarter: isNewUser });
+      if (isNewUser) store.addProfile({ id: userId, displayName: t('auth.defaultName'), updatedAt: nowUtc(), deletedAt: null });
+      await finish(userId);
+    } catch (err) {
+      setStep({ kind: 'error', message: err instanceof Error ? err.message : t('auth.failed') });
+    }
+  }
+
+  // The new session already exists server-side; backing out revokes it,
+  // leaving the kept data and its account exactly as they were.
+  async function cancelOtherAccount() {
+    await signOut();
+    navigate('/settings');
+  }
+
   const allManualResolved = (step: Extract<Step, { kind: 'merge-review' }>) => {
     const catIds = step.categoryMatch.manual.map((m) => m.local.id);
     const acctIds = step.accountMatch?.manual.map((m) => m.local.id) ?? [];
@@ -370,6 +412,20 @@ export function AuthVerifyScreen() {
           onPickNew={(displayName) => void choosePickedIdentity(step.userId, { kind: 'new', displayName })}
           onDiscard={() => void discardAndFinish(step.userId)}
         />
+      )}
+
+      {step.kind === 'other-account' && (
+        <div className="qr-stage">
+          <p className="qr-caption">
+            {step.keptEmail ? t('auth.otherAccountData', { email: step.keptEmail }) : t('auth.otherAccountDataAnon')}
+          </p>
+          <button className="save-btn delete-account-btn" onClick={() => void eraseOtherAccountAndFinish(step.userId, step.isNewUser)}>
+            {t('auth.eraseAndContinue')}
+          </button>
+          <button className="chip ghost" onClick={() => void cancelOtherAccount()}>
+            {t('common.cancel')}
+          </button>
+        </div>
       )}
 
       {step.kind === 'merge-review' && (
