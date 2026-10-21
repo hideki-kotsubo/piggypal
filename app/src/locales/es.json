@@ -495,7 +495,22 @@
     "theirs": "Del otro",
     "edited": "editado {{date}}",
     "keepMine": "Conservar el mío",
-    "keepTheirs": "Conservar el del otro"
+    "keepTheirs": "Conservar el del otro",
+    "otherAccountData": "Este dispositivo tiene datos de {{email}}, otra cuenta. Iniciar sesión aquí los borra de este dispositivo; siguen en esa cuenta.",
+    "otherAccountDataAnon": "Este dispositivo tiene datos de otra cuenta. Iniciar sesión aquí los borra de este dispositivo; siguen en esa cuenta.",
+    "eraseAndContinue": "Borrar e iniciar sesión"
+  },
+  "signOut": {
+    "explain": "Cerrar sesión borra los datos de Flowtab de este dispositivo. Todo lo que ya se sincronizó sigue en tu cuenta y vuelve cuando inicies sesión de nuevo.",
+    "pending_one": "{{count}} cambio aún no se ha sincronizado y se perderá si borras ahora.",
+    "pending_many": "{{count}} cambios aún no se han sincronizado y se perderán si borras ahora.",
+    "pending_other": "{{count}} cambios aún no se han sincronizado y se perderán si borras ahora.",
+    "erase": "Cerrar sesión y borrar este dispositivo",
+    "keep": "Desconectar y conservar los datos",
+    "keptNote": "Sesión cerrada. Este dispositivo todavía tiene datos de {{email}}: inicia sesión con ese correo para volver a sincronizarlos.",
+    "keptNoteAnon": "Sesión cerrada. Este dispositivo todavía tiene datos de tu cuenta anterior: vuelve a iniciar sesión en ella para sincronizar.",
+    "otherEmail": "Este dispositivo tiene datos de {{email}}. Para usar otro correo, bórralos primero de este dispositivo; siguen en esa cuenta.",
+    "eraseNow": "Borrar los datos de este dispositivo"
   },
   "schedule": {
     "weekly": "Semanal",

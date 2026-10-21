@@ -474,7 +474,21 @@
     "theirs": "Theirs",
     "edited": "edited {{date}}",
     "keepMine": "Keep mine",
-    "keepTheirs": "Keep theirs"
+    "keepTheirs": "Keep theirs",
+    "otherAccountData": "This device has data from {{email}}, a different account. Signing in here erases it from this device — it stays in that account.",
+    "otherAccountDataAnon": "This device has data from a different account. Signing in here erases it from this device — it stays in that account.",
+    "eraseAndContinue": "Erase and sign in"
+  },
+  "signOut": {
+    "explain": "Signing out erases Flowtab's data from this device. Everything that has synced stays in your account and comes back when you sign in again.",
+    "pending_one": "{{count}} change hasn't synced yet and will be lost if you erase now.",
+    "pending_other": "{{count}} changes haven't synced yet and will be lost if you erase now.",
+    "erase": "Sign out and erase this device",
+    "keep": "Disconnect and keep data",
+    "keptNote": "Signed out. This device still has data from {{email}} — sign in with that email to sync it again.",
+    "keptNoteAnon": "Signed out. This device still has data from your previous account — sign in to it again to sync.",
+    "otherEmail": "This device has data from {{email}}. To use a different email, erase it from this device first — it stays in that account.",
+    "eraseNow": "Erase this device's data"
   },
   "schedule": {
     "weekly": "Weekly",

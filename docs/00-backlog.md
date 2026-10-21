@@ -918,6 +918,13 @@ it needs doing.
       Deferred — parked per user 2026-08-11, revisit later.
 ## ✅ Done
 
+- [x] Sign-out erases the device by default (docs/75, 2026-10-20):
+      **Disconnect and keep data** as the second option, remembered per
+      account (D283/D284); another account's data is erased, never
+      merged, and the api no longer reuses a taken `localUserId` as a new
+      `users.id` (D285); a deleted account's data stays mergeable (D286);
+      unsynced changes are called out before erasing (D287).
+
 - [x] docs/48's household profiles & devices, finished by docs/71
       (2026-10-14). docs/48 itself was mostly built 2026-08-30 (schema,
       sync, profile picker, rename, read-only devices list; this entry

@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import type { ReactNode } from 'react';
 import type { Transaction as SqliteTransaction } from '@powersync/web';
 import { connectSync, db } from './db';
-import { clearAuthAccount, getAuthAccount } from './auth';
+import { clearAuthAccount, getAuthAccount, setKeptData } from './auth';
 import { clearLocalUserId, getDeviceId, getLocalUserId, setLocalUserId } from './identity';
 import { clearPairedPeers } from './peers';
 import { nowUtc, setDollarCurrenciesInUse } from './format';
@@ -721,8 +721,10 @@ interface StoreApi extends StoreState {
   // local data — clears PowerSync's pending-upload queue too, so none of
   // the discarded demo rows ever get uploaded) and adopts newId as this
   // device's identity outright, no row-rewrite needed since nothing's
-  // left to rewrite.
-  discardAndAdoptAccountId: (newId: string) => Promise<void>;
+  // left to rewrite. docs/75 D285: seedStarter for a brand-new account,
+  // which has nothing to download — an existing one never gets seeded
+  // (docs/45 #7).
+  discardAndAdoptAccountId: (newId: string, options?: { seedStarter?: boolean }) => Promise<void>;
   // Manual, user-triggered record-level merge (backlog 2026-08-23) —
   // distinct from applySignInMergePlan above: no matching/reconciliation
   // step, the user has already picked which rows are duplicates. Folds
@@ -1421,9 +1423,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         });
       },
 
-      async discardAndAdoptAccountId(newId) {
+      async discardAndAdoptAccountId(newId, options) {
         await db.disconnectAndClear();
+        // Same as resetLocalData below: nothing left that a paired peer
+        // or a kept account (docs/75) could refer to.
+        clearPairedPeers();
+        setKeptData(null);
         setLocalUserId(newId);
+        if (options?.seedStarter) await seedIfEmpty();
         // docs/48 D177 — discarding directly unifies this device's
         // identity with the account (setLocalUserId above) regardless of
         // who's physically using it — there's no pre-existing personal
@@ -1458,6 +1465,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         // state. A reset device is signed out, full stop; signing back in
         // mints a real new session same as any other fresh device would.
         clearAuthAccount();
+        setKeptData(null);
         // docs/46 — a real bug found testing this for real: a device that
         // had ever adopted a real account's id (any earlier "Merge into my
         // account") kept that id across every subsequent reset, so its

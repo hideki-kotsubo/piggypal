@@ -495,7 +495,22 @@
     "theirs": "Do outro",
     "edited": "editado {{date}}",
     "keepMine": "Manter o meu",
-    "keepTheirs": "Manter o do outro"
+    "keepTheirs": "Manter o do outro",
+    "otherAccountData": "Este aparelho tem dados de {{email}}, outra conta. Entrar aqui apaga esses dados deste aparelho — eles continuam naquela conta.",
+    "otherAccountDataAnon": "Este aparelho tem dados de outra conta. Entrar aqui apaga esses dados deste aparelho — eles continuam naquela conta.",
+    "eraseAndContinue": "Apagar e entrar"
+  },
+  "signOut": {
+    "explain": "Sair apaga os dados do Flowtab deste aparelho. Tudo o que já foi sincronizado continua na sua conta e volta quando você entrar de novo.",
+    "pending_one": "{{count}} alteração ainda não foi sincronizada e será perdida se você apagar agora.",
+    "pending_many": "{{count}} alterações ainda não foram sincronizadas e serão perdidas se você apagar agora.",
+    "pending_other": "{{count}} alterações ainda não foram sincronizadas e serão perdidas se você apagar agora.",
+    "erase": "Sair e apagar este aparelho",
+    "keep": "Desconectar e manter os dados",
+    "keptNote": "Você saiu. Este aparelho ainda tem dados de {{email}} — entre com esse e-mail para voltar a sincronizar.",
+    "keptNoteAnon": "Você saiu. Este aparelho ainda tem dados da sua conta anterior — entre nela de novo para sincronizar.",
+    "otherEmail": "Este aparelho tem dados de {{email}}. Para usar outro e-mail, apague-os deste aparelho primeiro — eles continuam naquela conta.",
+    "eraseNow": "Apagar os dados deste aparelho"
   },
   "schedule": {
     "weekly": "Semanal",

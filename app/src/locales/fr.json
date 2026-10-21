@@ -496,7 +496,22 @@
     "theirs": "L’autre",
     "edited": "modifié {{date}}",
     "keepMine": "Garder le mien",
-    "keepTheirs": "Garder l’autre"
+    "keepTheirs": "Garder l’autre",
+    "otherAccountData": "Cet appareil contient des données de {{email}}, un autre compte. Vous connecter ici les efface de cet appareil — elles restent dans ce compte.",
+    "otherAccountDataAnon": "Cet appareil contient des données d’un autre compte. Vous connecter ici les efface de cet appareil — elles restent dans ce compte.",
+    "eraseAndContinue": "Effacer et se connecter"
+  },
+  "signOut": {
+    "explain": "Se déconnecter efface les données de Flowtab de cet appareil. Tout ce qui a été synchronisé reste dans votre compte et revient quand vous vous reconnectez.",
+    "pending_one": "{{count}} modification n’a pas encore été synchronisée et sera perdue si vous effacez maintenant.",
+    "pending_many": "{{count}} modifications n’ont pas encore été synchronisées et seront perdues si vous effacez maintenant.",
+    "pending_other": "{{count}} modifications n’ont pas encore été synchronisées et seront perdues si vous effacez maintenant.",
+    "erase": "Se déconnecter et effacer cet appareil",
+    "keep": "Déconnecter et garder les données",
+    "keptNote": "Déconnecté. Cet appareil contient encore des données de {{email}} — connectez-vous avec cette adresse pour les synchroniser à nouveau.",
+    "keptNoteAnon": "Déconnecté. Cet appareil contient encore des données de votre compte précédent — reconnectez-vous à ce compte pour synchroniser.",
+    "otherEmail": "Cet appareil contient des données de {{email}}. Pour utiliser une autre adresse, effacez-les d’abord de cet appareil — elles restent dans ce compte.",
+    "eraseNow": "Effacer les données de cet appareil"
   },
   "schedule": {
     "weekly": "Hebdomadaire",
