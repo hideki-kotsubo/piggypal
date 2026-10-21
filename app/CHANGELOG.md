@@ -16,7 +16,7 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
-## Unreleased
+## 0.8.0 — 2026-10-21
 
 - **Signing out now erases Flowtab's data from this device.** Everything
   that synced stays in your account and comes back when you sign in
