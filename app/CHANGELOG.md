@@ -17,6 +17,15 @@ How to write an entry (docs/59):
 -->
 
 
+
+## Unreleased
+
+- **日本語, 한국어, 中文（简体） and 中文（繁體）**: Flowtab's screens,
+  starter categories, voice entry, the sign-in email and the iPhone
+  permission prompts are now in Japanese, Korean and Chinese. Typing or
+  saying an entry in these languages understands amounts written as
+  digits; dates, categories and currency words are coming next.
+
 ## 0.8.1 — 2026-10-22
 
 - Fixed: the amount keypad treated **yen and won** as if they had
