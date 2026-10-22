@@ -19,7 +19,7 @@ How to write an entry (docs/59):
 
 
 
-## Unreleased
+## 0.10.1 — 2026-10-22
 
 - In browsers without voice input (like Firefox), the mic button now
   shows, dimmed, and tells you which browsers support it.
