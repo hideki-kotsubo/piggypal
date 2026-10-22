@@ -18,6 +18,15 @@ How to write an entry (docs/59):
 
 
 
+
+## Unreleased
+
+- **Japanese entries are understood**: "昨日スタバでコーヒー500円",
+  "家賃3万円" or "先週の月曜 映画 1800円" fill in the amount in yen, the
+  category, the date and the shop.
+- Fixed: amounts with a thousands separator ("1,500") were read as 1.50.
+- Fixed: "salary 3000" lost its Salary category.
+
 ## 0.9.0 — 2026-10-22
 
 - **日本語, 한국어, 中文（简体） and 中文（繁體）**: Flowtab's screens,

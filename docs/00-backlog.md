@@ -19,8 +19,8 @@ it needs doing.
   - [x] Step 1: app text in ja, ko, zh-Hans, zh-Hant, email, iPhone
         prompts, taglines, voice tags (2026-10-22).
   - [ ] User: native-speaker review of all four before announcing them.
-  - [ ] Step 2: Japanese parser (no-spaces matching, 万 numbers, 円,
-        昨日/きのう…).
+  - [x] Step 2: Japanese parser (no-spaces matching, 万 numbers, 円,
+        昨日/きのう…), 2026-10-22.
   - [ ] Step 3: Korean and Chinese parsers (particles, 원; ¥ = yuan in
         Chinese, 块/元/毛, both scripts).
   - [ ] Decide: fresh-install default currency from the device region
