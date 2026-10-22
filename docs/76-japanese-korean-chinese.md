@@ -2,8 +2,8 @@
 
 2026-10-22. Asked for by the user after docs/73's four languages were live.
 Step 1, built the same day on branch `feat/i18n-cjk`, covers everything except
-the parser. Steps 2 and 3 (the parser) are planned below, not built. Not
-released.
+the parser. Step 2 (Japanese parser) was built the same day too; step 3
+(Korean, Chinese) is planned below, not built.
 
 ## Plan agreed with the user
 
@@ -83,13 +83,54 @@ units".
   (毎月22日 / 每月22日).
 - The email's language choice was checked for 11 tags with tsx.
 
+## Step 2: Japanese parser (2026-10-22, `feat/parser-japanese`)
+
+- **Japanese pack** in `parserVocab.ts`:
+  - dates and times: 今日/きょう/本日, 昨日/きのう, 一昨日/おととい; weekdays
+    (水曜日 = the most recent one) and 先週の月曜 (the previous calendar
+    week's, weeks starting Monday); 8月16日 / 2026年8月16日; 15時10分 /
+    午後3時半, with 時間 (a duration) excluded;
+  - money: income words (給料, 給与, 入金, ボーナス…); currency words
+    円 → JPY, 米ドル → USD, カナダドル → CAD, ユーロ, レアル, and plain ドル =
+    "some dollar" (docs/73 D272);
+  - about 70 category keywords (スーパー, ランチ, コーヒー, タクシー, 家賃,
+    電気代…).
+- **Shared groundwork, ready for step 3:**
+  - New optional pack fields: `noSpaces`, `previousWeekWeekday`,
+    `numerals`, `amountCounters`, `merchantAfter`, `edgeParticles`.
+  - `findWord()` does a plain substring search for any phrase in a CJK
+    script.
+  - `extractCjkAmount()` reads 万/千/百/十 forms (3万円, 1万5千円, 千五百円,
+    1.5万円). It runs before the digit reader, but only takes a run that
+    is followed by a counter (円) or that mixes digits with a unit, so
+    一緒/十分 are left alone.
+  - Full-width ASCII and the ideographic space are normalized one
+    character for one, so spans still line up.
+  - The new-merchant guess also reads a katakana/Latin name before で
+    (ドトールで). The note keeps that lead-in, like "at Costco".
+  - Leftover particles (で, に, を…) are trimmed from the note's edges.
+- **Category matching:** a keyword whose every hit sits inside a longer
+  keyword of another category is dropped, so アイスコーヒー is Coffee and
+  アイス alone is Snacks. This applies to every language.
+- **Two fixes for every language**, found by the Japanese tests:
+  - "1,500" was read as 1.50. Groups of exactly three digits after a
+    separator are now thousands, and a final 1-2 digits are cents
+    ("1.500,50", "1,500.50").
+  - Since the "99" claimed-text fix, an income word that is also the
+    Salary keyword ("salary", 給料) lost its category, because direction
+    claimed it first. Category is now matched before direction.
+- **Checks:** 227 app tests, including 10 Japanese cases and the
+  thousands cases. In headless Chromium with a ja-JP device, through
+  the real entry box: 昨日ドトールでアイスコーヒー650円 → ￥650, Coffee,
+  yesterday, merchant ドトール (guessed); 家賃3万円 → ￥30,000, Rent;
+  先週の月曜 映画 1800円 → ￥1,800, Movies, the previous week's Monday.
+
 ## Known gaps
 
-- **The parser doesn't understand these languages yet** (steps 2-3).
-  Typed and spoken entries still save, and amounts written as digits
-  ("1500円", "5000원") are found, but the currency word, dates and
-  categories mostly aren't. "¥" still always means yen, which is wrong for
-  Chinese until step 3.
+- **Korean and Chinese aren't understood by the parser yet** (step 3).
+  Amounts written as digits are found, and Chinese 万/千 amounts already
+  read through the shared numerals once its pack lists them. "¥" still
+  always means yen, which is wrong for Chinese until step 3.
 - **A fresh install defaults to CAD** whatever the device region
   (`defaultCurrencyFor()`'s fallback). Japanese, Korean and Chinese users
   would want ￥/₩/¥ from the start. Raised with the user, not changed.

@@ -6,7 +6,7 @@
 // never English "Sept"; Portuguese "dos" is "of the", never Spanish two.
 // No React, no i18n — parser.ts stays a pure module.
 
-export type PackId = 'en' | 'pt' | 'es' | 'fr';
+export type PackId = 'en' | 'pt' | 'es' | 'fr' | 'ja';
 
 export interface LanguagePack {
   numbers: Record<string, number>;
@@ -25,7 +25,8 @@ export interface LanguagePack {
   months: Record<string, number>;
   // monthDay: "August 16, 2026"; dayDeMonth: "16 de agosto de 2026";
   // dayMonth: "16 août 2026" / "le 1er mai".
-  dateStyle: 'monthDay' | 'dayDeMonth' | 'dayMonth';
+  // cjk: 8月16日 / 2026年8月16日 (docs/76), months by number.
+  dateStyle: 'monthDay' | 'dayDeMonth' | 'dayMonth' | 'cjk';
   incomeTriggers: string[];
   // Single words right before a new merchant's name ("at Costco").
   merchantConnectors: string[];
@@ -42,6 +43,26 @@ export interface LanguagePack {
   // in Portuguese speech "$" is US dollars. In Spanish "$" is just as
   // often pesos (Mexico, Argentina…), so it means nothing there.
   dollarSign: { typed: 'family' | 'USD' | 'none'; speech: 'family' | 'USD' | 'none' };
+
+  // docs/76 — languages written without spaces between words. Their
+  // vocabulary matches as plain substrings: parser.ts's findWord skips the
+  // word-boundary check for any phrase in a CJK script.
+  noSpaces?: boolean;
+  // "<weekday> of last week" (先週の月曜): one capture group for the
+  // weekday, looked up in `weekdays`. Unlike `lastWeekday` ("the most
+  // recent Monday"), this is the previous calendar week's.
+  previousWeekWeekday?: string[];
+  // Numerals for amounts written with them or with mixed digits: 3万円,
+  // 1万5千円, 千五百円. `small` multiplies within a group (十百千),
+  // `large` closes a group (万億).
+  numerals?: { digits: Record<string, number>; small: Record<string, number>; large: Record<string, number> };
+  // A word right after a number that makes it an amount (円).
+  amountCounters?: string[];
+  // Particles right after a new merchant's name (スタバで): the name comes
+  // before them, unlike `merchantConnectors`.
+  merchantAfter?: string[];
+  // Particles trimmed off the edges of the leftover note, character-wise.
+  edgeParticles?: string[];
 }
 
 const W = '([a-zà-ÿ]+)';
@@ -208,17 +229,70 @@ export const PACKS: Record<PackId, LanguagePack> = {
     reserved: ['sept'],
     dollarSign: { typed: 'family', speech: 'family' },
   },
+
+  // docs/76 step 2. Speech recognizers write amounts as digits ("1500円",
+  // "3万円"), so `numerals` matters most for the mixed 万/千 forms.
+  ja: {
+    numbers: {},
+    numberJoiners: [],
+    articles: [],
+    today: ['今日', 'きょう', '本日'],
+    yesterday: ['昨日', 'きのう'],
+    // Checked before `yesterday`, which they contain.
+    dayBeforeYesterday: ['一昨日', 'おととい', 'おとつい'],
+    weekdays: { 月: 1, 火: 2, 水: 3, 木: 4, 金: 5, 土: 6, 日: 0 },
+    lastWeekday: ['(月|火|水|木|金|土|日)曜'],
+    previousWeekWeekday: ['先週の?(月|火|水|木|金|土|日)曜'],
+    months: {},
+    dateStyle: 'cjk',
+    incomeTriggers: ['給料', '給与', '収入', '入金', 'ボーナス', '賞与', '売上'],
+    merchantConnectors: [],
+    edgeFillers: [],
+    categoryKeywords: {
+      'cat-food-groceries': ['スーパー', '食料品', '食材', '買い出し'],
+      'cat-food-dining': ['ランチ', '昼ごはん', '昼食', '夕食', '晩ごはん', '朝ごはん', '外食', 'レストラン', '定食', 'ラーメン', '寿司', '焼肉', '弁当'],
+      'cat-food-coffee': ['コーヒー', 'カフェ', 'スタバ', '珈琲', 'アイスコーヒー', 'カフェラテ'],
+      'cat-food-snacks': ['おやつ', 'お菓子', 'アイス', 'スイーツ', 'ケーキ'],
+      'cat-food-alcohol': ['お酒', 'ビール', '居酒屋', '飲み会', 'ワイン'],
+      'cat-transport-rideshare': ['タクシー', 'ウーバー'],
+      'cat-transport-fuel': ['ガソリン', '給油'],
+      'cat-transport-transit': ['電車', '地下鉄', '新幹線', '交通費', 'バス代'],
+      'cat-transport-parking': ['駐車場', '駐車'],
+      'cat-health-pharmacy': ['薬局', 'ドラッグストア'],
+      'cat-health-medical': ['病院', '診察'],
+      'cat-recreation-movies': ['映画', 'ネットフリックス'],
+      'cat-shopping-clothing': ['洋服', 'ユニクロ'],
+      'cat-housing-rent': ['家賃'],
+      'cat-housing-electricity': ['電気代'],
+      'cat-housing-water': ['水道代'],
+      'cat-housing-heat': ['ガス代'],
+      'cat-housing-phone': ['携帯代', 'スマホ代', '携帯料金'],
+      'cat-personal-subscriptions': ['サブスク'],
+      'cat-salary': ['給料', '給与'],
+    },
+    reserved: [],
+    dollarSign: { typed: 'family', speech: 'family' },
+    noSpaces: true,
+    numerals: {
+      digits: { 〇: 0, 零: 0, 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 },
+      small: { 十: 10, 百: 100, 千: 1000 },
+      large: { 万: 10_000, 億: 100_000_000 },
+    },
+    amountCounters: ['円'],
+    merchantAfter: ['で'],
+    edgeParticles: ['から', 'まで', 'で', 'に', 'を', 'の', 'は', 'が', 'と', 'へ', 'も', '、', '。'],
+  },
 };
 
 export function packFor(language: string | undefined): PackId | null {
   const base = language?.toLowerCase().split('-')[0];
-  return base === 'en' || base === 'pt' || base === 'es' || base === 'fr' ? base : null;
+  return base === 'en' || base === 'pt' || base === 'es' || base === 'fr' || base === 'ja' ? base : null;
 }
 
 // Packs in priority order: the input language first, then the rest.
 export function orderedPacks(language: string | undefined): { id: PackId; pack: LanguagePack }[] {
   const first = packFor(language);
-  const ids: PackId[] = ['en', 'pt', 'es', 'fr'];
+  const ids: PackId[] = ['en', 'pt', 'es', 'fr', 'ja'];
   const order = first ? [first, ...ids.filter((id) => id !== first)] : ids;
   return order.map((id) => ({ id, pack: PACKS[id] }));
 }
