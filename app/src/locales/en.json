@@ -624,6 +624,7 @@
     "languageUnsupported": "Voice entry in {{language}} isn't available on this device. Change it in Settings → Voice language.",
     "network": "Voice entry needs a connection right now — try again, or type it.",
     "failed": "Couldn't catch that — try again, or type it.",
-    "noSpeech": "Didn't hear anything — tap the mic and try again."
+    "noSpeech": "Didn't hear anything — tap the mic and try again.",
+    "unsupportedBrowser": "Voice entry isn't available in this browser — try Chrome, Edge or Safari, or type it."
   }
 }

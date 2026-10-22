@@ -595,6 +595,7 @@
     "languageUnsupported": "此设备不支持{{language}}语音输入。可在 设置 → 语音输入语言 中更改。",
     "network": "语音输入现在需要网络连接 — 请重试，或直接输入。",
     "failed": "没听清 — 请重试，或直接输入。",
-    "noSpeech": "没有听到声音 — 点按麦克风再试一次。"
+    "noSpeech": "没有听到声音 — 点按麦克风再试一次。",
+    "unsupportedBrowser": "此浏览器不支持语音输入 — 请使用 Chrome、Edge 或 Safari，或直接输入。"
   }
 }

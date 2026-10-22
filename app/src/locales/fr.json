@@ -648,6 +648,7 @@
     "languageUnsupported": "La saisie vocale en {{language}} n’est pas disponible sur cet appareil. Changez-la dans Paramètres → Langue de la voix.",
     "network": "La saisie vocale a besoin d’une connexion — réessayez, ou tapez-le.",
     "failed": "Je n’ai pas compris — réessayez, ou tapez-le.",
-    "noSpeech": "Je n’ai rien entendu — touchez le micro et réessayez."
+    "noSpeech": "Je n’ai rien entendu — touchez le micro et réessayez.",
+    "unsupportedBrowser": "La saisie vocale n’est pas disponible dans ce navigateur — essayez Chrome, Edge ou Safari, ou tapez-le."
   }
 }

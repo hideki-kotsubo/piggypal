@@ -19,6 +19,11 @@ How to write an entry (docs/59):
 
 
 
+## Unreleased
+
+- In browsers without voice input (like Firefox), the mic button now
+  shows, dimmed, and tells you which browsers support it.
+
 ## 0.10.0 — 2026-10-22
 
 - **Japanese entries are understood**: "昨日ドトールでコーヒー500円",

@@ -211,6 +211,12 @@
   justify-content: center;
   font-size: 1rem;
 }
+/* No Web Speech in this browser (desktop Firefox): still shown so voice
+   entry is discoverable, dimmed, and a tap explains why (EntryZone). */
+.mic-btn.unavailable {
+  opacity: 0.45;
+  cursor: help;
+}
 .mic-btn.listening {
   background: var(--accent);
   border-color: var(--accent);

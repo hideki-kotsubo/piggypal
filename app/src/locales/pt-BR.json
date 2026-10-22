@@ -647,6 +647,7 @@
     "languageUnsupported": "A entrada por voz em {{language}} não está disponível neste dispositivo. Mude em Configurações → Idioma da voz.",
     "network": "A entrada por voz precisa de conexão agora — tente de novo ou digite.",
     "failed": "Não entendi — tente de novo ou digite.",
-    "noSpeech": "Não ouvi nada — toque no microfone e tente de novo."
+    "noSpeech": "Não ouvi nada — toque no microfone e tente de novo.",
+    "unsupportedBrowser": "A entrada por voz não está disponível neste navegador — use o Chrome, o Edge ou o Safari, ou digite."
   }
 }
