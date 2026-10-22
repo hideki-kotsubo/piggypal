@@ -244,6 +244,109 @@ describe('empty names', () => {
   });
 });
 
+// docs/76 step 2. NOW is Friday 16 Oct 2026, 10:00.
+describe('Japanese', () => {
+  it('reads amount, currency, category and date with no spaces', () => {
+    const r = parse('昨日コーヒー500円', 'ja');
+    expect(r.amountCents).toBe(50000);
+    expect(r.currency).toBe('JPY');
+    expect(r.categoryId).toBe('cat-food-coffee');
+    expect(r.occurredAt).toBe(day(2026, 10, 15));
+    expect(r.unrecognized).toBeNull();
+  });
+
+  it('reads 万/千 amounts, mixed digits and full-width digits', () => {
+    expect(parse('3万円 家賃', 'ja').amountCents).toBe(3_000_000);
+    expect(parse('家賃3万円', 'ja').categoryId).toBe('cat-housing-rent');
+    expect(parse('1万5千円 電気代', 'ja').amountCents).toBe(1_500_000);
+    expect(parse('千五百円のランチ', 'ja').amountCents).toBe(150_000);
+    expect(parse('1.5万円 ガソリン', 'ja').amountCents).toBe(1_500_000);
+    expect(parse('1,500円 ランチ', 'ja').amountCents).toBe(150_000);
+    expect(parse('１５００円 ランチ', 'ja').amountCents).toBe(150_000);
+    expect(parse('ランチ 1200', 'ja').amountCents).toBe(120_000);
+  });
+
+  it("doesn't read numeral-bearing words as amounts", () => {
+    const r = parse('一緒にランチ 1200円', 'ja');
+    expect(r.amountCents).toBe(120_000);
+  });
+
+  it('reads relative dates, weekdays and 先週', () => {
+    expect(parse('一昨日 タクシー 2800円', 'ja').occurredAt).toBe(day(2026, 10, 14));
+    expect(parse('おととい タクシー 2800円', 'ja').occurredAt).toBe(day(2026, 10, 14));
+    expect(parse('今日 ランチ 900円', 'ja').occurredAt).toBe(day(2026, 10, 16));
+    expect(parse('水曜日 ラーメン 900円', 'ja').occurredAt).toBe(day(2026, 10, 14));
+    // The previous calendar week's Monday, not this week's.
+    expect(parse('先週の月曜 映画 1800円', 'ja').occurredAt).toBe(day(2026, 10, 5));
+  });
+
+  it('reads 8月16日 and 2026年3月15日 dates, and times', () => {
+    const r = parse('8月16日 ガソリン 5000円', 'ja');
+    expect(r.occurredAt).toBe(day(2026, 8, 16));
+    expect(r.amountCents).toBe(500_000);
+    expect(r.categoryId).toBe('cat-transport-fuel');
+    expect(parse('2025年3月15日 薬局 800円', 'ja').occurredAt).toBe('2025-03-15T10:00:00');
+    expect(parse('午後3時半 カフェ 500円', 'ja').occurredAt).toBe('2026-10-16T15:30:00');
+    expect(parse('15時10分 カフェ 500円', 'ja').occurredAt).toBe('2026-10-16T15:10:00');
+    // 3時間 is a duration, not a time.
+    expect(parse('駐車場 3時間 600円', 'ja').occurredAt).toBeNull();
+  });
+
+  it('prefers the longer keyword: アイスコーヒー is coffee, アイス alone is snacks', () => {
+    expect(parse('アイスコーヒー 450円', 'ja').categoryId).toBe('cat-food-coffee');
+    expect(parse('アイス 300円', 'ja').categoryId).toBe('cat-food-snacks');
+  });
+
+  it('guesses the shop before で, never a word another field read', () => {
+    const r = parse('ドトールでアイスコーヒー650円', 'ja');
+    expect(r.merchant).toBe('ドトール');
+    expect(r.merchantGuessed).toBe(true);
+    expect(r.categoryId).toBe('cat-food-coffee');
+    expect(r.unrecognized).toBe('ドトールで');
+    const cafe = parse('カフェで500円', 'ja');
+    expect(cafe.merchant).toBeNull();
+    expect(cafe.unrecognized).toBeNull();
+  });
+
+  it('finds the starter Cash account as 現金 and trims particles from the note', () => {
+    const r = parse('現金で弁当600円', 'ja');
+    expect(r.accountId).toBe('acc-cash');
+    expect(r.categoryId).toBe('cat-food-dining');
+    expect(r.unrecognized).toBeNull();
+  });
+
+  it('reads income and currency words', () => {
+    // An income word that is also the Salary keyword keeps both readings.
+    const en = parse('salary 3000', 'en');
+    expect(en.direction).toBe('income');
+    expect(en.categoryId).toBe('cat-salary');
+    const r = parse('給料 25万円', 'ja');
+    expect(r.direction).toBe('income');
+    expect(r.categoryId).toBe('cat-salary');
+    expect(r.amountCents).toBe(25_000_000);
+    expect(parse('20米ドル コーヒー', 'ja').currency).toBe('USD');
+    expect(parse('20カナダドル コーヒー', 'ja').currency).toBe('CAD');
+    const dollars = parse('20ドル コーヒー', 'ja');
+    expect(dollars.currency).toBeNull();
+    expect(dollars.dollarFamily).toBe(true);
+  });
+
+  it('finds Japanese starter category names', () => {
+    expect(parse('食料品 3200円', 'ja').categoryId).toBe('cat-food-groceries');
+    expect(parse('スーパー 3200円', 'ja').categoryId).toBe('cat-food-groceries');
+  });
+});
+
+describe('thousands separators (docs/76, all languages)', () => {
+  it('reads groups of three digits as thousands, a final one or two as cents', () => {
+    expect(parse('1,500 dollars coffee', 'en').amountCents).toBe(150_000);
+    expect(parse('1,500.50 rent', 'en').amountCents).toBe(150_050);
+    expect(parse('1.500,50 aluguel', 'pt-BR').amountCents).toBe(150_050);
+    expect(parse('12,50 café', 'pt-BR').amountCents).toBe(1250);
+    expect(parse('10.61 coffee', 'en').amountCents).toBe(1061);
+  });
+});
+
 describe('categories across languages (docs/73 D270)', () => {
   it('prefers a subcategory over its own group', () => {
     expect(parse('transporte uber 20', 'pt-BR').categoryId).toBe('cat-transport-rideshare');

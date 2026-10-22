@@ -78,7 +78,12 @@ const WORD = '[a-zà-ÿ]+';
 
 // Whole-word search, accent-aware (JS's \b treats "é" as a non-word
 // character, so "café\b" never matches). Returns the match index or -1.
+// A phrase in a CJK script is a plain substring search (docs/76):
+// Japanese and Chinese have no spaces to bound a word.
+const CJK_SCRIPT = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
+
 function findWord(textLower: string, phrase: string): number {
+  if (CJK_SCRIPT.test(phrase)) return textLower.indexOf(phrase);
   const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const match = new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, 'u').exec(textLower);
   return match ? match.index : -1;
@@ -102,8 +107,12 @@ const BARE_CURRENCY_SYMBOLS = ['$', '¥', '€', '£'];
 // ("at 5:25pm I spent 45") would have its own digits mistaken for the
 // amount, since both are digit sequences too and, in these phrasings,
 // come before the real amount in the text.
+//
+// Thousands separators (docs/76): "1,500" and "1.500" are 1500, not 1.50
+// — groups of exactly three digits after a separator are thousands, and
+// only a final one- or two-digit group is cents ("1.500,50", "1,500.50").
 function extractDigitAmount(text: string, spans: Span[]): number | null {
-  const regex = /\d+(?:[.,]\d{1,2})?/g;
+  const regex = /\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,2})?(?!\d)|\d+(?:[.,]\d{1,2})?/g;
   let match: RegExpExecArray | null;
   while ((match = regex.exec(text)) !== null) {
     const start = match.index;
@@ -111,12 +120,99 @@ function extractDigitAmount(text: string, spans: Span[]): number | null {
     if (spans.some(([s, e]) => start < e && end > s)) continue;
     const symbolStart = start > 0 && BARE_CURRENCY_SYMBOLS.includes(text[start - 1]) ? start - 1 : start;
     spans.push([symbolStart, end]);
-    const raw = match[0];
+    let raw = match[0];
+    const grouped = /^\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,2})?$/.exec(raw);
+    if (grouped) {
+      const cents = /[.,](\d{1,2})$/.exec(raw);
+      const whole = (cents ? raw.slice(0, -cents[0].length) : raw).replace(/[.,]/g, '');
+      raw = cents ? `${whole}.${cents[1]}` : whole;
+    }
     const sepIndex = Math.max(raw.lastIndexOf('.'), raw.lastIndexOf(','));
     if (sepIndex === -1) return Number(raw) * 100;
     const intPart = raw.slice(0, sepIndex) || '0';
     const decPart = raw.slice(sepIndex + 1).padEnd(2, '0');
     return Number(intPart) * 100 + Number(decPart);
+  }
+  return null;
+}
+
+// ---- CJK amounts (docs/76): 3万円, 1万5千円, 千五百円, 1.5万円, 1,500円.
+// A run of digits/numerals counts as an amount when a counter like 円
+// follows it, or when it mixes digits with a unit (3万), so words that
+// merely contain a numeral (一緒, 十分) are left alone.
+
+function parseCjkNumber(
+  run: string,
+  digits: Record<string, number>,
+  small: Record<string, number>,
+  large: Record<string, number>,
+): number | null {
+  let total = 0;
+  let section = 0;
+  let current: number | null = null;
+  let literal = '';
+  let prevDigit = false;
+  const flush = () => {
+    if (literal) {
+      const n = Number(literal.replace(/,/g, ''));
+      current = Number.isFinite(n) ? n : null;
+      literal = '';
+    }
+  };
+  for (const ch of run) {
+    if (/[0-9.,]/.test(ch)) {
+      literal += ch;
+      prevDigit = false;
+      continue;
+    }
+    flush();
+    if (ch in digits) {
+      // 二〇二六-style runs read positionally.
+      current = prevDigit && current !== null ? current * 10 + digits[ch] : digits[ch];
+      prevDigit = true;
+    } else if (ch in small) {
+      section += (current ?? 1) * small[ch];
+      current = null;
+      prevDigit = false;
+    } else if (ch in large) {
+      total += (section + (current ?? 0) || 1) * large[ch];
+      section = 0;
+      current = null;
+      prevDigit = false;
+    } else {
+      return null;
+    }
+  }
+  flush();
+  return total + section + (current ?? 0);
+}
+
+function extractCjkAmount(text: string, spans: Span[], language: string | undefined): number | null {
+  const withNumerals = orderedPacks(language).filter(({ pack }) => pack.numerals);
+  if (withNumerals.length === 0) return null;
+  const digits: Record<string, number> = {};
+  const small: Record<string, number> = {};
+  const large: Record<string, number> = {};
+  for (const { pack } of withNumerals) {
+    for (const [k, v] of Object.entries(pack.numerals!.digits)) if (!(k in digits)) digits[k] = v;
+    for (const [k, v] of Object.entries(pack.numerals!.small)) if (!(k in small)) small[k] = v;
+    for (const [k, v] of Object.entries(pack.numerals!.large)) if (!(k in large)) large[k] = v;
+  }
+  const counters = mergedWords(language, (p) => p.amountCounters ?? []);
+  const chars = Object.keys({ ...digits, ...small, ...large }).join('');
+  const run = new RegExp(`[0-9${chars}](?:[0-9.,${chars}]*[0-9${chars}])?`, 'g');
+  let match: RegExpExecArray | null;
+  while ((match = run.exec(text)) !== null) {
+    const start = match.index;
+    const end = start + match[0].length;
+    if (spans.some(([s, e]) => start < e && end > s)) continue;
+    const counter = counters.find((c) => text.startsWith(c, end));
+    const hasUnit = [...match[0]].some((ch) => ch in small || ch in large);
+    if (!counter && !(hasUnit && /[0-9]/.test(match[0]))) continue;
+    const value = parseCjkNumber(match[0], digits, small, large);
+    if (value === null || value <= 0) continue;
+    spans.push([start, end + (counter?.length ?? 0)]);
+    return Math.round(value * 100);
   }
   return null;
 }
@@ -217,6 +313,9 @@ function extractWordAmount(tokens: RegExpMatchArray[], spans: Span[], language: 
 const CURRENCY_MARKERS: [RegExp, string][] = [
   [/\b(?:canadian dollars?|dollars? canadiens?|d[óo]lar(?:es)? canadenses?|d[óo]lar(?:es)? canadienses?)(?![\p{L}])/iu, 'CAD'],
   [/\b(?:american dollars?|u\.?s\.? dollars?|dollars? am[ée]ricains?|dollars? us|d[óo]lar(?:es)? americanos?|d[óo]lar(?:es)? estadunidenses?|d[óo]lar(?:es)? estadounidenses?)(?![\p{L}])/iu, 'USD'],
+  // docs/76 — Japanese.
+  [/(?:カナダドル|加ドル)/, 'CAD'], [/(?:米ドル|アメリカドル|usドル)/i, 'USD'],
+  [/円/, 'JPY'], [/ユーロ/, 'EUR'], [/レアル/, 'BRL'],
   [/r\$/i, 'BRL'], [/\breais?\b/i, 'BRL'], [/\breal\b/i, 'BRL'],
   [/¥/, 'JPY'], [/\bienes?\b/i, 'JPY'], [/\byen(?:es|s)?\b/i, 'JPY'],
   [/€/, 'EUR'], [/\beuros?\b/i, 'EUR'],
@@ -227,7 +326,7 @@ const CURRENCY_MARKERS: [RegExp, string][] = [
 // docs/73 D272: "dollars"/"bucks" with no country — a dollar, but which
 // one depends on the person (CAD in Vancouver, USD on a trip), so the
 // caller picks.
-const DOLLAR_WORDS = /\b(?:dollars?|bucks?)\b/i;
+const DOLLAR_WORDS = /\b(?:dollars?|bucks?)\b|ドル/i;
 
 function extractCurrency(text: string, spans: Span[], ctx: ParserContext): { currency: string | null; dollarFamily: boolean } {
   for (const [re, code] of CURRENCY_MARKERS) {
@@ -279,6 +378,13 @@ function lastWeekday(now: Date, targetDow: number): Date {
 // separate `resolveTimeOfDay` pass then overrides hours/minutes if the
 // utterance also named a clock time, so "August 16th at 5:25pm" and
 // "August 16th" (no time given) both resolve sensibly from the same base.
+// The given weekday in the previous calendar week, weeks starting on
+// Monday: on Friday 16 Oct, 先週の月曜 is 5 Oct (not the 12th).
+function previousWeekWeekday(now: Date, targetDow: number): Date {
+  const sinceMonday = (now.getDay() + 6) % 7;
+  return shiftDays(now, sinceMonday + 7 - ((targetDow + 6) % 7));
+}
+
 function firstWordMatch(textLower: string, words: string[]): [number, number] | null {
   let best: [number, number] | null = null;
   for (const w of words) {
@@ -307,6 +413,17 @@ function resolveRelativeOrAbsoluteDate(textLower: string, now: Date, spans: Span
   }
 
   const weekdays = mergedMap(language, (p) => p.weekdays);
+  // "<weekday> of last week" (先週の月曜) before the plain weekday, which
+  // it contains.
+  for (const { pack } of orderedPacks(language)) {
+    for (const source of pack.previousWeekWeekday ?? []) {
+      const match = textLower.match(new RegExp(source));
+      if (match && match[1] in weekdays) {
+        spans.push([match.index!, match.index! + match[0].length]);
+        return previousWeekWeekday(now, weekdays[match[1]]);
+      }
+    }
+  }
   for (const { pack } of orderedPacks(language)) {
     for (const source of pack.lastWeekday) {
       const match = textLower.match(new RegExp(source));
@@ -346,14 +463,16 @@ function resolveAbsoluteDate(textLower: string, now: Date, spans: Span[], langua
   const french = styled('dayMonth');
 
   // Each shape: regex, and which groups hold [day, month, year].
+  // cjk (docs/76): 8月16日 / 2026年8月16日, the month as a number.
   const shapes: Record<LanguagePack['dateStyle'], [RegExp, [number, number, number]] | null> = {
+    cjk: [/(?:(\d{4})年)?(\d{1,2})月(\d{1,2})日/, [3, 2, 1]],
     monthDay: [new RegExp(`\\b(${nonFrench})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?,?(?:\\s+(\\d{4}))?\\b`), [2, 1, 3]],
     dayDeMonth: [new RegExp(`\\b(\\d{1,2})\\s+de\\s+(${nonFrench})(?:\\s+de\\s+(\\d{4}))?\\b`), [1, 2, 3]],
     dayMonth: french ? [new RegExp(`\\b(\\d{1,2})(?:er)?\\s+(${french})\\.?(?:\\s+(\\d{4}))?(?![\\p{L}])`, 'u'), [1, 2, 3]] : null,
   };
   // The input language's own shape first: "15 de marzo 30" is the 15th,
   // not English-style "marzo 30".
-  const order = [...new Set([orderedPacks(language)[0].pack.dateStyle, 'monthDay', 'dayDeMonth', 'dayMonth'] as const)];
+  const order = [...new Set([orderedPacks(language)[0].pack.dateStyle, 'monthDay', 'dayDeMonth', 'dayMonth', 'cjk'] as const)];
   for (const style of order) {
     const shape = shapes[style];
     if (!shape) continue;
@@ -363,6 +482,12 @@ function resolveAbsoluteDate(textLower: string, now: Date, spans: Span[], langua
     const dayOfMonth = Number(match[d]);
     if (dayOfMonth < 1 || dayOfMonth > 31) continue;
     spans.push([match.index, match.index + match[0].length]);
+    if (style === 'cjk') {
+      const month = Number(match[m]);
+      if (month < 1 || month > 12) continue;
+      const year = match[y] ? Number(match[y]) : now.getFullYear();
+      return new Date(year, month - 1, dayOfMonth, now.getHours(), now.getMinutes(), now.getSeconds());
+    }
     return at(dayOfMonth, match[m], match[y]);
   }
   return null;
@@ -377,7 +502,7 @@ const TZ_ABBREVIATIONS = ['pst', 'pdt', 'mst', 'mdt', 'cst', 'cdt', 'est', 'edt'
 
 function resolveTimeOfDay(textLower: string, spans: Span[]): { hours: number; minutes: number } | null {
   const match = /\b(\d{1,2}):(\d{2})\s*(am|pm)?\b/.exec(textLower);
-  if (!match) return null;
+  if (!match) return resolveCjkTime(textLower, spans);
   let hours = Number(match[1]);
   const minutes = Number(match[2]);
   if (hours > 23 || minutes > 59) return null;
@@ -388,6 +513,20 @@ function resolveTimeOfDay(textLower: string, spans: Span[]): { hours: number; mi
   const tz = new RegExp(`\\(?\\b(${TZ_ABBREVIATIONS.join('|')})\\b\\)?`).exec(textLower);
   if (tz) spans.push([tz.index, tz.index + tz[0].length]);
 
+  return { hours, minutes };
+}
+
+// docs/76: 15時30分, 午後3時, 午後3時半. "3時間" is a duration (hours), not
+// a time, so 時 followed by 間 doesn't count.
+function resolveCjkTime(textLower: string, spans: Span[]): { hours: number; minutes: number } | null {
+  const match = /(午前|午後)?\s*(\d{1,2})時(?!間)(?:\s*(\d{1,2})分|(半))?/.exec(textLower);
+  if (!match) return null;
+  let hours = Number(match[2]);
+  const minutes = match[4] ? 30 : match[3] ? Number(match[3]) : 0;
+  if (hours > 23 || minutes > 59) return null;
+  if (match[1] === '午後' && hours < 12) hours += 12;
+  if (match[1] === '午前' && hours === 12) hours = 0;
+  spans.push([match.index, match.index + match[0].length]);
   return { hours, minutes };
 }
 
@@ -445,9 +584,19 @@ function matchCategory(textLower: string, ctx: ParserContext, spans: Span[]): st
     return -1;
   };
 
-  const matched = new Set<string>();
+  const hits = new Map<string, Span[]>();
   for (const [keyword, { categoryId, wholeWord }] of vocab) {
-    if (find(keyword, wholeWord) !== -1) matched.add(categoryId);
+    const idx = find(keyword, wholeWord);
+    if (idx === -1) continue;
+    hits.set(categoryId, [...(hits.get(categoryId) ?? []), [idx, idx + keyword.length]]);
+  }
+  // A keyword found only inside a longer keyword of another category
+  // doesn't count (docs/76): アイス (snacks) inside アイスコーヒー (coffee).
+  const inside = ([s, e]: Span, [s2, e2]: Span) => s2 <= s && e <= e2 && e2 - s2 > e - s;
+  const matched = new Set<string>();
+  for (const [id, own] of hits) {
+    const others = [...hits].filter(([other]) => other !== id).flatMap(([, s]) => s);
+    if (!own.every((span) => others.some((o) => inside(span, o)))) matched.add(id);
   }
   // A group and its own subcategory both matching ("transporte uber")
   // means the subcategory, not an ambiguity.
@@ -558,7 +707,7 @@ function guessNewMerchant(text: string, spans: Span[], language: string | undefi
   // reserves (Spanish "no" is "not", never "in the").
   const connectors = mergedWords(language, (p) => p.merchantConnectors).join('|');
   const match = new RegExp(`(?<![\\p{L}\\p{N}])(?:${connectors})\\s+([^\\s,]+)`, 'iu').exec(text);
-  if (!match || match.index === undefined) return null;
+  if (!match || match.index === undefined) return guessMerchantBeforeParticle(text, spans, language);
   const raw = match[1];
   const candidate = raw.replace(/[.,]+$/, '');
   if (!candidate || /^\d/.test(candidate)) return null;
@@ -628,6 +777,49 @@ function trimLeftoverEdges(s: string, protect: string | null, fillers: Set<strin
   return words.slice(lo, hi).join(' ');
 }
 
+// docs/76 — Japanese puts the place before the particle: "スタバでコーヒー".
+// Katakana or Latin letters right before で are guessed as a new merchant
+// (shop names are mostly written that way); kanji words before で are
+// usually not shops (現金で = "with cash"). Same never-claims rule as
+// above, so a word another field already read (カフェ as a category)
+// is never guessed.
+function guessMerchantBeforeParticle(text: string, spans: Span[], language: string | undefined): MerchantGuess | null {
+  const particles = mergedWords(language, (p) => p.merchantAfter ?? []);
+  if (particles.length === 0) return null;
+  const re = new RegExp(`([\\p{Script=Katakana}ー・A-Za-z0-9&.'’]{2,})(?:${particles.join('|')})`, 'gu');
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(text)) !== null) {
+    const start = match.index;
+    const end = start + match[1].length;
+    if (/^\d+$/.test(match[1]) || spans.some(([s, e]) => start < e && end > s)) continue;
+    return { merchant: match[1], leadIn: match[0] };
+  }
+  return null;
+}
+
+// Character-wise particle trim for text without spaces (docs/76): the
+// note "スタバで" or "で" after the rest was read shouldn't keep a
+// dangling particle. The merchant guess's own lead-in stays.
+function trimLeftoverParticles(s: string, protect: string | null, particles: string[]): string {
+  if (particles.includes(s)) return '';
+  const sorted = [...particles].sort((a, b) => b.length - a.length);
+  let changed = true;
+  while (changed && s) {
+    changed = false;
+    for (const p of sorted) {
+      if (s.length > p.length && s.startsWith(p) && !(protect && s.startsWith(protect))) {
+        s = s.slice(p.length).trim();
+        changed = true;
+      }
+      if (s.length > p.length && s.endsWith(p) && !(protect && s.endsWith(protect))) {
+        s = s.slice(0, -p.length).trim();
+        changed = true;
+      }
+    }
+  }
+  return particles.includes(s) ? '' : s;
+}
+
 function computeUnrecognized(text: string, spans: Span[], protect: string | null, language: string | undefined): string | null {
   const fillers = new Set(mergedWords(language, (p) => p.edgeFillers));
   const sorted = [...spans].sort((a, b) => a[0] - b[0]);
@@ -638,13 +830,24 @@ function computeUnrecognized(text: string, spans: Span[], protect: string | null
     cursor = Math.max(cursor, end);
   }
   leftover += text.slice(cursor);
-  const cleaned = trimLeftoverEdges(leftover.replace(/\s+/g, ' ').trim(), protect, fillers);
+  let cleaned = trimLeftoverEdges(leftover.replace(/\s+/g, ' ').trim(), protect, fillers);
+  if (CJK_SCRIPT.test(cleaned)) {
+    cleaned = trimLeftoverParticles(cleaned, protect, mergedWords(language, (p) => p.edgeParticles ?? []));
+  }
   return cleaned || null;
 }
 
 // ---- entry point ----
 
-export function parseUtterance(text: string, ctx: ParserContext): ParseResult {
+// Full-width ASCII (１５００, ＄, Ａ) and the ideographic space become their
+// plain forms, one character for one, so every span still lines up with
+// the text (docs/76). Japanese keyboards and some dictation produce them.
+function normalizeWidth(text: string): string {
+  return text.replace(/[\uFF01-\uFF5E]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0)).replace(/\u3000/g, ' ');
+}
+
+export function parseUtterance(rawText: string, ctx: ParserContext): ParseResult {
+  const text = normalizeWidth(rawText);
   const textLower = text.toLowerCase();
   const tokens = Array.from(textLower.matchAll(new RegExp(WORD, 'g')));
   const spans: Span[] = [];
@@ -653,13 +856,17 @@ export function parseUtterance(text: string, ctx: ParserContext): ParseResult {
   // digit sequences that would otherwise be mistaken for the amount.
   const occurredAt = resolveDate(textLower, ctx.now, spans, ctx.language);
 
-  const digitAmount = extractDigitAmount(text, spans);
+  // CJK forms first (3万円 would otherwise read as 3), then plain digits.
+  const digitAmount = extractCjkAmount(text, spans, ctx.language) ?? extractDigitAmount(text, spans);
   const wordAmount = digitAmount === null ? extractWordAmount(tokens, spans, ctx.language) : null;
   const amountCents = digitAmount !== null ? digitAmount : wordAmount !== null ? wordAmount * 100 : null;
 
+  // Category before direction: an income word that is also a keyword
+  // ("salary", 給料) would otherwise be claimed by matchDirection first,
+  // and matchCategory skips claimed text.
+  const categoryId = matchCategory(textLower, ctx, spans);
   const direction = matchDirection(textLower, spans, ctx.language);
   const { currency, dollarFamily } = extractCurrency(text, spans, ctx);
-  const categoryId = matchCategory(textLower, ctx, spans);
   const accountId = matchAccount(textLower, ctx, spans);
   const confirmedMerchant = matchMerchant(textLower, ctx, spans);
   // Only try a guess once every other field (including the date/time/tz
