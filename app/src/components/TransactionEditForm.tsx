@@ -1,3 +1,4 @@
+import { appendDigit, dropDigit } from '../lib/cents';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
@@ -98,15 +99,14 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
   // empty. Each digit tap autosaves immediately, consistent with every
   // other field in this form (no separate "save" step for existing rows).
   function pressDigit(d: string) {
-    const digits = String(Math.abs(amountCentsLocal)) + d;
-    const next = direction === 'expense' ? -Number(digits) : Number(digits);
+    const abs = appendDigit(amountCentsLocal, d, transaction.currency);
+    const next = direction === 'expense' ? -abs : abs;
     setAmountCentsLocal(next);
     commit({ amountCents: next });
   }
 
   function backspace() {
-    const digits = String(Math.abs(amountCentsLocal)).slice(0, -1);
-    const cents = digits === '' ? 0 : Number(digits);
+    const cents = dropDigit(amountCentsLocal, transaction.currency);
     const next = direction === 'expense' ? -cents : cents;
     setAmountCentsLocal(next);
     commit({ amountCents: next });
@@ -198,8 +198,8 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
   function legPressDigit(d: string) {
     if (!openLegId) return;
     const dir: 'expense' | 'income' = legAmountLocal <= 0 ? 'expense' : 'income';
-    const digits = String(Math.abs(legAmountLocal)) + d;
-    const next = dir === 'expense' ? -Number(digits) : Number(digits);
+    const abs = appendDigit(legAmountLocal, d, transaction.currency);
+    const next = dir === 'expense' ? -abs : abs;
     setLegAmountLocal(next);
     store.updateTransactionSplit(openLegId, { amountCents: next });
     syncTotalFromLegs(legs.map((l) => (l.id === openLegId ? { ...l, amountCents: next } : l)));
@@ -208,8 +208,7 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
   function legBackspace() {
     if (!openLegId) return;
     const dir: 'expense' | 'income' = legAmountLocal <= 0 ? 'expense' : 'income';
-    const digits = String(Math.abs(legAmountLocal)).slice(0, -1);
-    const cents = digits === '' ? 0 : Number(digits);
+    const cents = dropDigit(legAmountLocal, transaction.currency);
     const next = dir === 'expense' ? -cents : cents;
     setLegAmountLocal(next);
     store.updateTransactionSplit(openLegId, { amountCents: next });

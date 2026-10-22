@@ -1,3 +1,4 @@
+import { appendDigit, centsPerUnit, dropDigit } from '../lib/cents';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -225,10 +226,10 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
   const coming = rule && !rule.paused && !rule.archived ? openOccurrences(rule, posted, rule.anchorDate, addDays(today, 3 * 366)).slice(0, COMING_UP) : [];
   const perInstallment =
     view.kind === 'installment' && view.occurrenceCount && view.occurrenceCount > 0
-      ? installmentAmount(view.amountCents, view.occurrenceCount, 2)
+      ? installmentAmount(view.amountCents, view.occurrenceCount, 2, centsPerUnit(view.currency))
       : null;
   const firstInstallment =
-    view.kind === 'installment' && view.occurrenceCount ? installmentAmount(view.amountCents, view.occurrenceCount, 1) : null;
+    view.kind === 'installment' && view.occurrenceCount ? installmentAmount(view.amountCents, view.occurrenceCount, 1, centsPerUnit(view.currency)) : null;
 
   return (
     <main className="home">
@@ -276,11 +277,11 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
             currency={view.currency}
             direction={direction}
             onDigit={(d) => {
-              const digits = String(Math.abs(amountLocal)) + d;
-              setAmount(direction === 'expense' ? -Number(digits) : Number(digits));
+              const abs = appendDigit(amountLocal, d, view.currency);
+              setAmount(direction === 'expense' ? -abs : abs);
             }}
             onBackspace={() => {
-              const cents = Number(String(Math.abs(amountLocal)).slice(0, -1) || '0');
+              const cents = dropDigit(amountLocal, view.currency);
               setAmount(direction === 'expense' ? -cents : cents);
             }}
             onToggleDirection={() => setAmount(-amountLocal)}

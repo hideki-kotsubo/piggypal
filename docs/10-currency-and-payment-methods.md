@@ -193,3 +193,17 @@ Conversion math (FX rates, a single unified cross-currency number) is not
 part of this doc — this is tracking multiple currencies accurately side by
 side, not converting between them. Revisit only if users specifically ask
 for a "what did I spend total, in one number" view across currencies.
+
+## Currencies without minor units (2026-10-22)
+
+Every amount is stored ×100 whatever the currency (￥1,500 = 150000),
+the convention the parser, the server and `formatAmount()` already
+follow. Existing data stays valid. The keypad, though, assumed cents
+everywhere: typing 1 5 0 0 in yen gave ￥15 (found while checking
+Japanese/Korean/Chinese feasibility, docs/73). `lib/cents.ts`'s
+`centsPerUnit(currency)` reads the currency's decimal count from `Intl`
+(100 for JPY/KRW and other zero-decimal currencies, 1 otherwise; the
+three-decimal ones step by cents). `appendDigit`/`dropDigit` drive the
+transaction, split-leg and schedule keypads. `installmentAmount()` takes
+the same unit, so ￥1,000 over 3 is ￥334 + ￥333 + ￥333 instead of
+fractional yen. Checked in headless Chromium on a real yen entry.

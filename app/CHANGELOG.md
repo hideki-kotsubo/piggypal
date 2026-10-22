@@ -16,6 +16,13 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
+
+## Unreleased
+
+- Fixed: the amount keypad treated **yen and won** as if they had
+  cents, so typing 1 5 0 0 gave ￥15. It now types whole yen and won,
+  and installment plans in those currencies split into whole amounts.
+
 ## 0.8.0 — 2026-10-21
 
 - **Signing out now erases Flowtab's data from this device.** Everything

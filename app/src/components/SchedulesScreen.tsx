@@ -1,3 +1,4 @@
+import { centsPerUnit } from '../lib/cents';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -23,7 +24,7 @@ const UPCOMING_DAYS = 30;
 // installment plan is the regular (non-first) installment.
 function perOccurrenceLabel(rule: ScheduledPayment): string {
   if (rule.kind === 'installment' && rule.occurrenceCount) {
-    const each = installmentAmount(rule.amountCents, rule.occurrenceCount, 2);
+    const each = installmentAmount(rule.amountCents, rule.occurrenceCount, 2, centsPerUnit(rule.currency));
     return `${formatAmount(each, rule.currency)} × ${rule.occurrenceCount}`;
   }
   return `${rule.amountMode === 'estimated' ? '~' : ''}${formatAmount(rule.amountCents, rule.currency)}`;
