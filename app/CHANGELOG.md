@@ -20,7 +20,7 @@ How to write an entry (docs/59):
 
 
 
-## Unreleased
+## 0.11.0 — 2026-10-22
 
 - **Korean entries are understood**: "어제 커피 4500원", "월세 50만 원" or
   "지난주 월요일 영화 12000원" fill in the amount in won, the category, the
