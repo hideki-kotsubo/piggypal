@@ -18,7 +18,7 @@ How to write an entry (docs/59):
 
 
 
-## Unreleased
+## 0.9.0 — 2026-10-22
 
 - **日本語, 한국어, 中文（简体） and 中文（繁體）**: Flowtab's screens,
   starter categories, voice entry, the sign-in email and the iPhone
