@@ -96,7 +96,7 @@ function findWord(textLower: string, phrase: string): number {
 // never used to set `currency`: a bare "$" stays genuinely ambiguous
 // between USD/CAD (docs/10) — only an explicit marker like "R$"/"US$"
 // does that, via extractCurrency.
-const BARE_CURRENCY_SYMBOLS = ['$', '¥', '€', '£'];
+const BARE_CURRENCY_SYMBOLS = ['$', '¥', '€', '£', '₩'];
 
 // Bare integer "45" -> 4500 cents, matching docs/04's tool-schema
 // description verbatim ("'45' means 4500. '12,50' means 1250.").
@@ -200,18 +200,28 @@ function extractCjkAmount(text: string, spans: Span[], language: string | undefi
   }
   const counters = mergedWords(language, (p) => p.amountCounters ?? []);
   const chars = Object.keys({ ...digits, ...small, ...large }).join('');
-  const run = new RegExp(`[0-9${chars}](?:[0-9.,${chars}]*[0-9${chars}])?`, 'g');
+  const units = Object.keys({ ...small, ...large }).join('');
+  // Korean spaces amounts after a unit ("5만 2천 원"), so a space right
+  // after a unit and before another numeral stays inside the run.
+  const run = new RegExp(`[0-9${chars}](?:[0-9.,${chars}]|(?<=[${units}])\\s(?=[0-9${chars}]))*`, 'g');
   let match: RegExpExecArray | null;
   while ((match = run.exec(text)) !== null) {
+    const raw = match[0].replace(/[.,]+$/, '');
     const start = match.index;
-    const end = start + match[0].length;
+    const end = start + raw.length;
     if (spans.some(([s, e]) => start < e && end > s)) continue;
-    const counter = counters.find((c) => text.startsWith(c, end));
-    const hasUnit = [...match[0]].some((ch) => ch in small || ch in large);
-    if (!counter && !(hasUnit && /[0-9]/.test(match[0]))) continue;
-    const value = parseCjkNumber(match[0], digits, small, large);
+    // The counter may follow a space: "5만 원".
+    const gap = /^\s?/.exec(text.slice(end))![0].length;
+    const counter = counters.find((c) => text.startsWith(c, end + gap));
+    const hasUnit = [...raw].some((ch) => ch in small || ch in large);
+    const hasArabic = /[0-9]/.test(raw);
+    // A run of native digits alone is too often part of a word (Korean
+    // 사원 "employee", 오늘 "today"): it needs a unit or an Arabic digit.
+    if (!hasUnit && !hasArabic) continue;
+    if (!counter && !(hasUnit && hasArabic)) continue;
+    const value = parseCjkNumber(raw.replace(/\s/g, ''), digits, small, large);
     if (value === null || value <= 0) continue;
-    spans.push([start, end + (counter?.length ?? 0)]);
+    spans.push([start, counter ? end + gap + counter.length : end]);
     return Math.round(value * 100);
   }
   return null;
@@ -315,6 +325,10 @@ const CURRENCY_MARKERS: [RegExp, string][] = [
   [/\b(?:american dollars?|u\.?s\.? dollars?|dollars? am[ée]ricains?|dollars? us|d[óo]lar(?:es)? americanos?|d[óo]lar(?:es)? estadunidenses?|d[óo]lar(?:es)? estadounidenses?)(?![\p{L}])/iu, 'USD'],
   // docs/76 — Japanese.
   [/(?:カナダドル|加ドル)/, 'CAD'], [/(?:米ドル|アメリカドル|usドル)/i, 'USD'],
+  // Korean. 원 and 엔 only right after a number: 원 also ends ordinary
+  // words (병원 "hospital", 회원 "member").
+  [/캐나다\s?달러/, 'CAD'], [/(?:미국\s?달러|미화)/, 'USD'], [/₩/, 'KRW'],
+  [/(?<=[0-9십백천만억]\s?)원/, 'KRW'], [/(?<=[0-9십백천만억]\s?)엔/, 'JPY'], [/유로/, 'EUR'], [/헤알/, 'BRL'],
   [/円/, 'JPY'], [/ユーロ/, 'EUR'], [/レアル/, 'BRL'],
   [/r\$/i, 'BRL'], [/\breais?\b/i, 'BRL'], [/\breal\b/i, 'BRL'],
   [/¥/, 'JPY'], [/\bienes?\b/i, 'JPY'], [/\byen(?:es|s)?\b/i, 'JPY'],
@@ -326,7 +340,7 @@ const CURRENCY_MARKERS: [RegExp, string][] = [
 // docs/73 D272: "dollars"/"bucks" with no country — a dollar, but which
 // one depends on the person (CAD in Vancouver, USD on a trip), so the
 // caller picks.
-const DOLLAR_WORDS = /\b(?:dollars?|bucks?)\b|ドル/i;
+const DOLLAR_WORDS = /\b(?:dollars?|bucks?)\b|ドル|달러/i;
 
 function extractCurrency(text: string, spans: Span[], ctx: ParserContext): { currency: string | null; dollarFamily: boolean } {
   for (const [re, code] of CURRENCY_MARKERS) {
@@ -465,7 +479,7 @@ function resolveAbsoluteDate(textLower: string, now: Date, spans: Span[], langua
   // Each shape: regex, and which groups hold [day, month, year].
   // cjk (docs/76): 8月16日 / 2026年8月16日, the month as a number.
   const shapes: Record<LanguagePack['dateStyle'], [RegExp, [number, number, number]] | null> = {
-    cjk: [/(?:(\d{4})年)?(\d{1,2})月(\d{1,2})日/, [3, 2, 1]],
+    cjk: [/(?:(\d{4})[年년]\s?)?(\d{1,2})[月월]\s?(\d{1,2})[日일]/, [3, 2, 1]],
     monthDay: [new RegExp(`\\b(${nonFrench})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?,?(?:\\s+(\\d{4}))?\\b`), [2, 1, 3]],
     dayDeMonth: [new RegExp(`\\b(\\d{1,2})\\s+de\\s+(${nonFrench})(?:\\s+de\\s+(\\d{4}))?\\b`), [1, 2, 3]],
     dayMonth: french ? [new RegExp(`\\b(\\d{1,2})(?:er)?\\s+(${french})\\.?(?:\\s+(\\d{4}))?(?![\\p{L}])`, 'u'), [1, 2, 3]] : null,
@@ -519,13 +533,14 @@ function resolveTimeOfDay(textLower: string, spans: Span[]): { hours: number; mi
 // docs/76: 15時30分, 午後3時, 午後3時半. "3時間" is a duration (hours), not
 // a time, so 時 followed by 間 doesn't count.
 function resolveCjkTime(textLower: string, spans: Span[]): { hours: number; minutes: number } | null {
-  const match = /(午前|午後)?\s*(\d{1,2})時(?!間)(?:\s*(\d{1,2})分|(半))?/.exec(textLower);
+  // Korean too: 오후 3시 30분, 3시 반; 3시간 (hours) excluded the same way.
+  const match = /(午前|午後|오전|오후)?\s*(\d{1,2})[時시](?![間간])(?:\s*(\d{1,2})[分분]|\s*(半|반))?/.exec(textLower);
   if (!match) return null;
   let hours = Number(match[2]);
   const minutes = match[4] ? 30 : match[3] ? Number(match[3]) : 0;
   if (hours > 23 || minutes > 59) return null;
-  if (match[1] === '午後' && hours < 12) hours += 12;
-  if (match[1] === '午前' && hours === 12) hours = 0;
+  if ((match[1] === '午後' || match[1] === '오후') && hours < 12) hours += 12;
+  if ((match[1] === '午前' || match[1] === '오전') && hours === 12) hours = 0;
   spans.push([match.index, match.index + match[0].length]);
   return { hours, minutes };
 }
@@ -783,16 +798,19 @@ function trimLeftoverEdges(s: string, protect: string | null, fillers: Set<strin
 // usually not shops (現金で = "with cash"). Same never-claims rule as
 // above, so a word another field already read (カフェ as a category)
 // is never guessed.
+// Korean (step 3) works the same way with Hangul names before 에서
+// (스타벅스에서); each pack names its own characters.
 function guessMerchantBeforeParticle(text: string, spans: Span[], language: string | undefined): MerchantGuess | null {
-  const particles = mergedWords(language, (p) => p.merchantAfter ?? []);
-  if (particles.length === 0) return null;
-  const re = new RegExp(`([\\p{Script=Katakana}ー・A-Za-z0-9&.'’]{2,})(?:${particles.join('|')})`, 'gu');
-  let match: RegExpExecArray | null;
-  while ((match = re.exec(text)) !== null) {
-    const start = match.index;
-    const end = start + match[1].length;
-    if (/^\d+$/.test(match[1]) || spans.some(([s, e]) => start < e && end > s)) continue;
-    return { merchant: match[1], leadIn: match[0] };
+  for (const { pack } of orderedPacks(language)) {
+    if (!pack.merchantAfter?.length || !pack.merchantNameChars) continue;
+    const re = new RegExp(`([${pack.merchantNameChars}]{2,})(?:${pack.merchantAfter.join('|')})`, 'gu');
+    let match: RegExpExecArray | null;
+    while ((match = re.exec(text)) !== null) {
+      const start = match.index;
+      const end = start + match[1].length;
+      if (/^\d+$/.test(match[1]) || spans.some(([s, e]) => start < e && end > s)) continue;
+      return { merchant: match[1], leadIn: match[0] };
+    }
   }
   return null;
 }
