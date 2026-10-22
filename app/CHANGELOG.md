@@ -19,7 +19,7 @@ How to write an entry (docs/59):
 
 
 
-## Unreleased
+## 0.10.0 — 2026-10-22
 
 - **Japanese entries are understood**: "昨日ドトールでコーヒー500円",
   "家賃3万円" or "先週の月曜 映画 1800円" fill in the amount in yen, the
