@@ -1,0 +1,4 @@
+/* docs/76 — Info.plist's permission prompts in Japanese. */
+"NSCameraUsageDescription" = "ほかのデバイスとペアリングするときに、QRコードをスキャンするためにカメラを使います。";
+"NSMicrophoneUsageDescription" = "支出を入力する代わりに話せるよう、マイクを使います。";
+"NSSpeechRecognitionUsageDescription" = "話した内容を文字にして支出の入力欄を埋め、あなたが確認できるようにします。";

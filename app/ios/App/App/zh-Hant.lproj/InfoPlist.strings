@@ -1,0 +1,4 @@
+/* docs/76 — Info.plist's permission prompts in Traditional Chinese (Taiwan). */
+"NSCameraUsageDescription" = "與其他裝置配對時，Flowtab 使用相機掃描 QR Code。";
+"NSMicrophoneUsageDescription" = "Flowtab 使用麥克風，讓你說出一筆支出而不用打字。";
+"NSSpeechRecognitionUsageDescription" = "Flowtab 把你說的話轉成文字，填好這筆支出供你確認。";

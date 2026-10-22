@@ -1,0 +1,4 @@
+/* docs/76 — Info.plist's permission prompts in Korean. */
+"NSCameraUsageDescription" = "다른 기기와 페어링할 때 QR 코드를 스캔하기 위해 카메라를 사용합니다.";
+"NSMicrophoneUsageDescription" = "지출을 입력하는 대신 말로 할 수 있도록 마이크를 사용합니다.";
+"NSSpeechRecognitionUsageDescription" = "말한 내용을 글자로 바꿔 지출 항목을 채우고, 확인할 수 있게 합니다.";

@@ -1,0 +1,4 @@
+/* docs/76 — Info.plist's permission prompts in Simplified Chinese. */
+"NSCameraUsageDescription" = "与其他设备配对时，Flowtab 使用相机扫描二维码。";
+"NSMicrophoneUsageDescription" = "Flowtab 使用麦克风，让你说出一笔支出而不用打字。";
+"NSSpeechRecognitionUsageDescription" = "Flowtab 把你说的话转成文字，填好这笔支出供你确认。";
