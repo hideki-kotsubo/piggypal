@@ -17,7 +17,7 @@ How to write an entry (docs/59):
 -->
 
 
-## Unreleased
+## 0.8.1 — 2026-10-22
 
 - Fixed: the amount keypad treated **yen and won** as if they had
   cents, so typing 1 5 0 0 gave ￥15. It now types whole yen and won,
