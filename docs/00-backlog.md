@@ -21,8 +21,9 @@ it needs doing.
   - [ ] User: native-speaker review of all four before announcing them.
   - [x] Step 2: Japanese parser (no-spaces matching, 万 numbers, 円,
         昨日/きのう…), 2026-10-22.
-  - [ ] Step 3: Korean and Chinese parsers (particles, 원; ¥ = yuan in
-        Chinese, 块/元/毛, both scripts).
+  - [x] Step 3a: Korean parser (particles, 원, 만/천), 2026-10-22.
+  - [ ] Step 3b: Chinese parser (¥ = yuan in Chinese, 块/元/毛, both
+        scripts).
   - [ ] Decide: fresh-install default currency from the device region
         instead of always CAD.
   - Added 2026-10-22.

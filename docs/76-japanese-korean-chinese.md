@@ -125,12 +125,43 @@ units".
   yesterday, merchant ドトール (guessed); 家賃3万円 → ￥30,000, Rent;
   先週の月曜 映画 1800円 → ￥1,800, Movies, the previous week's Monday.
 
+## Step 3, part 1: Korean parser (2026-10-22, `feat/parser-korean`)
+
+- **Korean pack**:
+  - dates and times: 오늘, 어제, 그저께/그제; weekdays (수요일) and 지난주
+    월요일; 10월 3일 / 2025년 3월 15일 (the CJK date shape now takes 월/일/년
+    and spaces); 오후 3시 30분 / 3시 반, with 3시간 (a duration) excluded;
+  - money: income words (월급, 급여, 입금, 보너스…); currency words
+    ₩ / 원 → KRW, 엔 → JPY, 미국 달러 → USD, 캐나다 달러 → CAD, 유로,
+    헤알, and plain 달러 = "some dollar";
+  - about 50 category keywords (마트, 점심, 커피, 택시, 월세, 통신비…).
+- **Particles**: Korean spaces words but glues particles onto them
+  (커피를, 마트에서). Substring matching handles those inside the text. The
+  note trims only particles that rarely end a noun (에서, 으로, 을/를, 은/는,
+  에…), never 이/가, which would clip 고양이.
+- **Amounts**: Hangul units 만/천/백/십 and Sino-Korean digits join the
+  shared reader. A space right after a unit stays inside the amount
+  ("5만 2천 원"), and the counter may follow a space ("5만 원").
+- **Two traps, closed for every CJK language:**
+  - A run made only of native digits never counts as an amount; it needs
+    a unit or an Arabic digit. 사원 ("employee") and 오늘 start with
+    numeral syllables.
+  - 원 counts as won only right after a number, because it also ends
+    ordinary words (병원 "hospital", 회원 "member").
+- **Merchant guess**: a Hangul or Latin name before 에서 (투썸플레이스에서).
+  Each pack now names its own merchant-name characters
+  (`merchantNameChars`).
+- **Checks**: 236 app tests, including 9 Korean cases that cover each
+  trap. In headless Chromium with a ko-KR device, through the real entry
+  box: 어제 투썸플레이스에서 라떼 5000원 → ₩5,000, Coffee, yesterday,
+  merchant 투썸플레이스 (guessed); 월세 50만 원 → ₩500,000, Rent; 지난주
+  월요일 영화 12000원 → ₩12,000, Movies, the previous week's Monday.
+
 ## Known gaps
 
-- **Korean and Chinese aren't understood by the parser yet** (step 3).
-  Amounts written as digits are found, and Chinese 万/千 amounts already
-  read through the shared numerals once its pack lists them. "¥" still
-  always means yen, which is wrong for Chinese until step 3.
+- **Chinese isn't understood by the parser yet** (step 3, part 2).
+  Amounts written as digits are found; "¥" still always means yen, which
+  is wrong for Chinese until then.
 - **A fresh install defaults to CAD** whatever the device region
   (`defaultCurrencyFor()`'s fallback). Japanese, Korean and Chinese users
   would want ￥/₩/¥ from the start. Raised with the user, not changed.

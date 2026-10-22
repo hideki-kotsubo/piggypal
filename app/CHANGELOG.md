@@ -19,6 +19,13 @@ How to write an entry (docs/59):
 
 
 
+
+## Unreleased
+
+- **Korean entries are understood**: "어제 커피 4500원", "월세 50만 원" or
+  "지난주 월요일 영화 12000원" fill in the amount in won, the category, the
+  date and the shop.
+
 ## 0.10.1 — 2026-10-22
 
 - In browsers without voice input (like Firefox), the mic button now
