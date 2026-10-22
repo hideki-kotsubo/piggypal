@@ -1,4 +1,5 @@
 import type { ScheduledPayment, Transaction } from './types';
+import { centsPerUnit } from './cents';
 import i18n, { uiLocale } from './i18n';
 
 // docs/57 — everything about a scheduled payment that isn't storage: when
@@ -78,19 +79,21 @@ export function remainingCount(rule: Pick<ScheduledPayment, 'occurrenceCount' | 
 }
 
 // D211 — integer cents, remainder on the FIRST installment (card-issuer
-// convention): 100000 / 3 → 33334, 33333, 33333. Sign preserved.
-export function installmentAmount(totalCents: number, count: number, number: number): number {
+// convention): 100000 / 3 → 33334, 33333, 33333. Sign preserved. `unit`
+// is the currency's smallest step in cents (cents.ts's centsPerUnit):
+// yen split in whole yen, ￥1,000 / 3 → ￥334, ￥333, ￥333.
+export function installmentAmount(totalCents: number, count: number, number: number, unit = 1): number {
   if (count <= 0) return totalCents;
   const sign = totalCents < 0 ? -1 : 1;
   const abs = Math.abs(totalCents);
-  const base = Math.floor(abs / count);
+  const base = Math.floor(abs / unit / count) * unit;
   const remainder = abs - base * count;
   return sign * (base + (number === 1 ? remainder : 0));
 }
 
 export function occurrenceAmount(rule: ScheduledPayment, number: number): number {
   if (rule.kind === 'installment' && rule.occurrenceCount) {
-    return installmentAmount(rule.amountCents, rule.occurrenceCount, number);
+    return installmentAmount(rule.amountCents, rule.occurrenceCount, number, centsPerUnit(rule.currency));
   }
   return rule.amountCents;
 }
