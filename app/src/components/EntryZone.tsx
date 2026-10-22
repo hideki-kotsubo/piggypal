@@ -339,18 +339,29 @@ export function EntryZone({ onSubmitted }: Props) {
               {voiceShort}
             </button>
           )}
-          {isSpeechInputSupported() && (
+          {/* Shown even without Web Speech (desktop Firefox), dimmed, so
+              voice entry is discoverable there and a tap says why it can't
+              work. aria-disabled rather than disabled: a disabled button
+              swallows the tap that shows the explanation. */}
+          {isSpeechInputSupported() ? (
             <button
               type="button"
               className={`mic-btn ${listening ? 'listening' : ''}`}
               onClick={toggleVoice}
               aria-label={listening ? t('entry.stopVoice') : t('entry.startVoice')}
             >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <rect x="5" y="1" width="4" height="7" rx="2" stroke="currentColor" strokeWidth="1.3" />
-                <path d="M2.5 6.5C2.5 9 4.5 11 7 11C9.5 11 11.5 9 11.5 6.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-                <path d="M7 11V13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-              </svg>
+              <MicIcon />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="mic-btn unavailable"
+              onClick={() => onSubmitted(t('voice.unsupportedBrowser'))}
+              aria-disabled="true"
+              aria-label={t('voice.unsupportedBrowser')}
+              title={t('voice.unsupportedBrowser')}
+            >
+              <MicIcon />
             </button>
           )}
           {/* The pulsing ring and the placeholder are both purely visual —
@@ -439,5 +450,15 @@ export function EntryZone({ onSubmitted }: Props) {
         )}
       </form>
     </div>
+  );
+}
+
+function MicIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <rect x="5" y="1" width="4" height="7" rx="2" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M2.5 6.5C2.5 9 4.5 11 7 11C9.5 11 11.5 9 11.5 6.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      <path d="M7 11V13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
   );
 }

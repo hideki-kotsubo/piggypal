@@ -595,6 +595,7 @@
     "languageUnsupported": "此裝置不支援{{language}}語音輸入。可在 設定 → 語音輸入語言 中更改。",
     "network": "語音輸入現在需要網路連線 — 請重試，或直接輸入。",
     "failed": "沒聽清 — 請重試，或直接輸入。",
-    "noSpeech": "沒有聽到聲音 — 點一下麥克風再試一次。"
+    "noSpeech": "沒有聽到聲音 — 點一下麥克風再試一次。",
+    "unsupportedBrowser": "此瀏覽器不支援語音輸入 — 請使用 Chrome、Edge 或 Safari，或直接輸入。"
   }
 }
