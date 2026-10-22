@@ -229,15 +229,18 @@ export function describeCadence(rule: Pick<ScheduledPayment, 'freq' | 'intervalC
   switch (rule.freq) {
     case 'weekly': {
       const weekday = new Intl.DateTimeFormat(uiLocale(), { weekday: 'long', timeZone: 'UTC' }).format(date);
-      return i18n.t('cadence.weekly', { count, weekday });
+      return i18n.t(count === 1 ? 'cadence.weekly1' : 'cadence.weekly', { count, weekday });
     }
     case 'yearly': {
       const monthDay = new Intl.DateTimeFormat(uiLocale(), { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(date);
-      return i18n.t('cadence.yearly', { count, date: monthDay });
+      return i18n.t(count === 1 ? 'cadence.yearly1' : 'cadence.yearly', { count, date: monthDay });
     }
     default: {
       const ordinal = i18n.t('cadence.day', { count: d, ordinal: true });
-      return i18n.t('cadence.monthly', { count, day: d >= 29 ? i18n.t('cadence.orLastDay', { day: ordinal }) : ordinal });
+      return i18n.t(count === 1 ? 'cadence.monthly1' : 'cadence.monthly', {
+        count,
+        day: d >= 29 ? i18n.t('cadence.orLastDay', { day: ordinal }) : ordinal,
+      });
     }
   }
 }

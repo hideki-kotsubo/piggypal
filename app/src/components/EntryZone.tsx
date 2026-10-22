@@ -286,7 +286,8 @@ export function EntryZone({ onSubmitted }: Props) {
     }
   }
   const voiceTag = voicePreference === 'app' ? i18n.language : voicePreference;
-  const voiceShort = voiceTag === 'pt-BR' ? 'PT' : voiceTag.toUpperCase();
+  // Short chip labels; Chinese by script, as Chinese apps label them.
+  const voiceShort = ({ 'pt-BR': 'PT', 'zh-Hans': '简', 'zh-Hant': '繁' } as Record<string, string>)[voiceTag] ?? voiceTag.toUpperCase();
   const voiceLabel = LANGUAGES.find((l) => l.tag === voiceTag)?.label ?? voiceTag;
 
   return (

@@ -20,6 +20,13 @@ describe('speechTagFor', () => {
     expect(speechTagFor('fr', ['fr-CA'])).toBe('fr-FR');
   });
 
+  it('always sends Mandarin for Chinese, never Cantonese zh-HK (docs/76)', () => {
+    expect(speechTagFor('zh-Hant', ['zh-HK'])).toBe('zh-TW');
+    expect(speechTagFor('zh-Hans', ['zh-SG'])).toBe('zh-CN');
+    expect(speechTagFor('ja', ['ja-JP'])).toBe('ja-JP');
+    expect(speechTagFor('ko', ['en-CA'])).toBe('ko-KR');
+  });
+
   it('falls back to a concrete default, never es-419', () => {
     expect(speechTagFor('es', ['en-CA'])).toBe('es-MX');
     expect(speechTagFor('en', ['pt-BR'])).toBe('en-US');

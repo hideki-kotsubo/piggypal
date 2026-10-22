@@ -228,7 +228,10 @@
     "day_ordinal_one": "{{count}}st",
     "day_ordinal_two": "{{count}}nd",
     "day_ordinal_few": "{{count}}rd",
-    "day_ordinal_other": "{{count}}th"
+    "day_ordinal_other": "{{count}}th",
+    "weekly1": "Weekly on {{weekday}}",
+    "yearly1": "Yearly on {{date}}",
+    "monthly1": "Monthly on the {{day}}"
   },
   "schedules": {
     "title": "Scheduled",

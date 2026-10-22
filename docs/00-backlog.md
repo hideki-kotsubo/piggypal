@@ -14,6 +14,19 @@ it needs doing.
 
 ## ⚪ Next
 
+- [ ] **Japanese, Korean and Chinese** (docs/76, D288-D292). Branch
+      `feat/i18n-cjk`.
+  - [x] Step 1: app text in ja, ko, zh-Hans, zh-Hant, email, iPhone
+        prompts, taglines, voice tags (2026-10-22).
+  - [ ] User: native-speaker review of all four before announcing them.
+  - [ ] Step 2: Japanese parser (no-spaces matching, 万 numbers, 円,
+        昨日/きのう…).
+  - [ ] Step 3: Korean and Chinese parsers (particles, 원; ¥ = yuan in
+        Chinese, 块/元/毛, both scripts).
+  - [ ] Decide: fresh-install default currency from the device region
+        instead of always CAD.
+  - Added 2026-10-22.
+
 - [ ] **Multi-language UI and voice (en, pt-BR, es, fr)**. Plan in docs/73
       (D261-D271). Branch `feat/i18n`. Reopens docs/09 D31/D32 at the
       user's request (2026-10-16).

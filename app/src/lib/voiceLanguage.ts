@@ -34,6 +34,12 @@ const DEFAULT_SPEECH_TAG: Record<Language, string> = {
   'es-ES': 'es-ES',
   fr: 'fr-FR',
   'fr-CA': 'fr-CA',
+  ja: 'ja-JP',
+  ko: 'ko-KR',
+  // Always Mandarin: a Hong Kong device's own zh-HK selects Cantonese
+  // recognition (docs/76), so the script tags send fixed regions.
+  'zh-Hans': 'zh-CN',
+  'zh-Hant': 'zh-TW',
 };
 const OTHER_VARIANT: Partial<Record<Language, string>> = { es: 'es-es', fr: 'fr-ca' };
 
