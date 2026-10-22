@@ -7,10 +7,16 @@ import es from '../locales/es.json';
 import esES from '../locales/es-ES.json';
 import fr from '../locales/fr.json';
 import frCA from '../locales/fr-CA.json';
+import ja from '../locales/ja.json';
+import ko from '../locales/ko.json';
+import zhHans from '../locales/zh-Hans.json';
+import zhHant from '../locales/zh-Hant.json';
 
 // docs/73 — UI languages. Regional files (es-ES, fr-CA) hold only the
 // strings that differ from their base; i18next falls back along
 // es-ES → es → en on its own (D261). Labels are endonyms, never translated.
+// docs/76: Japanese, Korean and both Chinese scripts are full files —
+// Traditional differs from Simplified in its characters, not a few words.
 export const LANGUAGES = [
   { tag: 'en', label: 'English' },
   { tag: 'pt-BR', label: 'Português (Brasil)' },
@@ -18,6 +24,10 @@ export const LANGUAGES = [
   { tag: 'es-ES', label: 'Español (España)' },
   { tag: 'fr', label: 'Français (France)' },
   { tag: 'fr-CA', label: 'Français (Canada)' },
+  { tag: 'ja', label: '日本語' },
+  { tag: 'ko', label: '한국어' },
+  { tag: 'zh-Hans', label: '中文（简体）' },
+  { tag: 'zh-Hant', label: '中文（繁體）' },
 ] as const;
 
 export type Language = (typeof LANGUAGES)[number]['tag'];
@@ -30,10 +40,23 @@ export const resources = {
   'es-ES': { translation: esES },
   fr: { translation: fr },
   'fr-CA': { translation: frCA },
+  ja: { translation: ja },
+  ko: { translation: ko },
+  'zh-Hans': { translation: zhHans },
+  'zh-Hant': { translation: zhHant },
 } as const;
 
 function primary(tag: string): string {
   return tag.toLowerCase().split('-')[0];
+}
+
+// Chinese is chosen by script, not region: Taiwan, Hong Kong and Macau
+// write Traditional; everywhere else (mainland, Singapore) Simplified.
+// An explicit script subtag wins over the region (zh-Hans-HK is
+// Simplified).
+function chineseScript(tag: string): 'zh-Hans' | 'zh-Hant' {
+  if (/-hans\b/i.test(tag)) return 'zh-Hans';
+  return /-(hant|tw|hk|mo)\b/i.test(tag) ? 'zh-Hant' : 'zh-Hans';
 }
 
 // D262 — "Automatic" walks the device's preferred languages in order and
@@ -53,6 +76,12 @@ export function resolveLanguage(deviceLanguages: readonly string[]): Language {
         return 'es';
       case 'fr':
         return 'fr';
+      case 'ja':
+        return 'ja';
+      case 'ko':
+        return 'ko';
+      case 'zh':
+        return chineseScript(device);
     }
   }
   return 'en';
@@ -69,10 +98,20 @@ const DEFAULT_FORMAT_LOCALE: Record<Language, string> = {
   'es-ES': 'es-ES',
   fr: 'fr-FR',
   'fr-CA': 'fr-CA',
+  ja: 'ja-JP',
+  ko: 'ko-KR',
+  'zh-Hans': 'zh-CN',
+  'zh-Hant': 'zh-TW',
 };
 
 export function formatLocaleFor(language: Language, deviceLanguages: readonly string[]): string {
-  const sameLanguage = deviceLanguages.find((d) => primary(d) === primary(language) && d.includes('-'));
+  const sameLanguage = deviceLanguages.find(
+    (d) =>
+      primary(d) === primary(language) &&
+      d.includes('-') &&
+      // Chinese only borrows a device region of the same script.
+      (primary(language) !== 'zh' || chineseScript(d) === language),
+  );
   return sameLanguage ?? DEFAULT_FORMAT_LOCALE[language];
 }
 

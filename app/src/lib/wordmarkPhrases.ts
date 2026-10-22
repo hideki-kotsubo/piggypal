@@ -217,15 +217,166 @@ const HOUSEHOLD_FR: string[] = [
   'Les bons comptes font les bons amis',
 ];
 
+// docs/76 — Japanese, Korean, Chinese.
+const GENERAL_JA: string[] = [
+  'つけといて',
+  'ちりも積もれば山となる',
+  'さっと記録',
+  '言うだけ家計簿',
+  '今日の収支',
+  'あなただけの帳簿',
+  '静かな家計簿',
+  'ひと言で記録',
+  '話して、記録して、おしまい',
+  '小さな記録、確かな家計',
+  'お財布にやさしく',
+  'プラスとマイナス',
+  'ポケットの帳面',
+  '収支すっきり',
+  'お金の流れをそっと',
+  '一円単位で',
+  'のんびり、きっちり',
+  '今日もおつかれさま',
+  'ゆるく、まめに',
+];
+
+const HOUSEHOLD_JA: string[] = [
+  'ひとつ屋根の下',
+  '夕飯、誰が払った？',
+  'けんかじゃなくて記録',
+  '今回はどっちの番？',
+  '牛乳を買った証拠',
+  'ふたりの暮らし、ひとつの合計',
+  'ランチはあなた、スーパーはわたし',
+  '家庭円満のために',
+  '今、何買ったっけ？',
+  'セールだったことにしよう',
+  '割り勘も、すっきり',
+];
+
+const GENERAL_KO: string[] = [
+  '외상으로 달아 줘요',
+  '티끌 모아 태산',
+  '말만 하면 기록 끝',
+  '오늘의 수입과 지출',
+  '나만의 가계부',
+  '조용한 가계부',
+  '말하고, 기록하고, 끝',
+  '한 푼도 빠짐없이',
+  '주머니 속 장부',
+  '더하기 빼기',
+  '정직한 계산',
+  '차곡차곡',
+  '천천히, 꼼꼼히',
+  '지갑에 평화를',
+  '하루하루 가볍게',
+  '오늘도 수고했어요',
+  '돈의 흐름을 살짝',
+  '기록은 짧게, 마음은 가볍게',
+];
+
+const HOUSEHOLD_KO: string[] = [
+  '한 지붕 아래 두 사람',
+  '저녁은 누가 샀지?',
+  '싸움 말고 기록',
+  '이번엔 누구 차례였지?',
+  '우유 산 증거',
+  '두 사람, 하나의 합계',
+  '점심은 네가, 장보기는 내가',
+  '집안의 평화를 위해',
+  '방금 뭐 샀더라?',
+  '세일이었던 걸로 하자',
+  '더치페이도 깔끔하게',
+];
+
+const GENERAL_ZH_HANS: string[] = [
+  '先记账上',
+  '积少成多',
+  '说一句就记好',
+  '今日收支',
+  '你的私人账本',
+  '安静的小账本',
+  '说完，记好，搞定',
+  '一分一毛都清楚',
+  '口袋里的账本',
+  '有进有出',
+  '老实的账',
+  '慢慢来，记清楚',
+  '钱包里的平静',
+  '轻轻松松过日子',
+  '今天也辛苦了',
+  '钱的流向，悄悄记下',
+  '记账不费劲',
+  '聚沙成塔',
+];
+
+const HOUSEHOLD_ZH_HANS: string[] = [
+  '同一屋檐下',
+  '晚饭谁请的？',
+  '不吵架，只记账',
+  '这次轮到谁了？',
+  '我买过牛奶的证据',
+  '两个人，一个总数',
+  '午饭你请，菜我买',
+  '为了家庭和睦',
+  '我们刚买了啥？',
+  '就当它在打折吧',
+  'AA 也清清楚楚',
+  '亲兄弟，明算账',
+];
+
+// Converted from the Simplified pool (OpenCC, Taiwan phrases).
+const GENERAL_ZH_HANT: string[] = [
+  '先記帳上',
+  '積少成多',
+  '說一句就記好',
+  '今日收支',
+  '你的私人帳本',
+  '安靜的小帳本',
+  '說完，記好，搞定',
+  '一分一毛都清楚',
+  '口袋裡的帳本',
+  '有進有出',
+  '老實的帳',
+  '慢慢來，記清楚',
+  '錢包裡的平靜',
+  '輕輕鬆鬆過日子',
+  '今天也辛苦了',
+  '錢的流向，悄悄記下',
+  '記帳不費勁',
+  '聚沙成塔',
+];
+
+const HOUSEHOLD_ZH_HANT: string[] = [
+  '同一屋簷下',
+  '晚飯誰請的？',
+  '不吵架，只記帳',
+  '這次輪到誰了？',
+  '我買過牛奶的證據',
+  '兩個人，一個總數',
+  '午飯你請，菜我買',
+  '為了家庭和睦',
+  '我們剛買了啥？',
+  '就當它在打折吧',
+  'AA 也清清楚楚',
+  '親兄弟，明算帳',
+];
+
+
 const POOLS: Record<string, { general: string[]; household: string[] }> = {
   en: { general: GENERAL_EN, household: HOUSEHOLD_EN },
   pt: { general: GENERAL_PT, household: HOUSEHOLD_PT },
   es: { general: GENERAL_ES, household: HOUSEHOLD_ES },
   fr: { general: GENERAL_FR, household: HOUSEHOLD_FR },
+  ja: { general: GENERAL_JA, household: HOUSEHOLD_JA },
+  ko: { general: GENERAL_KO, household: HOUSEHOLD_KO },
+  'zh-Hans': { general: GENERAL_ZH_HANS, household: HOUSEHOLD_ZH_HANS },
+  'zh-Hant': { general: GENERAL_ZH_HANT, household: HOUSEHOLD_ZH_HANT },
 };
 
 export function wordmarkPool(language: string, hasHousehold: boolean): string[] {
-  const pools = POOLS[language.split('-')[0]] ?? POOLS.en;
+  // Full tag first (zh-Hant has its own pool), then the base language.
+  const pools = POOLS[language] ?? POOLS[language.split('-')[0]] ?? POOLS.en;
   return hasHousehold ? [...pools.general, ...pools.household] : pools.general;
 }
 

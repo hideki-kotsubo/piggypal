@@ -242,7 +242,10 @@
     "monthly_many": "Tous les {{count}} mois le {{day}}",
     "orLastDay": "{{day}} (ou dernier jour)",
     "day_ordinal_one": "{{count}}er",
-    "day_ordinal_other": "{{count}}"
+    "day_ordinal_other": "{{count}}",
+    "weekly1": "Chaque semaine le {{weekday}}",
+    "yearly1": "Chaque année le {{date}}",
+    "monthly1": "Chaque mois le {{day}}"
   },
   "schedules": {
     "title": "Programmés",

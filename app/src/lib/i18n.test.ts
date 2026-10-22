@@ -17,7 +17,8 @@ function baseKeys(lang: Language): Set<string> {
   return new Set(flatten(resources[lang].translation as Tree).map((k) => k.replace(PLURAL_SUFFIX, '')));
 }
 
-const BASE_LANGUAGES = ['pt-BR', 'es', 'fr'] as const satisfies Language[];
+// docs/76: ja, ko and both Chinese scripts are full files too.
+const BASE_LANGUAGES = ['pt-BR', 'es', 'fr', 'ja', 'ko', 'zh-Hans', 'zh-Hant'] as const satisfies Language[];
 const REGIONAL_LANGUAGES = ['es-ES', 'fr-CA'] as const satisfies Language[];
 const enKeys = baseKeys('en');
 
@@ -65,6 +66,18 @@ describe('resolveLanguage', () => {
     expect(resolveLanguage(['pt-BR'])).toBe('pt-BR');
   });
 
+  it('maps Chinese by script, Japanese and Korean by language (docs/76)', () => {
+    expect(resolveLanguage(['zh-CN'])).toBe('zh-Hans');
+    expect(resolveLanguage(['zh-SG'])).toBe('zh-Hans');
+    expect(resolveLanguage(['zh'])).toBe('zh-Hans');
+    expect(resolveLanguage(['zh-Hans-HK'])).toBe('zh-Hans');
+    expect(resolveLanguage(['zh-TW'])).toBe('zh-Hant');
+    expect(resolveLanguage(['zh-HK'])).toBe('zh-Hant');
+    expect(resolveLanguage(['zh-Hant-TW'])).toBe('zh-Hant');
+    expect(resolveLanguage(['ja-JP'])).toBe('ja');
+    expect(resolveLanguage(['ko-KR'])).toBe('ko');
+  });
+
   it('maps other regions to the base language', () => {
     expect(resolveLanguage(['pt-PT'])).toBe('pt-BR');
     expect(resolveLanguage(['es-AR'])).toBe('es');
@@ -74,8 +87,8 @@ describe('resolveLanguage', () => {
   });
 
   it('walks the preference list and falls back to English', () => {
-    expect(resolveLanguage(['ja-JP', 'fr-CA', 'en-US'])).toBe('fr-CA');
-    expect(resolveLanguage(['ja-JP', 'de-DE'])).toBe('en');
+    expect(resolveLanguage(['de-DE', 'fr-CA', 'en-US'])).toBe('fr-CA');
+    expect(resolveLanguage(['de-DE', 'it-IT'])).toBe('en');
     expect(resolveLanguage([])).toBe('en');
   });
 });
@@ -85,6 +98,14 @@ describe('formatLocaleFor', () => {
   it("uses the device's region when it speaks the same language", () => {
     expect(formatLocaleFor('es', ['es-AR'])).toBe('es-AR');
     expect(formatLocaleFor('en', ['pt-BR', 'en-GB'])).toBe('en-GB');
+  });
+
+  it("borrows a Chinese device region only for the same script", () => {
+    expect(formatLocaleFor('zh-Hant', ['zh-HK'])).toBe('zh-HK');
+    expect(formatLocaleFor('zh-Hans', ['zh-TW'])).toBe('zh-CN');
+    expect(formatLocaleFor('zh-Hans', ['zh-SG'])).toBe('zh-SG');
+    expect(formatLocaleFor('ja', ['en-CA'])).toBe('ja-JP');
+    expect(formatLocaleFor('ko', [])).toBe('ko-KR');
   });
 
   it('otherwise uses the language default', () => {
@@ -109,8 +130,8 @@ describe('fallback', () => {
 describe('wordmark phrases (docs/51, docs/73)', () => {
   it('has a native pool for every UI language, regional variants sharing their base', async () => {
     const { wordmarkPool } = await import('./wordmarkPhrases');
-    const pools = ['en', 'pt-BR', 'es', 'fr'].map((l) => wordmarkPool(l, false));
-    expect(new Set(pools.map((p) => p[0])).size).toBe(4);
+    const pools = ['en', 'pt-BR', 'es', 'fr', 'ja', 'ko', 'zh-Hans', 'zh-Hant'].map((l) => wordmarkPool(l, false));
+    expect(new Set(pools.map((p) => p[0])).size).toBe(8);
     for (const p of pools) expect(p.length).toBeGreaterThan(15);
     expect(wordmarkPool('es-ES', true)).toEqual(wordmarkPool('es', true));
     expect(wordmarkPool('fr-CA', false)).toEqual(wordmarkPool('fr', false));
