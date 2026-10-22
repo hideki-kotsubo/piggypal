@@ -6,7 +6,7 @@
 // never English "Sept"; Portuguese "dos" is "of the", never Spanish two.
 // No React, no i18n — parser.ts stays a pure module.
 
-export type PackId = 'en' | 'pt' | 'es' | 'fr' | 'ja';
+export type PackId = 'en' | 'pt' | 'es' | 'fr' | 'ja' | 'ko';
 
 export interface LanguagePack {
   numbers: Record<string, number>;
@@ -61,6 +61,9 @@ export interface LanguagePack {
   // Particles right after a new merchant's name (スタバで): the name comes
   // before them, unlike `merchantConnectors`.
   merchantAfter?: string[];
+  // Characters a merchant name before `merchantAfter` may use (a regex
+  // character-class body): katakana for Japanese, Hangul for Korean.
+  merchantNameChars?: string;
   // Particles trimmed off the edges of the leftover note, character-wise.
   edgeParticles?: string[];
 }
@@ -280,19 +283,75 @@ export const PACKS: Record<PackId, LanguagePack> = {
     },
     amountCounters: ['円'],
     merchantAfter: ['で'],
+    merchantNameChars: "\\p{Script=Katakana}ー・A-Za-z0-9&.'’",
     edgeParticles: ['から', 'まで', 'で', 'に', 'を', 'の', 'は', 'が', 'と', 'へ', 'も', '、', '。'],
+  },
+
+  // docs/76 step 3. Korean puts spaces between words but glues particles
+  // onto them (커피를, 마트에서); substring matching (findWord, Hangul)
+  // handles that. Amounts mostly arrive as digits ("5000원", "5만 원").
+  ko: {
+    numbers: {},
+    numberJoiners: [],
+    articles: [],
+    today: ['오늘'],
+    yesterday: ['어제'],
+    dayBeforeYesterday: ['그저께', '그제'],
+    weekdays: { 월: 1, 화: 2, 수: 3, 목: 4, 금: 5, 토: 6, 일: 0 },
+    lastWeekday: ['(월|화|수|목|금|토|일)요일'],
+    previousWeekWeekday: ['지난\\s?주\\s?(월|화|수|목|금|토|일)요일'],
+    months: {},
+    dateStyle: 'cjk',
+    incomeTriggers: ['월급', '급여', '수입', '입금', '보너스', '상여금'],
+    merchantConnectors: [],
+    edgeFillers: [],
+    categoryKeywords: {
+      'cat-food-groceries': ['마트', '장보기', '식료품', '이마트', '홈플러스'],
+      'cat-food-dining': ['점심', '저녁', '아침', '외식', '식당', '배달', '치킨', '삼겹살'],
+      'cat-food-coffee': ['커피', '카페', '스타벅스', '아메리카노', '라떼', '아이스 아메리카노'],
+      'cat-food-snacks': ['간식', '과자', '아이스크림', '디저트'],
+      'cat-food-alcohol': ['맥주', '소주', '와인', '술집'],
+      'cat-transport-rideshare': ['택시'],
+      'cat-transport-fuel': ['주유', '기름값', '휘발유'],
+      'cat-transport-transit': ['지하철', '버스', '교통비', '기차', 'ktx'],
+      'cat-transport-parking': ['주차'],
+      'cat-health-pharmacy': ['약국'],
+      'cat-health-medical': ['병원', '진료'],
+      'cat-recreation-movies': ['영화', '넷플릭스'],
+      'cat-shopping-clothing': ['의류', '옷값'],
+      'cat-housing-rent': ['월세'],
+      'cat-housing-electricity': ['전기요금', '전기세'],
+      'cat-housing-water': ['수도요금'],
+      'cat-housing-heat': ['가스요금', '난방비'],
+      'cat-housing-phone': ['통신비', '휴대폰 요금', '폰요금'],
+      'cat-housing-internet': ['인터넷 요금'],
+      'cat-personal-subscriptions': ['구독'],
+      'cat-salary': ['월급', '급여'],
+    },
+    reserved: [],
+    dollarSign: { typed: 'family', speech: 'family' },
+    numerals: {
+      digits: { 영: 0, 공: 0, 일: 1, 이: 2, 삼: 3, 사: 4, 오: 5, 육: 6, 칠: 7, 팔: 8, 구: 9 },
+      small: { 십: 10, 백: 100, 천: 1000 },
+      large: { 만: 10_000, 억: 100_000_000 },
+    },
+    amountCounters: ['원'],
+    merchantAfter: ['에서'],
+    merchantNameChars: "\\p{Script=Hangul}A-Za-z0-9&.'’",
+    // Only particles that rarely end a noun: 이/가 would clip 고양이.
+    edgeParticles: ['에서', '으로', '에게', '까지', '부터', '에', '을', '를', '은', '는'],
   },
 };
 
 export function packFor(language: string | undefined): PackId | null {
   const base = language?.toLowerCase().split('-')[0];
-  return base === 'en' || base === 'pt' || base === 'es' || base === 'fr' || base === 'ja' ? base : null;
+  return base === 'en' || base === 'pt' || base === 'es' || base === 'fr' || base === 'ja' || base === 'ko' ? base : null;
 }
 
 // Packs in priority order: the input language first, then the rest.
 export function orderedPacks(language: string | undefined): { id: PackId; pack: LanguagePack }[] {
   const first = packFor(language);
-  const ids: PackId[] = ['en', 'pt', 'es', 'fr', 'ja'];
+  const ids: PackId[] = ['en', 'pt', 'es', 'fr', 'ja', 'ko'];
   const order = first ? [first, ...ids.filter((id) => id !== first)] : ids;
   return order.map((id) => ({ id, pack: PACKS[id] }));
 }

@@ -337,6 +337,94 @@ describe('Japanese', () => {
   });
 });
 
+// docs/76 step 3. NOW is Friday 16 Oct 2026, 10:00.
+describe('Korean', () => {
+  it('reads amount, currency, category and date, with particles attached', () => {
+    const r = parse('어제 커피를 4500원', 'ko');
+    expect(r.amountCents).toBe(450_000);
+    expect(r.currency).toBe('KRW');
+    expect(r.categoryId).toBe('cat-food-coffee');
+    expect(r.occurredAt).toBe(day(2026, 10, 15));
+    expect(r.unrecognized).toBeNull();
+  });
+
+  it('reads 만/천 amounts, with the spaces Korean puts in them', () => {
+    expect(parse('5만 원 월세', 'ko').amountCents).toBe(5_000_000);
+    expect(parse('월세 5만 원', 'ko').categoryId).toBe('cat-housing-rent');
+    expect(parse('5만 2천 원 장보기', 'ko').amountCents).toBe(5_200_000);
+    expect(parse('오천원 간식', 'ko').amountCents).toBe(500_000);
+    expect(parse('만원 택시', 'ko').amountCents).toBe(1_000_000);
+    expect(parse('₩5000 커피', 'ko').amountCents).toBe(500_000);
+    expect(parse('₩5000 커피', 'ko').currency).toBe('KRW');
+  });
+
+  it("doesn't read Hangul digits inside words as amounts or 원 inside words as won", () => {
+    const staff = parse('사원 식당 8000원', 'ko');
+    expect(staff.amountCents).toBe(800_000);
+    expect(staff.categoryId).toBe('cat-food-dining');
+    const hospital = parse('병원', 'ko');
+    expect(hospital.currency).toBeNull();
+    expect(hospital.amountCents).toBeNull();
+    expect(parse('오늘 커피 4000원', 'ko').amountCents).toBe(400_000);
+    expect(parse('이마트 3만원', 'ko').categoryId).toBe('cat-food-groceries');
+    expect(parse('이마트 3만원', 'ko').amountCents).toBe(3_000_000);
+  });
+
+  it('reads relative dates, weekdays and 지난주', () => {
+    expect(parse('그저께 주유 6만원', 'ko').occurredAt).toBe(day(2026, 10, 14));
+    expect(parse('그제 주유 6만원', 'ko').categoryId).toBe('cat-transport-fuel');
+    expect(parse('오늘 점심 9000원', 'ko').occurredAt).toBe(day(2026, 10, 16));
+    expect(parse('수요일 점심 9000원', 'ko').occurredAt).toBe(day(2026, 10, 14));
+    expect(parse('지난주 월요일 영화 12000원', 'ko').occurredAt).toBe(day(2026, 10, 5));
+  });
+
+  it('reads 10월 3일 and 2025년 3월 15일 dates, and times', () => {
+    expect(parse('10월 3일 약국 7000원', 'ko').occurredAt).toBe(day(2026, 10, 3));
+    expect(parse('2025년 3월 15일 약국 7000원', 'ko').occurredAt).toBe('2025-03-15T10:00:00');
+    expect(parse('오후 3시 30분 카페 5000원', 'ko').occurredAt).toBe('2026-10-16T15:30:00');
+    expect(parse('3시 반 카페 5000원', 'ko').occurredAt).toBe('2026-10-16T03:30:00');
+    // 3시간 is a duration (hours), not a time.
+    expect(parse('주차 3시간 6000원', 'ko').occurredAt).toBeNull();
+  });
+
+  it('guesses the shop before 에서, never a word another field read', () => {
+    const r = parse('투썸플레이스에서 라떼 5000원', 'ko');
+    expect(r.merchant).toBe('투썸플레이스');
+    expect(r.merchantGuessed).toBe(true);
+    expect(r.categoryId).toBe('cat-food-coffee');
+    expect(r.unrecognized).toBe('투썸플레이스에서');
+    const mart = parse('마트에서 장보기 5만원', 'ko');
+    expect(mart.merchant).toBeNull();
+    expect(mart.categoryId).toBe('cat-food-groceries');
+    expect(mart.unrecognized).toBeNull();
+  });
+
+  it('finds the starter Cash account as 현금 and trims particles from the note', () => {
+    const r = parse('현금으로 점심 12000원', 'ko');
+    expect(r.accountId).toBe('acc-cash');
+    expect(r.categoryId).toBe('cat-food-dining');
+    expect(r.unrecognized).toBeNull();
+  });
+
+  it('reads income and currency words', () => {
+    const r = parse('월급 300만원', 'ko');
+    expect(r.direction).toBe('income');
+    expect(r.categoryId).toBe('cat-salary');
+    expect(r.amountCents).toBe(300_000_000);
+    expect(parse('20 미국 달러 커피', 'ko').currency).toBe('USD');
+    expect(parse('20 캐나다 달러 커피', 'ko').currency).toBe('CAD');
+    const dollars = parse('20달러 커피', 'ko');
+    expect(dollars.currency).toBeNull();
+    expect(dollars.dollarFamily).toBe(true);
+    expect(parse('3000엔 라멘', 'ko').currency).toBe('JPY');
+  });
+
+  it('finds Korean starter category names', () => {
+    expect(parse('장보기 32000원', 'ko').categoryId).toBe('cat-food-groceries');
+    expect(parse('교통 1500원', 'ko').categoryId).toBe('cat-transport');
+  });
+});
+
 describe('thousands separators (docs/76, all languages)', () => {
   it('reads groups of three digits as thousands, a final one or two as cents', () => {
     expect(parse('1,500 dollars coffee', 'en').amountCents).toBe(150_000);
