@@ -6,7 +6,7 @@
 // never English "Sept"; Portuguese "dos" is "of the", never Spanish two.
 // No React, no i18n — parser.ts stays a pure module.
 
-export type PackId = 'en' | 'pt' | 'es' | 'fr' | 'ja' | 'ko';
+export type PackId = 'en' | 'pt' | 'es' | 'fr' | 'ja' | 'ko' | 'zh';
 
 export interface LanguagePack {
   numbers: Record<string, number>;
@@ -64,6 +64,19 @@ export interface LanguagePack {
   // Characters a merchant name before `merchantAfter` may use (a regex
   // character-class body): katakana for Japanese, Hangul for Korean.
   merchantNameChars?: string;
+  // docs/76 step 3b — Chinese.
+  // What "¥" means when this language comes first: yen elsewhere, yuan here.
+  yenSign?: 'JPY' | 'CNY';
+  // What a bare 元/块 after a number means, by script: yuan on the
+  // mainland, New Taiwan dollars in Taiwan (Traditional's default region).
+  localYuan?: { Hans: string; Hant: string };
+  // Tenths after the main counter: 3块5, 5毛, 3块5毛.
+  minorCounters?: Record<string, number>;
+  // Words after the counter that make a lone native digit an amount
+  // anyway: 两块钱. Without them, 一块 is just as likely "a piece".
+  moneyAfterCounter?: string[];
+  // A merchant name after a prefix (在全家买…), ending at one of `stop`.
+  merchantAfterPrefix?: { prefix: string[]; stop: string };
   // Particles trimmed off the edges of the leftover note, character-wise.
   edgeParticles?: string[];
 }
@@ -341,17 +354,75 @@ export const PACKS: Record<PackId, LanguagePack> = {
     // Only particles that rarely end a noun: 이/가 would clip 고양이.
     edgeParticles: ['에서', '으로', '에게', '까지', '부터', '에', '을', '를', '은', '는'],
   },
+
+  // docs/76 step 3b. One pack for both scripts: every word that differs is
+  // listed in Simplified and Traditional. Mandarin only (D290).
+  zh: {
+    numbers: {},
+    numberJoiners: [],
+    articles: [],
+    today: ['今天', '今日'],
+    yesterday: ['昨天', '昨日'],
+    dayBeforeYesterday: ['前天'],
+    weekdays: { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 日: 0, 天: 0 },
+    lastWeekday: ['(?:星期|周|週|礼拜|禮拜)([一二三四五六日天])'],
+    previousWeekWeekday: ['上(?:个|個)?(?:星期|周|週|礼拜|禮拜)([一二三四五六日天])'],
+    months: {},
+    dateStyle: 'cjk',
+    incomeTriggers: ['工资', '工資', '薪水', '收入', '奖金', '獎金', '入账', '入帳', '到账', '到帳'],
+    merchantConnectors: [],
+    edgeFillers: [],
+    categoryKeywords: {
+      'cat-food-groceries': ['超市', '买菜', '買菜', '菜市场', '菜市場', '生鲜', '生鮮'],
+      'cat-food-dining': ['午饭', '午飯', '晚饭', '晚飯', '早饭', '早飯', '早餐', '午餐', '晚餐', '吃饭', '吃飯', '外卖', '外賣', '餐厅', '餐廳', '饭店', '飯店', '火锅', '火鍋', '便当', '便當'],
+      'cat-food-coffee': ['咖啡', '星巴克', '拿铁', '拿鐵', '美式'],
+      'cat-food-snacks': ['零食', '冰淇淋', '雪糕', '奶茶', '甜点', '甜點', '点心', '點心'],
+      'cat-food-alcohol': ['啤酒', '酒吧', '喝酒'],
+      'cat-transport-rideshare': ['打车', '打車', '叫车', '叫車', '出租车', '計程車', '滴滴'],
+      'cat-transport-fuel': ['加油', '油费', '油費', '汽油'],
+      'cat-transport-transit': ['地铁', '地鐵', '捷运', '捷運', '公交', '公車', '高铁', '高鐵', '火车', '火車', '交通费', '交通費', '车票', '車票'],
+      'cat-transport-parking': ['停车', '停車'],
+      'cat-health-pharmacy': ['药店', '藥局', '藥房', '买药', '買藥'],
+      'cat-health-medical': ['医院', '醫院', '看病', '挂号', '掛號'],
+      'cat-recreation-movies': ['电影', '電影'],
+      'cat-shopping-clothing': ['衣服', '服装', '服裝'],
+      'cat-housing-rent': ['房租', '租金'],
+      'cat-housing-electricity': ['电费', '電費'],
+      'cat-housing-water': ['水费', '水費'],
+      'cat-housing-heat': ['燃气费', '燃氣費', '煤气费', '瓦斯费', '瓦斯費'],
+      'cat-housing-phone': ['话费', '話費', '手机费', '手機費', '电信费', '電信費'],
+      'cat-housing-internet': ['网费', '網費', '网络费', '網路費'],
+      'cat-personal-subscriptions': ['订阅', '訂閱', '会员费', '會員費'],
+      'cat-salary': ['工资', '工資', '薪水'],
+    },
+    reserved: [],
+    dollarSign: { typed: 'family', speech: 'family' },
+    numerals: {
+      digits: { 〇: 0, 零: 0, 一: 1, 二: 2, 两: 2, 兩: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 },
+      small: { 十: 10, 百: 100, 千: 1000 },
+      large: { 万: 10_000, 萬: 10_000, 亿: 100_000_000, 億: 100_000_000 },
+    },
+    amountCounters: ['块', '塊', '元', '圆', '圓'],
+    minorCounters: { 毛: 0.1, 角: 0.1 },
+    moneyAfterCounter: ['钱', '錢'],
+    yenSign: 'CNY',
+    localYuan: { Hans: 'CNY', Hant: 'TWD' },
+    merchantAfterPrefix: { prefix: ['在'], stop: '买買吃喝花付刷用打加' },
+    edgeParticles: ['花了', '付了', '买了', '買了', '了', '的', '在', '买', '買', '花', '用', '，', '。', '、'],
+  },
 };
 
 export function packFor(language: string | undefined): PackId | null {
   const base = language?.toLowerCase().split('-')[0];
-  return base === 'en' || base === 'pt' || base === 'es' || base === 'fr' || base === 'ja' || base === 'ko' ? base : null;
+  return base === 'en' || base === 'pt' || base === 'es' || base === 'fr' || base === 'ja' || base === 'ko' || base === 'zh'
+    ? base
+    : null;
 }
 
 // Packs in priority order: the input language first, then the rest.
 export function orderedPacks(language: string | undefined): { id: PackId; pack: LanguagePack }[] {
   const first = packFor(language);
-  const ids: PackId[] = ['en', 'pt', 'es', 'fr', 'ja', 'ko'];
+  const ids: PackId[] = ['en', 'pt', 'es', 'fr', 'ja', 'ko', 'zh'];
   const order = first ? [first, ...ids.filter((id) => id !== first)] : ids;
   return order.map((id) => ({ id, pack: PACKS[id] }));
 }

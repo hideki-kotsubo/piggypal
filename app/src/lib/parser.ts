@@ -152,6 +152,11 @@ function parseCjkNumber(
   let current: number | null = null;
   let literal = '';
   let prevDigit = false;
+  // For the spoken shortening (step 3b): one digit right after a unit of
+  // a hundred or more stands for the next unit down — 一百五 = 150,
+  // 一万五 = 15,000, 1万5 = 15,000. 十五 stays 15 (十 is below a hundred).
+  let lastUnit = 0;
+  let digitsSinceUnit = 0;
   const flush = () => {
     if (literal) {
       const n = Number(literal.replace(/,/g, ''));
@@ -162,6 +167,7 @@ function parseCjkNumber(
   for (const ch of run) {
     if (/[0-9.,]/.test(ch)) {
       literal += ch;
+      if (/[0-9]/.test(ch)) digitsSinceUnit++;
       prevDigit = false;
       continue;
     }
@@ -170,20 +176,26 @@ function parseCjkNumber(
       // 二〇二六-style runs read positionally.
       current = prevDigit && current !== null ? current * 10 + digits[ch] : digits[ch];
       prevDigit = true;
+      digitsSinceUnit++;
     } else if (ch in small) {
       section += (current ?? 1) * small[ch];
       current = null;
       prevDigit = false;
+      lastUnit = small[ch];
+      digitsSinceUnit = 0;
     } else if (ch in large) {
       total += (section + (current ?? 0) || 1) * large[ch];
       section = 0;
       current = null;
       prevDigit = false;
+      lastUnit = large[ch];
+      digitsSinceUnit = 0;
     } else {
       return null;
     }
   }
   flush();
+  if (current !== null && lastUnit >= 100 && digitsSinceUnit === 1) current *= lastUnit / 10;
   return total + section + (current ?? 0);
 }
 
@@ -193,15 +205,25 @@ function extractCjkAmount(text: string, spans: Span[], language: string | undefi
   const digits: Record<string, number> = {};
   const small: Record<string, number> = {};
   const large: Record<string, number> = {};
+  const minor: Record<string, number> = {};
   for (const { pack } of withNumerals) {
     for (const [k, v] of Object.entries(pack.numerals!.digits)) if (!(k in digits)) digits[k] = v;
     for (const [k, v] of Object.entries(pack.numerals!.small)) if (!(k in small)) small[k] = v;
     for (const [k, v] of Object.entries(pack.numerals!.large)) if (!(k in large)) large[k] = v;
+    for (const [k, v] of Object.entries(pack.minorCounters ?? {})) if (!(k in minor)) minor[k] = v;
   }
   const counters = mergedWords(language, (p) => p.amountCounters ?? []);
+  const moneyAfter = mergedWords(language, (p) => p.moneyAfterCounter ?? []);
+  // Counters that take tenths after them (3块5): only those of a pack
+  // with minor counters, so 円 or 원 never do.
+  const tenthsCounters = new Set(
+    withNumerals.filter(({ pack }) => pack.minorCounters).flatMap(({ pack }) => pack.amountCounters ?? []),
+  );
   const chars = Object.keys({ ...digits, ...small, ...large }).join('');
   const units = Object.keys({ ...small, ...large }).join('');
-  // Korean spaces amounts after a unit ("5만 2천 원"), so a space right
+  const digitChars = `0-9${Object.keys(digits).join('')}`;
+  const minorChars = Object.keys(minor).join('');
+  // Korean spaces amounts after a unit ("5万 2천 원"), so a space right
   // after a unit and before another numeral stays inside the run.
   const run = new RegExp(`[0-9${chars}](?:[0-9.,${chars}]|(?<=[${units}])\\s(?=[0-9${chars}]))*`, 'g');
   let match: RegExpExecArray | null;
@@ -213,16 +235,43 @@ function extractCjkAmount(text: string, spans: Span[], language: string | undefi
     // The counter may follow a space: "5만 원".
     const gap = /^\s?/.exec(text.slice(end))![0].length;
     const counter = counters.find((c) => text.startsWith(c, end + gap));
+    const minorUnit = minorChars ? Object.keys(minor).find((m) => text.startsWith(m, end)) : undefined;
     const hasUnit = [...raw].some((ch) => ch in small || ch in large);
     const hasArabic = /[0-9]/.test(raw);
-    // A run of native digits alone is too often part of a word (Korean
-    // 사원 "employee", 오늘 "today"): it needs a unit or an Arabic digit.
-    if (!hasUnit && !hasArabic) continue;
-    if (!counter && !(hasUnit && hasArabic)) continue;
+    let claimEnd = counter ? end + gap + counter.length : minorUnit ? end + minorUnit.length : end;
+    let money: string | undefined;
+    if (!hasUnit && !hasArabic) {
+      // A run of native digits alone is too often part of a word (Korean
+      // 사원 "employee", Chinese 一块蛋糕 "a piece of cake"): it counts only
+      // when money is spelled out after the counter (两块钱).
+      money = counter ? moneyAfter.find((m) => text.startsWith(m, claimEnd)) : undefined;
+      if (!money) continue;
+      claimEnd += money.length;
+    } else if (!counter && !minorUnit && !(hasUnit && hasArabic)) {
+      continue;
+    }
     const value = parseCjkNumber(raw.replace(/\s/g, ''), digits, small, large);
     if (value === null || value <= 0) continue;
-    spans.push([start, counter ? end + gap + counter.length : end]);
-    return Math.round(value * 100);
+    // 5毛: tenths on their own.
+    if (!counter && minorUnit) {
+      spans.push([start, claimEnd]);
+      return Math.round(value * minor[minorUnit] * 100);
+    }
+    // 3块5 / 3块5毛: one digit right after the counter is tenths.
+    // Only languages with minor counters (Chinese) read it that way. A
+    // native digit must end there or take 毛 (3块五), so 30元零食 and
+    // 30元一杯 keep their words.
+    let tenths = 0;
+    if (counter && !money && minorChars && tenthsCounters.has(counter)) {
+      const after = new RegExp(`^([${digitChars}])([${minorChars}])?(?![0-9${chars}])`, 'u').exec(text.slice(claimEnd));
+      const nativeInWord = after && !/[0-9]/.test(after[1]) && !after[2] && /^[\p{L}\p{N}]/u.test(text.slice(claimEnd + 1));
+      if (after && !nativeInWord) {
+        tenths = (/[0-9]/.test(after[1]) ? Number(after[1]) : digits[after[1]]) / 10;
+        claimEnd += after[0].length;
+      }
+    }
+    spans.push([start, claimEnd]);
+    return Math.round((value + tenths) * 100);
   }
   return null;
 }
@@ -323,6 +372,11 @@ function extractWordAmount(tokens: RegExpMatchArray[], spans: Span[], language: 
 const CURRENCY_MARKERS: [RegExp, string][] = [
   [/\b(?:canadian dollars?|dollars? canadiens?|d[óo]lar(?:es)? canadenses?|d[óo]lar(?:es)? canadienses?)(?![\p{L}])/iu, 'CAD'],
   [/\b(?:american dollars?|u\.?s\.? dollars?|dollars? am[ée]ricains?|dollars? us|d[óo]lar(?:es)? americanos?|d[óo]lar(?:es)? estadunidenses?|d[óo]lar(?:es)? estadounidenses?)(?![\p{L}])/iu, 'USD'],
+  // docs/76 — Chinese, both scripts. These contain 元 (美元, 日元, 港元),
+  // so they come before the bare-元 rule in extractCurrency.
+  [/(?:人民币|人民幣|rmb)/i, 'CNY'], [/(?:美元|美金)/, 'USD'], [/(?:加拿大元|加元|加币|加幣)/, 'CAD'],
+  [/(?:日元|日圆|日圓|日币|日幣)/, 'JPY'], [/(?:欧元|歐元)/, 'EUR'], [/(?:港币|港幣|港元|hk\$)/i, 'HKD'],
+  [/(?:新台币|新台幣|台币|台幣|nt\$)/i, 'TWD'], [/(?:韩元|韓元)/, 'KRW'],
   // docs/76 — Japanese.
   [/(?:カナダドル|加ドル)/, 'CAD'], [/(?:米ドル|アメリカドル|usドル)/i, 'USD'],
   // Korean. 원 and 엔 only right after a number: 원 also ends ordinary
@@ -343,11 +397,26 @@ const CURRENCY_MARKERS: [RegExp, string][] = [
 const DOLLAR_WORDS = /\b(?:dollars?|bucks?)\b|ドル|달러/i;
 
 function extractCurrency(text: string, spans: Span[], ctx: ParserContext): { currency: string | null; dollarFamily: boolean } {
+  const first = orderedPacks(ctx.language)[0].pack;
   for (const [re, code] of CURRENCY_MARKERS) {
     const match = re.exec(text);
     if (match) {
       spans.push([match.index, match.index + match[0].length]);
-      return { currency: code, dollarFamily: false };
+      // "¥" is yuan when Chinese is the input language (docs/76 step 3b).
+      const currency = match[0] === '¥' && first.yenSign ? first.yenSign : code;
+      return { currency, dollarFamily: false };
+    }
+  }
+  // A bare 元/块 right after a number: the local yuan for the script —
+  // CNY in Simplified, TWD in Traditional (Taiwan, its default region).
+  const yuanPack = orderedPacks(ctx.language).find(({ pack }) => pack.localYuan)?.pack;
+  if (yuanPack?.localYuan && yuanPack.numerals) {
+    const numerals = Object.keys({ ...yuanPack.numerals.digits, ...yuanPack.numerals.small, ...yuanPack.numerals.large }).join('');
+    const yuan = new RegExp(`(?<=[0-9${numerals}]\\s?)(?:${(yuanPack.amountCounters ?? []).join('|')})`).exec(text);
+    if (yuan) {
+      spans.push([yuan.index, yuan.index + yuan[0].length]);
+      const traditional = /-(hant|tw|hk|mo)\b/i.test(ctx.language ?? '') && !/-hans\b/i.test(ctx.language ?? '');
+      return { currency: traditional ? yuanPack.localYuan.Hant : yuanPack.localYuan.Hans, dollarFamily: false };
     }
   }
   const word = DOLLAR_WORDS.exec(text);
@@ -479,7 +548,7 @@ function resolveAbsoluteDate(textLower: string, now: Date, spans: Span[], langua
   // Each shape: regex, and which groups hold [day, month, year].
   // cjk (docs/76): 8月16日 / 2026年8月16日, the month as a number.
   const shapes: Record<LanguagePack['dateStyle'], [RegExp, [number, number, number]] | null> = {
-    cjk: [/(?:(\d{4})[年년]\s?)?(\d{1,2})[月월]\s?(\d{1,2})[日일]/, [3, 2, 1]],
+    cjk: [/(?:(\d{4})[年년]\s?)?(\d{1,2})[月월]\s?(\d{1,2})[日일号號]/, [3, 2, 1]],
     monthDay: [new RegExp(`\\b(${nonFrench})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?,?(?:\\s+(\\d{4}))?\\b`), [2, 1, 3]],
     dayDeMonth: [new RegExp(`\\b(\\d{1,2})\\s+de\\s+(${nonFrench})(?:\\s+de\\s+(\\d{4}))?\\b`), [1, 2, 3]],
     dayMonth: french ? [new RegExp(`\\b(\\d{1,2})(?:er)?\\s+(${french})\\.?(?:\\s+(\\d{4}))?(?![\\p{L}])`, 'u'), [1, 2, 3]] : null,
@@ -534,12 +603,18 @@ function resolveTimeOfDay(textLower: string, spans: Span[]): { hours: number; mi
 // a time, so 時 followed by 間 doesn't count.
 function resolveCjkTime(textLower: string, spans: Span[]): { hours: number; minutes: number } | null {
   // Korean too: 오후 3시 30분, 3시 반; 3시간 (hours) excluded the same way.
-  const match = /(午前|午後|오전|오후)?\s*(\d{1,2})[時시](?![間간])(?:\s*(\d{1,2})[分분]|\s*(半|반))?/.exec(textLower);
+  // Chinese too (step 3b): 下午3点半, 3点20分. "3点5元" is 3.5 yuan, not
+  // 3 o'clock, so 点 followed by digits and a yuan counter doesn't count.
+  const match =
+    /(午前|午後|오전|오후|上午|下午|早上|晚上|中午)?\s*(\d{1,2})[時시点點](?![間간])(?!\d+\s*[元块塊圆圓])(?:\s*(\d{1,2})[分분]|\s*(半|반))?/.exec(
+      textLower,
+    );
   if (!match) return null;
   let hours = Number(match[2]);
   const minutes = match[4] ? 30 : match[3] ? Number(match[3]) : 0;
   if (hours > 23 || minutes > 59) return null;
-  if ((match[1] === '午後' || match[1] === '오후') && hours < 12) hours += 12;
+  if (['午後', '오후', '下午', '晚上'].includes(match[1]) && hours < 12) hours += 12;
+  if (match[1] === '中午' && hours < 6) hours += 12;
   if ((match[1] === '午前' || match[1] === '오전') && hours === 12) hours = 0;
   spans.push([match.index, match.index + match[0].length]);
   return { hours, minutes };
@@ -812,6 +887,31 @@ function guessMerchantBeforeParticle(text: string, spans: Span[], language: stri
       return { merchant: match[1], leadIn: match[0] };
     }
   }
+  return guessMerchantAfterPrefix(text, spans, language);
+}
+
+// Chinese (step 3b) puts the place after 在 and before the verb:
+// 在全家买早餐 — the name runs from 在 to the first stop character
+// (买, 吃, 花…) or text another field already read. 现在/正在/存在 aren't
+// "at". The lead-in 在全家 stays in the note, like "at Costco".
+function guessMerchantAfterPrefix(text: string, spans: Span[], language: string | undefined): MerchantGuess | null {
+  for (const { pack } of orderedPacks(language)) {
+    const rule = pack.merchantAfterPrefix;
+    if (!rule) continue;
+    const re = new RegExp(`(?<![现正存实現實])(?:${rule.prefix.join('|')})\\s?`, 'gu');
+    let match: RegExpExecArray | null;
+    while ((match = re.exec(text)) !== null) {
+      const start = match.index + match[0].length;
+      let end = start;
+      while (end < text.length && /[\p{Script=Han}A-Za-z0-9&.'’]/u.test(text[end]) && !rule.stop.includes(text[end])) {
+        if (spans.some(([s, e]) => end >= s && end < e)) break;
+        end++;
+      }
+      const name = text.slice(start, end);
+      if (name.length < 2 || /^\d+$/.test(name)) continue;
+      return { merchant: name, leadIn: text.slice(match.index, end) };
+    }
+  }
   return null;
 }
 
@@ -861,7 +961,13 @@ function computeUnrecognized(text: string, spans: Span[], protect: string | null
 // plain forms, one character for one, so every span still lines up with
 // the text (docs/76). Japanese keyboards and some dictation produce them.
 function normalizeWidth(text: string): string {
-  return text.replace(/[\uFF01-\uFF5E]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0)).replace(/\u3000/g, ' ');
+  return text
+    .replace(/[\uFF01-\uFF5E]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0))
+    .replace(/\u3000/g, ' ')
+    .replace(/\uFFE5/g, '\u00A5')
+    .replace(/\uFFE1/g, '\u00A3')
+    // Chinese says the decimal point: 3点5元 is 3.5 yuan (docs/76 step 3b).
+    .replace(/(?<=\d)[点點](?=\d+\s?[元块塊圆圓])/g, '.');
 }
 
 export function parseUtterance(rawText: string, ctx: ParserContext): ParseResult {

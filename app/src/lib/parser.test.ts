@@ -425,6 +425,108 @@ describe('Korean', () => {
   });
 });
 
+// docs/76 step 3b. NOW is Friday 16 Oct 2026, 10:00.
+describe('Chinese', () => {
+  it('reads amount, currency, category and date', () => {
+    const r = parse('昨天咖啡35元', 'zh-Hans');
+    expect(r.amountCents).toBe(3500);
+    expect(r.currency).toBe('CNY');
+    expect(r.categoryId).toBe('cat-food-coffee');
+    expect(r.occurredAt).toBe(day(2026, 10, 15));
+    expect(r.unrecognized).toBeNull();
+  });
+
+  it('reads 元 as the local yuan for the script, and ¥ as yuan', () => {
+    expect(parse('电影100元', 'zh-Hans').currency).toBe('CNY');
+    expect(parse('電影100元', 'zh-Hant').currency).toBe('TWD');
+    expect(parse('電影100元', 'zh-TW').currency).toBe('TWD');
+    expect(parse('¥30 奶茶', 'zh-Hans').currency).toBe('CNY');
+    expect(parse('¥30 奶茶', 'zh-Hans').amountCents).toBe(3000);
+    expect(parse('￥30 奶茶', 'zh-Hans').currency).toBe('CNY');
+    // Japanese keeps ¥ as yen.
+    expect(parse('¥300 コーヒー', 'ja').currency).toBe('JPY');
+  });
+
+  it('reads 块/毛 amounts and Chinese numerals', () => {
+    expect(parse('3块5 零食', 'zh-Hans').amountCents).toBe(350);
+    expect(parse('3块5毛 零食', 'zh-Hans').amountCents).toBe(350);
+    expect(parse('5毛 零食', 'zh-Hans').amountCents).toBe(50);
+    expect(parse('两块钱 零食', 'zh-Hans').amountCents).toBe(200);
+    expect(parse('3块五 零食', 'zh-Hans').amountCents).toBe(350);
+    // 零 and 一 after the counter start words here, not tenths.
+    const snack = parse('两块钱零食', 'zh-Hans');
+    expect(snack.amountCents).toBe(200);
+    expect(snack.categoryId).toBe('cat-food-snacks');
+    expect(parse('30元零食', 'zh-Hans').categoryId).toBe('cat-food-snacks');
+    expect(parse('30元一杯奶茶', 'zh-Hans').amountCents).toBe(3000);
+    expect(parse('一百五十元 超市', 'zh-Hans').amountCents).toBe(15_000);
+    expect(parse('一百五元 超市', 'zh-Hans').amountCents).toBe(15_000);
+    expect(parse('房租3万元', 'zh-Hans').amountCents).toBe(3_000_000);
+    expect(parse('一万五元 房租', 'zh-Hans').amountCents).toBe(1_500_000);
+    expect(parse('房租3万元', 'zh-Hans').categoryId).toBe('cat-housing-rent');
+  });
+
+  it("doesn't read a counted 一 as the amount", () => {
+    const cake = parse('一块蛋糕15元', 'zh-Hans');
+    expect(cake.amountCents).toBe(1500);
+    expect(cake.currency).toBe('CNY');
+  });
+
+  it('keeps currency words containing 元 apart from yuan', () => {
+    expect(parse('咖啡20美元', 'zh-Hans').currency).toBe('USD');
+    expect(parse('拉面1000日元', 'zh-Hans').currency).toBe('JPY');
+    expect(parse('咖啡20加元', 'zh-Hans').currency).toBe('CAD');
+    expect(parse('咖啡50港币', 'zh-Hans').currency).toBe('HKD');
+    expect(parse('咖啡50人民币', 'zh-Hant').currency).toBe('CNY');
+    expect(parse('咖啡150新台幣', 'zh-Hant').currency).toBe('TWD');
+  });
+
+  it('reads relative dates, weekdays and 上周', () => {
+    expect(parse('前天加油300元', 'zh-Hans').occurredAt).toBe(day(2026, 10, 14));
+    expect(parse('前天加油300元', 'zh-Hans').categoryId).toBe('cat-transport-fuel');
+    expect(parse('今天午饭30元', 'zh-Hans').occurredAt).toBe(day(2026, 10, 16));
+    expect(parse('星期三午饭30元', 'zh-Hans').occurredAt).toBe(day(2026, 10, 14));
+    expect(parse('周三午饭30元', 'zh-Hans').occurredAt).toBe(day(2026, 10, 14));
+    expect(parse('上周一电影60元', 'zh-Hans').occurredAt).toBe(day(2026, 10, 5));
+    expect(parse('上個星期一電影300元', 'zh-Hant').occurredAt).toBe(day(2026, 10, 5));
+  });
+
+  it('reads 10月3号 dates and times', () => {
+    expect(parse('10月3号药店50元', 'zh-Hans').occurredAt).toBe(day(2026, 10, 3));
+    expect(parse('10月3日藥局50元', 'zh-Hant').occurredAt).toBe(day(2026, 10, 3));
+    expect(parse('下午3点半咖啡30元', 'zh-Hans').occurredAt).toBe('2026-10-16T15:30:00');
+    expect(parse('晚上8点20分晚饭100元', 'zh-Hans').occurredAt).toBe('2026-10-16T20:20:00');
+    // 3点5元 is 3.5 yuan, not 3 o'clock.
+    const price = parse('零食3点5元', 'zh-Hans');
+    expect(price.occurredAt).toBeNull();
+    expect(price.amountCents).toBe(350);
+  });
+
+  it('guesses the shop after 在, never a word another field read', () => {
+    const r = parse('在全家买早餐30元', 'zh-Hans');
+    expect(r.merchant).toBe('全家');
+    expect(r.merchantGuessed).toBe(true);
+    expect(r.categoryId).toBe('cat-food-dining');
+    expect(r.unrecognized).toBe('在全家');
+    const shop = parse('在超市买菜200元', 'zh-Hans');
+    expect(shop.merchant).toBeNull();
+    expect(shop.categoryId).toBe('cat-food-groceries');
+    expect(parse('现在打车50元', 'zh-Hans').merchant).toBeNull();
+  });
+
+  it('reads income', () => {
+    const r = parse('工资8000元', 'zh-Hans');
+    expect(r.direction).toBe('income');
+    expect(r.categoryId).toBe('cat-salary');
+    expect(r.amountCents).toBe(800_000);
+  });
+
+  it('finds Chinese starter category names', () => {
+    expect(parse('买菜 200元', 'zh-Hans').categoryId).toBe('cat-food-groceries');
+    expect(parse('買菜 200元', 'zh-Hant').categoryId).toBe('cat-food-groceries');
+  });
+});
+
 describe('thousands separators (docs/76, all languages)', () => {
   it('reads groups of three digits as thousands, a final one or two as cents', () => {
     expect(parse('1,500 dollars coffee', 'en').amountCents).toBe(150_000);
