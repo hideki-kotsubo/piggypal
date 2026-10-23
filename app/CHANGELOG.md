@@ -16,7 +16,7 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
-## Unreleased
+## 0.12.0 — 2026-10-22
 
 - **Chinese entries are understood**, in Simplified and Traditional:
   "昨天在全家买咖啡35元", "房租3万元", "3块5" or "上周一电影60元" fill in
