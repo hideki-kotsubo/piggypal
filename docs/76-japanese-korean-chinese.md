@@ -2,8 +2,8 @@
 
 2026-10-22. Asked for by the user after docs/73's four languages were live.
 Step 1, built the same day on branch `feat/i18n-cjk`, covers everything except
-the parser. Step 2 (Japanese parser) was built the same day too; step 3
-(Korean, Chinese) is planned below, not built.
+the parser. Steps 2 and 3 (the Japanese, Korean and Chinese parsers) were
+built the same day too, each described below.
 
 ## Plan agreed with the user
 
@@ -33,6 +33,7 @@ units".
 | D290 | Speech for Chinese is always Mandarin: `zh-CN` for Simplified, `zh-TW` for Traditional, never the device's own `zh-HK`. | `zh-HK` selects Cantonese recognition. Cantonese is out of scope for now (the user agreed). |
 | D291 | `cadence.weekly1` / `yearly1` / `monthly1` hold the interval-1 wording ("Weekly on Friday", 毎週金曜日), used by `describeCadence()` whenever the interval is 1. | These languages have a single plural form, so the old `_one` variant would never be picked and Japanese would read "every 1 week". The existing languages keep their `_one` keys, and the new keys copy that text. |
 | D292 | Traditional Chinese is generated from Simplified with OpenCC (`cn → twp`, Taiwan phrases), then a fixed list of Taiwan terms is applied (登出, 帳戶/帳號, QR Code, 叫車, 點一下, 主畫面, 網路費/電信費, 全螢幕, 權限, 「」 quotes). It still gets its own native review. | Most of the work is mechanical character conversion; the term list covers what OpenCC leaves in mainland style. |
+| D293 | In Chinese, "¥" is yuan, and a bare 元/块 after a number is the script's local yuan: CNY for Simplified, TWD for Traditional. Named currencies (美元, 日元, 港元…) are matched first. | "¥" is the yuan's own sign in China. Traditional readers are mostly in Taiwan, where 元 is the NT dollar; Hong Kong's 元 (HKD) is the known exception, covered by writing 港币/HK$. |
 
 ## What step 1 contains
 
@@ -157,11 +158,50 @@ units".
   merchant 투썸플레이스 (guessed); 월세 50만 원 → ₩500,000, Rent; 지난주
   월요일 영화 12000원 → ₩12,000, Movies, the previous week's Monday.
 
+## Step 3, part 2: Chinese parser (2026-10-22, `feat/parser-chinese`)
+
+- **Chinese pack**, every word in both scripts:
+  - dates and times: 今天, 昨天, 前天; weekdays (星期三/周三/礼拜三) and
+    上周一 / 上個星期一; 10月3号 (号/號 join 日 as the day suffix);
+    下午3点半, 晚上8点20分 (上午/下午/早上/晚上/中午);
+  - money: income words (工资, 薪水, 奖金, 到账…); about 110 category
+    keywords (超市, 午饭, 咖啡, 打车, 房租, 话费…).
+- **Currency** (D293):
+  - "¥" and "￥" mean yuan when Chinese is the input language's pack,
+    and yen otherwise.
+  - A bare 元/块/圆 right after a number is the local yuan for the
+    script: CNY in Simplified, TWD in Traditional. Hong Kong also reads
+    Traditional, but there 元 means HKD; it gets TWD for now, and 港币 /
+    港元 / HK$ are always HKD.
+  - Named currencies win first, because several contain 元: 美元, 日元,
+    加元, 欧元, 港元, 新台币, 韩元, 人民币.
+- **Amounts**:
+  - 块/毛 forms: 3块5 and 3块5毛 = 3.50, 5毛 = 0.50, 两块钱 = 2.00
+    (两 is 2). A native digit after the counter is tenths only when it
+    ends there or takes 毛, so 30元零食 and 30元一杯 keep their words.
+  - The spoken shortening: 一百五 = 150, 一万五 = 15,000 (one digit
+    after a unit of 100 or more stands for the next unit down);
+    十五 stays 15.
+  - 点 between digits before a yuan counter is the decimal point
+    (3点5元 = 3.50), and that is never read as 3 o'clock.
+  - 一块蛋糕15元: native digits alone with a counter count only when
+    钱 follows, so "a piece of cake" isn't ¥1.
+- **Merchant guess**: the name between 在 and the verb (在全家买早餐 →
+  全家), stopping at 买/吃/喝/花/付/刷… or text another field read
+  (在超市买菜 is Groceries, no merchant). 现在/正在/存在 aren't "at".
+- **Checks**: 246 app tests, including 10 Chinese cases. In headless
+  Chromium through the real entry box, zh-CN: 昨天在全家买咖啡35元 →
+  ¥35, Coffee, yesterday, merchant 全家 (guessed); 房租3万元 → ¥30,000,
+  Rent; 上周一电影60元 → the previous week's Monday. zh-TW:
+  電影300元 → TWD; ¥30 奶茶 → CNY, Snacks. The browser run found that
+  两块钱零食 lost Snacks (零 read as tenths); fixed and tested.
+
 ## Known gaps
 
-- **Chinese isn't understood by the parser yet** (step 3, part 2).
-  Amounts written as digits are found; "¥" still always means yen, which
-  is wrong for Chinese until then.
+- **TWD shows "$300.00"** in zh-TW: Intl gives TWD two decimals and a
+  plain "$". Taiwan writes NT$300. A formatting question, not the
+  parser's; in the backlog.
+- **Hong Kong 元** reads as TWD (see D293).
 - **A fresh install defaults to CAD** whatever the device region
   (`defaultCurrencyFor()`'s fallback). Japanese, Korean and Chinese users
   would want ￥/₩/¥ from the start. Raised with the user, not changed.

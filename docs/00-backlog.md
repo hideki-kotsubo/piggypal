@@ -22,8 +22,10 @@ it needs doing.
   - [x] Step 2: Japanese parser (no-spaces matching, 万 numbers, 円,
         昨日/きのう…), 2026-10-22.
   - [x] Step 3a: Korean parser (particles, 원, 만/천), 2026-10-22.
-  - [ ] Step 3b: Chinese parser (¥ = yuan in Chinese, 块/元/毛, both
-        scripts).
+  - [x] Step 3b: Chinese parser (¥ = yuan in Chinese, 块/元/毛, both
+        scripts), 2026-10-22.
+  - [ ] Check: TWD amounts show "$35.00" with cents; Taiwan writes
+        NT$35. Formatting, not the parser.
   - [ ] Decide: fresh-install default currency from the device region
         instead of always CAD.
   - Added 2026-10-22.
