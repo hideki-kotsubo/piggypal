@@ -106,3 +106,8 @@ img { max-width: 100%; }
 .foot-links { display: flex; flex-wrap: wrap; gap: 8px 22px; }
 .foot-links a { text-decoration: none; }
 .foot-links a:hover { color: var(--ink); }
+/* docs/74 D283: the social accounts, one plain text link each. */
+.foot-social { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--font-mono); font-size: 0.8rem; }
+.foot-social span { color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.06em; }
+.foot-social a { text-decoration: none; }
+.foot-social a:hover { color: var(--ink); }
