@@ -105,6 +105,29 @@ compose + publish. The prompt is `marketing/ROUTINE.md`. Not set up
 yet: it needs this branch merged and pushed so a cloud session can
 clone it.
 
+## Accounts
+
+**D283 — The accounts as created (2026-10-23).** Handle `myflowtab`
+wherever it was free; display name **Flowtab** everywhere. The website
+footer ("Follow" row, every page) and the homepage's Organization
+structured data (`sameAs`) list the live ones; update both when this
+table changes.
+
+| Network | Account | Notes |
+| --- | --- | --- |
+| TikTok | [@myflowtab](https://www.tiktok.com/@myflowtab) | Personal account: Business now requires company registration documents, which a sole proprietor doesn't have. Full music library, which suits video. |
+| X | [@myflowtab](https://x.com/myflowtab) | |
+| Bluesky | [@myflowtab.com](https://bsky.app/profile/myflowtab.com) | Domain handle, via a `_atproto` TXT record on myflowtab.com. |
+| LinkedIn | [company/myflowtab](https://www.linkedin.com/company/myflowtab/) | Admin: the user's personal profile, which lists Founder, Flowtab. |
+| Facebook | [facebook.com/myflowtab](https://www.facebook.com/myflowtab) | Page under the user's personal Facebook. |
+| Reddit | [u/flowtab](https://www.reddit.com/user/flowtab), [r/flowtab](https://www.reddit.com/r/flowtab/) | u/myflowtab belongs to an unrelated 18+ account. Not posted to by `social:publish`; promotion happens from the user's own account, disclosed. |
+| YouTube | [@myflowtab](https://www.youtube.com/@myflowtab) | Brand Account channel under `flowtabit@gmail.com` (Google wouldn't verify another account with the user's phone). Public contact `social@myflowtab.com`. |
+| Instagram | **disabled by Meta** on 2026-10-23, one day after sign-up | Automated, no review offered. Next: one appeal through Meta's help form; then, if refused, create it from Meta Business Suite under the Facebook Page, on the phone, no VPN, waiting a few days before switching to Business. `myflowtab` stays held by the disabled account: plan for `flowtabapp`. |
+| Threads | not yet | Follows Instagram. |
+
+The login email is `social@myflowtab.com` everywhere except YouTube.
+Birthdays are the user's real one (identity checks compare them).
+
 ## Content plan
 
 Cadence: three posts a week, Tue/Thu/Sat at 09:00 Pacific. Three good
