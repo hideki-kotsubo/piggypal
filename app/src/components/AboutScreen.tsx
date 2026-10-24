@@ -61,9 +61,9 @@ export function AboutScreen() {
       <p className="about-text">{t('about.author')}</p>
 
       <div className="accounts-list">
-        <a href="mailto:hideki.kotsubo@gmail.com" className="settings-row">
+        <a href="mailto:social@myflowtab.com" className="settings-row">
           <span>{t('about.contact')}</span>
-          <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>hideki.kotsubo@gmail.com</span>
+          <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>social@myflowtab.com</span>
         </a>
         <div className="settings-row settings-row-static">
           <span>{t('about.version')}</span>

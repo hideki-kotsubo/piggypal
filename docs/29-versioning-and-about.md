@@ -60,6 +60,8 @@ own margin since it isn't nested in a centered flex container).
 | D155 | About screen framed as "built by one person," first person, not "our team" | Matches CLAUDE.md's actual owner context — a false "team" framing would be misleading copy for a single-developer app |
 | D156 | Contact is a real `mailto:` email (`hideki.kotsubo@gmail.com`), not deferred | User's explicit call when asked; no support inbox exists separately yet, this is it |
 
+**2026-10-23, amends D156:** the contact address is `social@myflowtab.com`, on the About screen and the website footer. The personal address was about to become public with the social accounts and the site opening to search engines (docs/74, docs/61 D282).
+
 **Implemented 2026-08-18.** Verified: `tsc -b`/`oxlint` clean on both
 workspaces; `vite build` bundle and `vite dev`'s raw module output both
 grepped for the real version string; `api`'s running `/health` endpoint
