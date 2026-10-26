@@ -33,6 +33,20 @@ it needs doing.
   - [ ] Part B phase 3: receipt auto-fill (R-D11): Claude vision via
         Tier 2 first, on-device text recognition maybe later.
 
+- [ ] **End-to-end encryption** (docs/78, design draft, proposals not
+      yet decided). Added 2026-10-26.
+  - [ ] Decide (user): go / no-go, recovery key required or optional,
+        whether E-D11 per-profile keys replace docs/77's P-D8 PIN,
+        rotation policy, Tier 2 "processed in transit" semantics,
+        migration opt-in vs automatic.
+  - [ ] Spike: WebCrypto AES-GCM + ECDH in the Capacitor WebView (iOS,
+        Android) and on web; E-D5 local decrypt layer (PowerSync raw
+        tables / JS SQLite function vs a two-layer copy); decrypt-pass
+        timing on a 2-year history.
+  - [ ] If go: device keypairs + approval + recovery key, then field
+        encryption + migration, then per-profile keys, encrypted
+        receipt blobs, policy and store answers (docs/78's order).
+
 - [ ] **Japanese, Korean and Chinese** (docs/76, D288-D292). Branch
       `feat/i18n-cjk`.
   - [x] Step 1: app text in ja, ko, zh-Hans, zh-Hant, email, iPhone
