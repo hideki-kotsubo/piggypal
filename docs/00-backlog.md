@@ -14,6 +14,25 @@ it needs doing.
 
 ## ⚪ Next
 
+- [ ] **Private records + receipt photos** (docs/77, design draft,
+      proposals not yet decided). Added 2026-10-26.
+  - [ ] Decide (user): budgets/joint accounts for private rows, wording
+        ("Private"/"Only me"), and whether Part A waits for P-D8.
+  - [ ] Part A spike: `profile_id` claim in the PowerSync JWT + a
+        filtered `transactions`/`transaction_splits` stream.
+  - [ ] Part A: `private_to_profile_id` column, upload guard, P2P
+        exclusion, toggle UI.
+  - [ ] P-D8: per-profile PIN, so the sign-in profile picker can't be
+        used to read someone's private records. Chosen by the user, not
+        scheduled yet.
+  - [ ] Part B phase 1: local-only receipt photos, several per
+        transaction (camera/file input, on-device compression).
+  - [ ] Decide (user): storage (Azure Blob vs MinIO) and paid quota.
+  - [ ] Part B phase 2: object storage, signed URLs, sync, quota
+        (flagged: adds a 4th subscription-gate point to locked decision 5).
+  - [ ] Part B phase 3: receipt auto-fill (R-D11): Claude vision via
+        Tier 2 first, on-device text recognition maybe later.
+
 - [ ] **Japanese, Korean and Chinese** (docs/76, D288-D292). Branch
       `feat/i18n-cjk`.
   - [x] Step 1: app text in ja, ko, zh-Hans, zh-Hant, email, iPhone
