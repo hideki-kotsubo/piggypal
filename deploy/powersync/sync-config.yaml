@@ -43,9 +43,20 @@ streams:
   # weeks it wants) — genuine schema/app work, not a one-line fix, and not
   # done here. Syncs ALL transaction history for now; re-add real
   # windowing as a follow-up (tracked in docs/00-backlog.md).
+  #
+  # docs/77 — split in two: rows shared with the household, plus "Only me"
+  # rows for the person this device's session was verified as (the
+  # profile_id claim, absent until verified, so such a device gets only
+  # the shared ones). Two streams instead of one OR so neither depends on
+  # how a missing claim compares to NULL. A row whose flag flips moves
+  # from one stream to the other; the client keeps one copy per id.
   transactions:
     auto_subscribe: true
-    query: SELECT * FROM transactions WHERE user_id = auth.user_id()
+    query: SELECT * FROM transactions WHERE user_id = auth.user_id() AND private_to_profile_id IS NULL
+
+  private_transactions:
+    auto_subscribe: true
+    query: SELECT * FROM transactions WHERE user_id = auth.user_id() AND private_to_profile_id = auth.parameter('profile_id')
 
   # docs/50 — the per-account amount breakdown for a split transaction.
   # Missing this stream was a real bug, not theoretical: PowerSync Service
@@ -56,9 +67,16 @@ streams:
   # cleared back out on the next sync reconciliation, confirmed against a
   # real signed-in device where "Split across accounts" appeared to insert
   # legs, then immediately lost them again.
+  #
+  # docs/77 — same split as transactions above; each leg's
+  # private_to_profile_id is a server-kept copy of its transaction's.
   transaction_splits:
     auto_subscribe: true
-    query: SELECT * FROM transaction_splits WHERE user_id = auth.user_id()
+    query: SELECT * FROM transaction_splits WHERE user_id = auth.user_id() AND private_to_profile_id IS NULL
+
+  private_transaction_splits:
+    auto_subscribe: true
+    query: SELECT * FROM transaction_splits WHERE user_id = auth.user_id() AND private_to_profile_id = auth.parameter('profile_id')
 
   # docs/57 — scheduled-payment rules. Small and low-churn (one row per
   # rent/lease/installment plan, not per occurrence — occurrences are

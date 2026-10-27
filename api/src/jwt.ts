@@ -54,11 +54,14 @@ async function kid(): Promise<string> {
   return cachedKid;
 }
 
-// docs/05: "sub=user_id". Only the claims docs/05 actually specifies —
-// no extra scope/role claims invented here.
-export async function signAccessToken(userId: string): Promise<string> {
+// docs/05: "sub=user_id". docs/77 D295 adds one claim, `profile_id`: the
+// household person this device's session was verified as
+// (device_profiles), absent until then. PowerSync's private-transactions
+// stream reads it with auth.parameter('profile_id'), so a token without
+// it downloads only shared rows.
+export async function signAccessToken(userId: string, profileId: string | null = null): Promise<string> {
   const key = await privateKey();
-  return new SignJWT({})
+  return new SignJWT(profileId ? { profile_id: profileId } : {})
     .setProtectedHeader({ alg: ALG, kid: await kid() })
     .setSubject(userId)
     .setAudience(AUDIENCE)
@@ -74,11 +77,12 @@ export async function signAccessToken(userId: string): Promise<string> {
 // anything invalid (expired, wrong audience, bad signature); callers
 // don't need to distinguish why, an auth middleware just turns any throw
 // into a 401.
-export async function verifyAccessToken(token: string): Promise<{ userId: string }> {
+export async function verifyAccessToken(token: string): Promise<{ userId: string; profileId: string | null }> {
   const key = await publicKey();
   const { payload } = await jwtVerify(token, key, { audience: AUDIENCE, algorithms: [ALG] });
   if (!payload.sub) throw new Error('Token has no subject');
-  return { userId: payload.sub };
+  const profileId = typeof payload.profile_id === 'string' ? payload.profile_id : null;
+  return { userId: payload.sub, profileId };
 }
 
 // GET /.well-known/jwks.json — PowerSync's client_auth.jwks_uri

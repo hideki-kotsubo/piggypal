@@ -66,6 +66,7 @@ const transactions = new Table(
     // docs/57 D207 — set only on a posted scheduled-payment occurrence.
     schedule_id: column.text,
     occurrence_date: column.text, // "YYYY-MM-DD"
+    private_to_profile_id: column.text, // docs/77 — "Only me"; null = shared
     updated_at: column.text,
   },
   { indexes: { by_account: ['account_id'], by_category: ['category_id'], by_schedule: ['schedule_id'] } },
@@ -137,6 +138,11 @@ const profiles = new Table({
   display_name: column.text,
   updated_at: column.text,
   deleted_at: column.text, // docs/71 D252
+  has_pin: column.integer, // docs/77 D299 — written by the api only
+  // docs/77 D304 — the last PIN reset done from elsewhere; api only too
+  pin_reset_at: column.text,
+  pin_reset_by: column.text,
+  pin_reset_device: column.text,
 });
 
 // docs/48 D176 — one row per physical device, `id` reusing identity.ts's

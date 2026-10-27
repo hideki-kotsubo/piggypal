@@ -131,7 +131,8 @@
     "due_other": "{{count}} pagamentos agendados pendentes",
     "due_many": "{{count}} pagamentos agendados pendentes",
     "accountDeleted": "Sua conta foi excluída — este dispositivo agora funciona sem sincronização",
-    "sessionExpired": "Sincronização pausada — entre novamente para sincronizar seus lançamentos"
+    "sessionExpired": "Sincronização pausada — entre novamente para sincronizar seus lançamentos",
+    "pinNeeded": "Digite seu PIN para receber seus registros Só eu neste dispositivo"
   },
   "home": {
     "loading": "Carregando seus dados",
@@ -164,7 +165,14 @@
     "time": "Hora",
     "note": "Nota",
     "location": "Local",
-    "optional": "opcional…"
+    "optional": "opcional…",
+    "onlyMe": "Só eu",
+    "onlyMeOn": "Só os seus dispositivos recebem este registro. As outras pessoas da casa não o veem.",
+    "onlyMeAccountNote": "O saldo desta conta vai aparecer diferente para elas.",
+    "onlyMeOff": "Guarde este registro só para você.",
+    "onlyMeNeedsSignIn": "Só eu precisa de login e de um PIN.",
+    "onlyMeNeedsPin": "Crie um PIN para usar Só eu",
+    "onlyMeNeedsVerify": "Digite seu PIN neste dispositivo para usar Só eu"
   },
   "deviceLink": {
     "scanTitle": "Escanear código",
@@ -186,7 +194,10 @@
     "lastDays_other": "Últimos {{count}} dias ({{currency}})",
     "lastDays_many": "Últimos {{count}} dias ({{currency}})",
     "thisMonth": "Este mês",
-    "scheduled": "+ {{amount}} agendado"
+    "scheduled": "+ {{amount}} agendado",
+    "includesPrivate_one": "Inclui {{count}} registro Só eu — as outras pessoas da casa não o veem.",
+    "includesPrivate_many": "Inclui {{count}} de registros Só eu — as outras pessoas da casa não os veem.",
+    "includesPrivate_other": "Inclui {{count}} registros Só eu — as outras pessoas da casa não os veem."
   },
   "about": {
     "title": "Sobre",
@@ -296,7 +307,11 @@
     "removePerson": "Remover {{name}}",
     "thisDevice": "este dispositivo",
     "seen": "visto {{time}}",
-    "removedName": "{{name}} (removido)"
+    "removedName": "{{name}} (removido)",
+    "setPin": "Criar um PIN para registros Só eu",
+    "changePin": "Trocar seu PIN",
+    "hasPin": "Tem PIN",
+    "resetPin": "Redefinir PIN"
   },
   "accounts": {
     "shared": "Compartilhada",
@@ -649,5 +664,50 @@
     "failed": "Não entendi — tente de novo ou digite.",
     "noSpeech": "Não ouvi nada — toque no microfone e tente de novo.",
     "unsupportedBrowser": "A entrada por voz não está disponível neste navegador — use o Chrome, o Edge ou o Safari, ou digite."
+  },
+  "pin": {
+    "title": "PIN",
+    "notSignedIn": "Faça login primeiro (Ajustes → Conta). O PIN fica guardado no servidor, então precisa de uma conta.",
+    "setIntro": "O PIN mantém seus registros Só eu com você: um dispositivo só vira seu depois que o seu PIN é digitado nele. Use de 4 a 6 dígitos.",
+    "changeIntro": "Seus outros dispositivos vão pedir o novo PIN uma vez.",
+    "newPin": "PIN (4 a 6 dígitos)",
+    "confirmPin": "Digite de novo",
+    "mismatch": "Os dois PINs não são iguais.",
+    "save": "Salvar PIN",
+    "change": "Trocar PIN",
+    "saved": "PIN salvo. Seus outros dispositivos vão pedi-lo uma vez.",
+    "offline": "Você está offline. O PIN precisa de conexão.",
+    "enterIntro": "{{name}} tem um PIN. Digite-o para usar este dispositivo como {{name}}.",
+    "pinLabel": "PIN",
+    "continue": "Continuar",
+    "wrong_one": "PIN errado. Resta {{count}} tentativa.",
+    "wrong_many": "PIN errado. Restam {{count}} de tentativas.",
+    "wrong_other": "PIN errado. Restam {{count}} tentativas.",
+    "lockedNow": "PIN errado vezes demais. Tente de novo em 15 minutos.",
+    "locked": "PIN errado vezes demais. Tente de novo depois das {{time}}.",
+    "forgot": "Esqueceu o PIN?",
+    "errorFormat": "O PIN precisa ter de 4 a 6 dígitos.",
+    "errorNotSynced": "Esta pessoa ainda não sincronizou. Tente de novo daqui a pouco.",
+    "errorNotVerified": "Digite seu PIN neste dispositivo primeiro.",
+    "errorRemoved": "Esta pessoa foi removida da casa.",
+    "errorGeneric": "Não foi possível salvar. Tente de novo.",
+    "errorSignIn": "Faça login de novo neste dispositivo.",
+    "otherDeviceHint": "Esqueceu? Troque-o em qualquer outro dispositivo onde você já é {{name}} (Configurações → Família → Trocar seu PIN) e digite o novo aqui.",
+    "setForgetHint": "Se esquecer, troque-o em qualquer outro dispositivo seu (Configurações → Família) ou peça a alguém da família para redefini-lo no dispositivo dessa pessoa.",
+    "forgotOtherDevice": "Em qualquer outro dispositivo onde você já é {{name}}, abra Configurações → Família → Trocar seu PIN. Depois digite o novo PIN aqui. Nada se perde.",
+    "forgotAskMember": "Não tem outro dispositivo? Outra pessoa da família pode criar um novo PIN para {{name}} no dispositivo dela: Configurações → Família → Redefinir PIN, abaixo de {{name}}. {{name}} verá quem fez isso.",
+    "forgotEmailIntro": "Ou receba um código no e-mail da conta.",
+    "forgotEmailSend": "Enviar código por e-mail",
+    "emailSent": "Enviamos um código de 6 dígitos para o e-mail da conta. Digite-o com seu novo PIN. Ele expira em 15 minutos.",
+    "emailCode": "Código do e-mail",
+    "emailResend": "Enviar novo código",
+    "resetForIntro": "Crie um novo PIN para {{name}} e conte qual é. Os dispositivos de {{name}} vão pedi-lo e mostrar que você o redefiniu neste dispositivo. Este dispositivo continua sendo seu: ele não recebe os registros Só eu de {{name}}.",
+    "resetForButton": "Redefinir o PIN de {{name}}",
+    "resetForDone": "Pronto. Conte o novo PIN para {{name}} — dá para trocá-lo depois.",
+    "unknownDevice": "um dispositivo sem nome",
+    "resetNoticeBy": "Seu PIN foi redefinido por {{name}} em {{device}} ({{when}}).",
+    "resetNoticeEmail": "Seu PIN foi redefinido com um código do e-mail da conta, em {{device}} ({{when}}).",
+    "resetNoticeDismiss": "Entendi",
+    "errorNoPin": "Esta pessoa não tem PIN."
   }
 }

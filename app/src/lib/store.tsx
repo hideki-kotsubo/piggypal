@@ -9,7 +9,7 @@ import { nowUtc, setDollarCurrenciesInUse } from './format';
 import { computeBalances } from './balances';
 import type { AccountRewrite, CategoryRewrite } from './mergeMatch';
 import { effectiveDeviceLabel } from './settings';
-import type { Account, AccountKind, Budget, Category, CategoryKeyword, Device, MergeSummary, PeerDataset, Profile, ScheduledPayment, Transaction, TransactionSplit } from './types';
+import type { Account, AccountKind, ApiProfileField, Budget, Category, CategoryKeyword, Device, MergeSummary, PeerDataset, Profile, ScheduledPayment, Transaction, TransactionSplit } from './types';
 import {
   addDays,
   dueOccurrences,
@@ -110,6 +110,7 @@ interface TransactionRow {
   created_by_user_id: string | null;
   schedule_id: string | null; // docs/57 — absent (null) on every pre-docs/57 row
   occurrence_date: string | null;
+  private_to_profile_id: string | null;
   updated_at: string | null;
 }
 function rowToTransaction(r: TransactionRow): Transaction {
@@ -136,6 +137,7 @@ function rowToTransaction(r: TransactionRow): Transaction {
     // Postgres `date` columns can come down through PowerSync with a time
     // part attached — only the date is ever meaningful here.
     occurrenceDate: r.occurrence_date ? r.occurrence_date.slice(0, 10) : null,
+    privateToProfileId: r.private_to_profile_id ?? null,
     updatedAt: r.updated_at ?? NEVER_UPDATED,
   };
 }
@@ -245,9 +247,20 @@ interface ProfileRow {
   display_name: string;
   updated_at: string | null;
   deleted_at: string | null;
+  has_pin: number | null; // Postgres boolean, synced as 0/1
+  pin_reset_at: string | null;
+  pin_reset_by: string | null;
+  pin_reset_device: string | null;
 }
 function rowToProfile(r: ProfileRow): Profile {
-  return { id: r.id, displayName: r.display_name, updatedAt: r.updated_at ?? NEVER_UPDATED, deletedAt: r.deleted_at ?? null };
+  return {
+    id: r.id,
+    displayName: r.display_name,
+    updatedAt: r.updated_at ?? NEVER_UPDATED,
+    deletedAt: r.deleted_at ?? null,
+    hasPin: Boolean(r.has_pin),
+    pinReset: r.pin_reset_at ? { at: r.pin_reset_at, byProfileId: r.pin_reset_by, deviceLabel: r.pin_reset_device } : null,
+  };
 }
 
 interface DeviceRow {
@@ -311,6 +324,7 @@ const TRANSACTION_COLUMNS: Record<keyof Transaction, string> = {
   createdByUserId: 'created_by_user_id',
   scheduleId: 'schedule_id',
   occurrenceDate: 'occurrence_date',
+  privateToProfileId: 'private_to_profile_id',
   updatedAt: 'updated_at',
 };
 
@@ -348,7 +362,8 @@ const TRANSACTION_SPLIT_COLUMNS: Record<keyof TransactionSplit, string> = {
   updatedAt: 'updated_at',
 };
 
-const PROFILE_COLUMNS: Record<keyof Profile, string> = {
+// hasPin and pinReset aren't here: the api alone writes them (docs/77).
+const PROFILE_COLUMNS: Record<keyof Omit<Profile, ApiProfileField>, string> = {
   id: 'id',
   displayName: 'display_name',
   updatedAt: 'updated_at',
@@ -413,9 +428,9 @@ async function insertAccountRow(a: Account): Promise<void> {
 // posted schedule occurrences and the P2P merge all write through it.
 async function insertTransactionRow(tx: Pick<SqliteTransaction, 'execute'>, t: Transaction): Promise<void> {
   await tx.execute(
-    `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_at, note, merchant, source, ai_raw, deleted_at, paid_by_user_id, created_by_user_id, schedule_id, occurrence_date, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [t.id, t.accountId, t.categoryId, t.amountCents, t.currency, t.occurredAt, t.note, t.merchant, t.source, t.aiRaw, t.deletedAt, t.paidByUserId, t.createdByUserId, t.scheduleId, t.occurrenceDate, t.updatedAt],
+    `INSERT INTO transactions (id, account_id, category_id, amount_cents, currency, occurred_at, note, merchant, source, ai_raw, deleted_at, paid_by_user_id, created_by_user_id, schedule_id, occurrence_date, private_to_profile_id, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [t.id, t.accountId, t.categoryId, t.amountCents, t.currency, t.occurredAt, t.note, t.merchant, t.source, t.aiRaw, t.deletedAt, t.paidByUserId, t.createdByUserId, t.scheduleId, t.occurrenceDate, t.privateToProfileId ?? null, t.updatedAt],
   );
 }
 
@@ -464,6 +479,7 @@ async function postOccurrenceRows(
         createdByUserId: getLocalUserId(),
         scheduleId: rule.id,
         occurrenceDate: occ.date,
+        privateToProfileId: null,
         updatedAt: now,
       });
     }
@@ -738,11 +754,16 @@ interface StoreApi extends StoreState {
   // ("Someone new" in the sign-in picker). Does NOT adopt it as this
   // device's own identity — the caller (AuthVerifyScreen) does that
   // itself via setLocalUserId(), same as picking an existing profile.
-  addProfile: (profile: Profile) => void;
+  addProfile: (profile: Omit<Profile, ApiProfileField>) => void;
   // Renaming a profile (e.g. the "Wife" placeholder from docs/48's
   // production backfill) — not surfaced in any UI by this pass, but the
   // same generic patch shape every other updateX method already has.
-  updateProfile: (profileId: string, patch: Partial<Profile>) => void;
+  updateProfile: (profileId: string, patch: Partial<Omit<Profile, ApiProfileField>>) => void;
+  // docs/77 — mirrors a PIN the server just set or removed, so the screens
+  // don't wait for it to sync down.
+  notePinChanged: (profileId: string, hasPin: boolean) => void;
+  // docs/77 D304 — mirrors a dismissed reset notice until the api's copy syncs.
+  notePinResetSeen: (profileId: string) => void;
   // docs/48 D176 — upserts this device's own devices row. Exposed on the
   // API (rather than only the module-level touchDevice()) so components
   // can call it after whatever just changed: connecting sync, settling
@@ -1649,8 +1670,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         })();
       },
 
+      notePinChanged(profileId, hasPin) {
+        void db.execute('UPDATE profiles SET has_pin = ? WHERE id = ?', [hasPin ? 1 : 0, profileId]);
+      },
+
+      notePinResetSeen(profileId) {
+        void db.execute('UPDATE profiles SET pin_reset_at = NULL, pin_reset_by = NULL, pin_reset_device = NULL WHERE id = ?', [profileId]);
+      },
+
       updateProfile(profileId, patch) {
-        const entries = (Object.entries(patch) as [keyof Profile, unknown][]).filter(([k]) => k !== 'updatedAt');
+        const entries = (Object.entries(patch) as [keyof Omit<Profile, ApiProfileField>, unknown][]).filter(([k]) => k !== 'updatedAt');
         if (entries.length === 0) return;
         const setClause = entries.map(([k]) => `${PROFILE_COLUMNS[k]} = ?`).join(', ');
         const params = entries.map(([, v]) => v);

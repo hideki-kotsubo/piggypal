@@ -72,6 +72,8 @@ function writeAuthAccount(next: AuthAccount | null): void {
 export function clearAuthAccount(): void {
   writeAuthAccount(null);
   setSessionExpired(false);
+  setVerifiedProfileId(null);
+  setPinNeeded(false);
   // Unlike the web's httpOnly cookie, the native apps' Keychain copy
   // (docs/68) is reachable from here, so a reset really forgets it.
   void forgetRefreshToken();
@@ -219,7 +221,7 @@ export function onAccountDeleted(handler: () => void): void {
 
 async function handleAccountDeleted(): Promise<void> {
   const email = getAuthAccount()?.email ?? '';
-  accessToken = null;
+  setAccessToken(null);
   await forgetRefreshToken();
   writeAuthAccount(null);
   setSessionExpired(false);
@@ -230,6 +232,73 @@ async function handleAccountDeleted(): Promise<void> {
 // docs/05 D13: the access JWT lives in memory only, for this module's own
 // lifetime — never localStorage, never touched by any other file.
 let accessToken: string | null = null;
+
+function setAccessToken(next: string | null): void {
+  accessToken = next;
+  // A token is the server's current word on which profile this device is
+  // verified as (docs/77 D295). No token at all (offline, reloading)
+  // says nothing, so the remembered answer stands.
+  if (next) setVerifiedProfileId(tokenProfileId(next));
+}
+
+function tokenProfileId(token: string): string | null {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))) as { profile_id?: unknown };
+    return typeof payload.profile_id === 'string' ? payload.profile_id : null;
+  } catch {
+    return null;
+  }
+}
+
+// docs/77 D299 — which household person this device's session is verified
+// as (picked in the sign-in profile picker, with the PIN if that person
+// has one). Remembered across reloads so "Only me" still works offline;
+// the server re-checks every upload anyway. Null until verified, and
+// whenever the server says the device no longer is (a PIN set from
+// another device, a PIN reset, a new sign-in).
+const VERIFIED_PROFILE_KEY = 'flowtab:verified-profile';
+let verifiedProfileId: string | null = localStorage.getItem(VERIFIED_PROFILE_KEY);
+const verifiedListeners = new Set<() => void>();
+
+function setVerifiedProfileId(next: string | null): void {
+  if (next) localStorage.setItem(VERIFIED_PROFILE_KEY, next);
+  else localStorage.removeItem(VERIFIED_PROFILE_KEY);
+  if (verifiedProfileId === next) return;
+  verifiedProfileId = next;
+  for (const listener of verifiedListeners) listener();
+}
+
+export function useVerifiedProfileId(): string | null {
+  return useSyncExternalStore(
+    (listener) => {
+      verifiedListeners.add(listener);
+      return () => verifiedListeners.delete(listener);
+    },
+    () => verifiedProfileId,
+  );
+}
+
+// Set when this device's own profile turned out to need its PIN (it got
+// one from another device, or this device signed in again): Home shows a
+// banner until it's entered (PinScreen).
+let pinNeeded = false;
+const pinNeededListeners = new Set<() => void>();
+
+function setPinNeeded(next: boolean): void {
+  if (pinNeeded === next) return;
+  pinNeeded = next;
+  for (const listener of pinNeededListeners) listener();
+}
+
+export function usePinNeeded(): boolean {
+  return useSyncExternalStore(
+    (listener) => {
+      pinNeededListeners.add(listener);
+      return () => pinNeededListeners.delete(listener);
+    },
+    () => pinNeeded,
+  );
+}
 
 function apiFetch(path: string, init?: RequestInit): Promise<Response> {
   return fetch(`${API_BASE_URL}${path}`, { credentials: 'include', ...init });
@@ -257,6 +326,11 @@ const SERVER_ERROR_KEYS: Record<string, string> = {
   device_link_expired: 'errors.codeUsed',
   sign_in_again: 'errors.signInToDelete',
   not_owner: 'errors.notOwner',
+  pin_format: 'pin.errorFormat',
+  profile_not_synced: 'pin.errorNotSynced',
+  profile_not_verified: 'pin.errorNotVerified',
+  profile_removed: 'pin.errorRemoved',
+  pin_not_set: 'pin.errorNoPin',
 };
 
 async function serverError(res: Response, fallbackKey: string): Promise<Error> {
@@ -314,7 +388,7 @@ export interface VerifyResult {
 // Every successful sign-in lands here: keeps the access token in memory
 // and, in the native apps, the refresh token in the Keychain.
 async function adoptSession(result: VerifyResult): Promise<VerifyResult> {
-  accessToken = result.accessToken;
+  setAccessToken(result.accessToken);
   if (result.refreshToken) await saveRefreshToken(result.refreshToken);
   setSessionExpired(false);
   return result;
@@ -412,7 +486,7 @@ export async function deleteAccount(): Promise<void> {
   if (!res.ok) {
     throw await serverError(res, 'errors.deleteAccount');
   }
-  accessToken = null;
+  setAccessToken(null);
   await forgetRefreshToken();
   setSessionExpired(false);
 }
@@ -445,7 +519,7 @@ export async function refreshAccessToken(): Promise<string | null> {
     if (usesNativeRefreshToken) {
       refreshToken = await loadRefreshToken();
       if (!refreshToken) {
-        accessToken = null;
+        setAccessToken(null);
         if (getAuthAccount()) setSessionExpired(true);
         return null;
       }
@@ -456,7 +530,7 @@ export async function refreshAccessToken(): Promise<string | null> {
       body: JSON.stringify({ ...(refreshToken && { refreshToken }), ...(userId && { userId }) }),
     });
     if (!res.ok) {
-      accessToken = null;
+      setAccessToken(null);
       // 401 is the server's final word on this token (unknown, expired,
       // revoked); anything else (a 5xx, a proxy error) may pass, so the
       // token is kept for the next try.
@@ -475,8 +549,9 @@ export async function refreshAccessToken(): Promise<string | null> {
     // The token rotates on every use, so the new one has to be saved
     // before anything else can ask for a refresh.
     if (body.refreshToken) await saveRefreshToken(body.refreshToken);
-    accessToken = body.accessToken;
+    setAccessToken(body.accessToken);
     setSessionExpired(false);
+    if (tokenProfileId(body.accessToken) !== getLocalUserId()) void ensureSessionProfile();
     return accessToken;
   })();
   try {
@@ -507,7 +582,9 @@ export async function signOut(): Promise<void> {
   } catch {
     // Network failure signing out is still a sign-out, locally.
   }
-  accessToken = null;
+  setAccessToken(null);
+  setVerifiedProfileId(null);
+  setPinNeeded(false);
   await forgetRefreshToken();
   setSessionExpired(false);
 }
@@ -606,6 +683,136 @@ export async function uploadSyncOps(ops: SyncOp[]): Promise<UploadSyncResult> {
     if (!token) throw new Error('Not signed in.');
     res = await send();
   }
+  if (res.status === 409) {
+    // docs/77 — an "Only me" row waits until this device is verified as
+    // its profile; PowerSync retries the upload after its backoff.
+    void ensureSessionProfile();
+    throw new Error('Sync upload held until this device is verified.');
+  }
   if (!res.ok) throw new Error(`Sync upload failed (${res.status})`);
   return res.json();
+}
+
+// docs/77 D299 — the calls behind the profile PIN. Each sends this device's
+// refresh token the way delete-account does (the cookie on the web, the
+// Keychain token in the body natively): the server needs to know which
+// device is asking, and the access token doesn't say.
+async function withRefreshTokenBody(body: Record<string, unknown>): Promise<string> {
+  const refreshToken = usesNativeRefreshToken ? await loadRefreshToken() : null;
+  return JSON.stringify(refreshToken ? { ...body, refreshToken } : body);
+}
+
+export type SessionProfileResult =
+  | { ok: true }
+  | { ok: false; code: 'pin_required' | 'pin_invalid' | 'pin_locked' | 'offline' | 'other'; attemptsLeft?: number; lockedUntil?: string; message?: string };
+
+// Tells the server which household person this device is. A profile with
+// a PIN needs it.
+export async function verifySessionProfile(profileId: string, pin?: string): Promise<SessionProfileResult> {
+  let res: Response | null;
+  try {
+    res = await authedFetch('/api/auth/session-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: await withRefreshTokenBody({ profileId, ...(pin && { pin }) }),
+    });
+  } catch {
+    return { ok: false, code: 'offline' };
+  }
+  if (!res) return { ok: false, code: 'other', message: i18n.t('pin.errorSignIn') };
+  const body = (await res.json().catch(() => ({}))) as {
+    accessToken?: string;
+    code?: string;
+    attemptsLeft?: number;
+    lockedUntil?: string;
+  };
+  if (res.ok && body.accessToken) {
+    setAccessToken(body.accessToken);
+    setPinNeeded(false);
+    return { ok: true };
+  }
+  if (body.code === 'pin_required' || body.code === 'pin_invalid' || body.code === 'pin_locked') {
+    return { ok: false, code: body.code, attemptsLeft: body.attemptsLeft, lockedUntil: body.lockedUntil };
+  }
+  return { ok: false, code: 'other', message: i18n.t((body.code && SERVER_ERROR_KEYS[body.code]) || 'pin.errorGeneric') };
+}
+
+// Makes sure a signed-in device is verified as its own profile
+// (getLocalUserId()). A profile without a PIN is verified silently; one
+// with a PIN raises the Home banner instead. Runs after each refresh that
+// came back without this device's profile, after sign-in, and when an
+// upload is held for it.
+let ensureInFlight: Promise<void> | null = null;
+export function ensureSessionProfile(): Promise<void> {
+  ensureInFlight ??= (async () => {
+    if (!getAuthAccount()) return;
+    const token = await ensureAccessToken();
+    if (!token) return;
+    if (tokenProfileId(token) === getLocalUserId()) {
+      setPinNeeded(false);
+      return;
+    }
+    const result = await verifySessionProfile(getLocalUserId());
+    if (!result.ok && (result.code === 'pin_required' || result.code === 'pin_locked')) setPinNeeded(true);
+  })().finally(() => {
+    ensureInFlight = null;
+  });
+  return ensureInFlight;
+}
+
+// Sets or changes the PIN of the profile this device is verified as.
+export async function setProfilePin(pin: string): Promise<void> {
+  let res: Response | null;
+  try {
+    res = await authedFetch('/api/auth/profile-pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: await withRefreshTokenBody({ pin }),
+    });
+  } catch {
+    throw new Error(i18n.t('errors.unreachable'));
+  }
+  if (!res) throw new Error(i18n.t('pin.errorSignIn'));
+  if (!res.ok) throw await serverError(res, 'pin.errorGeneric');
+}
+
+async function postPinCall(path: string, body: Record<string, unknown>): Promise<Response> {
+  let res: Response | null;
+  try {
+    res = await authedFetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: await withRefreshTokenBody(body),
+    });
+  } catch {
+    throw new Error(i18n.t('errors.unreachable'));
+  }
+  if (!res) throw new Error(i18n.t('pin.errorSignIn'));
+  if (!res.ok) throw await serverError(res, 'pin.errorGeneric');
+  return res;
+}
+
+// docs/77 D303 — sets a new PIN for another household person, from this
+// device (verified as someone else). That person's devices all have to
+// enter it, and are told who did it; this device stays who it is.
+export async function resetMemberPin(profileId: string, pin: string): Promise<void> {
+  await postPinCall('/api/auth/profile-pin/reset', { profileId, pin, language: i18n.language });
+}
+
+// docs/77 D302 — the owner's forgotten PIN: a code to the account email.
+export async function requestPinResetCode(): Promise<void> {
+  await postPinCall('/api/auth/profile-pin/email-code', { language: i18n.language });
+}
+
+// The emailed code plus the new PIN; verifies this device as the owner.
+export async function resetPinWithEmailCode(code: string, pin: string): Promise<void> {
+  const res = await postPinCall('/api/auth/profile-pin/email-reset', { code, pin });
+  const body = (await res.json()) as { accessToken: string };
+  setAccessToken(body.accessToken);
+  setPinNeeded(false);
+}
+
+// D304 — "Got it" on the PIN reset notice; clears it on every device.
+export async function dismissPinResetNotice(): Promise<void> {
+  await postPinCall('/api/auth/profile-pin/notice/dismiss', {});
 }

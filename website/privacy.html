@@ -52,7 +52,7 @@
 </nav>
 <main class="wrap">
   <h1>Privacy Policy</h1>
-  <p class="lede">Effective <time datetime="2026-10-22">October 22, 2026</time></p>
+  <p class="lede">Effective <time datetime="2026-10-26">October 26, 2026</time></p>
 
   <section id="who-we-are">
     <h2>1. Who we are and what this covers</h2>
@@ -73,7 +73,7 @@
           <tr><td>Text you type or dictate for quick entry</td><td data-label="Examples">"Coffee 4.50 Visa"</td><td data-label="Where it is stored">Your device; saved with the transaction, so also our servers if you sync</td><td data-label="When we receive it">Only if you sync</td></tr>
           <tr><td>Account details</td><td data-label="Examples">Email address</td><td data-label="Where it is stored">Our servers</td><td data-label="When we receive it">When you sign in</td></tr>
           <tr><td>Sign-in and device records</td><td data-label="Examples">One-time sign-in links and 6-digit codes (stored only as one-way hashes, expire after 15 minutes), a random device ID, a device label you choose, profile display name, last-seen time, session tokens (hashed, expire after 60 days of inactivity)</td><td data-label="Where it is stored">Our servers</td><td data-label="When we receive it">When you sign in</td></tr>
-          <tr><td>Household sharing</td><td data-label="Examples">Who paid for or logged each entry, the profile names of household members</td><td data-label="Where it is stored">Our servers and the devices of your household members</td><td data-label="When we receive it">When you join or create a household</td></tr>
+          <tr><td>Household sharing</td><td data-label="Examples">Who paid for or logged each entry, the profile names of household members, whether each member has set a PIN, and who last reset a member's PIN, when and on which device</td><td data-label="Where it is stored">Our servers and the devices of your household members</td><td data-label="When we receive it">When you join or create a household</td></tr>
           <tr><td>Technical data</td><td data-label="Examples">IP address and request details in standard server logs</td><td data-label="Where it is stored">Our servers</td><td data-label="When we receive it">Whenever your device contacts our servers</td></tr>
           <tr><td>Support messages</td><td data-label="Examples">Your email and what you write to us</td><td data-label="Where it is stored">Our email inbox</td><td data-label="When we receive it">When you contact us</td></tr>
         </tbody>
@@ -91,7 +91,7 @@
     <h2>3. How we use information</h2>
     <p>We use your information only to run Flowtab for you. Specifically, to:</p>
     <ul>
-      <li>Sign you in by emailing you a one-time link or code.</li>
+      <li>Sign you in by emailing you a one-time link or code, and email the account owner a code to reset a forgotten household PIN, or a notice when someone else in the household resets it.</li>
       <li>Sync your budget between your devices and with household members you invite.</li>
       <li>Keep the Service secure, such as limiting repeated sign-in attempts and investigating abuse.</li>
       <li>Answer your support requests.</li>
@@ -105,7 +105,7 @@
     <h2>4. Who we share information with</h2>
     <p>We share information only in the cases below, and never sell or rent it.</p>
     <ul>
-      <li><strong>People you choose.</strong> If you create or join a household, its members see the shared budget data and your profile name. If you pair two devices directly, data moves between those devices. Our pairing relay only helps the two devices find each other; it does not see or store your budget data.</li>
+      <li><strong>People you choose.</strong> If you create or join a household, its members see the shared budget data and your profile name. Entries you mark <em>Only me</em> are not sent to other members' devices, though they are stored on our servers like the rest of your synced data. If you pair two devices directly, data moves between those devices. Our pairing relay only helps the two devices find each other; it does not see or store your budget data.</li>
       <li><strong>Service providers.</strong> These companies process data on our behalf, only to provide the Service, under contracts that require them to protect it:</li>
     </ul>
     <div class="table-wrap">
@@ -114,7 +114,7 @@
           <tr><th>Provider</th><th>Purpose</th><th>Data involved</th></tr>
         </thead>
         <tbody>
-          <tr><td>SMTP2GO</td><td>Sending sign-in emails</td><td>Your email address and the sign-in link or code</td></tr>
+          <tr><td>SMTP2GO</td><td>Sending sign-in and PIN emails</td><td>Your email address, the sign-in link or code, a PIN reset code, and for a PIN reset notice the name of the household member and device that reset it</td></tr>
           <tr><td>Our hosting provider</td><td>Running our servers and database</td><td>Synced data, account details, server logs</td></tr>
         </tbody>
       </table>
@@ -129,7 +129,7 @@
   <section id="security-retention">
     <h2>5. Storage, security and retention</h2>
     <p>Data on your device stays there until you delete it or uninstall the app. Synced data stays on our servers until you delete your account.</p>
-    <p><strong>Security.</strong> All traffic between the app and our servers is encrypted with HTTPS (TLS). We use passwordless sign-in, so there is no password to steal. Sign-in links, codes, and session tokens are stored only as one-way hashes. In the mobile apps, your session is kept in the device's secure storage (Keychain on iOS, Keystore on Android). Access to our servers is limited to the people who operate Flowtab. No system is perfectly secure, but we work to protect your information and will notify you and the authorities of a breach as the law requires.</p>
+    <p><strong>Security.</strong> All traffic between the app and our servers is encrypted with HTTPS (TLS). We use passwordless sign-in, so there is no password to steal. Sign-in links, codes, session tokens, and household PINs are stored only as one-way hashes. In the mobile apps, your session is kept in the device's secure storage (Keychain on iOS, Keystore on Android). Access to our servers is limited to the people who operate Flowtab. No system is perfectly secure, but we work to protect your information and will notify you and the authorities of a breach as the law requires.</p>
     <p><strong>How long we keep it.</strong></p>
     <div class="table-wrap">
       <table>

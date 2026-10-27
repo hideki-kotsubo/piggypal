@@ -14,6 +14,9 @@ export async function isDeletedAccount(userId: unknown): Promise<boolean> {
 
 export interface AuthedRequest extends Request {
   userId?: string;
+  // docs/77 D295 — the verified household person, from the token's
+  // profile_id claim; null until this device's session picked one.
+  profileId?: string | null;
 }
 
 // Gates any route needing a signed-in user — docs/05's "requires a valid
@@ -27,8 +30,9 @@ export async function requireAccessToken(req: AuthedRequest, res: Response, next
     return;
   }
   let userId: string;
+  let profileId: string | null;
   try {
-    ({ userId } = await verifyAccessToken(token));
+    ({ userId, profileId } = await verifyAccessToken(token));
   } catch {
     // docs/05: an access token is meant to be short-lived (15 min) and
     // silently refreshed by the client well before this happens in normal
@@ -48,5 +52,6 @@ export async function requireAccessToken(req: AuthedRequest, res: Response, next
     return;
   }
   req.userId = userId;
+  req.profileId = profileId;
   next();
 }

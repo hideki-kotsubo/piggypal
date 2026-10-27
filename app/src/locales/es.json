@@ -131,7 +131,8 @@
     "due_other": "{{count}} pagos programados pendientes",
     "due_many": "{{count}} pagos programados pendientes",
     "accountDeleted": "Tu cuenta fue eliminada: este dispositivo ahora funciona sin sincronización",
-    "sessionExpired": "Sincronización en pausa: inicia sesión de nuevo para sincronizar tus movimientos"
+    "sessionExpired": "Sincronización en pausa: inicia sesión de nuevo para sincronizar tus movimientos",
+    "pinNeeded": "Ingresa tu PIN para recibir tus registros Solo yo en este dispositivo"
   },
   "home": {
     "loading": "Cargando tus datos",
@@ -164,7 +165,14 @@
     "time": "Hora",
     "note": "Nota",
     "location": "Lugar",
-    "optional": "opcional…"
+    "optional": "opcional…",
+    "onlyMe": "Solo yo",
+    "onlyMeOn": "Solo tus dispositivos reciben este registro. Las demás personas del hogar no lo ven.",
+    "onlyMeAccountNote": "El saldo de esta cuenta se les verá distinto.",
+    "onlyMeOff": "Guarda este registro solo para ti.",
+    "onlyMeNeedsSignIn": "Solo yo necesita iniciar sesión y un PIN.",
+    "onlyMeNeedsPin": "Crea un PIN para usar Solo yo",
+    "onlyMeNeedsVerify": "Ingresa tu PIN en este dispositivo para usar Solo yo"
   },
   "deviceLink": {
     "scanTitle": "Escanear código",
@@ -186,7 +194,10 @@
     "lastDays_other": "Últimos {{count}} días ({{currency}})",
     "lastDays_many": "Últimos {{count}} días ({{currency}})",
     "thisMonth": "Este mes",
-    "scheduled": "+ {{amount}} programado"
+    "scheduled": "+ {{amount}} programado",
+    "includesPrivate_one": "Incluye {{count}} registro Solo yo — las demás personas del hogar no lo ven.",
+    "includesPrivate_many": "Incluye {{count}} de registros Solo yo — las demás personas del hogar no los ven.",
+    "includesPrivate_other": "Incluye {{count}} registros Solo yo — las demás personas del hogar no los ven."
   },
   "about": {
     "title": "Acerca de",
@@ -296,7 +307,11 @@
     "removePerson": "Quitar a {{name}}",
     "thisDevice": "este dispositivo",
     "seen": "visto {{time}}",
-    "removedName": "{{name}} (quitado)"
+    "removedName": "{{name}} (quitado)",
+    "setPin": "Crear un PIN para registros Solo yo",
+    "changePin": "Cambiar tu PIN",
+    "hasPin": "Tiene PIN",
+    "resetPin": "Restablecer PIN"
   },
   "accounts": {
     "shared": "Compartida",
@@ -649,5 +664,50 @@
     "failed": "No te entendí: inténtalo de nuevo o escríbelo.",
     "noSpeech": "No escuché nada: toca el micrófono e inténtalo de nuevo.",
     "unsupportedBrowser": "La entrada por voz no está disponible en este navegador: prueba Chrome, Edge o Safari, o escríbelo."
+  },
+  "pin": {
+    "title": "PIN",
+    "notSignedIn": "Inicia sesión primero (Ajustes → Cuenta). El PIN se guarda en el servidor, así que necesita una cuenta.",
+    "setIntro": "El PIN mantiene tus registros Solo yo contigo: un dispositivo pasa a ser tuyo solo después de ingresar tu PIN en él. Usa de 4 a 6 dígitos.",
+    "changeIntro": "Tus otros dispositivos pedirán el nuevo PIN una vez.",
+    "newPin": "PIN (4 a 6 dígitos)",
+    "confirmPin": "Escríbelo otra vez",
+    "mismatch": "Los dos PIN no coinciden.",
+    "save": "Guardar PIN",
+    "change": "Cambiar PIN",
+    "saved": "PIN guardado. Tus otros dispositivos lo pedirán una vez.",
+    "offline": "No tienes conexión. El PIN necesita conexión.",
+    "enterIntro": "{{name}} tiene un PIN. Ingrésalo para usar este dispositivo como {{name}}.",
+    "pinLabel": "PIN",
+    "continue": "Continuar",
+    "wrong_one": "PIN incorrecto. Te queda {{count}} intento.",
+    "wrong_many": "PIN incorrecto. Te quedan {{count}} de intentos.",
+    "wrong_other": "PIN incorrecto. Te quedan {{count}} intentos.",
+    "lockedNow": "Demasiados PIN incorrectos. Vuelve a intentarlo en 15 minutos.",
+    "locked": "Demasiados PIN incorrectos. Vuelve a intentarlo después de las {{time}}.",
+    "forgot": "¿Olvidaste el PIN?",
+    "errorFormat": "El PIN debe tener de 4 a 6 dígitos.",
+    "errorNotSynced": "Esta persona aún no se ha sincronizado. Inténtalo de nuevo en un momento.",
+    "errorNotVerified": "Ingresa tu PIN en este dispositivo primero.",
+    "errorRemoved": "Esta persona fue quitada del hogar.",
+    "errorGeneric": "No se pudo guardar. Inténtalo de nuevo.",
+    "errorSignIn": "Vuelve a iniciar sesión en este dispositivo.",
+    "otherDeviceHint": "¿Lo olvidaste? Cámbialo en cualquier otro dispositivo donde ya eres {{name}} (Configuración → Hogar → Cambiar tu PIN) y escribe el nuevo aquí.",
+    "setForgetHint": "Si lo olvidas, cámbialo en cualquier otro dispositivo tuyo (Configuración → Hogar) o pide a alguien del hogar que lo restablezca desde el suyo.",
+    "forgotOtherDevice": "En cualquier otro dispositivo donde ya eres {{name}}, abre Configuración → Hogar → Cambiar tu PIN. Luego escribe el PIN nuevo aquí. No se pierde nada.",
+    "forgotAskMember": "¿No tienes otro dispositivo? Otra persona del hogar puede crear un PIN nuevo para {{name}} desde su propio dispositivo: Configuración → Hogar → Restablecer PIN, debajo de {{name}}. {{name}} verá quién lo hizo.",
+    "forgotEmailIntro": "O recibe un código en el correo de la cuenta.",
+    "forgotEmailSend": "Enviarme un código",
+    "emailSent": "Enviamos un código de 6 dígitos al correo de la cuenta. Escríbelo junto con tu PIN nuevo. Vence en 15 minutos.",
+    "emailCode": "Código del correo",
+    "emailResend": "Enviar un código nuevo",
+    "resetForIntro": "Crea un PIN nuevo para {{name}} y dile cuál es. Sus dispositivos lo pedirán y mostrarán que lo restableciste desde este dispositivo. Este dispositivo sigue siendo tuyo: no recibe los registros Solo yo de {{name}}.",
+    "resetForButton": "Restablecer el PIN de {{name}}",
+    "resetForDone": "Listo. Dile a {{name}} el PIN nuevo; puede cambiarlo después.",
+    "unknownDevice": "un dispositivo sin nombre",
+    "resetNoticeBy": "{{name}} restableció tu PIN en {{device}} ({{when}}).",
+    "resetNoticeEmail": "Tu PIN se restableció con un código del correo de la cuenta, en {{device}} ({{when}}).",
+    "resetNoticeDismiss": "Entendido",
+    "errorNoPin": "Esta persona no tiene PIN."
   }
 }

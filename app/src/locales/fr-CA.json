@@ -14,9 +14,53 @@
     "codeLabel": "Code reçu par courriel"
   },
   "household": {
-    "addDeviceHint": "Ajouter un appareil affiche un code à scanner depuis le nouvel appareil — pas besoin de courriel. Pour synchroniser directement avec un appareil à proximité sans le nuage, utilisez Paramètres → Connecter un appareil."
+    "addDeviceHint": "Ajouter un appareil affiche un code à scanner depuis le nouvel appareil — pas besoin de courriel. Pour synchroniser directement avec un appareil à proximité sans le nuage, utilisez Paramètres → Connecter un appareil.",
+    "setPin": "Créer un NIP pour les opérations Moi seul",
+    "changePin": "Changer votre NIP",
+    "hasPin": "A un NIP",
+    "resetPin": "Réinitialiser le NIP"
   },
   "auth": {
     "iosHomeScreenHint": "Vous utilisez Flowtab depuis l’écran d’accueil ? Ne vous connectez pas ici — ouvrez l’appli et saisissez le code à 6 chiffres du courriel."
+  },
+  "transaction": {
+    "onlyMeNeedsSignIn": "Moi seul nécessite une connexion et un NIP.",
+    "onlyMeNeedsPin": "Créez un NIP pour utiliser Moi seul",
+    "onlyMeNeedsVerify": "Saisissez votre NIP sur cet appareil pour utiliser Moi seul"
+  },
+  "banner": {
+    "pinNeeded": "Saisissez votre NIP pour recevoir vos opérations Moi seul sur cet appareil"
+  },
+  "pin": {
+    "title": "NIP",
+    "notSignedIn": "Connectez-vous d’abord (Réglages → Compte). Le NIP est conservé par le serveur, il faut donc un compte.",
+    "setIntro": "Le NIP garde vos opérations Moi seul pour vous : un appareil ne devient le vôtre qu’une fois votre NIP saisi dessus. Utilisez 4 à 6 chiffres.",
+    "changeIntro": "Vos autres appareils demanderont le nouveau NIP une fois.",
+    "newPin": "NIP (4 à 6 chiffres)",
+    "mismatch": "Les deux NIP ne correspondent pas.",
+    "save": "Enregistrer le NIP",
+    "change": "Changer le NIP",
+    "saved": "NIP enregistré. Vos autres appareils le demanderont une fois.",
+    "offline": "Vous êtes hors ligne. Le NIP nécessite une connexion.",
+    "enterIntro": "{{name}} a un NIP. Saisissez-le pour utiliser cet appareil en tant que {{name}}.",
+    "pinLabel": "NIP",
+    "wrong_one": "NIP incorrect. Il reste {{count}} essai.",
+    "wrong_many": "NIP incorrect. Il reste {{count}} d’essais.",
+    "wrong_other": "NIP incorrect. Il reste {{count}} essais.",
+    "lockedNow": "Trop de NIP incorrects. Réessayez dans 15 minutes.",
+    "locked": "Trop de NIP incorrects. Réessayez après {{time}}.",
+    "forgot": "NIP oublié ?",
+    "errorFormat": "Le NIP doit comporter 4 à 6 chiffres.",
+    "errorNotVerified": "Saisissez d’abord votre NIP sur cet appareil.",
+    "otherDeviceHint": "Oublié ? Changez-le sur un autre appareil où vous êtes déjà {{name}} (Paramètres → Foyer → Changer votre NIP), puis saisissez le nouveau ici.",
+    "forgotOtherDevice": "Sur un autre appareil où vous êtes déjà {{name}}, ouvrez Paramètres → Foyer → Changer votre NIP. Saisissez ensuite le nouveau NIP ici. Rien n’est perdu.",
+    "forgotAskMember": "Pas d’autre appareil ? Quelqu’un d’autre du foyer peut choisir un nouveau NIP pour {{name}} depuis son propre appareil : Paramètres → Foyer → Réinitialiser le NIP, sous {{name}}. {{name}} verra qui l’a fait.",
+    "emailSent": "Nous avons envoyé un code à 6 chiffres à l’adresse du compte. Saisissez-le avec votre nouveau NIP. Il expire dans 15 minutes.",
+    "resetForIntro": "Choisissez un nouveau NIP pour {{name}}, puis dites-le-lui. Ses appareils le demanderont et indiqueront que vous l’avez réinitialisé depuis cet appareil. Cet appareil reste le vôtre : il ne reçoit pas les opérations Moi seul de {{name}}.",
+    "resetForButton": "Réinitialiser le NIP de {{name}}",
+    "resetForDone": "C’est fait. Donnez le nouveau NIP à {{name}} — il pourra être changé ensuite.",
+    "resetNoticeBy": "Votre NIP a été réinitialisé par {{name}} sur {{device}} ({{when}}).",
+    "resetNoticeEmail": "Votre NIP a été réinitialisé avec un code envoyé à l’adresse du compte, sur {{device}} ({{when}}).",
+    "errorNoPin": "Cette personne n’a pas de NIP."
   }
 }

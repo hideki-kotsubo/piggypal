@@ -24,6 +24,7 @@ import { SettingsScreen } from './components/SettingsScreen'
 import { PairingScreen } from './components/PairingScreen'
 import { HouseholdScreen } from './components/HouseholdScreen'
 import { DeleteAccountScreen } from './components/DeleteAccountScreen'
+import { PinScreen } from './components/PinScreen'
 import { DeviceLinkScreen } from './components/DeviceLinkScreen'
 import { ScanDeviceLinkScreen } from './components/ScanDeviceLinkScreen'
 import { AboutScreen } from './components/AboutScreen'
@@ -59,6 +60,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/settings/pair" element={<PairingScreen />} />
           <Route path="/settings/household" element={<HouseholdScreen />} />
           <Route path="/settings/household/link-device" element={<DeviceLinkScreen />} />
+          <Route path="/settings/household/pin" element={<PinScreen />} />
           <Route path="/settings/delete-account" element={<DeleteAccountScreen />} />
           {/* docs/71 — the old Profiles screen folded into Household. */}
           <Route path="/settings/profiles" element={<Navigate to="/settings/household" replace />} />

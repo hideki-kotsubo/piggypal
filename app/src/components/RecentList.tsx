@@ -7,6 +7,7 @@ import { totalsByCurrency } from '../lib/filterTransactions';
 import { getLocalUserId } from '../lib/identity';
 import { hasHousehold, personLabel, useHouseholdPeers } from '../lib/household';
 import { PayerBadge } from './PayerBadge';
+import { PrivateMark } from './PrivateMark';
 
 const PREVIEW_COUNT = 5;
 
@@ -72,7 +73,10 @@ export function RecentList() {
                         <PayerBadge label={personLabel(tx.paidByUserId, peers, store.profiles)} mine={tx.paidByUserId === getLocalUserId()} />
                       )}
                       <div className="tx-main">
-                        <span className="tx-note">{transactionTitle(tx, category)}</span>
+                        <span className="tx-note">
+                          {tx.privateToProfileId && <PrivateMark />}
+                          {transactionTitle(tx, category)}
+                        </span>
                         {/* day-label above already carries the date — just the account here */}
                         <span className="tx-meta">{accountSegment}</span>
                       </div>

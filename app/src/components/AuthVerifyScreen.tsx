@@ -8,6 +8,7 @@ import { getLocalUserId } from '../lib/identity';
 import { isUntouchedSeedAccount, referencedAccountIds } from '../lib/seed';
 import {
   claimDeviceLink,
+  ensureSessionProfile,
   fetchServerSnapshot,
   getKeptData,
   signOut,
@@ -17,6 +18,7 @@ import {
   verifyMagicLink,
 } from '../lib/auth';
 import { isIosDevice, isRunningInstalled } from '../lib/installPrompt';
+import { PinPrompt } from './PinScreen';
 import { useStore } from '../lib/store';
 import { accountName, categoryLabel } from '../lib/starterLabels';
 import { matchAccounts, matchCategories, resolveAccountRewrites, resolveCategoryRewrites } from '../lib/mergeMatch';
@@ -67,6 +69,9 @@ type Step =
   | { kind: 'confirm'; credential: Credential }
   | { kind: 'verifying' }
   | { kind: 'profile-picker'; userId: string; profiles: Profile[]; existingAccounts: number; existingTransactions: number }
+  // docs/77 D299 — the picked person has a PIN: entered before anything
+  // on this device becomes theirs. `picker` is where Back returns to.
+  | { kind: 'profile-pin'; userId: string; profile: Profile; picker: Extract<Step, { kind: 'profile-picker' }> | null }
   | { kind: 'other-account'; userId: string; isNewUser: boolean; keptEmail: string | null }
   | { kind: 'syncing' }
   | {
@@ -202,7 +207,9 @@ export function AuthVerifyScreen() {
         const snapshot = await fetchServerSnapshot();
         const profiles = snapshot?.profiles ?? [];
         const alreadyKnown = profiles.find((p) => p.id === getLocalUserId());
-        if (alreadyKnown) {
+        if (alreadyKnown?.hasPin) {
+          setStep({ kind: 'profile-pin', userId: result.userId, profile: alreadyKnown, picker: null });
+        } else if (alreadyKnown) {
           await proceedWithProfile(result.userId, { kind: 'existing', profile: alreadyKnown });
         } else {
           setStep({ kind: 'profile-picker', userId: result.userId, profiles, existingAccounts, existingTransactions });
@@ -226,6 +233,10 @@ export function AuthVerifyScreen() {
   }
 
   async function choosePickedIdentity(userId: string, picked: PickedIdentity) {
+    if (picked.kind === 'existing' && picked.profile.hasPin && step.kind === 'profile-picker') {
+      setStep({ kind: 'profile-pin', userId, profile: picked.profile, picker: step });
+      return;
+    }
     if (picked.kind === 'new') {
       // This device's own pre-existing getLocalUserId() becomes the new
       // profile's id directly — no adoption/rewrite needed, it's already
@@ -333,6 +344,10 @@ export function AuthVerifyScreen() {
   async function finish(userId: string) {
     const pendingEmail = takePendingEmail();
     setAuthAccount({ userId, email: claimedEmailRef.current || pendingEmail });
+    // docs/77 D299 — tells the server which person this device is (a
+    // person without a PIN is accepted as is; the PIN step above already
+    // covered one with).
+    void ensureSessionProfile();
     // docs/48 D176 — refresh this device's own devices row right after
     // connecting, on every sign-in path that reaches here (new signup,
     // repeat sign-in, or either profile-picker branch).
@@ -412,6 +427,22 @@ export function AuthVerifyScreen() {
           onPickNew={(displayName) => void choosePickedIdentity(step.userId, { kind: 'new', displayName })}
           onDiscard={() => void discardAndFinish(step.userId)}
         />
+      )}
+
+      {step.kind === 'profile-pin' && (
+        <div className="qr-stage">
+          <PinPrompt
+            profileId={step.profile.id}
+            name={step.profile.displayName}
+            accountUserId={step.userId}
+            onVerified={() => void proceedWithProfile(step.userId, { kind: 'existing', profile: step.profile })}
+          />
+          {step.picker && (
+            <button className="chip ghost" onClick={() => setStep(step.picker!)}>
+              {t('common.back')}
+            </button>
+          )}
+        </div>
       )}
 
       {step.kind === 'other-account' && (

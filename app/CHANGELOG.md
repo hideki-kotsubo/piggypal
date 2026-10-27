@@ -16,6 +16,19 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
+## Unreleased
+
+- **"Only me" entries.** In a household, tick **Only me** on an entry you
+  logged and it syncs only to your own devices. Nobody else in the
+  household sees it, and you can switch it back to shared any time.
+- **A PIN for each person in the household.** Set it in Settings →
+  Household. A new device can only sign in as you, and get your Only me
+  entries, once your PIN is entered on it.
+- **Forgot your PIN?** Change it on another device that's already you, or
+  ask someone in the household to reset it from theirs. Nothing is lost,
+  and you'll see who reset it and on which device. The account owner can
+  also get a reset code by email.
+
 ## 0.12.0 — 2026-10-22
 
 - **Chinese entries are understood**, in Simplified and Traditional:

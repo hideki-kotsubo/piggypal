@@ -122,7 +122,8 @@
     "due_one": "A scheduled payment is due",
     "due_other": "{{count}} scheduled payments are due",
     "accountDeleted": "Your account was deleted — this device now works without sync",
-    "sessionExpired": "Sync paused — sign in again to sync your entries"
+    "sessionExpired": "Sync paused — sign in again to sync your entries",
+    "pinNeeded": "Enter your PIN to get your Only me records on this device"
   },
   "home": {
     "loading": "Loading your data",
@@ -155,7 +156,14 @@
     "time": "Time",
     "note": "Note",
     "location": "Location",
-    "optional": "optional…"
+    "optional": "optional…",
+    "onlyMe": "Only me",
+    "onlyMeOn": "Only your devices get this record. Others in the household don't see it.",
+    "onlyMeAccountNote": "This account's balance will look different to them.",
+    "onlyMeOff": "Keep this record to yourself.",
+    "onlyMeNeedsSignIn": "Only me needs sign-in and a PIN.",
+    "onlyMeNeedsPin": "Set a PIN to use Only me",
+    "onlyMeNeedsVerify": "Enter your PIN on this device to use Only me"
   },
   "deviceLink": {
     "scanTitle": "Scan a code",
@@ -176,7 +184,9 @@
     "lastDays_one": "Last {{count}} day ({{currency}})",
     "lastDays_other": "Last {{count}} days ({{currency}})",
     "thisMonth": "This month",
-    "scheduled": "+ {{amount}} scheduled"
+    "scheduled": "+ {{amount}} scheduled",
+    "includesPrivate_one": "Includes {{count}} Only me record — others in the household don't see it.",
+    "includesPrivate_other": "Includes {{count}} Only me records — others in the household don't see them."
   },
   "about": {
     "title": "About",
@@ -279,7 +289,11 @@
     "removePerson": "Remove {{name}}",
     "thisDevice": "this device",
     "seen": "seen {{time}}",
-    "removedName": "{{name}} (removed)"
+    "removedName": "{{name}} (removed)",
+    "setPin": "Set a PIN for Only me records",
+    "changePin": "Change your PIN",
+    "hasPin": "Has a PIN",
+    "resetPin": "Reset PIN"
   },
   "accounts": {
     "shared": "Shared",
@@ -626,5 +640,49 @@
     "failed": "Couldn't catch that — try again, or type it.",
     "noSpeech": "Didn't hear anything — tap the mic and try again.",
     "unsupportedBrowser": "Voice entry isn't available in this browser — try Chrome, Edge or Safari, or type it."
+  },
+  "pin": {
+    "title": "PIN",
+    "notSignedIn": "Sign in first (Settings → Account). Your PIN is kept by the server, so it needs an account.",
+    "setIntro": "A PIN keeps your Only me records yours: a device becomes you only after your PIN is entered on it. Use 4 to 6 digits.",
+    "changeIntro": "Your other devices will ask for the new PIN once.",
+    "newPin": "PIN (4 to 6 digits)",
+    "confirmPin": "Type it again",
+    "mismatch": "The two PINs don't match.",
+    "save": "Save PIN",
+    "change": "Change PIN",
+    "saved": "PIN saved. Your other devices will ask for it once.",
+    "offline": "You're offline. The PIN needs a connection.",
+    "enterIntro": "{{name}} has a PIN. Enter it to use this device as {{name}}.",
+    "pinLabel": "PIN",
+    "continue": "Continue",
+    "wrong_one": "Wrong PIN. {{count}} try left.",
+    "wrong_other": "Wrong PIN. {{count}} tries left.",
+    "lockedNow": "Too many wrong PINs. Try again in 15 minutes.",
+    "locked": "Too many wrong PINs. Try again after {{time}}.",
+    "forgot": "Forgot the PIN?",
+    "errorFormat": "The PIN must be 4 to 6 digits.",
+    "errorNotSynced": "This person hasn't synced yet. Try again in a moment.",
+    "errorNotVerified": "Enter your PIN on this device first.",
+    "errorRemoved": "This person was removed from the household.",
+    "errorGeneric": "Couldn't save that. Try again.",
+    "errorSignIn": "Sign in again on this device.",
+    "otherDeviceHint": "Forgot it? Change it on any other device where you're already {{name}} (Settings → Household → Change your PIN), then enter the new one here.",
+    "setForgetHint": "If you forget it, change it on any other device of yours (Settings → Household), or ask someone in the household to reset it from theirs.",
+    "forgotOtherDevice": "On any other device where you're already {{name}}, open Settings → Household → Change your PIN. Then enter the new PIN here. Nothing is lost.",
+    "forgotAskMember": "No other device? Someone else in the household can set a new PIN for {{name}} from their own device: Settings → Household → Reset PIN, under {{name}}. {{name}} will see who did it.",
+    "forgotEmailIntro": "Or get a code sent to the account's email.",
+    "forgotEmailSend": "Email me a code",
+    "emailSent": "We sent a 6-digit code to the account's email. Enter it with your new PIN. It expires in 15 minutes.",
+    "emailCode": "Code from the email",
+    "emailResend": "Send a new code",
+    "resetForIntro": "Set a new PIN for {{name}}, then tell them what it is. Their devices will ask for it and show that you reset it from this device. This device stays yours: it doesn't get {{name}}'s Only me records.",
+    "resetForButton": "Reset {{name}}'s PIN",
+    "resetForDone": "Done. Tell {{name}} the new PIN — they can change it afterwards.",
+    "unknownDevice": "an unnamed device",
+    "resetNoticeBy": "Your PIN was reset by {{name}} on {{device}} ({{when}}).",
+    "resetNoticeEmail": "Your PIN was reset with a code from the account email, on {{device}} ({{when}}).",
+    "resetNoticeDismiss": "Got it",
+    "errorNoPin": "This person has no PIN."
   }
 }

@@ -1,9 +1,8 @@
 # 77 — Private records and receipt photos
 
-Two feature requests from the user, 2026-10-26. **Design draft for
-discussion. Nothing decided or built.** The D-numbers below are proposals
-(next free number after docs/76's D292). They become decisions only after
-the user confirms them.
+Two feature requests from the user, 2026-10-26. **Part A is built**
+(D293–D301, below). **Part B is a design draft**: its R-D numbers are
+proposals that become decisions only after the user confirms them.
 
 ---
 
@@ -28,110 +27,136 @@ lands in the spouse's SQLite and can be read from an export, a P2P sync,
 or a debugger. That isn't privacy. The filtering has to happen at
 **download time**, on the server.
 
-### Proposed design
+### Built (2026-10-26, branch `feat/private-records`)
 
-- **P-D1: column.** `transactions.private_to_profile_id uuid null`.
-  NULL means shared (today's behaviour). When it is set, only that
-  profile's devices receive the row. This is better than a boolean because
-  the server can filter on it directly, and "private to whom" stays
-  unambiguous after the payer changes.
-- **P-D2: profile in the token.** `GET /api/auth/powersync-token` already
-  knows the caller's device (refresh token → `devices` row →
-  `profile_id`). Add a `profile_id` claim to the PowerSync JWT. Never
-  take it from the client.
-- **P-D3: sync streams.** The `transactions` stream becomes:
-  `WHERE user_id = auth.user_id() AND (private_to_profile_id IS NULL OR
-  private_to_profile_id = auth.parameter('profile_id'))`. (The exact
-  syntax for a custom JWT claim in edition-3 streams needs checking.)
-  `transaction_splits` needs the same filter. It has no profile column of
-  its own, so either denormalize the column onto it or use a subquery
-  stream. Spike this first.
-- **P-D4: upload guard.** `/api/sync/upload` rejects a write to a private
-  row from another profile's device. A device can only set
-  `private_to_profile_id` to its own profile.
-- **P-D5: P2P sync (docs/25).** `applyPeerDataset` / the outgoing
-  dataset must leave out private rows when syncing with a
-  "someone-else" peer. Own-device pairing still includes them.
-- **P-D6: flipping private → shared** is a normal PATCH; the row then
-  appears for everyone. **Shared → private** also works going forward,
-  but other devices that already downloaded it keep a copy until
-  PowerSync removes it from their bucket. PowerSync does remove rows
-  that leave a stream, so this should converge, but it needs a test
-  against a real service.
-- **P-D7: UI.** A "Private" toggle (lock icon) on the transaction edit
-  screen. It shows only when `hasHousehold()` is true. A small lock on
-  list rows for your own private records. No parser keyword in v1.
+The user's calls: build the PIN together with the feature, private rows
+count only in their owner's own view, any account allowed (with a note),
+label "Only me". The proposals P-D1–P-D8 became D293–D301.
 
-### Questions for the user
+- **D293 — column.** `transactions.private_to_profile_id uuid`: null =
+  shared, set = only that person's devices get the row. Always the row's
+  creator (`created_by_user_id`), never the payer. Migration
+  `2026-10-26-private-records.sql`.
+- **D294 — verified profile per device, server-side.** The client-written
+  `devices.profile_id` can't decide whose private rows a device gets (any
+  device can upload any value). New server-only table `device_profiles
+  (user_id, device_id, profile_id)`, set by `POST
+  /api/auth/session-profile` after the sign-in profile picker. The device
+  proves itself with its refresh token, the same way delete-account does.
+  Every new sign-in (`issueSession`) clears it, and so do device revoke
+  and a PIN change from another device.
+- **D295 — `profile_id` claim.** Access and PowerSync tokens carry the
+  device's verified profile. `powersync-token` copies it from the access
+  token, so a device that lost verification keeps it for at most one
+  access-token lifetime plus one PowerSync-token lifetime.
+- **D296 — two streams per table.** `transactions` (shared, `IS NULL`) +
+  `private_transactions` (`= auth.parameter('profile_id')`), and the same
+  for `transaction_splits`, instead of one `OR`, so nothing depends on how
+  a missing claim compares to NULL. Checked with
+  `@powersync/service-sync-rules` 0.44: the config compiles with no
+  errors; a shared row lands only in `transactions|0[user]`, a private one
+  only in `private_transactions|0[profile,user]`; a token without the
+  claim gets no private bucket. **Confirmed on the dev PowerSync Service
+  (2026-10-26):** private rows sit only in the owner's
+  `3#private_transactions` bucket, a row toggled private → shared →
+  private got matching REMOVE/PUT ops in both buckets, and the other
+  household member's device dropped the rows once it synced. The first
+  test leaked only because PowerSync was still on the old config: it loads
+  `sync-config.yaml` at start, so a release must restart it right after
+  the api (whose migration adds the column the streams read).
+- **D297 — split legs.** `transaction_splits.private_to_profile_id` is a
+  copy of the transaction's value, recomputed by the upload handler at
+  the end of every batch, never written by the client.
+- **D298 — upload rules** (`privateGuard`, `api/src/sync/routes.ts`): a
+  row (or split leg) private to someone else can't be changed or deleted;
+  only the creator can make a row private, only to themselves, and only
+  once their profile has a PIN. A device not verified yet gets **409
+  `profile_not_verified`** for the whole batch instead of a skip, because
+  a skipped PUT would be dropped from the device for good. The app retries
+  after it is verified.
+- **D299 — profile PIN** (was P-D8). 4–6 digits, scrypt with a salt, in
+  server-only `profile_pins`; `profiles.has_pin` is set by the api only
+  and synced down, so every device knows when picking a person needs a PIN.
+  5 wrong PINs lock that profile for 15 minutes. `POST
+  /api/auth/profile-pin` sets or changes the PIN of the profile the device
+  is verified as. Being verified is the proof, so the old PIN isn't asked
+  for. Setting a PIN drops every *other* device verified as that profile,
+  so a device that picked it before it had a PIN has to enter the PIN.
+  The "Only me" toggle needs a PIN.
+- **D300 — forgotten PIN (superseded by D302–D304, same day).** First
+  built as a reset that removed the PIN and hard-deleted that person's
+  private rows. Replaced before release: it let anyone in the household
+  destroy someone's records, and the user preferred recovery over erasure.
+- **D301 — P2P (docs/25).** Private rows and their legs are left out of
+  both directions of a "someone else" sync; own-device sync keeps them.
+- **D302 — the owner's forgotten PIN: emailed code.** For the case the user
+  raised: the owner, now alone in the household on one device. `POST
+  /api/auth/profile-pin/email-code` mails a 6-digit code to the account
+  email (`profile_pins.reset_code_*`, hashed, 15 minutes, 5 tries, a new
+  code replaces the old one); `POST /api/auth/profile-pin/email-reset`
+  takes the code + a new PIN, verifies the calling device as the owner and
+  drops the owner's other devices. A code, not a link, for docs/56 D204's
+  reason (a tapped link opens Safari, not the installed app). Owner only:
+  the inbox proves the owner, nobody else.
+- **D303 — reset by another household member.** The user's call: this is
+  not high-security storage, so someone without another device can ask a
+  household member. `POST /api/auth/profile-pin/reset {profileId, pin}`
+  from a device verified as a *different*, not removed person, for a
+  person who has a PIN. Sets the new PIN and drops all of the target's
+  devices; nothing is erased. The acting device stays its own person, so
+  it never downloads the target's rows. **Accepted, recorded:** whoever
+  resets someone's PIN knows the new one and can enter it on a device to
+  read that person's Only me records; the target finds out afterwards, by
+  name (D304). Also clears a pending emailed code.
+- **D304 — the reset notice.** Every reset except a person changing their
+  own PIN on their own verified device writes `profiles.pin_reset_at /
+  pin_reset_by / pin_reset_device` (api only, synced). All of that
+  person's devices show it — Home banner, their Household card, above the
+  PIN prompt — as "Your PIN was reset by Bob on Bob's iMac (date)" or
+  "…with a code from the account email, on New phone (date)", until "Got
+  it" (`POST /api/auth/profile-pin/notice/dismiss`, from a device verified
+  as them) clears it everywhere. If the target is the owner, the account
+  email gets the same notice. No push notifications (docs/57 D214 still
+  stands); that would be its own item.
+- Plus the user's point 2: the PIN prompt and the set-PIN screen say how
+  to change a forgotten PIN on another device that's already you.
 
-1. **Totals and budgets.** A private expense in a shared category: should
-   it count toward the household's budget? Other members can't see it,
-   so either their "spent" number is lower than yours (two truths), or
-   private rows are left out of shared budgets for everyone. Proposal:
-   private rows count only in **your own** view. The budget screen says
-   "includes N private items" only to you.
-2. **Shared accounts.** A private expense on a joint account (owned by
-   someone else, or shared) makes that account's balance differ between
-   members. Allow it, warn, or limit private records to accounts you
-   own? Proposal: allow it, and add a one-line note under the toggle.
-3. **Scheduled payments (docs/57).** Should a whole schedule be private
-   too, with its posted transactions inheriting the flag? Proposal: yes,
-   but in phase 2.
-4. **Wording.** "Private" vs "Only me" vs "Don't share". Translations go
-   into all 10 locales.
-5. **Single-person accounts.** With no household the toggle is hidden.
-   If someone joins later, nothing earlier becomes private on its own.
-   Confirm.
+App side: "Only me" checkbox on the edit screen, shown to the creator
+when there's a household (or the row is already private), with a note
+when the account isn't the creator's own. Lock mark on list rows. Insights'
+budget bars say "includes N Only me records" (to the owner only; nobody
+else has those rows). Settings → Household → PIN (`PinScreen`), PIN step
+in the sign-in picker (`PinPrompt`), Home banner when this device's
+person needs to enter their PIN. The verified profile is remembered on
+the device (`flowtab:verified-profile`) so the toggle works offline; the
+server re-checks every upload. Strings in all 10 locales (fr-CA says
+"NIP"); translations are mine and need native review like docs/73/76.
 
-### Caveats to state honestly
+Recovery (D302–D304) verified: api 79/79 (the 55 below plus member reset,
+notice, dismiss, emailed code incl. single use and the 5-try limit)
+against a throwaway database on the dev Postgres, with emails logged, not
+sent; headless Chromium for the PIN prompt hint, Forgot options and the
+owner's email-code reset end to end. Not yet in a browser: the Home
+banner, the Household notice and "Reset PIN" link (they need synced
+profiles, so a dev PowerSync test).
 
-- This is privacy *from household members*, not from the server.
-  Postgres still stores the row in plain text, as it does today. The
-  privacy policy and the toggle's help text should say so.
-- A household member who is the account **owner** can delete the account
-  (docs/72), and that deletes private rows too. Acceptable, but worth
-  knowing.
-- Free tier without sign-in: there's only one person per device, so this
-  only matters for P2P (P-D5).
+Verified: api 55/55 against a throwaway PGlite (migration applied on top
+of `main`'s schema), app tsc + 246 unit tests (locale parity included),
+and a headless-Chromium run of the whole flow (sign up, add a person, PIN,
+toggle, list lock, second device picking a PIN profile with a wrong then
+right PIN), then the user's own test on dev with the real PowerSync
+Service and two people's devices. Not yet: a phone.
 
-### The profile-picker gap, and P-D8 (profile PIN)
-
-Found 2026-10-26 while answering "can any household member save private
-records?". Yes: any profile with a device can, and a record is private to
-its **creator** (`created_by_user_id`), not its payer. But profiles have
-no secret of their own. When a new device signs in (magic link, code or
-QR link, docs/48 D177/D178), it shows the profile picker, and nothing
-checks that the person tapping "This is [name]'s device" is that person.
-A household member could sign in a spare device as your profile and
-download your private rows. P-D2 trusts the chosen profile, so it can't
-stop this.
-
-Options considered:
-
-1. Leave it. "Private" then means "hidden from others by default", and
-   the help text has to say so.
-2. **Per-profile PIN (chosen by the user, 2026-10-26, not scheduled
-   yet).** Each person can set a 4–6 digit PIN, stored hashed on the
-   server. Choosing a profile that has a PIN requires entering it. The
-   api adds `profile_id` to a device's PowerSync token only after the PIN
-   was verified for that device. The Private toggle requires a PIN.
-   Wrong-attempt limit like docs/56 D204's codes.
-3. A separate login per person. Real security, but it reopens docs/48's
-   "1 login, shared benefits" and is much bigger than this feature.
-
-**Open:** P-D8 is in the backlog, not scheduled. If Part A ships before
-it, Part A has option 1's meaning, and the toggle's help text must say
-so. The other choice is to hold Part A until P-D8 is built. To decide
-before building Part A.
-
-Other answers from the same discussion:
-- A person added before they have a device (docs/71 D254) can't have
-  private records until they have one.
-- Removing a person (docs/71 soft delete) leaves their private rows
-  visible to nobody. Restoring the person brings them back, and owner
-  account deletion (docs/72) erases them.
-- A household-wide "turn private records off" switch for the owner: not
-  planned.
+Still true from the design:
+- Private from household members, not from the server: Postgres stores
+  these rows in plain text like everything else (privacy policy updated).
+- Removing a person (docs/71) leaves their private rows visible to nobody;
+  restoring them brings the rows back. Owner account deletion (docs/72)
+  erases them with everything else.
+- Turning "Only me" off is a normal edit; the row reaches everyone at their
+  next sync. Turning it on removes it from the others' devices at their
+  next sync, but what they already saw or exported stays with them.
+- Phase 2, not built: private scheduled payments.
 
 ---
 
@@ -177,7 +202,7 @@ Attach one or more photos of a receipt to a transaction.
   gate's natural home (locked decision 5 lists only three gate points, so
   **adding a fourth is a flagged change to that decision**).
 - **R-D9: privacy and deletion.** An attachment inherits its
-  transaction's `private_to_profile_id` (Part A). Account deletion
+  transaction's `private_to_profile_id` (Part A, D293). Account deletion
   (docs/72) must also delete the blobs. Soft-deleted transactions'
   attachments get purged by a job after N days. Update the privacy policy
   and the App Store / Play Data-safety answers (photos are user content
@@ -223,13 +248,8 @@ on-device recognition later as the free fallback. Not decided.
 
 ## Suggested order
 
-1. Part A first. It's smaller, has no new infrastructure, and Part B's
-   privacy depends on it (R-D9).
-   Spike: a custom JWT claim in edition-3 streams + filtering
-   `transaction_splits`.
+1. Part A (with the PIN): built 2026-10-26.
 2. Part B phase 1: local-only photos (free tier works, no server).
 3. Part B phase 2: blob storage + sync + quota (after storage and quota
    are decided).
 4. Part B phase 3: receipt auto-fill (R-D11).
-5. P-D8 profile PIN: in the backlog, not scheduled. See the open
-   question in Part A about shipping Part A before it.

@@ -14,17 +14,25 @@ it needs doing.
 
 ## ⚪ Next
 
-- [ ] **Private records + receipt photos** (docs/77, design draft,
-      proposals not yet decided). Added 2026-10-26.
-  - [ ] Decide (user): budgets/joint accounts for private rows, wording
-        ("Private"/"Only me"), and whether Part A waits for P-D8.
-  - [ ] Part A spike: `profile_id` claim in the PowerSync JWT + a
-        filtered `transactions`/`transaction_splits` stream.
-  - [ ] Part A: `private_to_profile_id` column, upload guard, P2P
-        exclusion, toggle UI.
-  - [ ] P-D8: per-profile PIN, so the sign-in profile picker can't be
-        used to read someone's private records. Chosen by the user, not
-        scheduled yet.
+- [ ] **Private records + receipt photos** (docs/77). Added 2026-10-26.
+  - [x] Part A, "Only me" records + per-profile PIN (D293–D301), built
+        2026-10-26 on `feat/private-records`: api 55/55 on throwaway
+        PGlite, sync config checked with PowerSync's own rules library,
+        app tests + headless Chromium run of the whole flow.
+  - [x] Real PowerSync Service (dev, 2026-10-26): Only me rows reach only
+        their owner's devices and move when the flag flips. Release note:
+        restart PowerSync right after the api, or private rows keep
+        reaching everyone.
+  - [ ] User, on phones: toggle, PIN set/enter, second device picking a
+        PIN profile.
+  - [ ] Native-speaker review of the new strings (all 10 locales).
+  - [x] Forgotten PIN, decided and built (D302–D304): change it on
+        another own device, a household member resets it from theirs
+        (no erasing; the person sees who/where/when, owner also by
+        email), or the owner uses an emailed code. Reset-and-erase gone.
+  - [ ] User, on dev: member reset → banner on the other person's
+        devices → Got it; owner email code with real SMTP2GO.
+  - [ ] Phase 2: private scheduled payments.
   - [ ] Part B phase 1: local-only receipt photos, several per
         transaction (camera/file input, on-device compression).
   - [ ] Decide (user): storage (Azure Blob vs MinIO) and paid quota.
@@ -36,7 +44,7 @@ it needs doing.
 - [ ] **End-to-end encryption** (docs/78, design draft, proposals not
       yet decided). Added 2026-10-26.
   - [ ] Decide (user): go / no-go, recovery key required or optional,
-        whether E-D11 per-profile keys replace docs/77's P-D8 PIN,
+        whether E-D11 per-profile keys replace docs/77's PIN (D299, built),
         rotation policy, Tier 2 "processed in transit" semantics,
         migration opt-in vs automatic.
   - [ ] Spike: WebCrypto AES-GCM + ECDH in the Capacitor WebView (iOS,

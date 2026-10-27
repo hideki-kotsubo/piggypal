@@ -113,7 +113,8 @@
     "inbox_other": "有{{count}}條記錄需要分類",
     "due_other": "有{{count}}筆定期付款到期",
     "accountDeleted": "你的帳號已被刪除 — 此裝置現在不再同步",
-    "sessionExpired": "同步已暫停 — 重新登入以同步你的記錄"
+    "sessionExpired": "同步已暫停 — 重新登入以同步你的記錄",
+    "pinNeeded": "輸入 PIN，即可在這台裝置上收到你的「僅自己」紀錄"
   },
   "home": {
     "loading": "正在載入你的資料",
@@ -146,7 +147,14 @@
     "time": "時間",
     "note": "備註",
     "location": "地點",
-    "optional": "可選…"
+    "optional": "可選…",
+    "onlyMe": "僅自己",
+    "onlyMeOn": "這筆紀錄只會同步到你自己的裝置，家庭其他成員看不到。",
+    "onlyMeAccountNote": "這個帳戶的餘額在他們那裡會顯示不同。",
+    "onlyMeOff": "把這筆紀錄留給自己。",
+    "onlyMeNeedsSignIn": "「僅自己」需要登入並設定 PIN。",
+    "onlyMeNeedsPin": "設定 PIN 以使用「僅自己」",
+    "onlyMeNeedsVerify": "在這台裝置上輸入 PIN 以使用「僅自己」"
   },
   "deviceLink": {
     "scanTitle": "掃描QR Code",
@@ -166,7 +174,8 @@
   "insights": {
     "lastDays_other": "最近{{count}}天（{{currency}}）",
     "thisMonth": "本月",
-    "scheduled": "+ {{amount}} 待付"
+    "scheduled": "+ {{amount}} 待付",
+    "includesPrivate_other": "包含 {{count}} 筆「僅自己」紀錄 — 家庭其他成員看不到。"
   },
   "about": {
     "title": "關於",
@@ -256,7 +265,11 @@
     "removePerson": "移除{{name}}",
     "thisDevice": "此裝置",
     "seen": "{{time}}線上",
-    "removedName": "{{name}}（已移除）"
+    "removedName": "{{name}}（已移除）",
+    "setPin": "為「僅自己」紀錄設定 PIN",
+    "changePin": "變更 PIN",
+    "hasPin": "已設 PIN",
+    "resetPin": "重設 PIN"
   },
   "accounts": {
     "shared": "共用",
@@ -597,5 +610,48 @@
     "failed": "沒聽清 — 請重試，或直接輸入。",
     "noSpeech": "沒有聽到聲音 — 點一下麥克風再試一次。",
     "unsupportedBrowser": "此瀏覽器不支援語音輸入 — 請使用 Chrome、Edge 或 Safari，或直接輸入。"
+  },
+  "pin": {
+    "title": "PIN",
+    "notSignedIn": "請先登入（設定 → 帳戶）。PIN 儲存在伺服器上，所以需要帳戶。",
+    "setIntro": "PIN 讓你的「僅自己」紀錄只屬於你：只有在裝置上輸入你的 PIN 之後，它才會成為你的裝置。請使用 4 到 6 位數字。",
+    "changeIntro": "你的其他裝置會要求輸入一次新 PIN。",
+    "newPin": "PIN（4 到 6 位數字）",
+    "confirmPin": "再輸入一次",
+    "mismatch": "兩次輸入的 PIN 不一致。",
+    "save": "儲存 PIN",
+    "change": "變更 PIN",
+    "saved": "PIN 已儲存。你的其他裝置會要求輸入一次。",
+    "offline": "你目前離線。PIN 需要網路連線。",
+    "enterIntro": "{{name}} 設定了 PIN。輸入 PIN 後即可以 {{name}} 的身分使用這台裝置。",
+    "pinLabel": "PIN",
+    "continue": "繼續",
+    "wrong_other": "PIN 錯誤。還可以嘗試 {{count}} 次。",
+    "lockedNow": "PIN 錯誤次數過多。請 15 分鐘後再試。",
+    "locked": "PIN 錯誤次數過多。請在 {{time}} 之後再試。",
+    "forgot": "忘記 PIN？",
+    "errorFormat": "PIN 必須是 4 到 6 位數字。",
+    "errorNotSynced": "此人尚未同步。請稍後再試。",
+    "errorNotVerified": "請先在這台裝置上輸入你的 PIN。",
+    "errorRemoved": "此人已被移出家庭。",
+    "errorGeneric": "無法儲存。請重試。",
+    "errorSignIn": "請在這台裝置上重新登入。",
+    "otherDeviceHint": "忘記了？在任何一台已經是 {{name}} 身分的其他裝置上變更（設定 → 家庭 → 變更 PIN），然後在這裡輸入新的 PIN。",
+    "setForgetHint": "如果忘記了，可以在你的其他裝置上變更（設定 → 家庭），或請家庭中的其他人在他們的裝置上為你重設。",
+    "forgotOtherDevice": "在任何一台已經是 {{name}} 身分的其他裝置上，開啟 設定 → 家庭 → 變更 PIN，然後在這裡輸入新的 PIN。不會遺失任何資料。",
+    "forgotAskMember": "沒有其他裝置？家庭中的其他人可以在自己的裝置上為 {{name}} 設定新的 PIN：設定 → 家庭 → {{name}} 下方的「重設 PIN」。{{name}} 會看到是誰操作的。",
+    "forgotEmailIntro": "或向帳戶電子郵件寄送驗證碼。",
+    "forgotEmailSend": "以電子郵件寄送驗證碼",
+    "emailSent": "我們已向帳戶電子郵件寄送 6 位數驗證碼。請連同新的 PIN 一起輸入。驗證碼將在 15 分鐘後失效。",
+    "emailCode": "郵件中的驗證碼",
+    "emailResend": "重新寄送驗證碼",
+    "resetForIntro": "為 {{name}} 設定新的 PIN，然後告訴對方。對方的裝置會要求輸入它，並顯示是你在這台裝置上重設的。這台裝置仍然是你的，不會收到 {{name}} 的「僅自己」紀錄。",
+    "resetForButton": "重設 {{name}} 的 PIN",
+    "resetForDone": "完成。請把新的 PIN 告訴 {{name}}，之後可以再變更。",
+    "unknownDevice": "一台未命名的裝置",
+    "resetNoticeBy": "{{name}} 在「{{device}}」上重設了你的 PIN（{{when}}）。",
+    "resetNoticeEmail": "你的 PIN 已透過帳戶電子郵件中的驗證碼，在「{{device}}」上重設（{{when}}）。",
+    "resetNoticeDismiss": "知道了",
+    "errorNoPin": "此人沒有設定 PIN。"
   }
 }

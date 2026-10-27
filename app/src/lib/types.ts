@@ -71,6 +71,9 @@ export interface Transaction {
   // "YYYY-MM-DD" this row fulfils — occurredAt may differ if paid late.
   scheduleId: string | null;
   occurrenceDate: string | null;
+  // docs/77 — "Only me": the profile this row is private to (always its
+  // creator), or null when it's shared with the household.
+  privateToProfileId: string | null;
   updatedAt: string; // docs/46 D170 — see Account.updatedAt
 }
 
@@ -171,7 +174,18 @@ export interface Profile {
   updatedAt: string;
   // docs/71 D252 — removed from the household; history keeps the name.
   deletedAt: string | null;
+  // docs/77 D299 — picking this profile on a device needs its PIN. The
+  // api's copy is the real one (uploads can't change it); the app only
+  // mirrors a PIN change it just made (store.notePinChanged).
+  hasPin: boolean;
+  // docs/77 D304 — the last time this person's PIN was reset by someone
+  // else's device (byProfileId) or with the owner's emailed code
+  // (byProfileId = their own id), until they dismiss it. api only.
+  pinReset: { at: string; byProfileId: string | null; deviceLabel: string | null } | null;
 }
+
+// Profile fields only the api writes; uploads never carry them.
+export type ApiProfileField = 'hasPin' | 'pinReset';
 
 // docs/48 D176 — one row per physical device, `id` reusing identity.ts's
 // getDeviceId().

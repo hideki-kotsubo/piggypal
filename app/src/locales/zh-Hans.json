@@ -113,7 +113,8 @@
     "inbox_other": "有{{count}}条记录需要分类",
     "due_other": "有{{count}}笔定期付款到期",
     "accountDeleted": "你的账号已被删除 — 此设备现在不再同步",
-    "sessionExpired": "同步已暂停 — 重新登录以同步你的记录"
+    "sessionExpired": "同步已暂停 — 重新登录以同步你的记录",
+    "pinNeeded": "输入 PIN，即可在这台设备上收到你的“仅自己”记录"
   },
   "home": {
     "loading": "正在加载你的数据",
@@ -146,7 +147,14 @@
     "time": "时间",
     "note": "备注",
     "location": "地点",
-    "optional": "可选…"
+    "optional": "可选…",
+    "onlyMe": "仅自己",
+    "onlyMeOn": "这条记录只会同步到你自己的设备，家庭其他成员看不到。",
+    "onlyMeAccountNote": "这个账户的余额在他们那里会显示不同。",
+    "onlyMeOff": "把这条记录留给自己。",
+    "onlyMeNeedsSignIn": "“仅自己”需要登录并设置 PIN。",
+    "onlyMeNeedsPin": "设置 PIN 以使用“仅自己”",
+    "onlyMeNeedsVerify": "在这台设备上输入 PIN 以使用“仅自己”"
   },
   "deviceLink": {
     "scanTitle": "扫描二维码",
@@ -166,7 +174,8 @@
   "insights": {
     "lastDays_other": "最近{{count}}天（{{currency}}）",
     "thisMonth": "本月",
-    "scheduled": "+ {{amount}} 待付"
+    "scheduled": "+ {{amount}} 待付",
+    "includesPrivate_other": "包含 {{count}} 条“仅自己”记录 — 家庭其他成员看不到。"
   },
   "about": {
     "title": "关于",
@@ -256,7 +265,11 @@
     "removePerson": "移除{{name}}",
     "thisDevice": "此设备",
     "seen": "{{time}}在线",
-    "removedName": "{{name}}（已移除）"
+    "removedName": "{{name}}（已移除）",
+    "setPin": "为“仅自己”记录设置 PIN",
+    "changePin": "更改 PIN",
+    "hasPin": "已设 PIN",
+    "resetPin": "重置 PIN"
   },
   "accounts": {
     "shared": "共用",
@@ -597,5 +610,48 @@
     "failed": "没听清 — 请重试，或直接输入。",
     "noSpeech": "没有听到声音 — 点按麦克风再试一次。",
     "unsupportedBrowser": "此浏览器不支持语音输入 — 请使用 Chrome、Edge 或 Safari，或直接输入。"
+  },
+  "pin": {
+    "title": "PIN",
+    "notSignedIn": "请先登录（设置 → 账户）。PIN 保存在服务器上，所以需要账户。",
+    "setIntro": "PIN 让你的“仅自己”记录只属于你：只有在设备上输入你的 PIN 之后，它才会成为你的设备。请使用 4 到 6 位数字。",
+    "changeIntro": "你的其他设备会要求输入一次新 PIN。",
+    "newPin": "PIN（4 到 6 位数字）",
+    "confirmPin": "再输入一次",
+    "mismatch": "两次输入的 PIN 不一致。",
+    "save": "保存 PIN",
+    "change": "更改 PIN",
+    "saved": "PIN 已保存。你的其他设备会要求输入一次。",
+    "offline": "你处于离线状态。PIN 需要网络连接。",
+    "enterIntro": "{{name}} 设置了 PIN。输入 PIN 后即可以 {{name}} 的身份使用这台设备。",
+    "pinLabel": "PIN",
+    "continue": "继续",
+    "wrong_other": "PIN 错误。还可以尝试 {{count}} 次。",
+    "lockedNow": "PIN 错误次数过多。请 15 分钟后再试。",
+    "locked": "PIN 错误次数过多。请在 {{time}} 之后再试。",
+    "forgot": "忘记 PIN？",
+    "errorFormat": "PIN 必须是 4 到 6 位数字。",
+    "errorNotSynced": "此人尚未同步。请稍后再试。",
+    "errorNotVerified": "请先在这台设备上输入你的 PIN。",
+    "errorRemoved": "此人已被移出家庭。",
+    "errorGeneric": "无法保存。请重试。",
+    "errorSignIn": "请在这台设备上重新登录。",
+    "otherDeviceHint": "忘记了？在任何一台已经是 {{name}} 身份的其他设备上更改（设置 → 家庭 → 更改 PIN），然后在这里输入新的 PIN。",
+    "setForgetHint": "如果忘记了，可以在你的其他设备上更改（设置 → 家庭），或者请家庭中的其他人在他们的设备上为你重置。",
+    "forgotOtherDevice": "在任何一台已经是 {{name}} 身份的其他设备上，打开 设置 → 家庭 → 更改 PIN，然后在这里输入新的 PIN。不会丢失任何数据。",
+    "forgotAskMember": "没有其他设备？家庭中的其他人可以在自己的设备上为 {{name}} 设置新的 PIN：设置 → 家庭 → {{name}} 下方的“重置 PIN”。{{name}} 会看到是谁操作的。",
+    "forgotEmailIntro": "或者向账户邮箱发送验证码。",
+    "forgotEmailSend": "通过邮件发送验证码",
+    "emailSent": "我们已向账户邮箱发送了6位验证码。请连同新的 PIN 一起输入。验证码将在15分钟后过期。",
+    "emailCode": "邮件中的验证码",
+    "emailResend": "重新发送验证码",
+    "resetForIntro": "为 {{name}} 设置新的 PIN，然后告诉对方。对方的设备会要求输入它，并显示是你在这台设备上重置的。这台设备仍然是你的，不会收到 {{name}} 的“仅自己”记录。",
+    "resetForButton": "重置 {{name}} 的 PIN",
+    "resetForDone": "完成。请把新的 PIN 告诉 {{name}}，之后可以再更改。",
+    "unknownDevice": "一台未命名的设备",
+    "resetNoticeBy": "{{name}} 在「{{device}}」上重置了你的 PIN（{{when}}）。",
+    "resetNoticeEmail": "你的 PIN 已通过账户邮箱中的验证码，在「{{device}}」上重置（{{when}}）。",
+    "resetNoticeDismiss": "知道了",
+    "errorNoPin": "此人没有设置 PIN。"
   }
 }
