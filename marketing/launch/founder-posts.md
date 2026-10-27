@@ -15,7 +15,7 @@ connection, four announced languages, web app live, store apps not yet
 LinkedIn shows a post first to your connections, then to theirs if they
 react. With under 30 connections, add people first:
 
-- Former colleagues and clients from the last 25 years: search each
+- Former colleagues and clients: search each
   company you worked at, and send requests without a note, or with one
   line ("Good to reconnect").
 - People you know in Vancouver's tech and Brazilian communities.
@@ -30,7 +30,7 @@ comment within the first hour, and share the post to the Flowtab page
 Add one image: `marketing/out/posts/2026-11-03-type-it-or-say-it/en-feed.png`
 (run `npm run social:compose` first), or a photo of you at your desk.
 
-> After 25 years building software for other people, I built something for myself.
+> I've spent my career building software for other people. This time, I built something for myself.
 >
 > I'm Brazilian, I live in Vancouver, and I spend in reais, Canadian dollars, US dollars and whatever the next trip needs. Every budgeting app I tried wanted my bank login, blended everything into one made-up total, or took too long to log a coffee. So I stopped using them.
 >
@@ -54,7 +54,7 @@ For your personal Facebook, WhatsApp status, and Brazilian community groups
 (read each group's rules on promotion first; many allow it if you're a
 member who participates).
 
-> Depois de 25 anos criando software para os outros, fiz um app para mim.
+> Passei a carreira criando software para os outros. Desta vez, fiz um app para mim.
 >
 > Sou brasileiro, moro em Vancouver e gasto em reais, dólar canadense, dólar americano e no que a próxima viagem pedir. Todo app de orçamento que testei pedia a senha do banco, misturava tudo num total com cotação inventada, ou demorava demais pra anotar um café.
 >
