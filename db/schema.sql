@@ -396,4 +396,4 @@ insert into schema_migrations (filename) values
   ('2026-10-14-household-management.sql'),
   ('2026-10-15-deleted-accounts.sql'),
   ('2026-10-26-private-records.sql'),
-  ('2026-10-26-pin-recovery.sql');
+  ('2026-10-27-pin-recovery.sql');
