@@ -1,9 +1,9 @@
 ---
-date: 2026-10-24
+date: 2026-11-07
 template: feature
 screen: 07-settings
 crop: bottom
-platforms: instagram, facebook, tiktok, threads, linkedin
+platforms: facebook, linkedin, x, bluesky, instagram, threads
 approved:
 ---
 

@@ -1,9 +1,9 @@
 ---
-date: 2026-10-29
+date: 2026-11-14
 template: feature
 screen: 04-transactions
 crop: top
-platforms: instagram, facebook, threads, linkedin
+platforms: facebook, linkedin, x, bluesky, instagram, threads
 approved:
 ---
 
