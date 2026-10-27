@@ -16,7 +16,7 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
-## Unreleased
+## 0.13.0 — 2026-10-27
 
 - **"Only me" entries.** In a household, tick **Only me** on an entry you
   logged and it syncs only to your own devices. Nobody else in the
