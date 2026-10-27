@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Flowtab — every expense, the moment it happens</title>
-<meta name="description" content="Type or say what you spent, in English, Português, Español or Français, and it's on the tab. Every currency side by side, scheduled payments and installments, works offline. Free, in your browser or on your phone.">
+<meta name="description" content="Type or say what you spent, in English, Português, Español, Français, 日本語, 한국어 or 中文, and it's on the tab. Every currency side by side, scheduled payments and installments, works offline. Free, in your browser or on your phone.">
 <link rel="canonical" href="https://myflowtab.com/">
 
 <!-- myflowtab.com is the site, app.myflowtab.com the app (docs/61 D282). -->
@@ -12,13 +12,13 @@
 <meta property="og:site_name" content="Flowtab">
 <meta property="og:url" content="https://myflowtab.com/">
 <meta property="og:title" content="Flowtab — every expense, the moment it happens">
-<meta property="og:description" content="Type it or say it, in English, Português, Español or Français. Every currency side by side, works offline, free.">
+<meta property="og:description" content="Type it or say it, in English, Português, Español, Français, 日本語, 한국어 or 中文. Every currency side by side, works offline, free.">
 <meta property="og:image" content="https://myflowtab.com/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Flowtab — every expense, the moment it happens">
-<meta name="twitter:description" content="Type it or say it, in English, Português, Español or Français. Every currency side by side, works offline, free.">
+<meta name="twitter:description" content="Type it or say it, in English, Português, Español, Français, 日本語, 한국어 or 中文. Every currency side by side, works offline, free.">
 <meta name="twitter:image" content="https://myflowtab.com/og-image.png">
 
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f8f6">
@@ -164,6 +164,7 @@
   @media (min-width: 600px) { .feat-grid { grid-template-columns: repeat(2, 1fr); } }
   @media (min-width: 960px) { .feat-grid { grid-template-columns: repeat(3, 1fr); } }
   .feat { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 22px; }
+  .nw { white-space: nowrap; }
   .feat .glyph {
     font-family: var(--font-mono); color: var(--flow-ink); font-size: 0.74rem; letter-spacing: 0.05em;
     display: block; margin-bottom: 10px; font-weight: 600; text-transform: uppercase;
@@ -235,7 +236,8 @@
     <div>
       <p class="eyebrow">every expense, the moment it happens</p>
       <h1>Type it or say it.<br><span class="accent">It's on the tab.</span></h1>
-      <p class="lede">A coffee or a mortgage payment, in English, Português, Español or Français, lands the
+      <p class="lede">A coffee or a mortgage payment, in English, Português, Español, Français,
+      <span class="nw" lang="ja">日本語</span>, <span class="nw" lang="ko">한국어</span> or <span class="nw" lang="zh">中文</span>, lands the
       same simple way. Every currency side by side, works offline, and nothing to
       sign up for.</p>
       <div class="cta-row">
@@ -403,9 +405,10 @@
     </div>
     <div class="feat-grid">
       <div class="feat">
-        <span class="glyph">EN · PT · ES · FR</span>
+        <span class="glyph">EN · PT · ES · FR · JA · KO · ZH</span>
         <h3>Your language, for real</h3>
-        <p>Say or type an expense in English, Portuguese, Spanish or French, and use
+        <p>Say or type an expense in English, Portuguese, Spanish, French, Japanese,
+        Korean or Chinese, and use
         the whole app in it. The parser runs on your device, so it works offline too.</p>
       </div>
       <div class="feat">
@@ -476,7 +479,7 @@
         <ul>
           <li>The whole app, on your device</li>
           <li>Every currency and every account</li>
-          <li>Typed and spoken entry, in four languages</li>
+          <li>Typed and spoken entry, in seven languages</li>
           <li>Scheduled payments and installments</li>
           <li>Pair phones with your household by QR code</li>
         </ul>

@@ -22,7 +22,7 @@ Most budget apps start by asking for your bank login. Flowtab doesn't. 🔒
 
 You type or say what you spent, and it's saved on your phone. No account, no bank connection, and it works with no signal. If you want your budget on a second phone or shared with your partner, you can turn on sync. If you don't, nothing leaves your device.
 
-We never sell your data. Free, in English, Português, Español and Français. Link in bio.
+We never sell your data. Free, in English, Português, Español, Français, 日本語, 한국어 and 中文. Link in bio.
 
 #Flowtab #privacy #budgeting #personalfinance #moneytips
 
@@ -38,7 +38,7 @@ A maioria dos apps de orçamento começa pedindo o acesso ao seu banco. O Flowta
 
 Você digita ou fala o que gastou, e fica salvo no seu celular. Sem conta, sem conexão com o banco, e funciona sem sinal. Quer o orçamento em outro celular ou dividido com quem mora com você? É só ativar a sincronização. Se não quiser, nada sai do seu aparelho.
 
-Nunca vendemos seus dados. Grátis, em Português, English, Español e Français. Link na bio.
+Nunca vendemos seus dados. Grátis, em Português, English, Español, Français, 日本語, 한국어 e 中文. Link na bio.
 
 #Flowtab #privacidade #orçamento #financaspessoais #educacaofinanceira
 
@@ -54,7 +54,7 @@ La mayoría de las apps de presupuesto empiezan pidiéndote el acceso a tu banco
 
 Escribes o dices lo que gastaste, y se guarda en tu teléfono. Sin cuenta, sin conexión con tu banco, y funciona sin señal. ¿Quieres tu presupuesto en otro teléfono o compartido con tu pareja? Activa la sincronización. Si no, nada sale de tu dispositivo.
 
-Nunca vendemos tus datos. Gratis, en Español, English, Português y Français. Link en la bio.
+Nunca vendemos tus datos. Gratis, en Español, English, Português, Français, 日本語, 한국어 y 中文. Link en la bio.
 
 #Flowtab #privacidad #presupuesto #finanzaspersonales
 
@@ -70,6 +70,6 @@ La plupart des applis de budget commencent par demander l'accès à votre banque
 
 Vous écrivez ou dites ce que vous avez dépensé, et c'est enregistré sur votre téléphone. Pas de compte, pas de lien avec votre banque, et ça fonctionne sans réseau. Vous voulez votre budget sur un deuxième téléphone ou partagé avec votre conjoint? Activez la synchronisation. Sinon, rien ne quitte votre appareil.
 
-Nous ne vendons jamais vos données. Gratuit, en Français, English, Português et Español. Lien dans la bio.
+Nous ne vendons jamais vos données. Gratuit, en Français, English, Português, Español, 日本語, 한국어 et 中文. Lien dans la bio.
 
 #Flowtab #confidentialité #budget #financespersonnelles

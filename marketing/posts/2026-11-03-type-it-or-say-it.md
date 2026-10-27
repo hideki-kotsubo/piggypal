@@ -17,7 +17,7 @@ Type it or say it the way you'd tell a friend: "groceries 86.20 at costco", "ube
 
 ✓ Free, no sign-up needed
 ✓ Works offline
-✓ English, Português, Español, Français
+✓ English, Português, Español, Français, 日本語, 한국어, 中文
 
 Link in bio.
 
@@ -33,7 +33,7 @@ Digite ou fale do jeito que você contaria pra um amigo: "mercado 86,20 no carre
 
 ✓ Grátis, sem cadastro
 ✓ Funciona offline
-✓ Português, English, Español, Français
+✓ Português, English, Español, Français, 日本語, 한국어, 中文
 
 Link na bio.
 
@@ -49,7 +49,7 @@ Escríbelo o dilo como se lo contarías a un amigo: "supermercado 86.20 en walma
 
 ✓ Gratis, sin registrarte
 ✓ Funciona sin conexión
-✓ Español, English, Português, Français
+✓ Español, English, Português, Français, 日本語, 한국어, 中文
 
 Link en la bio.
 
@@ -65,7 +65,7 @@ Une appli de budget meurt le jour où on arrête de noter ses dépenses. Alors o
 
 ✓ Gratuit, sans inscription
 ✓ Fonctionne hors ligne
-✓ Français, English, Português, Español
+✓ Français, English, Português, Español, 日本語, 한국어, 中文
 
 Lien dans la bio.
 

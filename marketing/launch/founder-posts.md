@@ -39,7 +39,7 @@ Add one image: `marketing/out/posts/2026-11-03-type-it-or-say-it/en-feed.png`
 > A few things I cared about:
 > • It works offline and needs no account. Your budget stays on your phone unless you choose to sync it.
 > • Every currency stays separate. No invented exchange rates.
-> • English, Português, Español and Français, for the screens and for what you type or say.
+> • English, Português, Español, Français, 日本語, 한국어 and 中文, for the screens and for what you type or say.
 >
 > It's free, and live today as a web app you can install on your phone. iPhone and Android apps are coming.
 >
@@ -62,7 +62,7 @@ member who participates).
 >
 > • Funciona offline e não precisa de cadastro. Seus dados ficam no seu celular.
 > • Cada moeda separada, sem cotação inventada.
-> • Em Português, English, Español e Français.
+> • Em Português, English, Español, Français, 日本語, 한국어 e 中文.
 >
 > É grátis e já funciona pelo navegador (dá pra instalar no celular). Os apps de iPhone e Android estão chegando.
 >
@@ -73,11 +73,11 @@ member who participates).
 
 Post a few days after LinkedIn. Title and body:
 
-> **I built a budgeting app where you just type or say what you spent (offline, no account, 4 languages)**
+> **I built a budgeting app where you just type or say what you spent (offline, no account, 7 languages)**
 >
 > I'm a solo developer in Vancouver. I spend in several currencies and kept abandoning budget apps because logging took too long or they wanted my bank login.
 >
-> Flowtab parses "coffee 4.50" or "uber 18 yesterday" on the device (no server, works offline), shows what it understood, and you tap Save. Currencies are tracked side by side, never converted. English, Portuguese, Spanish and French.
+> Flowtab parses "coffee 4.50" or "uber 18 yesterday" on the device (no server, works offline), shows what it understood, and you tap Save. Currencies are tracked side by side, never converted. English, Portuguese, Spanish, French, Japanese, Korean and Chinese.
 >
 > Stack, for the curious: React + Vite PWA, local SQLite (PowerSync) with optional sync, Capacitor for the native apps, a rule-based parser per language.
 >
