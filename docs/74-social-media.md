@@ -90,7 +90,7 @@ https URLs: see "Hosting the images" (D281). **The adapter is
 untested**: no account existed when it was written. Do the first `--send`
 with one post and check it in Ayrshare's dashboard.
 
-**D284 — Post manually first; Ayrshare is off the table for now
+**D306 — Post manually first; Ayrshare is off the table for now
 (2026-10-27, amends D278).** Ayrshare's price doesn't fit yet. For the
 first weeks posts go out by hand, through each network's own scheduler
 or a dashboard, using the images and captions from `social:compose`;
@@ -121,7 +121,7 @@ clone it.
 
 ## Accounts
 
-**D283 — The accounts as created (2026-10-23).** Handle `myflowtab`
+**D305 — The accounts as created (2026-10-23).** Handle `myflowtab`
 wherever it was free; display name **Flowtab** everywhere. The website
 footer ("Follow" row, every page) and the homepage's Organization
 structured data (`sameAs`) list the live ones; update both when this
