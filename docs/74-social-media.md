@@ -160,12 +160,14 @@ can look like spam. Rotate five themes:
 
 First two weeks, re-dated 2026-10-27 to start Tue Nov 3 (all
 `approved:` empty): `2026-11-03-type-it-or-say-it`,
-`2026-11-05-built-in-vancouver`, `2026-11-07-four-languages`,
+`2026-11-05-built-in-vancouver`, `2026-11-07-seven-languages`,
 `2026-11-10-small-spends`, `2026-11-12-no-bank-login`,
 `2026-11-14-every-day-added-up`. The 0.7.0 update post was dropped (stale
 by then); `no-bank-login` replaces it. Japanese, Korean and Chinese
-(docs/76) aren't mentioned in any post until native reviewers have checked
-them. `built-in-vancouver` speaks in the user's own voice (Brazilian,
+(docs/76) were first held out of posts until native reviewers checked
+them; dropped the same day after the user's tests with real users found
+no misparses, so every post and the website now list all seven languages
+(`four-languages` became `seven-languages`). `built-in-vancouver` speaks in the user's own voice (Brazilian,
 Vancouver, spending in several currencies, why the app exists) and goes
 out the same week as the user's personal LinkedIn post
 (`marketing/launch/`); it needs their check before anything else.

@@ -9,7 +9,7 @@ approved:
 is one: personal posts do better with a face or a place. -->
 
 ## en
-headline: One person, one app, four languages.
+headline: One person, one app, seven languages.
 sub: Flowtab is built in Vancouver by a Brazilian developer who spends in Reais, Dollars and everything in between.
 caption:
 Hi 👋 Flowtab is a one-person app, built in Vancouver.
@@ -21,7 +21,7 @@ It's free, works offline and doesn't need an account. Follow along: I'll post wh
 #buildinpublic #indiedev #solofounder #Flowtab #budgeting
 
 ## pt-BR
-headline: Uma pessoa, um app, quatro idiomas.
+headline: Uma pessoa, um app, sete idiomas.
 sub: O Flowtab é feito em Vancouver por um desenvolvedor brasileiro que gasta em Reais, dólares e tudo no meio.
 caption:
 Oi 👋 O Flowtab é um app feito por uma pessoa só, em Vancouver.
@@ -33,7 +33,7 @@ Sou brasileiro e gasto em Reais, dólar canadense, dólar americano e no que a p
 #buildinpublic #devsolo #brasileirosnocanada #Flowtab #orçamento
 
 ## es
-headline: Una persona, una app, cuatro idiomas.
+headline: Una persona, una app, siete idiomas.
 sub: Flowtab se hace en Vancouver, por un desarrollador brasileño que gasta en reales, dólares y todo lo demás.
 caption:
 Hola 👋 Flowtab es una app hecha por una sola persona, en Vancouver.
@@ -45,7 +45,7 @@ Es gratis, funciona sin conexión y no necesita cuenta. Sígueme: voy a contar l
 #buildinpublic #indiedev #Flowtab #presupuesto
 
 ## fr
-headline: Une personne, une appli, quatre langues.
+headline: Une personne, une appli, sept langues.
 sub: Flowtab est conçu à Vancouver par un développeur brésilien qui dépense en Reais, en dollars et en tout le reste.
 caption:
 Bonjour 👋 Flowtab est une appli faite par une seule personne, à Vancouver.
