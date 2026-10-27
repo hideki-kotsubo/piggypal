@@ -17,6 +17,7 @@ function tx(overrides: Partial<Transaction>): Transaction {
     deletedAt: null,
     paidByUserId: 'u-1',
     createdByUserId: 'u-1',
+    privateToProfileId: null,
     scheduleId: null,
     occurrenceDate: null,
     updatedAt: '2026-08-20T12:00:00',

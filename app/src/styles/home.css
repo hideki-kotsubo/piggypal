@@ -721,6 +721,13 @@
   border-color: var(--accent-ink);
   color: var(--accent);
 }
+.private-mark {
+  display: inline-block;
+  vertical-align: -1px;
+  margin-right: 0.3rem;
+  color: var(--ink-muted);
+  flex-shrink: 0;
+}
 .provenance {
   font-size: 0.76rem;
   color: var(--ink-faint);
@@ -1740,6 +1747,32 @@
 .household-row-action {
   flex-shrink: 0;
 }
+/* docs/77 D299 */
+.household-pin-link {
+  display: block;
+  width: fit-content;
+  margin: 0.55rem 0 0 2.1rem;
+}
+.household-hint.household-pin-note {
+  margin: 0.45rem 0 0 2.1rem;
+}
+.pin-form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.8rem;
+  margin-top: 0.4rem;
+}
+.pin-form .save-btn,
+.pin-form .chip {
+  align-self: flex-start;
+}
+.pin-form .delete-account-text {
+  margin: 0;
+}
+.field-hint a {
+  color: var(--ink-muted);
+}
 .household-remove-person {
   margin: 0.55rem 0 0 2.1rem;
 }
@@ -1810,4 +1843,31 @@
   gap: 0.4rem;
   padding: 0.7rem 0.8rem;
   border-bottom: 1px solid var(--line);
+}
+/* docs/77 D304 — "Your PIN was reset by …" on your Household card and
+   above the PIN prompt. */
+.pin-reset-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin: 0.55rem 0 0 2.1rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--warn-soft);
+  color: var(--ink);
+  font-size: 0.875rem;
+}
+.pin-form .pin-reset-notice {
+  margin-left: 0;
+}
+.pin-reset-notice p {
+  margin: 0;
+  flex: 1 1 14rem;
+}
+.text-link.pin-link {
+  display: block;
+  align-self: center;
+  margin-inline: auto;
 }

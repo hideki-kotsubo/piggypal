@@ -106,3 +106,127 @@ export function magicLinkEmail(
       `<p>${c.homeScreen}</p><p>${c.expiry}</p>`,
   };
 }
+
+// docs/77 D302 — the owner forgot their PIN: a 6-digit code typed into
+// the app, not a link, for the same reason as D204 above.
+interface PinCodeCopy {
+  subject: string;
+  intro: string;
+  expiry: string;
+}
+
+const PIN_CODE_COPY: Record<EmailLanguage, PinCodeCopy> = {
+  en: {
+    subject: 'Your Flowtab PIN reset code',
+    intro: 'Enter this code in Flowtab to set a new PIN:',
+    expiry: "The code expires in 15 minutes. If you didn't ask for it, you can ignore this email — your PIN stays as it is.",
+  },
+  pt: {
+    subject: 'Código para redefinir seu PIN do Flowtab',
+    intro: 'Digite este código no Flowtab para criar um novo PIN:',
+    expiry: 'O código expira em 15 minutos. Se você não pediu, pode ignorar este e-mail — seu PIN continua o mesmo.',
+  },
+  es: {
+    subject: 'Tu código para restablecer el PIN de Flowtab',
+    intro: 'Escribe este código en Flowtab para crear un PIN nuevo:',
+    expiry: 'El código vence en 15 minutos. Si no lo pediste, puedes ignorar este correo: tu PIN sigue igual.',
+  },
+  fr: {
+    subject: 'Votre code pour réinitialiser le code PIN Flowtab',
+    intro: 'Saisissez ce code dans Flowtab pour choisir un nouveau code PIN :',
+    expiry: 'Le code expire dans 15 minutes. Si vous n’avez rien demandé, ignorez ce message — votre code PIN ne change pas.',
+  },
+  ja: {
+    subject: 'FlowtabのPINリセットコード',
+    intro: 'Flowtabでこのコードを入力して、新しいPINを設定してください：',
+    expiry: 'コードの有効期限は15分です。心当たりがない場合は、このメールを無視してください。PINは変わりません。',
+  },
+  ko: {
+    subject: 'Flowtab PIN 재설정 코드',
+    intro: 'Flowtab에서 이 코드를 입력하고 새 PIN을 설정하세요:',
+    expiry: '코드는 15분 후에 만료됩니다. 요청하지 않았다면 이 메일은 무시하셔도 됩니다. PIN은 그대로 유지됩니다.',
+  },
+  'zh-Hans': {
+    subject: '你的 Flowtab PIN 重置验证码',
+    intro: '在 Flowtab 中输入此验证码，设置新的 PIN：',
+    expiry: '验证码将在15分钟后过期。如果这不是你本人的操作，请忽略此邮件，你的 PIN 不会改变。',
+  },
+  'zh-Hant': {
+    subject: '你的 Flowtab PIN 重設驗證碼',
+    intro: '在 Flowtab 中輸入此驗證碼，設定新的 PIN：',
+    expiry: '驗證碼將在 15 分鐘後失效。如果這不是你本人的操作，請忽略此郵件，你的 PIN 不會改變。',
+  },
+};
+
+export function pinResetCodeEmail(code: string, language: EmailLanguage): { subject: string; text: string; html: string } {
+  const c = PIN_CODE_COPY[language];
+  const spacedCode = `${code.slice(0, 3)} ${code.slice(3)}`;
+  return {
+    subject: c.subject,
+    text: `${c.intro}\n\n${spacedCode}\n\n${c.expiry}`,
+    html:
+      `<p>${c.intro}</p>` +
+      `<p style="font-size:28px;font-weight:600;letter-spacing:4px;font-family:ui-monospace,Menlo,Consolas,monospace">${spacedCode}</p>` +
+      `<p>${c.expiry}</p>`,
+  };
+}
+
+// docs/77 D303 — another household member reset the owner's PIN from
+// their own device. The app shows the same notice; this one also reaches
+// the owner when none of their devices is open. The names are typed by
+// users, so unlike everything above they're escaped.
+const PIN_NOTICE_COPY: Record<EmailLanguage, { subject: string; body: (by: string, device: string) => string; after: string }> = {
+  en: {
+    subject: 'Your Flowtab PIN was reset',
+    body: (by, device) => `${by} just reset your Flowtab PIN on ${device}.`,
+    after: "If you asked them to, there's nothing to do. If not, open Flowtab, enter the new PIN they set (or ask them for it), then change it in Settings → Household.",
+  },
+  pt: {
+    subject: 'Seu PIN do Flowtab foi redefinido',
+    body: (by, device) => `${by} acabou de redefinir seu PIN do Flowtab no dispositivo ${device}.`,
+    after: 'Se foi a seu pedido, não precisa fazer nada. Se não, abra o Flowtab, digite o novo PIN (peça a essa pessoa) e troque-o em Configurações → Família.',
+  },
+  es: {
+    subject: 'Se restableció tu PIN de Flowtab',
+    body: (by, device) => `${by} acaba de restablecer tu PIN de Flowtab en ${device}.`,
+    after: 'Si se lo pediste, no tienes que hacer nada. Si no, abre Flowtab, escribe el PIN nuevo (pídeselo a esa persona) y cámbialo en Configuración → Hogar.',
+  },
+  fr: {
+    subject: 'Votre code PIN Flowtab a été réinitialisé',
+    body: (by, device) => `${by} vient de réinitialiser votre code PIN Flowtab sur ${device}.`,
+    after: 'Si vous le lui avez demandé, rien à faire. Sinon, ouvrez Flowtab, saisissez le nouveau code PIN (demandez-le à cette personne), puis changez-le dans Paramètres → Foyer.',
+  },
+  ja: {
+    subject: 'FlowtabのPINがリセットされました',
+    body: (by, device) => `${by}さんが「${device}」であなたのFlowtabのPINをリセットしました。`,
+    after: 'ご自身で頼んだ場合は、何もする必要はありません。そうでない場合は、Flowtabを開いて新しいPINを入力し（相手に確認してください）、設定 → 家族 で変更してください。',
+  },
+  ko: {
+    subject: 'Flowtab PIN이 재설정되었습니다',
+    body: (by, device) => `${by} 님이 ${device}에서 내 Flowtab PIN을 재설정했습니다.`,
+    after: '직접 부탁한 경우라면 아무것도 하지 않아도 됩니다. 그렇지 않다면 Flowtab을 열어 새 PIN을 입력하고(그 사람에게 물어보세요) 설정 → 가족에서 변경하세요.',
+  },
+  'zh-Hans': {
+    subject: '你的 Flowtab PIN 已被重置',
+    body: (by, device) => `${by} 刚刚在「${device}」上重置了你的 Flowtab PIN。`,
+    after: '如果是你请对方这样做的，无需任何操作。否则，请打开 Flowtab，输入新的 PIN（向对方询问），然后在 设置 → 家庭 中更改。',
+  },
+  'zh-Hant': {
+    subject: '你的 Flowtab PIN 已被重設',
+    body: (by, device) => `${by} 剛剛在「${device}」上重設了你的 Flowtab PIN。`,
+    after: '如果是你請對方這樣做的，無需任何操作。否則，請開啟 Flowtab，輸入新的 PIN（向對方詢問），然後在 設定 → 家庭 中變更。',
+  },
+};
+
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+export function pinResetNoticeEmail(byName: string, deviceLabel: string, language: EmailLanguage): { subject: string; text: string; html: string } {
+  const c = PIN_NOTICE_COPY[language];
+  return {
+    subject: c.subject,
+    text: `${c.body(byName, deviceLabel)}\n\n${c.after}`,
+    html: `<p>${c.body(escapeHtml(byName), escapeHtml(deviceLabel))}</p><p>${c.after}</p>`,
+  };
+}

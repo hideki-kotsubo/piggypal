@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import type { PoolClient } from 'pg';
 import { pool } from '../db.js';
 import { requireAccessToken, type AuthedRequest } from '../auth/middleware.js';
 
@@ -42,6 +43,8 @@ const TABLE_COLUMNS: Record<string, readonly string[]> = {
     // docs/57 D207 — set only on a posted scheduled-payment occurrence.
     'schedule_id',
     'occurrence_date',
+    // docs/77 — "Only me"; checked by privateGuard() below.
+    'private_to_profile_id',
   ],
   // docs/57 — a recurring/installment rule. Bare-id table like
   // transactions (real crypto.randomUUID() ids).
@@ -153,6 +156,54 @@ function isValidOp(op: unknown): op is SyncOp {
   );
 }
 
+// docs/77 D298 — "Only me" rules, checked before a transactions or
+// transaction_splits op is applied. Returns a skip reason, or null.
+// - A row private to someone else can't be changed or deleted from this
+//   device (it shouldn't even have it; this is the server's word on it).
+// - Only the person who logged a row can make it private, only to
+//   themselves (the profile_id claim, never the payload), and only once
+//   their profile has a PIN, so nothing is "private" behind a profile
+//   anyone can pick.
+// - A device not verified as anyone yet gets 'hold' instead of a skip: a
+//   skipped PUT would be gone for good (the device drops rows the server
+//   doesn't have), so the whole batch is refused and retried once the
+//   device has picked its profile / entered its PIN.
+async function privateGuard(client: PoolClient, userId: string, profileId: string | null, op: SyncOp): Promise<string | null> {
+  if (op.table === 'transaction_splits') {
+    const parentId =
+      op.op === 'PUT'
+        ? op.data?.transaction_id
+        : (await client.query<{ transaction_id: string }>('SELECT transaction_id FROM transaction_splits WHERE id = $1 AND user_id = $2', [op.id, userId]))
+            .rows[0]?.transaction_id;
+    if (typeof parentId !== 'string') return null;
+    const parent = await client.query<{ private_to_profile_id: string | null }>(
+      'SELECT private_to_profile_id FROM transactions WHERE id = $1 AND user_id = $2',
+      [parentId, userId],
+    );
+    const owner = parent.rows[0]?.private_to_profile_id ?? null;
+    if (owner && !profileId) return 'hold';
+    return owner && owner !== profileId ? 'private-to-another-profile' : null;
+  }
+  if (op.table !== 'transactions') return null;
+
+  const existing = await client.query<{ private_to_profile_id: string | null; created_by_user_id: string }>(
+    'SELECT private_to_profile_id, created_by_user_id FROM transactions WHERE id = $1 AND user_id = $2',
+    [op.id, userId],
+  );
+  const current = existing.rows[0];
+  if (current?.private_to_profile_id && !profileId) return 'hold';
+  if (current?.private_to_profile_id && current.private_to_profile_id !== profileId) return 'private-to-another-profile';
+  if (op.op === 'DELETE' || !op.data || !('private_to_profile_id' in op.data)) return null;
+
+  const wanted = op.data.private_to_profile_id ?? null;
+  if (wanted === null) return null;
+  const creator = op.op === 'PUT' ? op.data.created_by_user_id : current?.created_by_user_id;
+  if (!profileId) return 'hold';
+  if (wanted !== profileId || creator !== profileId) return 'private-not-allowed';
+  const profile = await client.query<{ has_pin: boolean }>('SELECT has_pin FROM profiles WHERE id = $1 AND user_id = $2', [profileId, userId]);
+  return profile.rows[0]?.has_pin ? null : 'private-needs-pin';
+}
+
 // docs/46 D163 — every op now resolves to exactly one of these two
 // buckets instead of a bare `{ ok: true }`. `skipped` covers three real,
 // distinct non-write outcomes: an ownership-guard WHERE that didn't match
@@ -223,6 +274,17 @@ syncRouter.post('/upload', requireAccessToken, async (req: AuthedRequest, res) =
       const badColumn = invalidColumn(columns, op.data);
       if (badColumn) {
         result.skipped.push({ table: op.table, id: op.id, reason: `invalid-${badColumn}` });
+        continue;
+      }
+
+      const privateSkip = await privateGuard(client, userId, req.profileId ?? null, op);
+      if (privateSkip === 'hold') {
+        await client.query('ROLLBACK');
+        res.status(409).json({ error: 'Verify this device first.', code: 'profile_not_verified' });
+        return;
+      }
+      if (privateSkip) {
+        result.skipped.push({ table: op.table, id: op.id, reason: privateSkip });
         continue;
       }
 
@@ -361,6 +423,17 @@ syncRouter.post('/upload', requireAccessToken, async (req: AuthedRequest, res) =
       else result.applied.push(op.id);
     }
 
+    // docs/77 — each split leg carries its transaction's "Only me" owner so
+    // the splits stream can filter on it. Recomputed here rather than
+    // trusted from the client, for every leg whose copy is out of date.
+    await client.query(
+      `UPDATE transaction_splits s SET private_to_profile_id = t.private_to_profile_id
+       FROM transactions t
+       WHERE t.id = s.transaction_id AND s.user_id = $1
+         AND s.private_to_profile_id IS DISTINCT FROM t.private_to_profile_id`,
+      [userId],
+    );
+
     await client.query('COMMIT');
     res.json(result);
   } catch (err) {
@@ -406,7 +479,7 @@ syncRouter.get('/snapshot', requireAccessToken, async (req: AuthedRequest, res) 
     // to show a profile list from yet.
     // docs/71 D252 — a removed person isn't offered to a new device.
     const profiles = await client.query(
-      'SELECT id, display_name, updated_at FROM profiles WHERE user_id = $1 AND deleted_at IS NULL',
+      'SELECT id, display_name, has_pin, updated_at FROM profiles WHERE user_id = $1 AND deleted_at IS NULL',
       [userId],
     );
     res.json({
@@ -430,6 +503,7 @@ syncRouter.get('/snapshot', requireAccessToken, async (req: AuthedRequest, res) 
       profiles: profiles.rows.map((p) => ({
         id: p.id,
         displayName: p.display_name,
+        hasPin: p.has_pin, // docs/77 — the picker asks for it
         updatedAt: p.updated_at,
       })),
     });

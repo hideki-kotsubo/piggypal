@@ -16,11 +16,16 @@ export function BudgetBars() {
   // docs/10 D40: one bar per (category, currency) that has a budget or spend
   // this month — never merged across currencies.
   const spendByKey = new Map<string, number>();
+  // docs/77 — "Only me" spending counts here like any other, but only this
+  // person's devices have those rows, so the rest of the household sees
+  // lower totals. Said so, to the one person it applies to.
+  const privateCountByKey = new Map<string, number>();
   for (const tx of store.transactions) {
     if (tx.deletedAt || !tx.categoryId || tx.amountCents >= 0) continue;
     if (!tx.occurredAt.startsWith(monthStart.slice(0, 7))) continue;
     const key = `${tx.categoryId}:${tx.currency}`;
     spendByKey.set(key, (spendByKey.get(key) ?? 0) + -tx.amountCents);
+    if (tx.privateToProfileId) privateCountByKey.set(key, (privateCountByKey.get(key) ?? 0) + 1);
   }
 
   // docs/57 D213 — open scheduled payments still to come this month,
@@ -38,10 +43,12 @@ export function BudgetBars() {
     });
 
   if (rows.length === 0) return null;
+  const privateCount = rows.reduce((n, r) => n + (privateCountByKey.get(`${r.categoryId}:${r.currency}`) ?? 0), 0);
 
   return (
     <section>
       <div className="section-label">{t('insights.thisMonth')}</div>
+      {privateCount > 0 && <p className="household-hint">{t('insights.includesPrivate', { count: privateCount })}</p>}
       {rows.map((r) => {
         const pct = r.amountCents > 0 ? Math.min(100, (r.spent / r.amountCents) * 100) : 0;
         const committedPct = r.amountCents > 0 ? Math.min(100 - pct, (r.committed / r.amountCents) * 100) : 0;

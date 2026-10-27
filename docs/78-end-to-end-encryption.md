@@ -131,6 +131,7 @@ locally (locked decision 1), so one table can't hold both.
   (P-D8): a spare device signed in as your profile gets ciphertext it
   can't read until one of your devices approves it, or your recovery key
   is entered. **E2EE could replace the P-D8 PIN.** Flagged, to decide.
+  (2026-10-26: P-D8 is now docs/77 D299, built together with Part A.)
 - **E-D12: removing a person or device.** Removing a person (docs/71) or
   revoking a device deletes their wrapped key copies. The device may
   still hold the old key, so real revocation means rotating the

@@ -16,6 +16,7 @@ import { CategoryPicker } from './CategoryPicker';
 import { getLocalUserId } from '../lib/identity';
 import { hasHousehold, personLabel, useHouseholdPeers } from '../lib/household';
 import { PayerBadge } from './PayerBadge';
+import { PrivateMark } from './PrivateMark';
 
 const MERCHANT_CAP = 8;
 const DATE_PRESETS: { id: DatePreset; labelKey: string }[] = [
@@ -292,7 +293,10 @@ export function TransactionList() {
                           <PayerBadge label={personLabel(tx.paidByUserId, peers, store.profiles)} mine={tx.paidByUserId === getLocalUserId()} />
                         )}
                         <div className="tx-main">
-                          <span className="tx-note">{transactionTitle(tx, category)}</span>
+                          <span className="tx-note">
+                            {tx.privateToProfileId && <PrivateMark />}
+                            {transactionTitle(tx, category)}
+                          </span>
                           {/* day-label above already carries the date — just time here, still genuinely new info */}
                           <span className="tx-meta">
                             {category ? categoryLabel(category) : t('category.uncategorized')} · {formatTime(tx.occurredAt)} · {accountSegment}

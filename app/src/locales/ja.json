@@ -113,7 +113,8 @@
     "inbox_other": "{{count}}件の記録にカテゴリが必要です",
     "due_other": "期日の定期支払いが{{count}}件あります",
     "accountDeleted": "アカウントが削除されました — このデバイスは同期なしで使えます",
-    "sessionExpired": "同期が停止中です — 同期するには再ログインしてください"
+    "sessionExpired": "同期が停止中です — 同期するには再ログインしてください",
+    "pinNeeded": "PINを入力すると、このデバイスに「自分だけ」の記録が届きます"
   },
   "home": {
     "loading": "データを読み込み中",
@@ -146,7 +147,14 @@
     "time": "時刻",
     "note": "メモ",
     "location": "場所",
-    "optional": "任意…"
+    "optional": "任意…",
+    "onlyMe": "自分だけ",
+    "onlyMeOn": "この記録は自分のデバイスにだけ届きます。世帯のほかの人には見えません。",
+    "onlyMeAccountNote": "この口座の残高は、ほかの人には違って見えます。",
+    "onlyMeOff": "この記録を自分だけのものにします。",
+    "onlyMeNeedsSignIn": "「自分だけ」にはログインとPINが必要です。",
+    "onlyMeNeedsPin": "PINを設定して「自分だけ」を使う",
+    "onlyMeNeedsVerify": "このデバイスでPINを入力して「自分だけ」を使う"
   },
   "deviceLink": {
     "scanTitle": "コードをスキャン",
@@ -166,7 +174,8 @@
   "insights": {
     "lastDays_other": "過去{{count}}日間（{{currency}}）",
     "thisMonth": "今月",
-    "scheduled": "＋ {{amount}} 予定"
+    "scheduled": "＋ {{amount}} 予定",
+    "includesPrivate_other": "「自分だけ」の記録{{count}}件を含みます — 世帯のほかの人には見えません。"
   },
   "about": {
     "title": "Flowtabについて",
@@ -256,7 +265,11 @@
     "removePerson": "{{name}}を削除",
     "thisDevice": "このデバイス",
     "seen": "{{time}}に確認",
-    "removedName": "{{name}}（削除済み）"
+    "removedName": "{{name}}（削除済み）",
+    "setPin": "「自分だけ」の記録用にPINを設定",
+    "changePin": "PINを変更",
+    "hasPin": "PINあり",
+    "resetPin": "PINをリセット"
   },
   "accounts": {
     "shared": "共有",
@@ -597,5 +610,48 @@
     "failed": "聞き取れませんでした — もう一度試すか、入力してください。",
     "noSpeech": "何も聞こえませんでした — マイクをタップしてもう一度どうぞ。",
     "unsupportedBrowser": "このブラウザでは音声入力を使えません — Chrome、Edge、Safari を使うか、入力してください。"
+  },
+  "pin": {
+    "title": "PIN",
+    "notSignedIn": "先にログインしてください（設定 → アカウント）。PINはサーバーに保存されるため、アカウントが必要です。",
+    "setIntro": "PINで「自分だけ」の記録を守ります。デバイスでPINを入力して初めて、そのデバイスがあなたのものになります。4〜6桁で設定してください。",
+    "changeIntro": "ほかのデバイスでは、新しいPINを一度だけ求められます。",
+    "newPin": "PIN（4〜6桁）",
+    "confirmPin": "もう一度入力",
+    "mismatch": "2つのPINが一致しません。",
+    "save": "PINを保存",
+    "change": "PINを変更",
+    "saved": "PINを保存しました。ほかのデバイスでは一度だけ求められます。",
+    "offline": "オフラインです。PINには接続が必要です。",
+    "enterIntro": "{{name}}さんにはPINがあります。このデバイスを{{name}}さんとして使うには入力してください。",
+    "pinLabel": "PIN",
+    "continue": "続ける",
+    "wrong_other": "PINが違います。あと{{count}}回試せます。",
+    "lockedNow": "PINの入力ミスが多すぎます。15分後にもう一度お試しください。",
+    "locked": "PINの入力ミスが多すぎます。{{time}}以降にもう一度お試しください。",
+    "forgot": "PINを忘れた場合",
+    "errorFormat": "PINは4〜6桁の数字にしてください。",
+    "errorNotSynced": "この人はまだ同期していません。少ししてからもう一度お試しください。",
+    "errorNotVerified": "先にこのデバイスでPINを入力してください。",
+    "errorRemoved": "この人は世帯から外されています。",
+    "errorGeneric": "保存できませんでした。もう一度お試しください。",
+    "errorSignIn": "このデバイスでもう一度ログインしてください。",
+    "otherDeviceHint": "忘れた場合は、すでに{{name}}さんとして使っている別のデバイスで変更し（設定 → 家族 → PINを変更）、新しいPINをここで入力してください。",
+    "setForgetHint": "忘れた場合は、自分の別のデバイス（設定 → 家族）で変更するか、家族の誰かにその人のデバイスからリセットしてもらえます。",
+    "forgotOtherDevice": "すでに{{name}}さんとして使っている別のデバイスで、設定 → 家族 → PINを変更 を開いてください。その後、新しいPINをここで入力します。データは失われません。",
+    "forgotAskMember": "別のデバイスがない場合は、家族の誰かが自分のデバイスから{{name}}さんの新しいPINを設定できます：設定 → 家族 → {{name}}さんの下の「PINをリセット」。誰が行ったかは{{name}}さんに表示されます。",
+    "forgotEmailIntro": "または、アカウントのメールアドレスにコードを送ります。",
+    "forgotEmailSend": "コードをメールで送る",
+    "emailSent": "アカウントのメールアドレスに6桁のコードを送りました。新しいPINと一緒に入力してください。有効期限は15分です。",
+    "emailCode": "メールに届いたコード",
+    "emailResend": "新しいコードを送る",
+    "resetForIntro": "{{name}}さんの新しいPINを設定し、本人に伝えてください。{{name}}さんのデバイスではPINの入力を求められ、あなたがこのデバイスからリセットしたことが表示されます。このデバイスはあなたのままなので、{{name}}さんの「自分だけ」の記録は届きません。",
+    "resetForButton": "{{name}}さんのPINをリセット",
+    "resetForDone": "完了しました。新しいPINを{{name}}さんに伝えてください。あとで変更できます。",
+    "unknownDevice": "名前のないデバイス",
+    "resetNoticeBy": "{{name}}さんが「{{device}}」であなたのPINをリセットしました（{{when}}）。",
+    "resetNoticeEmail": "アカウントのメールに届いたコードで、「{{device}}」からPINがリセットされました（{{when}}）。",
+    "resetNoticeDismiss": "OK",
+    "errorNoPin": "この人にはPINがありません。"
   }
 }

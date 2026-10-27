@@ -131,7 +131,8 @@
     "due_other": "{{count}} paiements programmés à régler",
     "due_many": "{{count}} paiements programmés à régler",
     "accountDeleted": "Votre compte a été supprimé — cet appareil fonctionne désormais sans synchronisation",
-    "sessionExpired": "Synchronisation en pause — reconnectez-vous pour synchroniser vos opérations"
+    "sessionExpired": "Synchronisation en pause — reconnectez-vous pour synchroniser vos opérations",
+    "pinNeeded": "Saisissez votre code PIN pour recevoir vos opérations Moi seul sur cet appareil"
   },
   "home": {
     "loading": "Chargement de vos données",
@@ -164,7 +165,14 @@
     "time": "Heure",
     "note": "Note",
     "location": "Lieu",
-    "optional": "facultatif…"
+    "optional": "facultatif…",
+    "onlyMe": "Moi seul",
+    "onlyMeOn": "Seuls vos appareils reçoivent cette opération. Les autres membres du foyer ne la voient pas.",
+    "onlyMeAccountNote": "Le solde de ce compte leur paraîtra différent.",
+    "onlyMeOff": "Gardez cette opération pour vous.",
+    "onlyMeNeedsSignIn": "Moi seul nécessite une connexion et un code PIN.",
+    "onlyMeNeedsPin": "Créez un code PIN pour utiliser Moi seul",
+    "onlyMeNeedsVerify": "Saisissez votre code PIN sur cet appareil pour utiliser Moi seul"
   },
   "deviceLink": {
     "scanTitle": "Scanner un code",
@@ -186,7 +194,10 @@
     "lastDays_other": "{{count}} derniers jours ({{currency}})",
     "lastDays_many": "{{count}} derniers jours ({{currency}})",
     "thisMonth": "Ce mois-ci",
-    "scheduled": "+ {{amount}} programmé"
+    "scheduled": "+ {{amount}} programmé",
+    "includesPrivate_one": "Inclut {{count}} opération Moi seul — les autres membres du foyer ne la voient pas.",
+    "includesPrivate_many": "Inclut {{count}} d’opérations Moi seul — les autres membres du foyer ne les voient pas.",
+    "includesPrivate_other": "Inclut {{count}} opérations Moi seul — les autres membres du foyer ne les voient pas."
   },
   "about": {
     "title": "À propos",
@@ -297,7 +308,11 @@
     "removePerson": "Retirer {{name}}",
     "thisDevice": "cet appareil",
     "seen": "vu {{time}}",
-    "removedName": "{{name}} (retiré)"
+    "removedName": "{{name}} (retiré)",
+    "setPin": "Créer un code PIN pour les opérations Moi seul",
+    "changePin": "Changer votre code PIN",
+    "hasPin": "A un code PIN",
+    "resetPin": "Réinitialiser le code PIN"
   },
   "accounts": {
     "shared": "Partagé",
@@ -650,5 +665,50 @@
     "failed": "Je n’ai pas compris — réessayez, ou tapez-le.",
     "noSpeech": "Je n’ai rien entendu — touchez le micro et réessayez.",
     "unsupportedBrowser": "La saisie vocale n’est pas disponible dans ce navigateur — essayez Chrome, Edge ou Safari, ou tapez-le."
+  },
+  "pin": {
+    "title": "Code PIN",
+    "notSignedIn": "Connectez-vous d’abord (Réglages → Compte). Le code PIN est conservé par le serveur, il faut donc un compte.",
+    "setIntro": "Le code PIN garde vos opérations Moi seul pour vous : un appareil ne devient le vôtre qu’une fois votre code saisi dessus. Utilisez 4 à 6 chiffres.",
+    "changeIntro": "Vos autres appareils demanderont le nouveau code une fois.",
+    "newPin": "Code PIN (4 à 6 chiffres)",
+    "confirmPin": "Saisissez-le à nouveau",
+    "mismatch": "Les deux codes ne correspondent pas.",
+    "save": "Enregistrer le code",
+    "change": "Changer le code",
+    "saved": "Code PIN enregistré. Vos autres appareils le demanderont une fois.",
+    "offline": "Vous êtes hors ligne. Le code PIN nécessite une connexion.",
+    "enterIntro": "{{name}} a un code PIN. Saisissez-le pour utiliser cet appareil en tant que {{name}}.",
+    "pinLabel": "Code PIN",
+    "continue": "Continuer",
+    "wrong_one": "Code incorrect. Il reste {{count}} essai.",
+    "wrong_many": "Code incorrect. Il reste {{count}} d’essais.",
+    "wrong_other": "Code incorrect. Il reste {{count}} essais.",
+    "lockedNow": "Trop de codes incorrects. Réessayez dans 15 minutes.",
+    "locked": "Trop de codes incorrects. Réessayez après {{time}}.",
+    "forgot": "Code PIN oublié ?",
+    "errorFormat": "Le code PIN doit comporter 4 à 6 chiffres.",
+    "errorNotSynced": "Cette personne ne s’est pas encore synchronisée. Réessayez dans un instant.",
+    "errorNotVerified": "Saisissez d’abord votre code PIN sur cet appareil.",
+    "errorRemoved": "Cette personne a été retirée du foyer.",
+    "errorGeneric": "Impossible d’enregistrer. Réessayez.",
+    "errorSignIn": "Reconnectez-vous sur cet appareil.",
+    "otherDeviceHint": "Oublié ? Changez-le sur un autre appareil où vous êtes déjà {{name}} (Paramètres → Foyer → Changer votre code PIN), puis saisissez le nouveau ici.",
+    "setForgetHint": "Si vous l’oubliez, changez-le sur un autre de vos appareils (Paramètres → Foyer), ou demandez à quelqu’un du foyer de le réinitialiser depuis le sien.",
+    "forgotOtherDevice": "Sur un autre appareil où vous êtes déjà {{name}}, ouvrez Paramètres → Foyer → Changer votre code PIN. Saisissez ensuite le nouveau code PIN ici. Rien n’est perdu.",
+    "forgotAskMember": "Pas d’autre appareil ? Quelqu’un d’autre du foyer peut choisir un nouveau code PIN pour {{name}} depuis son propre appareil : Paramètres → Foyer → Réinitialiser le code PIN, sous {{name}}. {{name}} verra qui l’a fait.",
+    "forgotEmailIntro": "Ou recevez un code à l’adresse courriel du compte.",
+    "forgotEmailSend": "M’envoyer un code",
+    "emailSent": "Nous avons envoyé un code à 6 chiffres à l’adresse du compte. Saisissez-le avec votre nouveau code PIN. Il expire dans 15 minutes.",
+    "emailCode": "Code reçu par courriel",
+    "emailResend": "Envoyer un nouveau code",
+    "resetForIntro": "Choisissez un nouveau code PIN pour {{name}}, puis dites-le-lui. Ses appareils le demanderont et indiqueront que vous l’avez réinitialisé depuis cet appareil. Cet appareil reste le vôtre : il ne reçoit pas les opérations Moi seul de {{name}}.",
+    "resetForButton": "Réinitialiser le code PIN de {{name}}",
+    "resetForDone": "C’est fait. Donnez le nouveau code PIN à {{name}} — il pourra être changé ensuite.",
+    "unknownDevice": "un appareil sans nom",
+    "resetNoticeBy": "Votre code PIN a été réinitialisé par {{name}} sur {{device}} ({{when}}).",
+    "resetNoticeEmail": "Votre code PIN a été réinitialisé avec un code envoyé à l’adresse du compte, sur {{device}} ({{when}}).",
+    "resetNoticeDismiss": "Compris",
+    "errorNoPin": "Cette personne n’a pas de code PIN."
   }
 }

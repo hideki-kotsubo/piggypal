@@ -12,7 +12,7 @@
 // dependency (just fetch, already global) and matches this adapter's
 // existing shape closer than pulling in nodemailer would.
 
-import { magicLinkEmail, type EmailLanguage } from './emailTemplates.js';
+import { magicLinkEmail, pinResetCodeEmail, pinResetNoticeEmail, type EmailLanguage } from './emailTemplates.js';
 
 const SMTP2GO_SEND_URL = 'https://api.smtp2go.com/v3/email/send';
 
@@ -30,9 +30,29 @@ export async function sendMagicLinkEmail(
   code: string,
   language: EmailLanguage = 'en',
 ): Promise<void> {
+  // Copy and HTML-safety notes live in emailTemplates.ts (docs/73 D271).
+  await sendEmail(email, magicLinkEmail(verifyUrl, code, language), `magic link for ${email} (${language}): ${verifyUrl} (code ${code})`);
+}
+
+// docs/77 D302/D303 — the owner's PIN reset code, and the notice that
+// someone else reset the owner's PIN. Same adapter, same fallback.
+export async function sendPinResetCodeEmail(email: string, code: string, language: EmailLanguage = 'en'): Promise<void> {
+  await sendEmail(email, pinResetCodeEmail(code, language), `PIN reset code for ${email} (${language}): ${code}`);
+}
+
+export async function sendPinResetNoticeEmail(
+  email: string,
+  byName: string,
+  deviceLabel: string,
+  language: EmailLanguage = 'en',
+): Promise<void> {
+  await sendEmail(email, pinResetNoticeEmail(byName, deviceLabel, language), `PIN reset notice for ${email}: by ${byName} on ${deviceLabel}`);
+}
+
+async function sendEmail(email: string, message: { subject: string; text: string; html: string }, logLine: string): Promise<void> {
   const apiKey = process.env.SMTP2GO_API_KEY;
   if (!apiKey) {
-    console.log(`[auth] magic link for ${email} (${language}): ${verifyUrl} (code ${code})`);
+    console.log(`[auth] ${logLine}`);
     return;
   }
 
@@ -41,8 +61,6 @@ export async function sendMagicLinkEmail(
     throw new Error('SMTP2GO_FROM_ADDRESS is not set — required once SMTP2GO_API_KEY is configured (see .env.example)');
   }
 
-  // Copy and HTML-safety notes live in emailTemplates.ts (docs/73 D271).
-  const message = magicLinkEmail(verifyUrl, code, language);
   const response = await fetch(SMTP2GO_SEND_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },

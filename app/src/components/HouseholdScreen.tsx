@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { revokeDevice, useAuthAccount } from '../lib/auth';
+import { revokeDevice, useAuthAccount, useVerifiedProfileId } from '../lib/auth';
 import { formatTimeAgo, nowUtc } from '../lib/format';
 import { getDeviceId, getLocalUserId } from '../lib/identity';
 import { useOnline } from '../lib/syncNow';
 import { useStore } from '../lib/store';
 import type { Device, Profile } from '../lib/types';
 import { PayerBadge } from './PayerBadge';
+import { PinResetNotice } from './PinScreen';
 
 // docs/71 — one place to manage who's in the household and which devices
 // they use, replacing Settings' separate "Household profiles" screen
@@ -203,6 +204,7 @@ function PersonCard({
   // every keystroke once the async DB round-trip resolves.
   const [nameStr, setNameStr] = useState(() => profile.displayName);
   const isYou = profile.id === getLocalUserId();
+  const verifiedProfileId = useVerifiedProfileId();
 
   return (
     <div className="household-person">
@@ -226,6 +228,29 @@ function PersonCard({
         <p className="household-hint household-device-none">{t('household.noDevices')}</p>
       ) : (
         devices.map((d) => <DeviceRow key={d.id} device={d} online={online} onRemove={() => onRemoveDevice(d)} />)
+      )}
+      {/* docs/77 D299 — only your own PIN can be set here; everyone's
+          PIN status is visible, never the PIN. */}
+      {isYou ? (
+        <>
+          <PinResetNotice profile={profile} />
+          <Link to="/settings/household/pin" className="text-link household-pin-link">
+            {profile.hasPin ? t('household.changePin') : t('household.setPin')}
+          </Link>
+        </>
+      ) : (
+        profile.hasPin && (
+          <p className="household-hint household-pin-note">
+            {t('household.hasPin')}
+            {/* D303 — reset a forgotten PIN for them from this device. */}
+            {verifiedProfileId && online && (
+              <>
+                {' · '}
+                <Link to={`/settings/household/pin?for=${profile.id}`}>{t('household.resetPin')}</Link>
+              </>
+            )}
+          </p>
+        )
       )}
       {/* You can't remove yourself here — signing out (Settings) is how a
           device leaves; another person's device can remove you. */}

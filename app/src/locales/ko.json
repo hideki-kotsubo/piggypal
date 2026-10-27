@@ -113,7 +113,8 @@
     "inbox_other": "카테고리가 필요한 내역이 {{count}}건 있습니다",
     "due_other": "예정된 정기 결제가 {{count}}건 있습니다",
     "accountDeleted": "계정이 삭제되었습니다 — 이 기기는 이제 동기화 없이 작동합니다",
-    "sessionExpired": "동기화가 멈췄습니다 — 다시 로그인하면 내역이 동기화됩니다"
+    "sessionExpired": "동기화가 멈췄습니다 — 다시 로그인하면 내역이 동기화됩니다",
+    "pinNeeded": "PIN을 입력하면 이 기기에서 나만 보기 기록을 받을 수 있습니다"
   },
   "home": {
     "loading": "데이터를 불러오는 중",
@@ -146,7 +147,14 @@
     "time": "시간",
     "note": "메모",
     "location": "장소",
-    "optional": "선택 사항…"
+    "optional": "선택 사항…",
+    "onlyMe": "나만 보기",
+    "onlyMeOn": "이 기록은 내 기기에만 전달됩니다. 가구의 다른 사람에게는 보이지 않습니다.",
+    "onlyMeAccountNote": "이 계좌의 잔액이 다른 사람에게는 다르게 보입니다.",
+    "onlyMeOff": "이 기록을 나만 볼 수 있게 합니다.",
+    "onlyMeNeedsSignIn": "나만 보기를 쓰려면 로그인과 PIN이 필요합니다.",
+    "onlyMeNeedsPin": "PIN을 설정하고 나만 보기 사용하기",
+    "onlyMeNeedsVerify": "이 기기에서 PIN을 입력하고 나만 보기 사용하기"
   },
   "deviceLink": {
     "scanTitle": "코드 스캔",
@@ -166,7 +174,8 @@
   "insights": {
     "lastDays_other": "최근 {{count}}일 ({{currency}})",
     "thisMonth": "이번 달",
-    "scheduled": "+ {{amount}} 예정"
+    "scheduled": "+ {{amount}} 예정",
+    "includesPrivate_other": "나만 보기 기록 {{count}}건 포함 — 가구의 다른 사람에게는 보이지 않습니다."
   },
   "about": {
     "title": "Flowtab 정보",
@@ -256,7 +265,11 @@
     "removePerson": "{{name}} 삭제",
     "thisDevice": "이 기기",
     "seen": "{{time}} 확인",
-    "removedName": "{{name}}(삭제됨)"
+    "removedName": "{{name}}(삭제됨)",
+    "setPin": "나만 보기 기록용 PIN 설정",
+    "changePin": "PIN 변경",
+    "hasPin": "PIN 있음",
+    "resetPin": "PIN 재설정"
   },
   "accounts": {
     "shared": "공유",
@@ -597,5 +610,48 @@
     "failed": "잘 알아듣지 못했습니다 — 다시 시도하거나 입력하세요.",
     "noSpeech": "아무 소리도 들리지 않았습니다 — 마이크를 누르고 다시 말해 보세요.",
     "unsupportedBrowser": "이 브라우저에서는 음성 입력을 사용할 수 없습니다 — Chrome, Edge, Safari를 사용하거나 입력하세요."
+  },
+  "pin": {
+    "title": "PIN",
+    "notSignedIn": "먼저 로그인하세요(설정 → 계정). PIN은 서버에 보관되므로 계정이 필요합니다.",
+    "setIntro": "PIN이 나만 보기 기록을 지켜 줍니다. 기기에서 PIN을 입력해야만 그 기기가 내 기기가 됩니다. 4~6자리 숫자를 사용하세요.",
+    "changeIntro": "다른 기기에서는 새 PIN을 한 번 묻습니다.",
+    "newPin": "PIN(4~6자리)",
+    "confirmPin": "한 번 더 입력",
+    "mismatch": "두 PIN이 일치하지 않습니다.",
+    "save": "PIN 저장",
+    "change": "PIN 변경",
+    "saved": "PIN을 저장했습니다. 다른 기기에서는 한 번 묻습니다.",
+    "offline": "오프라인 상태입니다. PIN에는 연결이 필요합니다.",
+    "enterIntro": "{{name}} 님에게는 PIN이 있습니다. 이 기기를 {{name}} 님으로 쓰려면 입력하세요.",
+    "pinLabel": "PIN",
+    "continue": "계속",
+    "wrong_other": "PIN이 틀렸습니다. {{count}}번 남았습니다.",
+    "lockedNow": "PIN을 너무 많이 틀렸습니다. 15분 후에 다시 시도하세요.",
+    "locked": "PIN을 너무 많이 틀렸습니다. {{time}} 이후에 다시 시도하세요.",
+    "forgot": "PIN을 잊으셨나요?",
+    "errorFormat": "PIN은 4~6자리 숫자여야 합니다.",
+    "errorNotSynced": "이 사람은 아직 동기화되지 않았습니다. 잠시 후 다시 시도하세요.",
+    "errorNotVerified": "먼저 이 기기에서 PIN을 입력하세요.",
+    "errorRemoved": "이 사람은 가구에서 제외되었습니다.",
+    "errorGeneric": "저장하지 못했습니다. 다시 시도하세요.",
+    "errorSignIn": "이 기기에서 다시 로그인하세요.",
+    "otherDeviceHint": "잊으셨나요? 이미 {{name}} 님으로 쓰고 있는 다른 기기에서 변경한 뒤(설정 → 가족 → PIN 변경) 새 PIN을 여기에 입력하세요.",
+    "setForgetHint": "잊어버리면 내 다른 기기(설정 → 가족)에서 변경하거나, 가족 중 누군가에게 그 사람의 기기에서 재설정해 달라고 하세요.",
+    "forgotOtherDevice": "이미 {{name}} 님으로 쓰고 있는 다른 기기에서 설정 → 가족 → PIN 변경을 여세요. 그런 다음 새 PIN을 여기에 입력하세요. 잃는 데이터는 없습니다.",
+    "forgotAskMember": "다른 기기가 없나요? 가족 중 다른 사람이 자신의 기기에서 {{name}} 님의 새 PIN을 설정할 수 있습니다: 설정 → 가족 → {{name}} 님 아래의 PIN 재설정. 누가 했는지 {{name}} 님에게 표시됩니다.",
+    "forgotEmailIntro": "또는 계정 이메일로 코드를 받으세요.",
+    "forgotEmailSend": "이메일로 코드 받기",
+    "emailSent": "계정 이메일로 6자리 코드를 보냈습니다. 새 PIN과 함께 입력하세요. 15분 후에 만료됩니다.",
+    "emailCode": "이메일로 받은 코드",
+    "emailResend": "새 코드 보내기",
+    "resetForIntro": "{{name}} 님의 새 PIN을 설정한 뒤 알려 주세요. {{name}} 님의 기기에서 PIN을 묻고, 내가 이 기기에서 재설정했다는 것이 표시됩니다. 이 기기는 계속 내 기기이므로 {{name}} 님의 나만 보기 기록은 받지 않습니다.",
+    "resetForButton": "{{name}} 님의 PIN 재설정",
+    "resetForDone": "완료되었습니다. {{name}} 님에게 새 PIN을 알려 주세요. 나중에 변경할 수 있습니다.",
+    "unknownDevice": "이름 없는 기기",
+    "resetNoticeBy": "{{name}} 님이 {{device}}에서 내 PIN을 재설정했습니다({{when}}).",
+    "resetNoticeEmail": "계정 이메일로 받은 코드로 {{device}}에서 PIN이 재설정되었습니다({{when}}).",
+    "resetNoticeDismiss": "확인",
+    "errorNoPin": "이 사람은 PIN이 없습니다."
   }
 }

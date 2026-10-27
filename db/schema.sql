@@ -151,6 +151,9 @@ create table transactions (
                                        -- whose id is then uuidv5(schedule_id
                                        -- + occurrence_date) (D208)
   occurrence_date     date,           -- the projected date this row fulfils
+  private_to_profile_id uuid,         -- docs/77 — NULL = shared with the
+                                       -- household; set = "Only me", synced
+                                       -- only to that profile's devices
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now(),
   -- docs/46 D162 — composite, matching categories' own composite key
@@ -182,6 +185,8 @@ create table transaction_splits (
   transaction_id uuid not null references transactions(id),
   account_id     uuid not null references accounts(id),
   amount_cents   bigint not null,
+  private_to_profile_id uuid,              -- docs/77 — copy of its transaction's,
+                                           -- kept by the upload handler only
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now()
 );
@@ -239,7 +244,13 @@ create table profiles (
   display_name text not null,
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now(),
-  deleted_at   timestamptz                -- docs/71 D252: removed from the household, history kept
+  deleted_at   timestamptz,               -- docs/71 D252: removed from the household, history kept
+  has_pin      boolean not null default false, -- docs/77 D299: set by the api only
+  -- docs/77 D304: the last PIN reset done from somewhere other than this
+  -- person's own verified device, shown to them until dismissed. api only.
+  pin_reset_at     timestamptz,
+  pin_reset_by     uuid,                    -- acting profile (self = emailed code)
+  pin_reset_device text                     -- that device's label
 );
 
 -- docs/48 D176 — one row per physical device. `id` reuses
@@ -271,6 +282,7 @@ create index on budgets      (user_id, month);
 create index on scheduled_payments (user_id);
 create index on transactions (schedule_id) where schedule_id is not null;
 create index on devices      (user_id, profile_id);
+create index on transactions (private_to_profile_id) where private_to_profile_id is not null;
 
 -- ── Auth (docs/05) — server-only, not part of the sync buckets above ───────
 
@@ -316,6 +328,31 @@ create table refresh_tokens (
 -- docs/72 D260 — one row per deleted account: only the random id and
 -- when, so other household devices can be told the account is gone.
 -- Removed again if the same id signs up anew.
+-- docs/77 D299 — server-only, never synced. A profile's PIN (scrypt
+-- "salt:hash") with its failed-attempt lock, and which profile each
+-- device's session was verified as: the source of the profile_id claim
+-- in that device's tokens.
+create table profile_pins (
+  profile_id      uuid primary key references profiles(id) on delete cascade,
+  user_id         uuid not null,
+  pin_hash        text not null,
+  failed_attempts int not null default 0,
+  locked_until    timestamptz,
+  updated_at      timestamptz not null default now(),
+  -- docs/77 D302: the owner's emailed reset code (hashed), 15 min, 5 tries
+  reset_code_hash       text,
+  reset_code_expires_at timestamptz,
+  reset_code_attempts   int not null default 0
+);
+
+create table device_profiles (
+  user_id     uuid not null,
+  device_id   uuid not null,
+  profile_id  uuid not null,
+  verified_at timestamptz not null default now(),
+  primary key (user_id, device_id)
+);
+
 create table deleted_accounts (
   user_id     uuid primary key,
   deleted_at  timestamptz not null default now()
@@ -357,4 +394,6 @@ insert into schema_migrations (filename) values
   ('2026-10-08-scheduled-payments.sql'),
   ('2026-10-09-scheduled-payments-deleted-at.sql'),
   ('2026-10-14-household-management.sql'),
-  ('2026-10-15-deleted-accounts.sql');
+  ('2026-10-15-deleted-accounts.sql'),
+  ('2026-10-26-private-records.sql'),
+  ('2026-10-26-pin-recovery.sql');

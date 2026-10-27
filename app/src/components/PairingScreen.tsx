@@ -9,7 +9,7 @@ import { isUntouchedSeedAccount, referencedAccountIds } from '../lib/seed';
 import { usePairedPeers } from '../lib/peers';
 import { effectiveDeviceLabel } from '../lib/settings';
 import { useStore } from '../lib/store';
-import type { MergeSummary, PeerDataset } from '../lib/types';
+import type { MergeSummary, PeerDataset, Transaction, TransactionSplit } from '../lib/types';
 import { QrCanvas, QrScanStep } from './Qr';
 
 // docs/27's sketch (frames 2-5), implemented for real, now with docs/24's
@@ -169,16 +169,23 @@ export function PairingScreen() {
       const accounts = adoptPeerIdentity
         ? store.accounts.filter((a) => !isUntouchedSeedAccount(a, referenced))
         : store.accounts;
+      // docs/77 D301 — "Only me" records go only to my own devices. Both
+      // directions are filtered, so an older or misbehaving peer that does
+      // send someone's private rows still doesn't get them stored here.
+      const ownDevice = identity === 'own-device';
       const localDataset: PeerDataset = {
         localUserId: getLocalUserId(),
         categories: store.categories,
         accounts,
-        transactions: store.transactions,
-        transactionSplits: store.transactionSplits,
+        ...withoutPrivate(store.transactions, store.transactionSplits, ownDevice),
         scheduledPayments: store.scheduledPayments,
         budgets: store.budgets,
       };
-      const peerDataset = await exchangeJson<PeerDataset>(pc, localDataset);
+      const received = await exchangeJson<PeerDataset>(pc, localDataset);
+      const peerDataset: PeerDataset = {
+        ...received,
+        ...withoutPrivate(received.transactions, received.transactionSplits, ownDevice),
+      };
       const summary = await store.applyPeerDataset(peerDataset, adoptPeerIdentity);
       // Upserts by peerLocalUserId (peers.ts) — a repeat sync with this
       // same peer updates their row instead of adding a duplicate, and
@@ -562,3 +569,19 @@ function QrShowStep({
   );
 }
 
+
+// docs/77 D301 — drops "Only me" rows (and their split legs) from a dataset
+// crossing between two people's devices. Kept when syncing with my own
+// other device.
+function withoutPrivate(
+  transactions: Transaction[],
+  transactionSplits: TransactionSplit[],
+  ownDevice: boolean,
+): { transactions: Transaction[]; transactionSplits: TransactionSplit[] } {
+  if (ownDevice) return { transactions, transactionSplits };
+  const hidden = new Set(transactions.filter((t) => t.privateToProfileId).map((t) => t.id));
+  return {
+    transactions: transactions.filter((t) => !hidden.has(t.id)),
+    transactionSplits: transactionSplits.filter((s) => !hidden.has(s.transactionId)),
+  };
+}

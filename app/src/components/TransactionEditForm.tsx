@@ -9,7 +9,11 @@ import { CategoryPicker } from './CategoryPicker';
 import { PayerBadge } from './PayerBadge';
 import { hasHousehold, householdMembers, personLabel, useHouseholdPeers } from '../lib/household';
 import { formatAmount, nowUtc } from '../lib/format';
+import { useAuthAccount, useVerifiedProfileId } from '../lib/auth';
+import { getLocalUserId } from '../lib/identity';
 import type { Transaction } from '../lib/types';
+import { Link } from 'react-router-dom';
+import { PrivateMark } from './PrivateMark';
 
 // occurredAt is "YYYY-MM-DDTHH:MM:SS" — split for the two native inputs,
 // recombine on either one's change so the other half is never lost.
@@ -30,6 +34,8 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
   const { t } = useTranslation();
   const peers = useHouseholdPeers();
   const showHousehold = hasHousehold(peers);
+  const [authAccount] = useAuthAccount();
+  const verifiedProfileId = useVerifiedProfileId();
   const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
   // Local mirror of the Note field — `transaction.note` comes straight
   // from the store, and commit() writes through an async DB round-trip
@@ -365,6 +371,16 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
         </div>
       )}
 
+      {(showHousehold || transaction.privateToProfileId) && transaction.createdByUserId === getLocalUserId() && (
+        <OnlyMeToggle
+          transaction={transaction}
+          accountIds={isSplit ? legs.map((l) => l.accountId) : transaction.accountId ? [transaction.accountId] : []}
+          signedIn={authAccount !== null}
+          verified={verifiedProfileId === getLocalUserId()}
+          onChange={(privateToProfileId) => commit({ privateToProfileId })}
+        />
+      )}
+
       <div className="field-pair">
         <label className="field-label">
           {t('transaction.date')}
@@ -449,6 +465,73 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
       <div className="form-actions">
         <button className="save-btn" onClick={onDone}>{t('common.done')}</button>
       </div>
+    </div>
+  );
+}
+
+// docs/77 — "Only me". Offered only on records this person logged, and
+// usable once their profile has a PIN and this device is verified as them
+// (the server enforces both; this only explains what's missing). Turning
+// it off is always allowed.
+function OnlyMeToggle({
+  transaction,
+  accountIds,
+  signedIn,
+  verified,
+  onChange,
+}: {
+  transaction: Transaction;
+  accountIds: string[];
+  signedIn: boolean;
+  verified: boolean;
+  onChange: (privateToProfileId: string | null) => void;
+}) {
+  const store = useStore();
+  const { t } = useTranslation();
+  const me = getLocalUserId();
+  const hasPin = store.profiles.find((p) => p.id === me)?.hasPin ?? false;
+  // Local mirror, same reason as the form's other fields: the store only
+  // catches up after the async DB round-trip, and a checkbox bound to it
+  // would flip back in between.
+  const [isPrivate, setIsPrivate] = useState(() => transaction.privateToProfileId !== null);
+  const canTurnOn = signedIn && hasPin && verified;
+  // Someone else's (or a shared) account shows a different balance to
+  // the rest of the household once this row is hidden from them.
+  const othersAccount = accountIds.some((id) => store.accounts.find((a) => a.id === id)?.ownerUserId !== me);
+
+  return (
+    <div>
+      <label className="schedule-toggle">
+        <input
+          type="checkbox"
+          checked={isPrivate}
+          disabled={!isPrivate && !canTurnOn}
+          onChange={(e) => {
+            setIsPrivate(e.target.checked);
+            onChange(e.target.checked ? me : null);
+          }}
+        />
+        <PrivateMark />
+        <span>{t('transaction.onlyMe')}</span>
+      </label>
+      {isPrivate ? (
+        <p className="field-hint">
+          {t('transaction.onlyMeOn')}
+          {othersAccount && ` ${t('transaction.onlyMeAccountNote')}`}
+        </p>
+      ) : !signedIn ? (
+        <p className="field-hint">{t('transaction.onlyMeNeedsSignIn')}</p>
+      ) : !hasPin ? (
+        <p className="field-hint">
+          <Link to="/settings/household/pin">{t('transaction.onlyMeNeedsPin')}</Link>
+        </p>
+      ) : !verified ? (
+        <p className="field-hint">
+          <Link to="/settings/household/pin?mode=verify">{t('transaction.onlyMeNeedsVerify')}</Link>
+        </p>
+      ) : (
+        <p className="field-hint">{t('transaction.onlyMeOff')}</p>
+      )}
     </div>
   );
 }

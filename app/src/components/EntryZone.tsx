@@ -100,6 +100,7 @@ export function EntryZone({ onSubmitted }: Props) {
       createdByUserId: getLocalUserId(),
       scheduleId: null,
       occurrenceDate: null,
+      privateToProfileId: null,
       updatedAt: nowUtc(),
     };
     store.addTransaction(tx);
@@ -203,6 +204,7 @@ export function EntryZone({ onSubmitted }: Props) {
       createdByUserId: getLocalUserId(),
       scheduleId: null,
       occurrenceDate: null,
+      privateToProfileId: null,
       updatedAt: nowUtc(),
     };
     store.addTransaction(tx);
