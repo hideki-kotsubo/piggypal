@@ -90,6 +90,20 @@ https URLs: see "Hosting the images" (D281). **The adapter is
 untested**: no account existed when it was written. Do the first `--send`
 with one post and check it in Ayrshare's dashboard.
 
+**D284 — Post manually first; Ayrshare is off the table for now
+(2026-10-27, amends D278).** Ayrshare's price doesn't fit yet. For the
+first weeks posts go out by hand, through each network's own scheduler
+or a dashboard, using the images and captions from `social:compose`;
+that's also when the content and timing are still being tuned.
+Automation comes later, through one of two cheaper routes, decided then:
+**Upload-Post** (API in Ayrshare's style, free tier of about 10 uploads a
+month, low paid plans; only `schedule()` changes) or **Postiz
+self-hosted** (open source, Docker, free, has a web calendar and a REST
+API, but needs our own developer app on each network: LinkedIn's
+Community Management approval and TikTok's audit can take weeks, X bills
+per post either way). `publish.mts` keeps its Ayrshare adapter until
+then and stays a dry run.
+
 **D279 — TikTok and YouTube Shorts need video.** Image posts skip them,
 with a note in the dry run. Next step for those two: short screen
 recordings of real entries, captioned per language (Playwright can record
