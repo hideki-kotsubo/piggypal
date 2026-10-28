@@ -16,6 +16,13 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
+## Unreleased
+
+- **Split purchases show up under each account.** Filtering your
+  transactions by account, or tapping "see all" on an account's page, now
+  includes purchases split across several accounts, counting only that
+  account's share, so the total matches the account's balance.
+
 ## 0.14.0 — 2026-10-28
 
 - **A tidier Settings.** Settings is now a short page of groups (your

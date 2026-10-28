@@ -1,4 +1,4 @@
-import type { Transaction } from './types';
+import type { Transaction, TransactionSplit } from './types';
 
 // docs/18 — pure filtering/aggregation, no React/store imports, so it's
 // easy to reason about (and test later) independent of the UI that drives
@@ -26,15 +26,27 @@ export function hasActiveFilters(f: TransactionFilters): boolean {
   return f.q !== '' || f.categoryId !== null || f.accountId !== null || f.merchant !== null || f.dateFrom !== null || f.dateTo !== null;
 }
 
-export function filterTransactions(all: Transaction[], f: TransactionFilters): Transaction[] {
+// docs/50 — a split purchase has no accountId of its own; it reaches an
+// account through its legs. This account's share of each split purchase
+// it's part of, keyed by transaction id.
+export function accountShares(splits: TransactionSplit[], accountId: string): Map<string, number> {
+  const shares = new Map<string, number>();
+  for (const s of splits) {
+    if (s.accountId === accountId) shares.set(s.transactionId, (shares.get(s.transactionId) ?? 0) + s.amountCents);
+  }
+  return shares;
+}
+
+export function filterTransactions(all: Transaction[], f: TransactionFilters, splits: TransactionSplit[] = []): Transaction[] {
   const q = f.q.trim().toLowerCase();
+  const shares = f.accountId ? accountShares(splits, f.accountId) : null;
   return all.filter((t) => {
     if (q) {
       const haystack = `${t.note ?? ''} ${t.merchant ?? ''}`.toLowerCase();
       if (!haystack.includes(q)) return false;
     }
     if (f.categoryId && t.categoryId !== f.categoryId) return false;
-    if (f.accountId && t.accountId !== f.accountId) return false;
+    if (f.accountId && t.accountId !== f.accountId && !shares?.has(t.id)) return false;
     if (f.merchant && t.merchant !== f.merchant) return false;
     const day = t.occurredAt.slice(0, 10);
     if (f.dateFrom && day < f.dateFrom) return false;
@@ -47,10 +59,15 @@ export function filterTransactions(all: Transaction[], f: TransactionFilters): T
 // same convention store.balancesFor already uses for account balances.
 // One line per currency actually present in the filtered set, not one
 // blended number.
-export function totalsByCurrency(filtered: Transaction[]): { currency: string; cents: number }[] {
+// `amountOf` lets an account-filtered list count only that account's
+// share of a split purchase (docs/50), matching its balance.
+export function totalsByCurrency(
+  filtered: Transaction[],
+  amountOf: (t: Transaction) => number = (t) => t.amountCents,
+): { currency: string; cents: number }[] {
   const totals = new Map<string, number>();
   for (const t of filtered) {
-    totals.set(t.currency, (totals.get(t.currency) ?? 0) + t.amountCents);
+    totals.set(t.currency, (totals.get(t.currency) ?? 0) + amountOf(t));
   }
   return [...totals.entries()].map(([currency, cents]) => ({ currency, cents }));
 }

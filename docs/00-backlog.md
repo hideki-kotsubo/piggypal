@@ -246,16 +246,16 @@ it needs doing.
       original ask.
 - [x] Accounts Management: improve UI — flagged 2026-08-19, raised again
       2026-10-27. docs/79: built 2026-10-28 on `feat/ui-refresh` (list
-      cards, account page D309, edit sheet D311). Not released yet.
+      cards, account page D309, edit sheet D311). Released in app 0.14.0.
 - [x] Categories Management: improve UI — flagged 2026-08-19, raised again
       2026-10-27. docs/79: built 2026-10-28 on `feat/ui-refresh` (D307,
-      D308 Restore, edit sheet D311). Not released yet.
+      D308 Restore, edit sheet D311). Released in app 0.14.0.
 - [x] Settings page: improve layout/navigation — flagged 2026-10-27, not
       yet scoped. The page has grown a long list of rows (language, cloud
       sync, household, devices, private-record PIN, about…). Ideas floated:
       hamburger menu, grouped sub-menus/sub-pages, or a floating menu.
       Sketched as S1–S3 in docs/79; hub + sub-pages chosen (D310), built
-      2026-10-28 on `feat/ui-refresh`. Not released yet.
+      2026-10-28 on `feat/ui-refresh`. Released in app 0.14.0.
 - [x] Categories Management: increase the left padding/margin for leaf
       nodes (the "↳ Espresso"-under-"Café" rows, docs/14) — flagged
       2026-08-19. Guide-line indent, docs/79 (2026-10-28).

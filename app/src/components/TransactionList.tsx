@@ -5,6 +5,7 @@ import { useStore } from '../lib/store';
 import { categoryLabel } from '../lib/starterLabels';
 import { accountLabel, formatAmount, formatTime, groupByDay, transactionTitle } from '../lib/format';
 import {
+  accountShares,
   filterTransactions,
   hasActiveFilters,
   presetRange,
@@ -17,6 +18,7 @@ import { getLocalUserId } from '../lib/identity';
 import { hasHousehold, personLabel, useHouseholdPeers } from '../lib/household';
 import { PayerBadge } from './PayerBadge';
 import { PrivateMark } from './PrivateMark';
+import type { Transaction } from '../lib/types';
 
 const MERCHANT_CAP = 8;
 const DATE_PRESETS: { id: DatePreset; labelKey: string }[] = [
@@ -65,8 +67,12 @@ export function TransactionList() {
   const all = [...store.transactions]
     .filter((tx) => !tx.deletedAt)
     .sort((a, b) => (a.occurredAt < b.occurredAt ? 1 : -1));
-  const filtered = filterTransactions(all, filters);
-  const totals = totalsByCurrency(filtered);
+  const filtered = filterTransactions(all, filters, store.transactionSplits);
+  // docs/50 — filtered by account, a split purchase counts (and shows)
+  // only that account's share, same as the account's balance and page.
+  const shares = filters.accountId ? accountShares(store.transactionSplits, filters.accountId) : null;
+  const amountOf = (tx: Transaction) => shares?.get(tx.id) ?? tx.amountCents;
+  const totals = totalsByCurrency(filtered, amountOf);
   const filtersActive = hasActiveFilters(filters);
 
   const rankedMerchants = store.rankedMerchants();
@@ -268,7 +274,7 @@ export function TransactionList() {
               <div className="day-label">
                 <span>{group.label}</span>
                 <span className="day-subtotal">
-                  {totalsByCurrency(group.items).map((tx, i) => (
+                  {totalsByCurrency(group.items, amountOf).map((tx, i) => (
                     <span key={tx.currency}>{i > 0 && ' · '}{formatAmount(tx.cents, tx.currency)}</span>
                   ))}
                 </span>
@@ -280,8 +286,11 @@ export function TransactionList() {
                   // docs/50 — a split transaction has no single account;
                   // show how many legs it's split across instead of the
                   // misleading '—' fallback (it has 2+ accounts, not zero).
+                  const share = shares?.get(tx.id);
                   const accountSegment =
-                    tx.accountId === null
+                    share !== undefined
+                      ? t('accounts.splitLeg', { total: formatAmount(tx.amountCents, tx.currency) })
+                      : tx.accountId === null
                       ? t('transaction.splitCount', { count: store.transactionSplits.filter((s) => s.transactionId === tx.id).length })
                       : account
                         ? accountLabel(account)
@@ -303,8 +312,8 @@ export function TransactionList() {
                           </span>
                         </div>
                       </div>
-                      <span className={`tx-amt ${tx.amountCents < 0 ? 'out' : 'in'}`}>
-                        {formatAmount(tx.amountCents, tx.currency)}
+                      <span className={`tx-amt ${amountOf(tx) < 0 ? 'out' : 'in'}`}>
+                        {formatAmount(amountOf(tx), tx.currency)}
                       </span>
                     </Link>
                   );
