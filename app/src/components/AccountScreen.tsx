@@ -6,6 +6,7 @@ import { accountName } from '../lib/starterLabels';
 import { accountLabel, formatAmount, formatOccurrenceDate, groupByDay, kindLabel, transactionTitle } from '../lib/format';
 import { hasHousehold, personLabel, useHouseholdPeers } from '../lib/household';
 import { accountMonthFlow, currentMonthKey } from '../lib/activity';
+import { accountShares } from '../lib/filterTransactions';
 import { dueOccurrences, postedKeys, todayLocal, upcomingOccurrences } from '../lib/schedules';
 import { AccountForm } from './AccountForm';
 import { BottomSheet } from './BottomSheet';
@@ -58,9 +59,7 @@ export function AccountScreen() {
   const upcoming = [...due, ...upcomingOccurrences(rules, posted, today, UPCOMING_DAYS)];
 
   // docs/50 — a split purchase shows here with this account's own leg.
-  const legs = new Map(
-    store.transactionSplits.filter((s) => s.accountId === account.id).map((s) => [s.transactionId, s.amountCents]),
-  );
+  const legs = accountShares(store.transactionSplits, account.id);
   const recent = active
     .filter((tx) => tx.accountId === account.id || legs.has(tx.id))
     .sort((a, b) => (a.occurredAt < b.occurredAt ? 1 : -1))

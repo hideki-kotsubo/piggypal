@@ -1,6 +1,6 @@
 # 79 — Accounts, Categories and Settings UI refresh
 
-Status: built 2026-10-28 on `feat/ui-refresh`, not released. See "Built" below.
+Status: built 2026-10-28, released in app 0.14.0. See "Built" below.
 
 Sketches: the canvas "Flowtab — Settings, Accounts & Categories sketches"
 (https://claude.ai/artifact/4iJ5H6HMQozYyaor6mc7Wz, private to the owner).
@@ -79,9 +79,14 @@ layout/navigation".
   archived account's page also has Restore.
 - **Account page (D309):** due-but-unposted and next-30-days occurrences
   of its non-paused rules; split purchases show this account's own leg.
-  Known gap, pre-existing: "See all" uses `/transactions?account=`, which
-  matches `accountId` only, so split purchases don't appear in that list
-  (docs/18's filter predates docs/50).
+  "See all" opens `/transactions?account=`. That filter used to match
+  `accountId` only, so split purchases were missing there (docs/18's
+  filter predates docs/50). **Fixed 2026-10-28 (0.14.1):**
+  `filterTransactions` also matches a purchase through its legs
+  (`accountShares`), and an account-filtered list counts and shows only
+  that account's share ("Split · $100.00 total" under the row), so its
+  total equals the account's balance. Tests in
+  `filterTransactions.test.ts`.
 - **Categories (C1, C2, C3, D307, D308):** Expense/Income switch (follows
   the keeper's kind while merging), a card per group with its
   subcategories on a guide line and "+ Add to <group>", runs of
