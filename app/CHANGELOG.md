@@ -16,7 +16,7 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
-## Unreleased
+## 0.14.0 — 2026-10-28
 
 - **A tidier Settings.** Settings is now a short page of groups (your
   money, sync and household, preferences, app), each opening its own page,
