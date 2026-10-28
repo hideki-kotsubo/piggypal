@@ -254,7 +254,7 @@ it needs doing.
       yet scoped. The page has grown a long list of rows (language, cloud
       sync, household, devices, private-record PIN, about…). Ideas floated:
       hamburger menu, grouped sub-menus/sub-pages, or a floating menu.
-      Sketched as S1–S3 in docs/79; direction not chosen yet.
+      Sketched as S1–S3 in docs/79; hub + sub-pages chosen (D310).
 - [ ] Categories Management: increase the left padding/margin for leaf
       nodes (the "↳ Espresso"-under-"Café" rows, docs/14) — flagged
       2026-08-19.
@@ -265,6 +265,13 @@ it needs doing.
       category back, which doesn't exist today — flagged 2026-08-19.
       Restore decided 2026-10-27 (docs/79 D308); what archiving means
       beyond that is still open.
+- [ ] Group budgets, either/or per group — raised 2026-10-28 (docs/79
+      open question 1). A group is budgeted as a whole (one budget counting
+      all its subcategories, which then show spend only) *or* per
+      subcategory, never both, so each purchase sits under one budget and
+      totals never double-count. Needs the rollup docs/14 D74 deferred,
+      incl. per currency and D213's committed segment. After the docs/79
+      screens ship.
 - [ ] Categories Management: adding a new Budget — suggestion floated
       2026-08-19: a shortcut for this directly on the Insights screen
       (`/insights`, docs/07 D147), rather than only reachable via
