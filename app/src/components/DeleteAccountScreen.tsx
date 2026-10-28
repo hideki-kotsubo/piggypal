@@ -54,7 +54,7 @@ export function DeleteAccountScreen() {
   return (
     <main className="home">
       <div className="app-bar">
-        <Link to="/settings" className="back-link">← {t('common.back')}</Link>
+        <Link to="/settings/sync" className="back-link">← {t('common.back')}</Link>
         <span className="wordmark">{t('deleteAccount.title')}</span>
         <span style={{ width: '3rem' }} />
       </div>
@@ -62,7 +62,7 @@ export function DeleteAccountScreen() {
       {done ? (
         <div className="settings-field">
           <p className="delete-account-text">{t('deleteAccount.doneText')}</p>
-          <Link to="/settings" className="save-btn delete-account-done">
+          <Link to="/settings/sync" className="save-btn delete-account-done">
             {t('deleteAccount.backToSettings')}
           </Link>
         </div>

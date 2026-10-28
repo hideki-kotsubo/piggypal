@@ -67,3 +67,17 @@ export function useOnline(): boolean {
   }, []);
   return online;
 }
+
+// Cloud sync's state in a few words — also the summary under the account
+// card on the Settings hub (docs/79 D310).
+export function connectionLabel(
+  sessionExpired: boolean,
+  online: boolean,
+  syncStatus: { connected: boolean; connecting: boolean },
+): string {
+  if (sessionExpired) return i18n.t('settings.signedOutHere');
+  if (!online) return i18n.t('settings.offline');
+  if (syncStatus.connected) return i18n.t('settings.connected');
+  if (syncStatus.connecting) return i18n.t('settings.connecting');
+  return i18n.t('settings.notConnected');
+}

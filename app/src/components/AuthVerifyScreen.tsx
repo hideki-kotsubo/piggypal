@@ -377,7 +377,7 @@ export function AuthVerifyScreen() {
   // leaving the kept data and its account exactly as they were.
   async function cancelOtherAccount() {
     await signOut();
-    navigate('/settings');
+    navigate('/settings/sync');
   }
 
   const allManualResolved = (step: Extract<Step, { kind: 'merge-review' }>) => {
@@ -506,7 +506,7 @@ export function AuthVerifyScreen() {
             ) : (
               <p className="qr-caption">{t('auth.closeTab')}</p>
             ))}
-          <button className="save-btn" onClick={() => navigate('/settings')}>
+          <button className="save-btn" onClick={() => navigate('/settings/sync')}>
             {t('common.done')}
           </button>
         </div>
@@ -515,7 +515,7 @@ export function AuthVerifyScreen() {
       {step.kind === 'error' && (
         <div className="qr-stage">
           <p className="qr-caption">{step.message}</p>
-          <button className="save-btn" onClick={() => navigate('/settings')}>
+          <button className="save-btn" onClick={() => navigate('/settings/sync')}>
             {t('deleteAccount.backToSettings')}
           </button>
         </div>

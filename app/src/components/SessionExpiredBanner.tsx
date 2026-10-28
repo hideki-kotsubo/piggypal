@@ -19,7 +19,7 @@ export function SessionExpiredBanner() {
   // docs/72 D260 — the account was deleted from another device.
   if (deletedNotice !== null) {
     return (
-      <Link to="/settings" className="inbox-banner">
+      <Link to="/settings/sync" className="inbox-banner">
         <div className="inbox-badge">!</div>
         <p>{t('banner.accountDeleted')}</p>
         <span className="inbox-chevron">›</span>
@@ -52,7 +52,7 @@ export function SessionExpiredBanner() {
   if (!expired) return null;
 
   return (
-    <Link to="/settings" className="inbox-banner">
+    <Link to="/settings/sync" className="inbox-banner">
       <div className="inbox-badge">!</div>
       <p>{t('banner.sessionExpired')}</p>
       <span className="inbox-chevron">›</span>

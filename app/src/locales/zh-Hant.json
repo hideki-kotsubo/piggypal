@@ -102,7 +102,8 @@
     "edit": "編輯",
     "save": "儲存",
     "ok": "好",
-    "cancelLower": "取消"
+    "cancelLower": "取消",
+    "restore": "還原"
   },
   "nav": {
     "insights": "統計",
@@ -297,7 +298,25 @@
     "namePlaceholder": "Visa、金融卡、旅行基金…",
     "kind": "型別",
     "owner": "所有者",
-    "archive": "歸檔帳戶"
+    "archive": "歸檔帳戶",
+    "search": "搜尋帳戶",
+    "searchPlaceholder_other": "搜尋 {{count}} 個帳戶",
+    "everyone": "所有人",
+    "totals": "依幣別合計",
+    "count_other": "{{count}} 個帳戶",
+    "noMatch": "沒有符合的帳戶。",
+    "restoreConfirm": "還原「{{name}}」？它會重新出現在選擇清單中。",
+    "notFound": "此帳戶已不存在。",
+    "isArchived": "此帳戶已歸檔。",
+    "thisMonth": "本月",
+    "noActivityMonth": "本月沒有收支。",
+    "moneyIn": "收入 · {{currency}}",
+    "moneyOut": "支出 · {{currency}}",
+    "comingUp": "即將到期",
+    "due": "到期",
+    "noTransactions": "此帳戶還沒有記錄。",
+    "splitLeg": "拆分 · 共 {{total}}",
+    "editing": "正在編輯帳戶"
   },
   "picker": {
     "more": "+ 另外{{count}}個"
@@ -428,7 +447,18 @@
     "archive": "歸檔分類",
     "monthBudget": "本月預算",
     "removeLower": "移除",
-    "addBudget": "+ 新增預算"
+    "addBudget": "+ 新增預算",
+    "restoreConfirm": "還原「{{name}}」？它會重新出現在選擇清單中。",
+    "spentOf": "{{spent}} / {{budget}}",
+    "editing": "正在編輯分類",
+    "spentIn": "{{month}}支出",
+    "receivedIn": "{{month}}收入",
+    "addTo": "+ 新增到{{name}}",
+    "archivedHint": "已歸檔的分類不會出現在選擇清單中，過去的記錄仍保留它們。",
+    "monthStat": "本月：{{amount}} · {{entries}}",
+    "entries_other": "{{count}}條",
+    "monthStatNone": "本月還沒有記錄。",
+    "seeThem": "檢視 →"
   },
   "merge": {
     "alreadyKeeper": "已經是保留項。",
@@ -653,5 +683,17 @@
     "resetNoticeEmail": "你的 PIN 已透過帳戶電子郵件中的驗證碼，在「{{device}}」上重設（{{when}}）。",
     "resetNoticeDismiss": "知道了",
     "errorNoPin": "此人沒有設定 PIN。"
+  },
+  "settingsHub": {
+    "accountSync": "帳號與同步",
+    "syncOffTitle": "雲同步已關閉",
+    "syncOffHint": "登入以同步你的裝置",
+    "yourMoney": "我的錢",
+    "activeCount_other": "{{count}}項",
+    "syncHousehold": "同步與家庭",
+    "connectDevice": "連線裝置",
+    "preferences": "偏好設定",
+    "voiceEntry": "語音與記帳",
+    "dollarSummary": "$ = {{code}}"
   }
 }

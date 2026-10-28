@@ -16,6 +16,26 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
+## Unreleased
+
+- **A tidier Settings.** Settings is now a short page of groups (your
+  money, sync and household, preferences, app), each opening its own page,
+  with your sync status at the top.
+- **A page for each account.** Tap an account to see its balance, money in
+  and out this month, scheduled payments coming up, and its latest
+  entries. Edit it from there.
+- **Accounts are easier to find.** Accounts are grouped in a card per
+  bank, with search once you have a lot of them, totals for each currency,
+  and filters per person in a household.
+- **Categories at a glance.** Switch between Expense and Income, see what
+  each category spent this month, and how far along its budget is.
+  Subcategories hang clearly under their group.
+- **Editing slides up from the bottom.** Accounts and categories now open
+  in a panel instead of inside the list, so it's always clear what you're
+  editing.
+- **Bring back archived categories and accounts.** Archived ones now have
+  a Restore button.
+
 ## 0.13.0 — 2026-10-27
 
 - **"Only me" entries.** In a household, tick **Only me** on an entry you

@@ -1,27 +1,15 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import i18n from '../lib/i18n';
 import { Link, useLocation } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { accountName } from '../lib/starterLabels';
-import { accountLabel, formatAmount, nowUtc } from '../lib/format';
-import { getLocalUserId } from '../lib/identity';
+import { accountLabel, formatAmount, kindLabel } from '../lib/format';
 import { hasHousehold, personLabel, useHouseholdPeers } from '../lib/household';
 import { crossOwnerLosers } from '../lib/manualMerge';
-import type { Account, AccountKind } from '../lib/types';
-
-// docs/12: name, kind, institution all read/write through the account
-// fields directly — the kind list is fixed (D53's layout), not derived
-// from usage. No currency, no savings goal — see Account.
-const ACCOUNT_KINDS: AccountKind[] = ['checking', 'credit', 'cash', 'savings'];
-const kindLabel = (kind: AccountKind) => i18n.t(`accountKind.${kind}`);
-
-// institutionSnapshot freezes the editing row's grouping key for the
-// duration of the edit session (see effectiveInstitution below) — without
-// it, typing in the Institution field (the live grouping key) reparents
-// the row into a different/new group on every keystroke, remounting
-// AccountForm and losing focus mid-edit.
-type OpenPanel = { type: 'edit'; id: string; institutionSnapshot: string | null } | { type: 'create' } | null;
+import { ACCOUNT_PICKER_SCALE_THRESHOLD } from '../lib/settings';
+import type { Account } from '../lib/types';
+import { AccountForm } from './AccountForm';
+import { BottomSheet } from './BottomSheet';
 
 // Backlog 2026-08-23's manual merge-duplicates tool. 'picking' collects a
 // survivor first (tap any row), then any number of duplicates to fold
@@ -32,6 +20,13 @@ type MergeState =
   | { step: 'picking'; survivorId: string | null; loserIds: Set<string> }
   | { step: 'review'; survivorId: string; loserIds: string[] };
 
+// 'all', a profile id, or accounts with no owner.
+type PersonFilter = 'all' | 'shared' | string;
+
+// docs/79 A1 — institution cards, search and per-person filters at the
+// real 15-20+ account scale (docs/12). A row opens the account's own page
+// (D309); editing happens there, never from the list. "+" opens the
+// create sheet (D311).
 export function AccountsScreen() {
   const store = useStore();
   const { t } = useTranslation();
@@ -41,10 +36,11 @@ export function AccountsScreen() {
   // straight to the create form instead of an empty list they'd still
   // have to find "+" on.
   const redirectState = location.state as { openCreate?: boolean; reason?: string } | null;
-  const [openPanel, setOpenPanel] = useState<OpenPanel>(redirectState?.openCreate ? { type: 'create' } : null);
-  const [expandedGroups, setExpandedGroups] = useState<Set<string> | null>(null);
+  const [creating, setCreating] = useState(!!redirectState?.openCreate);
   const [archivedOpen, setArchivedOpen] = useState(false);
   const [mergeState, setMergeState] = useState<MergeState>({ step: 'off' });
+  const [query, setQuery] = useState('');
+  const [person, setPerson] = useState<PersonFilter>('all');
   const peers = useHouseholdPeers();
   // docs/26 D123 — owner_user_id renders as a name prefix in the row's
   // existing name slot, but only once a household actually has 2+
@@ -56,6 +52,8 @@ export function AccountsScreen() {
 
   const active = store.accounts.filter((a) => !a.archived);
   const archived = store.accounts.filter((a) => a.archived);
+  const showSearch = active.length > ACCOUNT_PICKER_SCALE_THRESHOLD;
+  const people = store.profiles.filter((p) => !p.deletedAt);
 
   // D59: list order is most-recently-used, derived from transaction history —
   // no stored sort_order. Same recency signal doc 07 derives for defaults.
@@ -84,62 +82,41 @@ export function AccountsScreen() {
   const byRecency = (list: Account[]) =>
     [...list].sort((a, b) => (recency.get(b.id) ?? '').localeCompare(recency.get(a.id) ?? ''));
 
-  // The row currently being edited keeps the institution it had when
-  // editing started, regardless of what's been typed since — see the
-  // OpenPanel comment above. Everything else uses its live value.
-  const effectiveInstitution = useCallback(
-    (a: Account): string | null => {
-      if (openPanel?.type === 'edit' && openPanel.id === a.id) return openPanel.institutionSnapshot;
-      return a.institution;
-    },
-    [openPanel],
-  );
+  // Merging needs every account in reach, so filters don't apply then.
+  const filtering = mergeState.step === 'off';
+  const q = query.trim().toLowerCase();
+  const visible = active.filter((a) => {
+    if (!filtering) return true;
+    if (person === 'shared' && a.ownerUserId !== null) return false;
+    if (person !== 'all' && person !== 'shared' && a.ownerUserId !== person) return false;
+    if (q && !`${accountLabel(a)} ${a.institution ?? ''} ${kindLabel(a.kind)}`.toLowerCase().includes(q)) return false;
+    return true;
+  });
 
-  // D60/D61: group by institution; ungrouped accounts list plainly, no header.
-  const groups = useMemo(() => {
+  // D60/D61: group by institution; ungrouped accounts sit in their own
+  // card with no header.
+  const groups = (() => {
     const byInstitution = new Map<string, Account[]>();
-    for (const a of active) {
-      const institution = effectiveInstitution(a);
-      if (!institution) continue;
-      const arr = byInstitution.get(institution) ?? [];
+    for (const a of visible) {
+      if (!a.institution) continue;
+      const arr = byInstitution.get(a.institution) ?? [];
       arr.push(a);
-      byInstitution.set(institution, arr);
+      byInstitution.set(a.institution, arr);
     }
-    const sortByRecency = (list: Account[]) =>
-      [...list].sort((a, b) => (recency.get(b.id) ?? '').localeCompare(recency.get(a.id) ?? ''));
     return [...byInstitution.entries()]
-      .map(([institution, accounts]) => ({ institution, accounts: sortByRecency(accounts) }))
+      .map(([institution, accounts]) => ({ institution, accounts: byRecency(accounts) }))
       .sort((a, b) => (recency.get(b.accounts[0].id) ?? '').localeCompare(recency.get(a.accounts[0].id) ?? ''));
-  }, [active, recency, effectiveInstitution]);
+  })();
+  const ungrouped = byRecency(visible.filter((a) => !a.institution));
 
-  const ungrouped = byRecency(active.filter((a) => !effectiveInstitution(a)));
-
-  // Most-recently-used group expanded by default, others collapsed — a single
-  // computed default, not re-derived after the user starts toggling groups.
-  // While merging, every group is forced open instead — a duplicate
-  // sitting in a collapsed group would otherwise be impossible to pick.
-  const effectiveExpandedGroups =
-    mergeState.step !== 'off'
-      ? new Set(groups.map((g) => g.institution))
-      : (expandedGroups ?? new Set(groups[0] ? [groups[0].institution] : []));
-
-  function toggleGroup(institution: string) {
-    const next = new Set(effectiveExpandedGroups);
-    if (next.has(institution)) next.delete(institution);
-    else next.add(institution);
-    setExpandedGroups(next);
-  }
-
-  function toggleRow(account: Account) {
-    setOpenPanel((p) =>
-      p?.type === 'edit' && p.id === account.id
-        ? null
-        : { type: 'edit', id: account.id, institutionSnapshot: account.institution },
-    );
+  // docs/10 — one total per currency across what's shown, never blended.
+  const totals = new Map<string, number>();
+  for (const a of visible) {
+    for (const b of store.balancesFor(a.id)) totals.set(b.currency, (totals.get(b.currency) ?? 0) + b.cents);
   }
 
   function toggleMergeMode() {
-    setOpenPanel(null);
+    setCreating(false);
     setMergeState((m) => (m.step === 'off' ? { step: 'picking', survivorId: null, loserIds: new Set() } : { step: 'off' }));
   }
 
@@ -171,12 +148,27 @@ export function AccountsScreen() {
     setMergeState({ step: 'off' });
   }
 
+  // docs/79 D308, applied to accounts too — archiving only hides an
+  // account, so restoring just clears the flag. Asks first.
+  function restore(account: Account) {
+    if (!window.confirm(t('accounts.restoreConfirm', { name: accountLabel(account) }))) return;
+    store.updateAccount(account.id, { archived: false });
+  }
+
   const txCountForAccount = (accountId: string) =>
     store.transactions.filter((tx) => !tx.deletedAt && tx.accountId === accountId).length;
 
-  function renderRow(account: Account, showInstitutionInLabel: boolean) {
-    const isEditing = openPanel?.type === 'edit' && openPanel.id === account.id;
+  function renderBalances(account: Account) {
     const balances = store.balancesFor(account.id);
+    if (balances.length === 0) return <span className="balance-line empty">{t('accounts.noActivity')}</span>;
+    return balances.map((b) => (
+      <span className={`balance-line ${b.cents < 0 ? 'neg' : ''}`} key={b.currency}>
+        {formatAmount(b.cents, b.currency)}
+      </span>
+    ));
+  }
+
+  function renderRow(account: Account, showInstitutionInLabel: boolean) {
     const label = showInstitutionInLabel ? accountLabel(account) : accountName(account);
     const owner = ownerPrefix(account);
 
@@ -186,64 +178,36 @@ export function AccountsScreen() {
       return (
         <button
           key={account.id}
-          className={`account-row ${isSurvivor ? 'picked-survivor' : ''} ${isPicked ? 'picked-duplicate' : ''}`}
+          className={`account-card-row ${isSurvivor ? 'picked-survivor' : ''} ${isPicked ? 'picked-duplicate' : ''}`}
           disabled={isSurvivor}
           onClick={() => handleMergeTap(account)}
         >
-          <div className="account-row-top">
+          <span className="account-card-main">
             <span className="account-name">
               {isSurvivor && <span className="merge-badge">{t('duplicates.keeper')}</span>}
               {!isSurvivor && mergeState.survivorId !== null && (
                 <span className="merge-check">{isPicked ? '✓' : '○'}</span>
               )}
-              {owner && <span className="owner-prefix">{owner} — </span>}
               {label}
             </span>
-            <span className="account-kind">{kindLabel(account.kind)}</span>
-          </div>
-          <div className="account-balances">
-            {balances.length === 0 ? (
-              <span className="balance-line empty">{t('accounts.noActivity')}</span>
-            ) : (
-              balances.map((b) => (
-                <span className="balance-line" key={b.currency}>
-                  {formatAmount(b.cents, b.currency)}
-                </span>
-              ))
-            )}
-          </div>
+            <span className="account-card-sub">{kindLabel(account.kind)}</span>
+          </span>
+          <span className="account-balances">{renderBalances(account)}</span>
         </button>
       );
     }
 
     return (
-      <div className="account-block" key={account.id}>
-        <button className="account-row" onClick={() => toggleRow(account)}>
-          <div className="account-row-top">
-            <span className="account-name">
-              {owner && <span className="owner-prefix">{owner} — </span>}
-              {label}
-            </span>
-            <span className="account-kind">{kindLabel(account.kind)}</span>
-          </div>
-          <div className="account-balances">
-            {balances.length === 0 ? (
-              <span className="balance-line empty">{t('accounts.noActivity')}</span>
-            ) : (
-              balances.map((b) => (
-                <span className="balance-line" key={b.currency}>
-                  {formatAmount(b.cents, b.currency)}
-                </span>
-              ))
-            )}
-          </div>
-        </button>
-        {isEditing && (
-          <div className="account-edit">
-            <AccountForm account={account} onDone={() => setOpenPanel(null)} />
-          </div>
-        )}
-      </div>
+      <Link key={account.id} to={`/accounts/${account.id}`} className="account-card-row">
+        <span className="account-card-main">
+          <span className="account-name">{label}</span>
+          <span className="account-card-sub">
+            {kindLabel(account.kind)}
+            {owner && <span className="owner-tag">{owner}</span>}
+          </span>
+        </span>
+        <span className="account-balances">{renderBalances(account)}</span>
+      </Link>
     );
   }
 
@@ -257,11 +221,7 @@ export function AccountsScreen() {
             <button className="icon-btn" aria-label={t('accounts.mergeDuplicates')} onClick={toggleMergeMode}>⇄</button>
           )}
           {mergeState.step === 'off' && (
-            <button
-              className="icon-btn"
-              aria-label={t('accounts.add')}
-              onClick={() => setOpenPanel((p) => (p?.type === 'create' ? null : { type: 'create' }))}
-            >
+            <button className="icon-btn" aria-label={t('accounts.add')} onClick={() => setCreating(true)}>
               +
             </button>
           )}
@@ -330,232 +290,99 @@ export function AccountsScreen() {
           );
         })()}
 
-      {openPanel?.type === 'create' && (
-        <section className="account-create">
-          <div className="section-label">{t('accounts.new')}</div>
-          {redirectState?.reason && <p className="empty-note">{redirectState.reason}</p>}
-          <AccountForm account={null} onDone={() => setOpenPanel(null)} />
-        </section>
+      {mergeState.step === 'off' && showSearch && (
+        <label className="list-search">
+          <span aria-hidden="true">⌕</span>
+          <input
+            type="search"
+            value={query}
+            placeholder={t('accounts.searchPlaceholder', { count: active.length })}
+            aria-label={t('accounts.search')}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </label>
+      )}
+
+      {mergeState.step === 'off' && showOwner && people.length > 1 && (
+        <div className="chip-row list-filters">
+          <button className={`chip ${person === 'all' ? 'picked' : ''}`} onClick={() => setPerson('all')}>
+            {t('accounts.everyone')}
+          </button>
+          {people.map((p) => (
+            <button key={p.id} className={`chip ${person === p.id ? 'picked' : ''}`} onClick={() => setPerson(p.id)}>
+              {p.displayName}
+            </button>
+          ))}
+          <button className={`chip ${person === 'shared' ? 'picked' : ''}`} onClick={() => setPerson('shared')}>
+            {t('accounts.shared')}
+          </button>
+        </div>
+      )}
+
+      {mergeState.step === 'off' && totals.size > 0 && (
+        <div className="currency-totals" aria-label={t('accounts.totals')}>
+          {[...totals.entries()].map(([currency, cents]) => (
+            <div className="currency-total" key={currency}>
+              <span className="currency-total-code">{currency}</span>
+              <span className={`currency-total-amount ${cents < 0 ? 'neg' : ''}`}>{formatAmount(cents, currency)}</span>
+            </div>
+          ))}
+        </div>
       )}
 
       {mergeState.step !== 'review' && (
-        <div className="accounts-list">
-          {groups.map((g) => {
-            const isOpen = effectiveExpandedGroups.has(g.institution);
-            return (
-              <div className="account-group" key={g.institution}>
-                <button className="group-header" onClick={() => toggleGroup(g.institution)}>
-                  <span>{isOpen ? '▾' : '▸'} {g.institution}</span>
-                  <span className="group-count">({g.accounts.length})</span>
-                </button>
-                {isOpen && g.accounts.map((a) => renderRow(a, false))}
+        <div className="account-cards">
+          {groups.map((g) => (
+            <section className="account-card" key={g.institution} aria-label={g.institution}>
+              <div className="account-card-head">
+                <span className="institution-badge" aria-hidden="true">{g.institution.trim()[0]?.toUpperCase()}</span>
+                <span className="account-card-title">{g.institution}</span>
+                <span className="group-count">{t('accounts.count', { count: g.accounts.length })}</span>
               </div>
-            );
-          })}
+              {g.accounts.map((a) => renderRow(a, false))}
+            </section>
+          ))}
 
-          {ungrouped.map((a) => renderRow(a, true))}
+          {ungrouped.length > 0 && <section className="account-card">{ungrouped.map((a) => renderRow(a, true))}</section>}
 
-          {active.length === 0 && !openPanel && (
-            <p className="empty-note">{t('accounts.empty')}</p>
-          )}
+          {active.length === 0 && <p className="empty-note">{t('accounts.empty')}</p>}
+          {active.length > 0 && visible.length === 0 && <p className="empty-note">{t('accounts.noMatch')}</p>}
         </div>
       )}
 
       {mergeState.step === 'off' && archived.length > 0 && (
-        <div className="account-group">
-          <button className="group-header" onClick={() => setArchivedOpen((o) => !o)}>
+        <div className="archived-section">
+          <button className="group-header" aria-expanded={archivedOpen} onClick={() => setArchivedOpen((o) => !o)}>
             <span>{t('accounts.archived', { count: archived.length })}</span>
             <span className="group-count">{archivedOpen ? '▾' : '›'}</span>
           </button>
-          {archivedOpen &&
-            archived.map((a) => (
-              <div className="account-row archived-row" key={a.id}>
-                <div className="account-row-top">
-                  <span className="account-name">
-                    {ownerPrefix(a) && <span className="owner-prefix">{ownerPrefix(a)} — </span>}
-                    {accountLabel(a)}
-                  </span>
-                  <span className="account-kind">{kindLabel(a.kind)}</span>
-                </div>
-                <div className="account-balances">
-                  {store.balancesFor(a.id).map((b) => (
-                    <span className="balance-line" key={b.currency}>
-                      {formatAmount(b.cents, b.currency)}
+          {archivedOpen && (
+            <section className="account-card">
+              {archived.map((a) => (
+                <div className="account-card-row archived-row" key={a.id}>
+                  <Link to={`/accounts/${a.id}`} className="account-card-main">
+                    <span className="account-name">
+                      {ownerPrefix(a) && <span className="owner-prefix">{ownerPrefix(a)} — </span>}
+                      {accountLabel(a)}
                     </span>
-                  ))}
+                    <span className="account-card-sub">{kindLabel(a.kind)}</span>
+                  </Link>
+                  <button type="button" className="chip restore-chip" onClick={() => restore(a)}>
+                    {t('common.restore')}
+                  </button>
                 </div>
-              </div>
-            ))}
-        </div>
-      )}
-    </main>
-  );
-}
-
-// D54: tapping a row expands this inline, no separate screen, for both
-// editing an existing account (account set) and creating one (account null).
-function AccountForm({ account, onDone }: { account: Account | null; onDone: () => void }) {
-  const store = useStore();
-  const { t } = useTranslation();
-  const peers = useHouseholdPeers();
-  const isNew = account === null;
-
-  const [draft, setDraft] = useState<Account>(
-    () =>
-      account ?? {
-        id: '',
-        institution: null,
-        name: '',
-        kind: 'checking',
-        archived: false,
-        ownerUserId: getLocalUserId(),
-        updatedAt: nowUtc(),
-      },
-  );
-  const current: Account = account ?? draft;
-
-  const [pickerOpen, setPickerOpen] = useState<'kind' | 'owner' | null>(null);
-  // Local mirrors of the free-text fields — `current.name`/`current.institution`
-  // for an existing account come straight from the store, and commit() writes
-  // through an async DB round-trip (PowerSync live query), so binding the
-  // input's value directly to them snaps the cursor to the end on every
-  // keystroke once that round-trip resolves.
-  const [nameStr, setNameStr] = useState(() => (isNew ? current.name : accountName(current)));
-  const [institutionStr, setInstitutionStr] = useState(() => current.institution ?? '');
-
-  function commit(patch: Partial<Account>) {
-    if (isNew) setDraft((d) => ({ ...d, ...patch }));
-    else store.updateAccount(current.id, patch);
-  }
-
-  function saveNew() {
-    if (!current.name.trim()) return;
-    store.addAccount({ ...draft, id: crypto.randomUUID() });
-    onDone();
-  }
-
-  function archive() {
-    if (isNew) return;
-    store.updateAccount(current.id, { archived: true });
-    onDone();
-  }
-
-  return (
-    <div className="account-form">
-      <label className="field-label">
-        {t('accounts.institution')}
-        <input
-          className="text-input"
-          placeholder={t('accounts.institutionPlaceholder')}
-          value={institutionStr}
-          onChange={(e) => {
-            const v = e.target.value;
-            setInstitutionStr(v);
-            commit({ institution: v || null });
-          }}
-        />
-      </label>
-
-      <label className="field-label">
-        {t('common.name')}
-        <input
-          className="text-input"
-          placeholder={t('accounts.namePlaceholder')}
-          value={nameStr}
-          onChange={(e) => {
-            const v = e.target.value;
-            setNameStr(v);
-            commit({ name: v });
-          }}
-        />
-      </label>
-
-      <div>
-        <div className="field-label">{t('accounts.kind')}</div>
-        <button
-          className="pill-tap"
-          onClick={() => setPickerOpen(pickerOpen === 'kind' ? null : 'kind')}
-        >
-          {kindLabel(current.kind)} ▾
-        </button>
-        {pickerOpen === 'kind' && (
-          <div className="chip-row">
-            {ACCOUNT_KINDS.map((k) => (
-              <button
-                key={k}
-                className={`chip ${k === current.kind ? 'picked' : ''}`}
-                onClick={() => {
-                  commit({ kind: k });
-                  setPickerOpen(null);
-                }}
-              >
-                {kindLabel(k)}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* A new feature request: an account can optionally be linked to a
-          real profile as its owner, so a transaction on it can default
-          its payer automatically instead of asking every time
-          (EntryZone.tsx's startBlank/confirmPreview). Only shown once
-          there's actually more than one profile to choose between —
-          identical to a solo account, this has nothing to offer. */}
-      {/* docs/71 D252 — removed people aren't offered as a new owner; an
-          account they already own keeps showing their name, marked. */}
-      {store.profiles.filter((p) => !p.deletedAt).length > 1 && (
-        <div>
-          <div className="field-label">{t('accounts.owner')}</div>
-          <button className="pill-tap" onClick={() => setPickerOpen(pickerOpen === 'owner' ? null : 'owner')}>
-            {current.ownerUserId ? personLabel(current.ownerUserId, peers, store.profiles) : t('accounts.shared')} ▾
-          </button>
-          {pickerOpen === 'owner' && (
-            <div className="chip-row">
-              <button
-                className={`chip ${current.ownerUserId === null ? 'picked' : ''}`}
-                onClick={() => {
-                  commit({ ownerUserId: null });
-                  setPickerOpen(null);
-                }}
-              >
-                {t('accounts.shared')}
-              </button>
-              {store.profiles
-                .filter((p) => !p.deletedAt)
-                .map((p) => (
-                <button
-                  key={p.id}
-                  className={`chip ${p.id === current.ownerUserId ? 'picked' : ''}`}
-                  onClick={() => {
-                    commit({ ownerUserId: p.id });
-                    setPickerOpen(null);
-                  }}
-                >
-                  {p.displayName}
-                </button>
               ))}
-            </div>
+            </section>
           )}
         </div>
       )}
 
-      <div className="form-actions">
-        {isNew ? (
-          <>
-            <button className="chip ghost" onClick={onDone}>
-              {t('common.cancelLower')}
-            </button>
-            <button className="save-btn" onClick={saveNew}>
-              {t('accounts.add')}
-            </button>
-          </>
-        ) : (
-          <button className="text-link archive-link" onClick={archive}>
-            {t('accounts.archive')}
-          </button>
-        )}
-      </div>
-    </div>
+      {creating && (
+        <BottomSheet title={t('accounts.new')} onClose={() => setCreating(false)}>
+          {redirectState?.reason && <p className="empty-note sheet-note">{redirectState.reason}</p>}
+          <AccountForm account={null} onDone={() => setCreating(false)} />
+        </BottomSheet>
+      )}
+    </main>
   );
 }

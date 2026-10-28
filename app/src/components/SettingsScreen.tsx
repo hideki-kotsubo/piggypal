@@ -1,174 +1,38 @@
-import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useStore } from '../lib/store';
+import { useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { Trans, useTranslation } from 'react-i18next';
-import i18n, { LANGUAGES, uiLocale, useLanguagePreference } from '../lib/i18n';
-import { isSpeechInputSupported } from '../lib/speechInput';
-import { useVoicePreference } from '../lib/voiceLanguage';
+import i18n, { LANGUAGES, useLanguagePreference } from '../lib/i18n';
+import { useStore } from '../lib/store';
 import { useDollarPreference } from '../lib/dollar';
-import { ACCOUNT_PICKER_SCALE_THRESHOLD, guessDeviceLabel, useAccountPickerMode, useDeviceLabel, useThemeMode } from '../lib/settings';
-import { usePairedPeers } from '../lib/peers';
-import { hasHousehold, householdMembers, useHouseholdPeers } from '../lib/household';
-import { PayerBadge } from './PayerBadge';
+import { useThemeMode } from '../lib/settings';
 import { APP_VERSION } from '../lib/version';
-import { formatTimeAgo } from '../lib/format';
-import {
-  clearPendingEmail,
-  fetchPowerSyncCredentials,
-  getRecentPendingEmail,
-  requestMagicLink,
-  setDeletedNotice,
-  setKeptData,
-  signOut,
-  useAuthAccount,
-  useDeletedNotice,
-  useKeptData,
-  useSessionExpired,
-} from '../lib/auth';
+import { useAuthAccount, useSessionExpired } from '../lib/auth';
 import { useInstallPrompt } from '../lib/installPrompt';
-import { disconnectSync, forceSync, usePendingUploadCount, useSyncStatus } from '../lib/db';
-import { formatLastSynced, useOnline, type ForceSyncResult } from '../lib/syncNow';
-import { useSkippedSyncOps } from '../lib/connector';
+import { useSyncStatus } from '../lib/db';
+import { connectionLabel, useOnline } from '../lib/syncNow';
 
+// docs/79 D310 — Settings is a short hub of groups; each row shows a
+// one-line summary and opens its own page. What used to be one long page
+// now lives in SyncSettingsScreen (account, sync, this device) and
+// PreferenceScreens (appearance, language, voice & entry).
 export function SettingsScreen() {
   const store = useStore();
-  const [pickerMode, setPickerMode] = useAccountPickerMode();
-  const [themeMode, setThemeMode] = useThemeMode();
   const { t } = useTranslation();
-  const { preference: languagePreference, language, automaticLanguage, setPreference: setLanguagePreference } = useLanguagePreference();
-  const [voicePreference, setVoicePreference] = useVoicePreference();
-  const [dollarPreference, setDollarPreference] = useDollarPreference();
-  const currencyNames = new Intl.DisplayNames([uiLocale()], { type: 'currency' });
-  const [deviceLabel, setDeviceLabel] = useDeviceLabel();
-  const [peers] = usePairedPeers();
-  const householdPeers = useHouseholdPeers();
-  const [authAccount, setAuthAccount] = useAuthAccount();
-  const syncStatus = useSyncStatus();
+  const [authAccount] = useAuthAccount();
   const sessionExpired = useSessionExpired();
-  const deletedNotice = useDeletedNotice();
-  const keptData = useKeptData();
-  const [signOutOpen, setSignOutOpen] = useState(false);
-  const skippedSyncOps = useSkippedSyncOps();
-  const navigate = useNavigate();
+  const syncStatus = useSyncStatus();
+  const online = useOnline();
+  const [themeMode] = useThemeMode();
+  const { preference: languagePreference, language } = useLanguagePreference();
+  const [dollarPreference] = useDollarPreference();
   const install = useInstallPrompt();
   const [showIosInstallSteps, setShowIosInstallSteps] = useState(false);
-  // docs/56 D204: a link sent in the last 15 minutes resumes straight into
-  // the code field — an iOS home-screen PWA often reloads from scratch
-  // after the user switches to Mail and back.
-  const [emailInput, setEmailInput] = useState(() => getRecentPendingEmail() ?? '');
-  const [linkState, setLinkState] = useState<'idle' | 'sending' | 'sent' | 'error'>(() =>
-    getRecentPendingEmail() ? 'sent' : 'idle',
-  );
-  const [linkError, setLinkError] = useState('');
-  const [codeInput, setCodeInput] = useState('');
-  const codeDigits = codeInput.replace(/\D/g, '');
-  const [syncing, setSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState<ForceSyncResult | null>(null);
-  const online = useOnline();
-  const pendingUploads = usePendingUploadCount();
-  // Re-render twice a minute so "Last synced just now" doesn't outlive
-  // the minute it's true for.
-  const [, setClockTick] = useState(0);
-  useEffect(() => {
-    const timer = setInterval(() => setClockTick((n) => n + 1), 30_000);
-    return () => clearInterval(timer);
-  }, []);
 
-  // A real gap found from a real stuck device: its refresh chain had been
-  // revoked server-side (see auth.ts's signOut comment), and there was no
-  // way to sign out or force a fresh connection attempt — Settings just
-  // showed "signed in as ___" next to a permanently "Not connected" cloud
-  // sync with no recourse but clearing browser storage by hand.
-  //
-  // docs/75 D283: signing out erases this device by default (the server
-  // keeps everything that synced); D284's "keep data" only disconnects,
-  // and remembers which account the data belongs to. The server sign-out
-  // goes first, while the refresh token is still there to revoke.
-  async function handleSignOut(keepData: boolean) {
-    if (!keepData) {
-      await signOut();
-      await store.resetLocalData();
-      return;
-    }
-    const knownEmail = authAccount?.email ?? '';
-    await disconnectSync();
-    await signOut();
-    setKeptData(authAccount);
-    setAuthAccount(null);
-    setSignOutOpen(false);
-    setEmailInput(knownEmail);
-  }
-
-  // "Reconnect" only has something to do when the session itself is still
-  // valid — it can't revive one that's actually dead (revoked/expired),
-  // since there's no credential left to reconnect with (see auth.ts's
-  // signOut comment on why that's not a bug). A real report found that
-  // case looked identical to a broken button: tapping it just did
-  // nothing, with zero feedback either way. Checking credentials directly
-  // first tells the two apart — a dead session now drops straight into
-  // the sign-in-again form instead of silently failing, with the known
-  // email pre-filled since there's no reason to make the user retype
-  // something this device already knows.
-  //
-  // docs/69 D246: the same handler backs "Sync now" while connected —
-  // forceSync() is a reconnect that also waits for the sync to land.
-  async function handleSyncNow() {
-    setSyncing(true);
-    setSyncResult(null);
-    try {
-      await disconnectSync();
-      const credentials = await fetchPowerSyncCredentials();
-      if (!credentials) {
-        const knownEmail = authAccount?.email ?? '';
-        setAuthAccount(null);
-        setEmailInput(knownEmail);
-        return;
-      }
-      setSyncResult(await forceSync());
-    } finally {
-      setSyncing(false);
-    }
-  }
-  const downloadProgress = syncStatus.downloadProgress;
-  const syncError = syncStatus.dataFlowStatus.downloadError ?? syncStatus.dataFlowStatus.uploadError;
-  // docs/13 D69 — only surface this once it'd actually do something,
-  // rather than a control that's a no-op below the threshold.
-  const showPickerModeSetting = store.accounts.filter((a) => !a.archived).length > ACCOUNT_PICKER_SCALE_THRESHOLD;
-
-  // docs/05 flow step 1: "User taps 'Enable sync & AI' → enters email."
-  async function sendMagicLink() {
-    setLinkState('sending');
-    try {
-      await requestMagicLink(emailInput.trim());
-      setLinkState('sent');
-    } catch (err) {
-      setLinkState('error');
-      setLinkError(err instanceof Error ? err.message : t('settings.sendFailed'));
-    }
-  }
-
-  // docs/56 D204: finish sign-in with the emailed code, right here in the
-  // context that asked for it. The code rides in router state, never the
-  // URL, so it doesn't land in history; AuthVerifyScreen runs the same
-  // post-verify profile/merge flow either way.
-  function submitCode() {
-    navigate('/auth/verify', { state: { email: emailInput.trim(), code: codeDigits } });
-  }
-
-  function useDifferentEmail() {
-    clearPendingEmail();
-    setCodeInput('');
-    setLinkState('idle');
-  }
-
-  function resetData() {
-    if (
-      !window.confirm(t('settings.resetConfirm'))
-    ) {
-      return;
-    }
-    void store.resetLocalData();
-  }
+  const accountCount = store.accounts.filter((a) => !a.archived).length;
+  const categoryCount = store.categories.filter((c) => !c.archived).length;
+  const scheduleCount = store.scheduledPayments.filter((r) => !r.archived && !r.deletedAt).length;
+  const languageLabel = LANGUAGES.find((l) => l.tag === language)?.label ?? language;
+  const themeLabel = t(themeMode === 'system' ? 'settings.themeSystem' : themeMode === 'light' ? 'settings.themeLight' : 'settings.themeDark');
 
   return (
     <main className="home">
@@ -178,460 +42,151 @@ export function SettingsScreen() {
         <span style={{ width: '3rem' }} />
       </div>
 
-      <div className="accounts-list">
-        <Link to="/accounts" className="settings-row">
-          <span>{t('settings.accounts')}</span>
-          <span className="settings-row-arrow">›</span>
-        </Link>
-        <Link to="/categories" className="settings-row">
-          <span>{t('settings.categories')}</span>
-          <span className="settings-row-arrow">›</span>
-        </Link>
-        <Link to="/schedules" className="settings-row">
-          <span>{t('settings.scheduledPayments')}</span>
-          <span className="settings-row-arrow">›</span>
-        </Link>
-      </div>
-
-      <div className="section-label">{t('settings.account')}</div>
-      {/* docs/72 D260 — signed out because the owner deleted the account
-          on another device. */}
-      {!authAccount && deletedNotice !== null && (
-        <div className="settings-field account-deleted-note">
-          <p className="delete-account-text">
-            {deletedNotice ? (
-              <Trans i18nKey="settings.accountDeletedNotice" values={{ email: deletedNotice }} components={{ strong: <strong /> }} />
-            ) : (
-              t('settings.accountDeletedNoticeAnon')
-            )}
-          </p>
-          <button type="button" className="chip ghost" onClick={() => setDeletedNotice(null)}>
-            {t('common.ok')}
-          </button>
-        </div>
-      )}
-      {authAccount ? (
-        <div className="accounts-list">
-          <div className="settings-row settings-row-static">
-            <span>{t('settings.signedInAs')}</span>
-            <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>{authAccount.email || t('settings.thisDeviceFallback')}</span>
-          </div>
-          <div className="settings-row settings-row-static">
-            <span>{t('settings.cloudSync')}</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>
-                {syncing
-                  ? downloadProgress
-                    ? t('settings.downloading', { percent: Math.round(downloadProgress.downloadedFraction * 100) })
-                    : t('settings.syncing')
-                  : sessionExpired
-                    ? t('settings.signedOutHere')
-                    : !online
-                      ? t('settings.offline')
-                      : syncStatus.connected
-                        ? t('settings.connected')
-                        : syncStatus.connecting
-                          ? t('settings.connecting')
-                          : t('settings.notConnected')}
-              </span>
-              {/* Available whether or not the status says connected — a
-                  real report found the connection can silently stall
-                  without ever leaving "Connecting…", and a "Connected"
-                  device can still be behind (docs/69). Offline, it has
-                  nothing to reach, so it's disabled rather than hidden. */}
-              {!syncing && (
-                <button
-                  type="button"
-                  className="chip ghost"
-                  disabled={!online && !sessionExpired}
-                  onClick={() => void handleSyncNow()}
-                >
-                  {sessionExpired ? t('settings.signInAgain') : syncStatus.connected ? t('settings.syncNow') : t('settings.reconnect')}
-                </button>
+      {/* The account card is the way into Account & sync, signed in or not. */}
+      <div className="settings-group">
+        <Link to="/settings/sync" className="settings-hub-row settings-hub-account">
+          <span className="settings-hub-avatar" aria-hidden="true">
+            {authAccount?.email ? authAccount.email[0].toUpperCase() : <HubIcon name="cloud" />}
+          </span>
+          <span className="settings-hub-text">
+            <span className="settings-hub-title">
+              {authAccount ? authAccount.email || t('settings.thisDeviceFallback') : t('settingsHub.syncOffTitle')}
+            </span>
+            <span className="settings-hub-meta">
+              {authAccount ? (
+                <>
+                  <span className={`settings-hub-dot ${syncStatus.connected && online && !sessionExpired ? 'on' : ''}`} aria-hidden="true" />
+                  {connectionLabel(sessionExpired, online, syncStatus)}
+                </>
+              ) : (
+                t('settingsHub.syncOffHint')
               )}
             </span>
-          </div>
-          {!sessionExpired && (
-            <div className="settings-row settings-row-static">
-              <span>{t('settings.lastSynced')}</span>
-              <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>
-                {formatLastSynced(syncStatus.lastSyncedAt)}
-              </span>
-            </div>
-          )}
-          {pendingUploads > 0 && (
-            <div className="settings-row settings-row-static">
-              <span>{t('settings.waitingUpload')}</span>
-              <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>
-                {t('settings.changes', { count: pendingUploads })}
-              </span>
-            </div>
-          )}
-          {/* D247: the SDK's error text is raw server JSON — kept in the
-              tooltip for debugging, not shown as the message. */}
-          {!syncing && (syncResult === 'still-running' || (syncResult === 'error' && syncError)) && (
-            <div className="settings-row settings-row-static">
-              <span>{t('settings.sync')}</span>
-              <span
-                title={syncResult === 'error' ? syncError?.message : undefined}
-                style={{ color: syncResult === 'error' ? 'var(--warn)' : 'var(--ink-faint)', fontSize: '0.85rem' }}
-              >
-                {syncResult === 'error' ? t('settings.syncRetrying') : t('settings.syncBackground')}
-              </span>
-            </div>
-          )}
-          {/* docs/46 D163 — the whole point of this endpoint no longer
-              returning a bare { ok: true }: a skipped op is now visible
-              here instead of silently vanishing from view. */}
-          {skippedSyncOps.length > 0 && (
-            <div className="settings-row settings-row-static">
-              <span>{t('settings.sync')}</span>
-              <span style={{ color: 'var(--warn)', fontSize: '0.85rem' }}>
-                {t('settings.skipped', { count: skippedSyncOps.length })}
-              </span>
-            </div>
-          )}
-          <button className="settings-row settings-row-danger" onClick={() => setSignOutOpen((v) => !v)}>
-            <span>{t('settings.signOut')}</span>
-            <span className="settings-row-arrow">{signOutOpen ? '⌄' : '›'}</span>
-          </button>
-          {signOutOpen && (
-            <div className="settings-field signout-panel">
-              <p className="delete-account-text">{t('signOut.explain')}</p>
-              {/* D287 — erasing also drops the upload queue, so anything
-                  still waiting there would be lost for good. */}
-              {pendingUploads > 0 && (
-                <p className="delete-account-text signout-warn">{t('signOut.pending', { count: pendingUploads })}</p>
-              )}
-              {pendingUploads > 0 && online && !sessionExpired && (
-                <button type="button" className="chip ghost" disabled={syncing} onClick={() => void handleSyncNow()}>
-                  {syncing ? t('settings.syncing') : t('settings.syncNow')}
-                </button>
-              )}
-              <button className="save-btn delete-account-btn" onClick={() => void handleSignOut(false)}>
-                {t('signOut.erase')}
-              </button>
-              <button type="button" className="chip ghost signout-keep" onClick={() => void handleSignOut(true)}>
-                {t('signOut.keep')}
-              </button>
-            </div>
-          )}
-          {/* docs/72 D257 — App Review 5.1.1(v). */}
-          <Link to="/settings/delete-account" className="settings-row settings-row-danger">
-            <span>{t('settings.deleteAccount')}</span>
-            <span className="settings-row-arrow">›</span>
-          </Link>
-        </div>
-      ) : linkState === 'sent' ? (
-        <div className="settings-field signin-code">
-          <p className="qr-caption">
-            {t('settings.codeSent', { email: emailInput.trim() })}
-          </p>
-          <label className="field-label">
-            {t('settings.codeLabel')}
-            <input
-              className="text-input"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              placeholder="123 456"
-              maxLength={7}
-              value={codeInput}
-              onChange={(e) => setCodeInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && codeDigits.length === 6) submitCode();
-              }}
-            />
-          </label>
-          <div className="signin-code-actions">
-            <button className="save-btn" onClick={submitCode} disabled={codeDigits.length !== 6}>
-              {t('settings.signIn')}
-            </button>
-            <button type="button" className="chip ghost" onClick={useDifferentEmail}>
-              {t('settings.differentEmail')}
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="settings-field">
-          {/* docs/75 D284/D285 — signed out keeping data: only that
-              account can pick it back up; any other one erases it first. */}
-          {keptData && (
-            <p className="delete-account-text">
-              {keptData.email ? t('signOut.keptNote', { email: keptData.email }) : t('signOut.keptNoteAnon')}
-            </p>
-          )}
-          <label className="field-label">
-            {t('settings.enableSync')}
-            <input
-              className="text-input"
-              type="email"
-              placeholder={t('settings.emailPlaceholder')}
-              value={emailInput}
-              onChange={(e) => setEmailInput(e.target.value)}
-            />
-          </label>
-          {keptData?.email && emailInput.trim() && !sameEmail(emailInput, keptData.email) ? (
-            <>
-              <p className="delete-account-text signout-warn">{t('signOut.otherEmail', { email: keptData.email })}</p>
-              <button className="save-btn delete-account-btn" onClick={resetData}>
-                {t('signOut.eraseNow')}
-              </button>
-            </>
-          ) : (
-            <button
-              className="save-btn"
-              onClick={() => void sendMagicLink()}
-              disabled={!emailInput.trim() || linkState === 'sending'}
-            >
-              {linkState === 'sending' ? t('settings.sending') : t('settings.sendLink')}
-            </button>
-          )}
-          {linkState === 'error' && <p className="qr-caption">{linkError}</p>}
-          {/* docs/71 D255 — no email needed when another device is
-              already signed in to the account. */}
-          <Link to="/auth/scan" className="text-link signin-scan-link">
-            {t('settings.scanCode')}
-          </Link>
-        </div>
-      )}
-
-      <div className="section-label">{t('settings.sync')}</div>
-      <div className="settings-field">
-        <label className="field-label">
-          {t('settings.deviceName')}
-          <input
-            className="text-input"
-            placeholder={guessDeviceLabel()}
-            value={deviceLabel}
-            onChange={(e) => {
-              setDeviceLabel(e.target.value);
-              // docs/48 D176 — keep this device's synced row's label in
-              // step with what Settings shows, so the household devices
-              // list below (and any other device's view of it) doesn't
-              // go stale the moment this is renamed.
-              void store.touchDevice();
-            }}
-          />
-        </label>
-      </div>
-      <div className="accounts-list">
-        <Link to="/settings/pair" className="settings-row">
-          <span>{t('settings.connectDevice')}</span>
-          <span className="settings-row-arrow">›</span>
+          </span>
+          <Chevron />
         </Link>
-        {/* docs/71 — people and devices in one place (replaces the
-            separate profiles screen, devices list and members list). */}
+      </div>
+
+      <div className="section-label">{t('settingsHub.yourMoney')}</div>
+      <div className="settings-group">
+        <HubRow to="/accounts" icon="wallet" label={t('settings.accounts')} meta={String(accountCount)} />
+        <HubRow to="/categories" icon="tag" label={t('settings.categories')} meta={String(categoryCount)} />
+        <HubRow
+          to="/schedules"
+          icon="calendar"
+          label={t('settings.scheduledPayments')}
+          meta={scheduleCount > 0 ? t('settingsHub.activeCount', { count: scheduleCount }) : undefined}
+        />
+      </div>
+
+      <div className="section-label">{t('settingsHub.syncHousehold')}</div>
+      <div className="settings-group">
+        {/* docs/71 — people and devices in one place, once signed in. */}
         {authAccount && (
-          <Link to="/settings/household" className="settings-row">
-            <span>{t('settings.household')}</span>
-            <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>
-              {householdSummary(store.profiles.filter((p) => !p.deletedAt).length, store.devices.length)}{' '}
-              <span className="settings-row-arrow">›</span>
-            </span>
-          </Link>
+          <HubRow
+            to="/settings/household"
+            icon="people"
+            label={t('settings.household')}
+            meta={householdSummary(store.profiles.filter((p) => !p.deletedAt).length, store.devices.length)}
+          />
         )}
-      </div>
-      {peers.length > 0 && (
-        <>
-          <div className="section-label">{t('settings.pairedDevices')}</div>
-          <div className="accounts-list">
-            {/* Tappable, unlike the earlier static version — the whole
-                point of remembering a peer (docs/25 D138) is a lighter
-                repeat sync: this jumps straight into pairing with the
-                own-device/someone-else question already answered from
-                last time, instead of the full choice flow again. */}
-            {peers.map((p) => (
-              <Link key={p.id} to={`/settings/pair?peer=${encodeURIComponent(p.id)}`} className="settings-row">
-                <span>{p.label}</span>
-                <span style={{ color: 'var(--ink-faint)', fontSize: '0.8rem' }}>{t('settings.synced', { time: formatTimeAgo(p.lastSyncedAt) })}</span>
-              </Link>
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* Signed in, the Household screen covers this (docs/71); this stays
-          for a household formed only through docs/25's P2P pairing. */}
-      {!authAccount && hasHousehold(householdPeers) && (
-        <>
-          {/* docs/26 D124 — bare read-only members list, just enough to say
-              who the payer/owner badges elsewhere refer to. No invite/
-              pair/leave actions here; that surface belongs to docs/25's
-              pairing flow above, not this list. */}
-          <div className="section-label">{t('settings.household')}</div>
-          <div className="accounts-list">
-            {householdMembers(householdPeers, store.profiles).map((m) => (
-              <div className="member-row" key={m.userId}>
-                <PayerBadge label={m.label} mine={m.isYou} className="member-badge" />
-                <span className="member-name">
-                  {m.label}
-                  {m.isYou && <span className="member-you">{t('household.you')}</span>}
-                </span>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      <div className="section-label">{t('settings.appearance')}</div>
-      <div className="chip-row settings-chip-row">
-        <button
-          className={`chip ${themeMode === 'system' ? 'picked' : ''}`}
-          onClick={() => setThemeMode('system')}
-        >
-          {t('settings.themeSystem')}
-        </button>
-        <button
-          className={`chip ${themeMode === 'light' ? 'picked' : ''}`}
-          onClick={() => setThemeMode('light')}
-        >
-          {t('settings.themeLight')}
-        </button>
-        <button
-          className={`chip ${themeMode === 'dark' ? 'picked' : ''}`}
-          onClick={() => setThemeMode('dark')}
-        >
-          {t('settings.themeDark')}
-        </button>
+        <HubRow to="/settings/pair" icon="phone" label={t('settingsHub.connectDevice')} />
       </div>
 
-      {/* docs/73 D262 — per device, never synced. Language names are
-          endonyms, so they stay readable whatever is picked. */}
-      <div className="section-label">{t('settings.language.title')}</div>
-      <div className="chip-row settings-chip-row">
-        <button
-          className={`chip ${languagePreference === 'auto' ? 'picked' : ''}`}
-          onClick={() => setLanguagePreference('auto')}
-        >
-          {t('settings.language.automatic', { language: LANGUAGES.find((l) => l.tag === automaticLanguage)?.label })}
-        </button>
-        {LANGUAGES.map((l) => (
-          <button
-            key={l.tag}
-            lang={l.tag}
-            className={`chip ${languagePreference === l.tag ? 'picked' : ''}`}
-            onClick={() => setLanguagePreference(l.tag)}
-          >
-            {l.label}
+      <div className="section-label">{t('settingsHub.preferences')}</div>
+      <div className="settings-group">
+        <HubRow to="/settings/appearance" icon="sun" label={t('settings.appearance')} meta={themeLabel} />
+        <HubRow
+          to="/settings/language"
+          icon="globe"
+          label={t('settings.language.title')}
+          meta={languagePreference === 'auto' ? t('settings.language.automatic', { language: languageLabel }) : languageLabel}
+        />
+        <HubRow to="/settings/entry" icon="mic" label={t('settingsHub.voiceEntry')} meta={t('settingsHub.dollarSummary', { code: dollarPreference })} />
+      </div>
+
+      <div className="section-label">{t('settings.app')}</div>
+      <div className="settings-group">
+        {/* docs/56 D201 — only when there's something to do: hidden inside
+            the installed app itself and on browsers with no install path. */}
+        {install.mode === 'prompt' && (
+          <button className="settings-hub-row" onClick={() => void install.install()}>
+            <HubIconBox name="download" />
+            <span className="settings-hub-text"><span className="settings-hub-title">{t('settings.install')}</span></span>
+            <Chevron />
           </button>
-        ))}
-      </div>
-
-      {/* docs/73 D268 — what voice entry listens for; often not the app's
-          language. Hidden where there's no voice entry at all. */}
-      {isSpeechInputSupported() && (
-        <>
-          <div className="section-label">{t('settings.voiceLanguage')}</div>
-          <div className="chip-row settings-chip-row">
-            <button
-              className={`chip ${voicePreference === 'app' ? 'picked' : ''}`}
-              onClick={() => setVoicePreference('app')}
-            >
-              {t('settings.voiceSameAsApp', { language: LANGUAGES.find((l) => l.tag === language)?.label })}
+        )}
+        {install.mode === 'ios-instructions' && (
+          <>
+            <button className="settings-hub-row" aria-expanded={showIosInstallSteps} onClick={() => setShowIosInstallSteps((v) => !v)}>
+              <HubIconBox name="download" />
+              <span className="settings-hub-text"><span className="settings-hub-title">{t('settings.addToHome')}</span></span>
+              <span className="settings-row-arrow">{showIosInstallSteps ? '⌄' : '›'}</span>
             </button>
-            {LANGUAGES.map((l) => (
-              <button
-                key={l.tag}
-                lang={l.tag}
-                className={`chip ${voicePreference === l.tag ? 'picked' : ''}`}
-                onClick={() => setVoicePreference(l.tag)}
-              >
-                {l.label}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* docs/73 D272 — what "dollars" / "$" means when no country is said. */}
-      <div className="section-label">{t('settings.dollarMeans')}</div>
-      <div className="settings-row settings-row-static">
-        <span>{t('settings.dollarHint')}</span>
-      </div>
-      <div className="chip-row settings-chip-row">
-        {(['CAD', 'USD'] as const).map((code) => (
-          <button
-            key={code}
-            className={`chip ${dollarPreference === code ? 'picked' : ''}`}
-            onClick={() => setDollarPreference(code)}
-          >
-            {currencyNames.of(code)} ({code})
-          </button>
-        ))}
-      </div>
-
-      {showPickerModeSetting && (
-        <>
-          <div className="section-label">{t('settings.accountPicker')}</div>
-          <div className="settings-row settings-row-static">
-            <span>{t('settings.accountPickerHint')}</span>
-          </div>
-          <div className="chip-row settings-chip-row">
-            <button
-              className={`chip ${pickerMode === 'grouped' ? 'picked' : ''}`}
-              onClick={() => setPickerMode('grouped')}
-            >
-              {t('settings.groupedByInstitution')}
-            </button>
-            <button
-              className={`chip ${pickerMode === 'capped' ? 'picked' : ''}`}
-              onClick={() => setPickerMode('capped')}
-            >
-              {t('settings.mostUsed')}
-            </button>
-          </div>
-        </>
-      )}
-
-      {/* Dev-stage only — see store.tsx's resetLocalData comment. Remove
-          once this app has a real migration story instead of "wipe and
-          reseed" as the answer to a schema change. */}
-      <div className="section-label">{t('settings.developer')}</div>
-      <div className="accounts-list">
-        <button className="settings-row settings-row-danger" onClick={resetData}>
-          <span>{t('settings.resetData')}</span>
-        </button>
-      </div>
-
-      {/* docs/56 D201 — only when there's something to do: hidden inside
-          the installed app itself and on browsers with no install path. */}
-      {(install.mode === 'prompt' || install.mode === 'ios-instructions') && (
-        <>
-          <div className="section-label">{t('settings.app')}</div>
-          <div className="accounts-list">
-            {install.mode === 'prompt' ? (
-              <button className="settings-row" onClick={() => void install.install()}>
-                <span>{t('settings.install')}</span>
-                <span className="settings-row-arrow">›</span>
-              </button>
-            ) : (
-              <button className="settings-row" onClick={() => setShowIosInstallSteps((v) => !v)}>
-                <span>{t('settings.addToHome')}</span>
-                <span className="settings-row-arrow">{showIosInstallSteps ? '⌄' : '›'}</span>
-              </button>
+            {showIosInstallSteps && (
+              <p className="qr-caption install-steps">
+                <Trans i18nKey="settings.iosSteps" components={{ icon: <span aria-hidden="true" />, strong: <strong /> }} />
+              </p>
             )}
-          </div>
-          {install.mode === 'ios-instructions' && showIosInstallSteps && (
-            <p className="qr-caption install-steps">
-              <Trans i18nKey="settings.iosSteps" components={{ icon: <span aria-hidden="true" />, strong: <strong /> }} />
-            </p>
-          )}
-        </>
-      )}
-
-      <div className="accounts-list">
-        <Link to="/about" className="settings-row">
-          <span>{t('settings.about')}</span>
-          <span style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>v{APP_VERSION}</span>
-        </Link>
+          </>
+        )}
+        <HubRow to="/about" icon="info" label={t('settings.about')} meta={`v${APP_VERSION}`} />
       </div>
     </main>
   );
 }
 
-// Emails are stored lowercased by the server; typed ones may not be.
-function sameEmail(a: string, b: string): boolean {
-  return a.trim().toLowerCase() === b.trim().toLowerCase();
+function HubRow({ to, icon, label, meta }: { to: string; icon: IconName; label: string; meta?: string }) {
+  return (
+    <Link to={to} className="settings-hub-row">
+      <HubIconBox name={icon} />
+      <span className="settings-hub-text">
+        <span className="settings-hub-title">{label}</span>
+      </span>
+      {meta && <span className="settings-hub-value">{meta}</span>}
+      <Chevron />
+    </Link>
+  );
+}
+
+function Chevron() {
+  return (
+    <svg className="settings-hub-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M9 6l6 6-6 6" />
+    </svg>
+  );
+}
+
+type IconName = 'wallet' | 'tag' | 'calendar' | 'people' | 'phone' | 'sun' | 'globe' | 'mic' | 'info' | 'download' | 'cloud';
+
+const ICON_PATHS: Record<IconName, ReactNode> = {
+  wallet: <><rect x="3" y="6" width="18" height="13" rx="2" /><path d="M3 10h18" /></>,
+  tag: <><path d="M3 12V4h8l9 9-8 8z" /><circle cx="7.5" cy="8.5" r="1.2" /></>,
+  calendar: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></>,
+  people: <><circle cx="9" cy="8" r="3" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" /><circle cx="17" cy="9" r="2.5" /><path d="M16 14.2c2.8.4 5 2.8 5 5.8" /></>,
+  phone: <><rect x="7" y="2" width="10" height="20" rx="2" /><path d="M11 18h2" /></>,
+  sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></>,
+  globe: <><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3z" /></>,
+  mic: <><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></>,
+  info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></>,
+  download: <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />,
+  cloud: <path d="M7 18h10a4 4 0 0 0 .5-8A6 6 0 0 0 6 9.5 4.3 4.3 0 0 0 7 18z" />,
+};
+
+function HubIcon({ name }: { name: IconName }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {ICON_PATHS[name]}
+    </svg>
+  );
+}
+
+function HubIconBox({ name }: { name: IconName }) {
+  return (
+    <span className="settings-hub-icon">
+      <HubIcon name={name} />
+    </span>
+  );
 }
 
 // "2 people · 3 devices" for the Household row.

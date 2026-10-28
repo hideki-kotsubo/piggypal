@@ -163,3 +163,9 @@ export function formatTimeAgo(iso: string): string {
   const days = Math.round(hours / 24);
   return i18n.t('date.daysAgo', { count: days });
 }
+
+// docs/12: name, kind, institution all read/write through the account
+// fields directly — the kind list is fixed (D53's layout), not derived
+// from usage. No currency, no savings goal — see Account.
+export const ACCOUNT_KINDS: AccountKind[] = ['checking', 'credit', 'cash', 'savings'];
+export const kindLabel = (kind: AccountKind) => i18n.t(`accountKind.${kind}`);

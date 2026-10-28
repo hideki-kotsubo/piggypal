@@ -116,7 +116,8 @@
     "edit": "Modifier",
     "save": "Enregistrer",
     "ok": "OK",
-    "cancelLower": "annuler"
+    "cancelLower": "annuler",
+    "restore": "Restaurer"
   },
   "nav": {
     "insights": "Analyses",
@@ -342,7 +343,29 @@
     "namePlaceholder": "Visa, Compte chèques, Voyage…",
     "kind": "Type",
     "owner": "Propriétaire",
-    "archive": "Archiver le compte"
+    "archive": "Archiver le compte",
+    "search": "Rechercher des comptes",
+    "searchPlaceholder_one": "Rechercher parmi {{count}} compte",
+    "searchPlaceholder_many": "Rechercher parmi {{count}} comptes",
+    "searchPlaceholder_other": "Rechercher parmi {{count}} comptes",
+    "everyone": "Tout le monde",
+    "totals": "Totaux par devise",
+    "count_one": "{{count}} compte",
+    "count_many": "{{count}} comptes",
+    "count_other": "{{count}} comptes",
+    "noMatch": "Aucun compte ne correspond.",
+    "restoreConfirm": "Restaurer « {{name}} » ? Il réapparaîtra dans les listes de choix.",
+    "notFound": "Ce compte n’existe plus.",
+    "isArchived": "Ce compte est archivé.",
+    "thisMonth": "Ce mois-ci",
+    "noActivityMonth": "Aucune entrée ni sortie ce mois-ci.",
+    "moneyIn": "Entrées · {{currency}}",
+    "moneyOut": "Sorties · {{currency}}",
+    "comingUp": "À venir",
+    "due": "Échu",
+    "noTransactions": "Aucune opération sur ce compte pour l’instant.",
+    "splitLeg": "Partagé · total {{total}}",
+    "editing": "Modification du compte"
   },
   "picker": {
     "more": "+ {{count}} de plus"
@@ -479,7 +502,20 @@
     "archive": "Archiver la catégorie",
     "monthBudget": "Budget de ce mois-ci",
     "removeLower": "retirer",
-    "addBudget": "+ Ajouter un budget"
+    "addBudget": "+ Ajouter un budget",
+    "restoreConfirm": "Restaurer « {{name}} » ? Elle réapparaîtra dans les listes de choix.",
+    "spentOf": "{{spent}} sur {{budget}}",
+    "editing": "Modification de la catégorie",
+    "spentIn": "Dépensé en {{month}}",
+    "receivedIn": "Reçu en {{month}}",
+    "addTo": "+ Ajouter à {{name}}",
+    "archivedHint": "Les catégories archivées n’apparaissent plus dans les listes de choix. Les opérations passées les gardent.",
+    "monthStat": "Ce mois-ci : {{amount}} · {{entries}}",
+    "entries_one": "{{count}} opération",
+    "entries_many": "{{count}} opérations",
+    "entries_other": "{{count}} opérations",
+    "monthStatNone": "Rien ce mois-ci pour l’instant.",
+    "seeThem": "Voir →"
   },
   "merge": {
     "alreadyKeeper": "C’est déjà l’original.",
@@ -710,5 +746,19 @@
     "resetNoticeEmail": "Votre code PIN a été réinitialisé avec un code envoyé à l’adresse du compte, sur {{device}} ({{when}}).",
     "resetNoticeDismiss": "Compris",
     "errorNoPin": "Cette personne n’a pas de code PIN."
+  },
+  "settingsHub": {
+    "accountSync": "Compte et synchronisation",
+    "syncOffTitle": "Synchronisation désactivée",
+    "syncOffHint": "Connectez-vous pour synchroniser vos appareils",
+    "yourMoney": "Votre argent",
+    "activeCount_one": "{{count}} actif",
+    "activeCount_many": "{{count}} actifs",
+    "activeCount_other": "{{count}} actifs",
+    "syncHousehold": "Synchronisation et foyer",
+    "connectDevice": "Connecter un appareil",
+    "preferences": "Préférences",
+    "voiceEntry": "Voix et saisie",
+    "dollarSummary": "$ = {{code}}"
   }
 }
