@@ -7,8 +7,9 @@ page's, and a small LinkedIn network grows fastest when people you know
 reshare.
 
 Claims checked 2026-10-27: free, no account needed, works offline, no bank
-connection, four announced languages, web app live, store apps not yet
-(say "coming"). Japanese, Korean and Chinese stay unannounced until reviewed.
+connection, seven languages (Japanese, Korean and Chinese announced since
+the user's tests found no misparses), web app live, store apps not yet
+(say "coming").
 
 ## Before posting (LinkedIn, a week ahead)
 

@@ -18,7 +18,9 @@ built the same day too, each described below.
    in both scripts. Estimated at about 0.4× and 0.5× of Japanese.
 
 Native-speaker review: the user will ask people to validate all four
-before they're announced (2026-10-22).
+before they're announced (2026-10-22). Dropped 2026-10-27: the user's
+tests with real users found no misparses, so the website and posts now
+announce all seven languages (docs/74, "First two weeks").
 
 The yen keypad bug found while assessing this (typing 1 5 0 0 gave ￥15)
 was fixed separately first; see docs/10's "Currencies without minor
