@@ -244,10 +244,14 @@ it needs doing.
       visual, extends the app's existing hairline vocabulary — lowest
       priority of the three since the other two already address the
       original ask.
-- [ ] Accounts Management: improve UI — flagged 2026-08-19, general, not
-      yet scoped to specifics.
-- [ ] Categories Management: improve UI — flagged 2026-08-19, general, not
-      yet scoped to specifics.
+- [ ] Accounts Management: improve UI — flagged 2026-08-19, raised again
+      2026-10-27, general, not yet scoped to specifics.
+- [ ] Categories Management: improve UI — flagged 2026-08-19, raised again
+      2026-10-27, general, not yet scoped to specifics.
+- [ ] Settings page: improve layout/navigation — flagged 2026-10-27, not
+      yet scoped. The page has grown a long list of rows (language, cloud
+      sync, household, devices, private-record PIN, about…). Ideas floated:
+      hamburger menu, grouped sub-menus/sub-pages, or a floating menu.
 - [ ] Categories Management: increase the left padding/margin for leaf
       nodes (the "↳ Espresso"-under-"Café" rows, docs/14) — flagged
       2026-08-19.
