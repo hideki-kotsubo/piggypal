@@ -19,7 +19,7 @@ export function ScanDeviceLinkScreen() {
   return (
     <main className="home">
       <div className="app-bar">
-        <Link to="/settings" className="back-link">← {t('common.back')}</Link>
+        <Link to="/settings/sync" className="back-link">← {t('common.back')}</Link>
         <span className="wordmark">{t('deviceLink.scanTitle')}</span>
         <span style={{ width: '3rem' }} />
       </div>

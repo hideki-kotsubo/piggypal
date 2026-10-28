@@ -244,22 +244,24 @@ it needs doing.
       visual, extends the app's existing hairline vocabulary — lowest
       priority of the three since the other two already address the
       original ask.
-- [ ] Accounts Management: improve UI — flagged 2026-08-19, raised again
-      2026-10-27. Sketched in docs/79; account detail page decided
-      (D309), list and edit sheet proposed.
-- [ ] Categories Management: improve UI — flagged 2026-08-19, raised again
-      2026-10-27. Sketched in docs/79; budgets only on categories without
-      subcategories, never on groups (D307), Restore for archived (D308).
-- [ ] Settings page: improve layout/navigation — flagged 2026-10-27, not
+- [x] Accounts Management: improve UI — flagged 2026-08-19, raised again
+      2026-10-27. docs/79: built 2026-10-28 on `feat/ui-refresh` (list
+      cards, account page D309, edit sheet D311). Not released yet.
+- [x] Categories Management: improve UI — flagged 2026-08-19, raised again
+      2026-10-27. docs/79: built 2026-10-28 on `feat/ui-refresh` (D307,
+      D308 Restore, edit sheet D311). Not released yet.
+- [x] Settings page: improve layout/navigation — flagged 2026-10-27, not
       yet scoped. The page has grown a long list of rows (language, cloud
       sync, household, devices, private-record PIN, about…). Ideas floated:
       hamburger menu, grouped sub-menus/sub-pages, or a floating menu.
-      Sketched as S1–S3 in docs/79; hub + sub-pages chosen (D310).
-- [ ] Categories Management: increase the left padding/margin for leaf
+      Sketched as S1–S3 in docs/79; hub + sub-pages chosen (D310), built
+      2026-10-28 on `feat/ui-refresh`. Not released yet.
+- [x] Categories Management: increase the left padding/margin for leaf
       nodes (the "↳ Espresso"-under-"Café" rows, docs/14) — flagged
-      2026-08-19.
-- [ ] Categories Management: make it more visually clear when a category
-      row is in edit mode — flagged 2026-08-19.
+      2026-08-19. Guide-line indent, docs/79 (2026-10-28).
+- [x] Categories Management: make it more visually clear when a category
+      row is in edit mode — flagged 2026-08-19. "Editing category" sheet,
+      docs/79 D311 (2026-10-28).
 - [ ] Categories Management: Archive Category — needs discussion first
       (what it should actually mean/do), plus a way to bring an archived
       category back, which doesn't exist today — flagged 2026-08-19.

@@ -109,7 +109,8 @@
     "edit": "Edit",
     "save": "Save",
     "ok": "OK",
-    "cancelLower": "cancel"
+    "cancelLower": "cancel",
+    "restore": "Restore"
   },
   "nav": {
     "insights": "Insights",
@@ -322,7 +323,27 @@
     "namePlaceholder": "Visa, Checking, Trip Fund…",
     "kind": "Kind",
     "owner": "Owner",
-    "archive": "Archive account"
+    "archive": "Archive account",
+    "search": "Search accounts",
+    "searchPlaceholder_one": "Search {{count}} account",
+    "searchPlaceholder_other": "Search {{count}} accounts",
+    "everyone": "Everyone",
+    "totals": "Totals by currency",
+    "count_one": "{{count}} account",
+    "count_other": "{{count}} accounts",
+    "noMatch": "No accounts match.",
+    "restoreConfirm": "Restore “{{name}}”? It shows up in pickers again.",
+    "notFound": "This account doesn't exist anymore.",
+    "isArchived": "This account is archived.",
+    "thisMonth": "This month",
+    "noActivityMonth": "Nothing in or out this month.",
+    "moneyIn": "In · {{currency}}",
+    "moneyOut": "Out · {{currency}}",
+    "comingUp": "Coming up",
+    "due": "Due",
+    "noTransactions": "No transactions on this account yet.",
+    "splitLeg": "Split · {{total}} total",
+    "editing": "Editing account"
   },
   "picker": {
     "more": "+ {{count}} more"
@@ -456,7 +477,19 @@
     "archive": "Archive category",
     "monthBudget": "This month's budget",
     "removeLower": "remove",
-    "addBudget": "+ Add a budget"
+    "addBudget": "+ Add a budget",
+    "restoreConfirm": "Restore “{{name}}”? It shows up in pickers again.",
+    "spentOf": "{{spent}} of {{budget}}",
+    "editing": "Editing category",
+    "spentIn": "Spent in {{month}}",
+    "receivedIn": "Received in {{month}}",
+    "addTo": "+ Add to {{name}}",
+    "archivedHint": "Archived categories are hidden from pickers. Past transactions keep them.",
+    "monthStat": "This month: {{amount}} · {{entries}}",
+    "entries_one": "{{count}} entry",
+    "entries_other": "{{count}} entries",
+    "monthStatNone": "Nothing this month yet.",
+    "seeThem": "See them →"
   },
   "merge": {
     "alreadyKeeper": "Already the keeper.",
@@ -684,5 +717,18 @@
     "resetNoticeEmail": "Your PIN was reset with a code from the account email, on {{device}} ({{when}}).",
     "resetNoticeDismiss": "Got it",
     "errorNoPin": "This person has no PIN."
+  },
+  "settingsHub": {
+    "accountSync": "Account & sync",
+    "syncOffTitle": "Cloud sync is off",
+    "syncOffHint": "Sign in to sync your devices",
+    "yourMoney": "Your money",
+    "activeCount_one": "{{count}} active",
+    "activeCount_other": "{{count}} active",
+    "syncHousehold": "Sync & household",
+    "connectDevice": "Connect a device",
+    "preferences": "Preferences",
+    "voiceEntry": "Voice & entry",
+    "dollarSummary": "$ = {{code}}"
   }
 }

@@ -1871,3 +1871,639 @@
   align-self: center;
   margin-inline: auto;
 }
+
+/* ---- docs/79 — Settings hub, Accounts and Categories refresh ---- */
+
+/* D310 — the Settings hub: grouped cards of rows, each with an icon, a
+   one-line summary on the right and a chevron. Same sunken-zone card
+   vocabulary as the day cards (docs/37). */
+.settings-group {
+  margin: 0 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+.settings-group:first-of-type {
+  margin-top: 0.4rem;
+}
+.settings-hub-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 48px;
+  padding: 0.45rem 0.9rem;
+  border: none;
+  border-top: 1px solid var(--line);
+  background: none;
+  font: inherit;
+  font-size: 0.92rem;
+  color: var(--ink);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.settings-group > .settings-hub-row:first-child {
+  border-top: none;
+}
+.settings-hub-account {
+  min-height: 64px;
+}
+.settings-hub-icon,
+.settings-hub-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.settings-hub-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-weight: 600;
+}
+.settings-hub-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.settings-hub-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.settings-hub-account .settings-hub-title {
+  font-weight: 600;
+}
+.settings-hub-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+}
+.settings-hub-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+}
+.settings-hub-dot.on {
+  background: var(--accent);
+}
+.settings-hub-value {
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.82rem;
+  color: var(--ink-muted);
+}
+.settings-hub-chevron {
+  flex-shrink: 0;
+  color: var(--ink-faint);
+}
+.settings-group .install-steps {
+  margin: 0 0.9rem 0.8rem;
+}
+
+/* D311 — the slide-up edit panel. Sits over the page at the app's own
+   column width; the scrim closes it. */
+.sheet-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+.sheet-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 12, 9, 0.45);
+}
+.sheet {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: min(480px, 100%);
+  max-height: 88svh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.18);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  outline: none;
+  animation: sheet-up 0.22s ease-out;
+}
+@keyframes sheet-up {
+  from {
+    transform: translate(-50%, 100%);
+  }
+  to {
+    transform: translate(-50%, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheet {
+    animation: none;
+  }
+}
+.sheet-grab {
+  width: 40px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--line);
+  margin: 8px auto 0;
+  flex-shrink: 0;
+}
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.6rem 1.1rem 0.7rem;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.sheet-titles {
+  min-width: 0;
+}
+.sheet-eyebrow {
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.sheet-title {
+  font-family: var(--serif);
+  font-size: 1.25rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sheet-body {
+  overflow-y: auto;
+  padding: 0.9rem 1.1rem 1.2rem;
+}
+.sheet-note {
+  margin: 0 0 0.8rem;
+}
+.sheet-actions {
+  border-top: 1px solid var(--line);
+  padding-top: 0.8rem;
+  margin-top: 0.4rem;
+}
+.sheet-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  font-size: 0.83rem;
+  color: var(--ink-muted);
+}
+
+/* A row of equal options, one picked — account kind, category kind, the
+   Categories Expense/Income switch. */
+.segmented {
+  display: flex;
+  gap: 3px;
+  margin-top: 0.3rem;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+.segmented button {
+  flex: 1;
+  min-height: 36px;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+/* accent-soft, not plain surface: in dark mode surface and sunken are
+   only a shade apart, and the picked option disappeared. */
+.segmented button.on {
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+.segmented button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.list-segmented {
+  margin: 0.4rem 1.1rem 0;
+}
+
+.section-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.section-link {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* A1 — Accounts list. */
+.list-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.4rem 1.1rem 0;
+  padding: 0 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  color: var(--ink-faint);
+}
+.list-search input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.6rem 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 16px;
+  color: var(--ink);
+  outline: none;
+}
+.list-filters {
+  margin: 0.6rem 1.1rem 0;
+}
+.currency-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.8rem 1.1rem 0;
+}
+.currency-total {
+  flex: 1 1 6rem;
+  display: flex;
+  flex-direction: column;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+.currency-total-code {
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.07em;
+  color: var(--ink-faint);
+}
+.currency-total-amount {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9rem;
+}
+.currency-total-amount.neg,
+.balance-line.neg,
+.account-hero-balance.neg {
+  color: var(--warn);
+}
+.account-cards,
+.category-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin: 0.8rem 1.1rem 1.2rem;
+}
+.account-card,
+.category-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+.account-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.9rem;
+  border-bottom: 1px solid var(--line);
+}
+.institution-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.account-card-title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.account-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  width: 100%;
+  min-height: 52px;
+  padding: 0.5rem 0.9rem;
+  border: none;
+  border-top: 1px solid var(--line);
+  background: none;
+  font: inherit;
+  color: var(--ink);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.account-card > .account-card-row:first-child,
+.account-card-head + .account-card-row {
+  border-top: none;
+}
+.account-card-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+.account-card-sub {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+.owner-tag {
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+.account-card-row .account-balances {
+  align-items: flex-end;
+  margin-top: 0;
+  text-align: right;
+}
+.archived-section {
+  margin: 0 1.1rem 1.4rem;
+}
+.archived-section .account-card,
+.archived-section .category-card {
+  margin-top: 0.3rem;
+}
+.account-card-row.archived-row,
+.category-row.archived-row {
+  cursor: default;
+}
+.restore-chip {
+  flex-shrink: 0;
+  color: var(--accent);
+  border-color: var(--line);
+  font-weight: 600;
+}
+
+/* D309 — the account page. */
+.account-hero {
+  margin: 0.4rem 1.1rem 0;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-sunken);
+}
+.account-hero-meta {
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+}
+.account-hero-name {
+  margin: 0.25rem 0 0;
+  font-family: var(--serif);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+.account-hero-balances {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0.5rem;
+}
+.account-hero-balance {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.5rem;
+}
+.account-hero-empty {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+.account-hero-archived {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+.flow-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0 1.1rem;
+}
+.flow-tile {
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+.flow-label {
+  font-size: 0.72rem;
+  color: var(--ink-muted);
+}
+.flow-amount {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.95rem;
+}
+.flow-amount.in {
+  color: var(--accent);
+}
+.account-page-card {
+  margin: 0 1.1rem;
+}
+.due-tag {
+  margin-right: 0.4rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+/* C1 — Categories tree. Subcategories hang off a guide line instead of
+   the old "↳" prefix (the leaf-padding backlog item). */
+.category-month-note {
+  margin: 0.7rem 1.1rem 0;
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+}
+.archived-section .category-month-note {
+  margin: 0.5rem 0 0;
+}
+.category-row,
+.category-group-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+  min-height: 48px;
+  padding: 0.65rem 0.9rem;
+  border: none;
+  border-top: 1px solid var(--line);
+  background: none;
+  font: inherit;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.category-card > :first-child {
+  border-top: none;
+}
+.category-group-head {
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.category-group-head .category-name {
+  font-weight: 600;
+}
+.category-row-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+  width: 100%;
+}
+.category-name {
+  font-size: 0.92rem;
+}
+.category-amounts,
+.category-budget-amounts {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+.category-budget {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+}
+.category-budget-amounts.over {
+  color: var(--warn);
+  font-weight: 600;
+}
+.category-budget .track,
+.category-budget .fill {
+  display: block;
+}
+.category-children {
+  position: relative;
+  margin-left: 1.4rem;
+}
+.category-children::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 1.4rem;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--line);
+}
+.category-row.child {
+  position: relative;
+  padding-left: 1rem;
+}
+.category-row.child::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 1.35rem;
+  width: 0.6rem;
+  height: 2px;
+  background: var(--line);
+}
+.category-add-sub {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 1rem;
+  border: none;
+  border-top: 1px solid var(--line);
+  background: none;
+  font: inherit;
+  font-size: 0.82rem;
+  color: var(--accent);
+  text-align: left;
+  cursor: pointer;
+}
+.category-archived-text {
+  display: flex;
+  flex-direction: column;
+}
+.category-sub {
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+.category-row.archived-row .category-row-top {
+  align-items: center;
+}
+/* The merge tool's states on the new card rows — the cards are already
+   sunken, so a picked duplicate lifts to the plain surface instead. */
+.account-card-row.picked-survivor,
+.category-row.picked-survivor {
+  background: var(--accent-soft);
+}
+.account-card-row.picked-duplicate,
+.category-row.picked-duplicate {
+  background: var(--surface);
+}
+.category-row.merge-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.category-row .merge-disabled-note {
+  margin: 0;
+}

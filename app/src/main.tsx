@@ -16,11 +16,14 @@ import { TransactionScreen } from './components/TransactionScreen'
 import { DuplicateTransactionsScreen } from './components/DuplicateTransactionsScreen'
 import { InboxScreen } from './components/InboxScreen'
 import { AccountsScreen } from './components/AccountsScreen'
+import { AccountScreen } from './components/AccountScreen'
 import { CategoriesScreen } from './components/CategoriesScreen'
 import { SchedulesScreen } from './components/SchedulesScreen'
 import { ScheduleScreen } from './components/ScheduleScreen'
 import { InsightsScreen } from './components/InsightsScreen'
 import { SettingsScreen } from './components/SettingsScreen'
+import { SyncSettingsScreen } from './components/SyncSettingsScreen'
+import { AppearanceScreen, EntrySettingsScreen, LanguageScreen } from './components/PreferenceScreens'
 import { PairingScreen } from './components/PairingScreen'
 import { HouseholdScreen } from './components/HouseholdScreen'
 import { DeleteAccountScreen } from './components/DeleteAccountScreen'
@@ -57,6 +60,10 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/inbox" element={<InboxScreen />} />
           <Route path="/insights" element={<InsightsScreen />} />
           <Route path="/settings" element={<SettingsScreen />} />
+          <Route path="/settings/sync" element={<SyncSettingsScreen />} />
+          <Route path="/settings/appearance" element={<AppearanceScreen />} />
+          <Route path="/settings/language" element={<LanguageScreen />} />
+          <Route path="/settings/entry" element={<EntrySettingsScreen />} />
           <Route path="/settings/pair" element={<PairingScreen />} />
           <Route path="/settings/household" element={<HouseholdScreen />} />
           <Route path="/settings/household/link-device" element={<DeviceLinkScreen />} />
@@ -68,6 +75,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/auth/scan" element={<ScanDeviceLinkScreen />} />
           <Route path="/about" element={<AboutScreen />} />
           <Route path="/accounts" element={<AccountsScreen />} />
+          <Route path="/accounts/:id" element={<AccountScreen />} />
           <Route path="/categories" element={<CategoriesScreen />} />
           <Route path="/schedules" element={<SchedulesScreen />} />
           <Route path="/schedules/:id" element={<ScheduleScreen />} />

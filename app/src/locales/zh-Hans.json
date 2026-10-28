@@ -102,7 +102,8 @@
     "edit": "编辑",
     "save": "保存",
     "ok": "好",
-    "cancelLower": "取消"
+    "cancelLower": "取消",
+    "restore": "恢复"
   },
   "nav": {
     "insights": "统计",
@@ -297,7 +298,25 @@
     "namePlaceholder": "Visa、储蓄卡、旅行基金…",
     "kind": "类型",
     "owner": "所有者",
-    "archive": "归档账户"
+    "archive": "归档账户",
+    "search": "搜索账户",
+    "searchPlaceholder_other": "搜索 {{count}} 个账户",
+    "everyone": "所有人",
+    "totals": "按币种合计",
+    "count_other": "{{count}} 个账户",
+    "noMatch": "没有匹配的账户。",
+    "restoreConfirm": "恢复“{{name}}”？它会重新出现在选择列表中。",
+    "notFound": "此账户已不存在。",
+    "isArchived": "此账户已归档。",
+    "thisMonth": "本月",
+    "noActivityMonth": "本月没有收支。",
+    "moneyIn": "收入 · {{currency}}",
+    "moneyOut": "支出 · {{currency}}",
+    "comingUp": "即将到期",
+    "due": "到期",
+    "noTransactions": "此账户还没有记录。",
+    "splitLeg": "拆分 · 共 {{total}}",
+    "editing": "正在编辑账户"
   },
   "picker": {
     "more": "+ 另外{{count}}个"
@@ -428,7 +447,18 @@
     "archive": "归档分类",
     "monthBudget": "本月预算",
     "removeLower": "移除",
-    "addBudget": "+ 添加预算"
+    "addBudget": "+ 添加预算",
+    "restoreConfirm": "恢复“{{name}}”？它会重新出现在选择列表中。",
+    "spentOf": "{{spent}} / {{budget}}",
+    "editing": "正在编辑分类",
+    "spentIn": "{{month}}支出",
+    "receivedIn": "{{month}}收入",
+    "addTo": "+ 添加到{{name}}",
+    "archivedHint": "已归档的分类不会出现在选择列表中，过去的记录仍保留它们。",
+    "monthStat": "本月：{{amount}} · {{entries}}",
+    "entries_other": "{{count}}条",
+    "monthStatNone": "本月还没有记录。",
+    "seeThem": "查看 →"
   },
   "merge": {
     "alreadyKeeper": "已经是保留项。",
@@ -653,5 +683,17 @@
     "resetNoticeEmail": "你的 PIN 已通过账户邮箱中的验证码，在「{{device}}」上重置（{{when}}）。",
     "resetNoticeDismiss": "知道了",
     "errorNoPin": "此人没有设置 PIN。"
+  },
+  "settingsHub": {
+    "accountSync": "账号与同步",
+    "syncOffTitle": "云同步已关闭",
+    "syncOffHint": "登录以同步你的设备",
+    "yourMoney": "我的钱",
+    "activeCount_other": "{{count}}项",
+    "syncHousehold": "同步与家庭",
+    "connectDevice": "连接设备",
+    "preferences": "偏好设置",
+    "voiceEntry": "语音与记账",
+    "dollarSummary": "$ = {{code}}"
   }
 }

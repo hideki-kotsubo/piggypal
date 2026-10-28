@@ -102,7 +102,8 @@
     "edit": "편집",
     "save": "저장",
     "ok": "확인",
-    "cancelLower": "취소"
+    "cancelLower": "취소",
+    "restore": "복원"
   },
   "nav": {
     "insights": "분석",
@@ -297,7 +298,25 @@
     "namePlaceholder": "Visa, 입출금 통장, 여행 자금…",
     "kind": "종류",
     "owner": "소유자",
-    "archive": "계좌 보관"
+    "archive": "계좌 보관",
+    "search": "계좌 검색",
+    "searchPlaceholder_other": "계좌 {{count}}개 검색",
+    "everyone": "전체",
+    "totals": "통화별 합계",
+    "count_other": "계좌 {{count}}개",
+    "noMatch": "일치하는 계좌가 없습니다.",
+    "restoreConfirm": "“{{name}}”을(를) 복원할까요? 선택 목록에 다시 표시됩니다.",
+    "notFound": "이 계좌는 더 이상 없습니다.",
+    "isArchived": "이 계좌는 보관되었습니다.",
+    "thisMonth": "이번 달",
+    "noActivityMonth": "이번 달 입출금이 없습니다.",
+    "moneyIn": "입금 · {{currency}}",
+    "moneyOut": "출금 · {{currency}}",
+    "comingUp": "예정",
+    "due": "기한",
+    "noTransactions": "이 계좌에 아직 내역이 없습니다.",
+    "splitLeg": "분할 · 총 {{total}}",
+    "editing": "계좌 편집 중"
   },
   "picker": {
     "more": "+ {{count}}개 더 보기"
@@ -428,7 +447,18 @@
     "archive": "카테고리 보관",
     "monthBudget": "이번 달 예산",
     "removeLower": "삭제",
-    "addBudget": "+ 예산 추가"
+    "addBudget": "+ 예산 추가",
+    "restoreConfirm": "“{{name}}”을(를) 복원할까요? 선택 목록에 다시 표시됩니다.",
+    "spentOf": "{{spent}} / {{budget}}",
+    "editing": "카테고리 편집 중",
+    "spentIn": "{{month}} 지출",
+    "receivedIn": "{{month}} 수입",
+    "addTo": "+ {{name}}에 추가",
+    "archivedHint": "보관된 카테고리는 선택 목록에 표시되지 않습니다. 이전 내역에는 그대로 남습니다.",
+    "monthStat": "이번 달: {{amount}} · {{entries}}",
+    "entries_other": "{{count}}건",
+    "monthStatNone": "이번 달 내역이 아직 없습니다.",
+    "seeThem": "보기 →"
   },
   "merge": {
     "alreadyKeeper": "이미 남길 항목입니다.",
@@ -653,5 +683,17 @@
     "resetNoticeEmail": "계정 이메일로 받은 코드로 {{device}}에서 PIN이 재설정되었습니다({{when}}).",
     "resetNoticeDismiss": "확인",
     "errorNoPin": "이 사람은 PIN이 없습니다."
+  },
+  "settingsHub": {
+    "accountSync": "계정 및 동기화",
+    "syncOffTitle": "클라우드 동기화 꺼짐",
+    "syncOffHint": "로그인하여 기기를 동기화하세요",
+    "yourMoney": "내 돈",
+    "activeCount_other": "{{count}}건",
+    "syncHousehold": "동기화 및 가족",
+    "connectDevice": "기기 연결",
+    "preferences": "환경설정",
+    "voiceEntry": "음성 및 입력",
+    "dollarSummary": "$ = {{code}}"
   }
 }

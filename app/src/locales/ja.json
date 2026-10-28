@@ -102,7 +102,8 @@
     "edit": "編集",
     "save": "保存",
     "ok": "OK",
-    "cancelLower": "キャンセル"
+    "cancelLower": "キャンセル",
+    "restore": "復元"
   },
   "nav": {
     "insights": "分析",
@@ -297,7 +298,25 @@
     "namePlaceholder": "Visa、普通預金、旅行用…",
     "kind": "種類",
     "owner": "所有者",
-    "archive": "口座をアーカイブ"
+    "archive": "口座をアーカイブ",
+    "search": "口座を検索",
+    "searchPlaceholder_other": "{{count}}件の口座を検索",
+    "everyone": "全員",
+    "totals": "通貨別の合計",
+    "count_other": "{{count}}口座",
+    "noMatch": "一致する口座はありません。",
+    "restoreConfirm": "「{{name}}」を復元しますか？ 選択肢に再び表示されます。",
+    "notFound": "この口座はもう存在しません。",
+    "isArchived": "この口座はアーカイブ済みです。",
+    "thisMonth": "今月",
+    "noActivityMonth": "今月の入出金はありません。",
+    "moneyIn": "入金 · {{currency}}",
+    "moneyOut": "出金 · {{currency}}",
+    "comingUp": "今後の予定",
+    "due": "期日",
+    "noTransactions": "この口座の記録はまだありません。",
+    "splitLeg": "分割 · 合計 {{total}}",
+    "editing": "口座を編集中"
   },
   "picker": {
     "more": "＋ ほか{{count}}件"
@@ -428,7 +447,18 @@
     "archive": "カテゴリをアーカイブ",
     "monthBudget": "今月の予算",
     "removeLower": "削除",
-    "addBudget": "＋ 予算を追加"
+    "addBudget": "＋ 予算を追加",
+    "restoreConfirm": "「{{name}}」を復元しますか？ 選択肢に再び表示されます。",
+    "spentOf": "{{spent}} / {{budget}}",
+    "editing": "カテゴリを編集中",
+    "spentIn": "{{month}}の支出",
+    "receivedIn": "{{month}}の収入",
+    "addTo": "＋ {{name}}に追加",
+    "archivedHint": "アーカイブしたカテゴリは選択肢に表示されません。過去の記録はそのまま残ります。",
+    "monthStat": "今月：{{amount}} · {{entries}}",
+    "entries_other": "{{count}}件",
+    "monthStatNone": "今月はまだありません。",
+    "seeThem": "見る →"
   },
   "merge": {
     "alreadyKeeper": "すでに残す対象です。",
@@ -653,5 +683,17 @@
     "resetNoticeEmail": "アカウントのメールに届いたコードで、「{{device}}」からPINがリセットされました（{{when}}）。",
     "resetNoticeDismiss": "OK",
     "errorNoPin": "この人にはPINがありません。"
+  },
+  "settingsHub": {
+    "accountSync": "アカウントと同期",
+    "syncOffTitle": "クラウド同期はオフです",
+    "syncOffHint": "サインインしてデバイスを同期",
+    "yourMoney": "お金",
+    "activeCount_other": "{{count}}件",
+    "syncHousehold": "同期と家族",
+    "connectDevice": "デバイスを接続",
+    "preferences": "環境設定",
+    "voiceEntry": "音声と入力",
+    "dollarSummary": "$ = {{code}}"
   }
 }
