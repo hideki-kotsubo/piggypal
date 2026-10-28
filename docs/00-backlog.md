@@ -245,13 +245,16 @@ it needs doing.
       priority of the three since the other two already address the
       original ask.
 - [ ] Accounts Management: improve UI — flagged 2026-08-19, raised again
-      2026-10-27, general, not yet scoped to specifics.
+      2026-10-27. Sketched in docs/79; account detail page decided
+      (D309), list and edit sheet proposed.
 - [ ] Categories Management: improve UI — flagged 2026-08-19, raised again
-      2026-10-27, general, not yet scoped to specifics.
+      2026-10-27. Sketched in docs/79; budgets only on categories without
+      subcategories, never on groups (D307), Restore for archived (D308).
 - [ ] Settings page: improve layout/navigation — flagged 2026-10-27, not
       yet scoped. The page has grown a long list of rows (language, cloud
       sync, household, devices, private-record PIN, about…). Ideas floated:
       hamburger menu, grouped sub-menus/sub-pages, or a floating menu.
+      Sketched as S1–S3 in docs/79; direction not chosen yet.
 - [ ] Categories Management: increase the left padding/margin for leaf
       nodes (the "↳ Espresso"-under-"Café" rows, docs/14) — flagged
       2026-08-19.
@@ -260,6 +263,8 @@ it needs doing.
 - [ ] Categories Management: Archive Category — needs discussion first
       (what it should actually mean/do), plus a way to bring an archived
       category back, which doesn't exist today — flagged 2026-08-19.
+      Restore decided 2026-10-27 (docs/79 D308); what archiving means
+      beyond that is still open.
 - [ ] Categories Management: adding a new Budget — suggestion floated
       2026-08-19: a shortcut for this directly on the Insights screen
       (`/insights`, docs/07 D147), rather than only reachable via
