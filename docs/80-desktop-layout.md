@@ -84,15 +84,31 @@ Candidates: Transactions → TransactionScreen; Accounts → AccountScreen
 
 ### P4 — Entry: the existing typed entry as a top bar
 
-The typed/voice entry that exists today (docs/16 parser, parse preview
-docs/19–23) moves to a bar at the top of the window, focusable from
-anywhere. Not a new feature: same parser, same preview, same result.
-The tap entry (keypad + chips, docs/07/31) stays available as a
-composer panel/popover for mouse or touch use. Open: what replaces the
-bottom-docked entry zone (docs/31) on wide screens exactly.
+Today's entry zone (docs/31) is the "+" button (blank transaction,
+straight to its screen with the keypad, docs/19) and the typed/voice
+field with its parse preview (docs/16, docs/22). Corrected 2026-10-29:
+an earlier draft of this section described a keypad + chips entry
+panel; that was replaced by docs/19 and isn't part of the entry zone.
+Not a new feature in any variant: same "+", same parser, same preview.
 
-After an entry, the created transaction opens in the detail pane
-(today's auto-navigate after insert, docs/17, just in the pane).
+Four placements to try in the mockup (user wants to try them all
+before choosing):
+
+- **Bottom dock (today)**: docs/31's dock, centred in the main area.
+  "+"/Save open the transaction in the detail pane (docs/17's
+  auto-navigate, just in the pane).
+- **Top bar**: the entry in a bar across the top, preview drops down
+  under it. "+"/Save open the transaction in the detail pane.
+- **Top bar + panel**: same bar, but "+"/Save open the transaction in a
+  floating panel, leaving the screen underneath where it was.
+- **Side column**: a permanent right-hand column with the entry field,
+  preview, and the new transaction's form right under it (2026-08-20
+  direction A). Needs ≥1024px; narrower falls back to the dock.
+
+Mockup: `docs/artifacts/flowtab-desktop-prototype.html`
+(https://claude.ai/artifact/Sq8rsLd7jgpGo268jtfrMm, private to the
+owner) — width slider across the 600/1024 breakpoints, the four entry
+placements, and list + detail on/off per screen.
 
 ### P5 — Home as a multi-column dashboard
 
