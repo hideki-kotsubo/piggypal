@@ -1,5 +1,5 @@
 ---
-date: 2026-11-07
+date: 2026-11-05
 template: feature
 screen: 08-language
 platforms: facebook, linkedin, x, bluesky, instagram, threads

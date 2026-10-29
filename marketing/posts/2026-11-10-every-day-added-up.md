@@ -1,5 +1,5 @@
 ---
-date: 2026-11-14
+date: 2026-11-10
 template: feature
 screen: 04-transactions
 crop: top

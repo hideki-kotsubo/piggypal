@@ -1,8 +1,9 @@
 # Founder posts: from Hideki's own accounts
 
 docs/74. Not brand posts: these go out from the user's personal accounts,
-in the first person, the week of Nov 3 (with `2026-11-05-built-in-vancouver`
-on the brand accounts). Personal posts reach far more people than a new
+in the first person, on launch day, Tue Nov 3 (the same day as
+`2026-11-03-built-in-vancouver` on the brand accounts, which have been
+posting since Oct 29). Personal posts reach far more people than a new
 page's, and a small LinkedIn network grows fastest when people you know
 reshare.
 
@@ -28,7 +29,7 @@ comment within the first hour, and share the post to the Flowtab page
 
 ## LinkedIn (English)
 
-Add one image: `marketing/out/posts/2026-11-03-type-it-or-say-it/en-feed.png`
+Add one image: `marketing/out/posts/2026-10-29-type-it-or-say-it/en-feed.png`
 (run `npm run social:compose` first), or a photo of you at your desk.
 
 > I've spent my career building software for other people. This time, I built something for myself.

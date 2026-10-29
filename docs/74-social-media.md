@@ -158,18 +158,21 @@ can look like spam. Rotate five themes:
 5. **Community.** Brazilians, Latin Americans and francophones in Canada;
    travel and living in more than one currency.
 
-First two weeks, re-dated 2026-10-27 to start Tue Nov 3 (all
-`approved:` empty): `2026-11-03-type-it-or-say-it`,
-`2026-11-05-built-in-vancouver`, `2026-11-07-seven-languages`,
-`2026-11-10-small-spends`, `2026-11-12-no-bank-login`,
-`2026-11-14-every-day-added-up`. The 0.7.0 update post was dropped (stale
+First two weeks, re-dated 2026-10-27 to start Tue Nov 3, then on
+2026-10-29 (all six approved for English) moved earlier so the brand
+accounts aren't empty when the founder posts send people to them; Tue
+Nov 3 stays launch day: `2026-10-29-type-it-or-say-it`,
+`2026-10-31-small-spends`, `2026-11-03-built-in-vancouver`,
+`2026-11-05-seven-languages`, `2026-11-07-no-bank-login`,
+`2026-11-10-every-day-added-up`. Instagram (re-created 2026-10-29)
+joins from about Nov 5, after a quiet first week. The 0.7.0 update post was dropped (stale
 by then); `no-bank-login` replaces it. Japanese, Korean and Chinese
 (docs/76) were first held out of posts until native reviewers checked
 them; dropped the same day after the user's tests with real users found
 no misparses, so every post and the website now list all seven languages
 (`four-languages` became `seven-languages`). `built-in-vancouver` speaks in the user's own voice (Brazilian,
 Vancouver, spending in several currencies, why the app exists) and goes
-out the same week as the user's personal LinkedIn post
+out the same day as the user's personal LinkedIn post
 (`marketing/launch/`); it needs their check before anything else.
 
 ## Hosting the images
