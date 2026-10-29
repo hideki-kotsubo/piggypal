@@ -17,6 +17,13 @@ bullets:
 - Free, nothing to sign up for
 - Never asks for your bank password
 - Share with your household when you choose
+alt: Flowtab tip: No account. No bank login. Free, nothing to sign up for; never asks for your bank password; share with your household when you choose.
+short:
+Most budget apps start by asking for your bank login. Flowtab doesn't. 🔒
+
+Type or say what you spent and it's saved on your phone. No account, works offline, sync only if you want to. We never sell your data.
+
+Free: https://myflowtab.com
 caption:
 Most budget apps start by asking for your bank login. Flowtab doesn't. 🔒
 

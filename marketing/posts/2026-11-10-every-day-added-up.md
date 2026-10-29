@@ -10,6 +10,13 @@ approved: en
 ## en
 headline: Every day, added up.
 sub: Search, filter by category, account or date, and see the total. In every currency you spend in.
+alt: Flowtab's Transactions screen: search, filters for category, account and date, and the day's entries grouped under Today and Yesterday, each with its total.
+short:
+Where did this week go? 📊 Flowtab adds up every day for you.
+
+Search your notes, filter by category, account or date, and the total updates as you go. Several currencies? Totals stay per currency, never blended.
+
+https://myflowtab.com
 caption:
 Where did this week go? Open Transactions and every day is already added up. 📊
 

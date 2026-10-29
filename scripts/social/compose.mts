@@ -8,14 +8,30 @@
 //   npm run social:compose -- --profile        avatars + banners only
 //
 // Writes marketing/out/posts/<id>/<lang>-{feed,story}.png and
-// <lang>-caption.txt, and marketing/out/profile/*.png (git-ignored).
+// <lang>-captions.txt (the text for each platform, for posting by hand,
+// D306), and marketing/out/profile/*.png (git-ignored).
 // Run `npm run social:screenshots` first: feature/update posts embed them.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium, type Browser } from 'playwright';
 import type { Language } from './languages.mts';
-import { loadPosts, type Post, type PostCopy } from './posts.mts';
+import { captionFor, loadPosts, type Platform, type Post, type PostCopy } from './posts.mts';
+
+// One file to copy from when posting by hand: a block per group of
+// platforms that share a text, then the image's alt text.
+const GROUPS: [string, Platform[]][] = [
+  ['Facebook, LinkedIn', ['facebook', 'linkedin']],
+  ['X, Bluesky', ['x', 'bluesky']],
+  ['Instagram, Threads, TikTok', ['instagram', 'threads', 'tiktok']],
+];
+function captionsFile(post: Post, lang: Language, c: PostCopy): string {
+  const blocks = GROUPS.filter(([, ps]) => ps.some((p) => post.platforms.includes(p)))
+    .map(([name, ps]) => [name, captionFor(c, lang, ps[0])])
+    .filter(([, text]) => text);
+  if (c.alt) blocks.push(['Alt text (image description)', c.alt]);
+  return blocks.map(([name, text]) => `===== ${name} =====\n\n${text}\n`).join('\n');
+}
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const OUT = path.join(root, 'marketing/out');
@@ -180,7 +196,7 @@ try {
           const [w, h] = SIZE[format];
           await render(browser, postHtml(post, lang, c, format), w, h, path.join(dir, `${lang}-${format}.png`));
         }
-        writeFileSync(path.join(dir, `${lang}-caption.txt`), c.caption + '\n');
+        writeFileSync(path.join(dir, `${lang}-captions.txt`), captionsFile(post, lang, c));
       }
       console.log(`${post.id}: ${Object.keys(post.copy).join(', ')}`);
     }

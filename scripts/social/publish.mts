@@ -24,7 +24,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Language } from './languages.mts';
-import { loadPosts, type Platform, type Post } from './posts.mts';
+import { captionFor, loadPosts, type Platform, type Post } from './posts.mts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const LEDGER = path.join(root, 'marketing/published.json');
@@ -104,19 +104,30 @@ async function schedule(post: Post, lang: Language, channel: Channel) {
     if (!profileKey) throw new Error(`${key}: ${channel.profileKeyEnv} is not set`);
     headers['Profile-Key'] = profileKey;
   }
-  const res = await fetch('https://api.ayrshare.com/api/post', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      post: copy.caption,
-      platforms: platforms.map((p) => AYRSHARE_NAME[p] ?? p),
-      mediaUrls: [mediaUrl],
-      scheduleDate,
-    }),
-  });
-  const body = (await res.json().catch(() => ({}))) as { id?: string; status?: string };
-  if (!res.ok || body.status === 'error') throw new Error(`${key}: Ayrshare ${res.status} ${JSON.stringify(body)}`);
-  ledger[key] = { scheduledFor: scheduleDate, platforms, ayrshareId: body.id ?? null };
+  // One request per distinct text: X and Bluesky get the short version,
+  // Facebook and LinkedIn the link instead of "Link in bio" (captionFor).
+  const byText = new Map<string, Platform[]>();
+  for (const p of platforms) {
+    const text = captionFor(copy, lang, p);
+    byText.set(text, [...(byText.get(text) ?? []), p]);
+  }
+  const ids: string[] = [];
+  for (const [text, group] of byText) {
+    const res = await fetch('https://api.ayrshare.com/api/post', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        post: text,
+        platforms: group.map((p) => AYRSHARE_NAME[p] ?? p),
+        mediaUrls: [mediaUrl],
+        scheduleDate,
+      }),
+    });
+    const body = (await res.json().catch(() => ({}))) as { id?: string; status?: string };
+    if (!res.ok || body.status === 'error') throw new Error(`${key} (${group.join(', ')}): Ayrshare ${res.status} ${JSON.stringify(body)}`);
+    if (body.id) ids.push(body.id);
+  }
+  ledger[key] = { scheduledFor: scheduleDate, platforms, ayrshareId: ids.join(',') || null };
   writeFileSync(LEDGER, JSON.stringify(ledger, null, 2) + '\n');
 }
 

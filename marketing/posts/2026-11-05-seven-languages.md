@@ -9,6 +9,14 @@ approved: en
 ## en
 headline: Your money, your language.
 sub: English, Português, Español, Français, 日本語, 한국어, 中文. Each phone in the household can pick its own.
+alt: Flowtab's Language screen, listing English, Português (Brasil), Español, Français, 日本語, 한국어 and 中文 (Simplified and Traditional).
+short:
+Flowtab now speaks seven languages 🌏
+
+English, Português, Español, Français, 日本語, 한국어 and 中文. Type or say entries in yours: "café 4,50", "コーヒー500円", "커피 4500원", "咖啡35元".
+
+Each phone in the household can pick its own.
+https://myflowtab.com
 caption:
 Flowtab now speaks seven languages 🌏
 

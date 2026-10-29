@@ -11,11 +11,14 @@ approved:
 with "_" are ignored). Format and rules: scripts/social/posts.mts and
 docs/74. Screens: 01-empty 02-understood 03-home 04-transactions
 05-insights 06-accounts 07-settings
-08-language. -->
+08-language. short: is the X/Bluesky text with the link; caption: is
+written for Instagram ("Link in bio"). -->
 
 ## en
 headline:
 sub:
+alt:
+short:
 caption:
 
 ## pt-BR

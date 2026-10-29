@@ -104,6 +104,16 @@ Community Management approval and TikTok's audit can take weeks, X bills
 per post either way). `publish.mts` keeps its Ayrshare adapter until
 then and stays a dry run.
 
+Posting the first one by hand (2026-10-29) showed one caption doesn't fit
+every network: "Link in bio" is Instagram-only, and X and Bluesky stop at
+280/300 characters. So each language section now also has `short:` (the
+X/Bluesky text, link included; `posts.mts` rejects it over the limit,
+counting as X does) and `alt:` (the image description), and
+`captionFor()` derives Facebook/LinkedIn from `caption:` (the link instead
+of "Link in bio", three hashtags). `social:compose` writes them all to
+one `<lang>-captions.txt` per post to copy from; `publish.mts` sends each
+distinct text in its own request.
+
 **D279 — TikTok and YouTube Shorts need video.** Image posts skip them,
 with a note in the dry run. Next step for those two: short screen
 recordings of real entries, captioned per language (Playwright can record
