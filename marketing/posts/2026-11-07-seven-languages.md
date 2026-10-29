@@ -1,8 +1,7 @@
 ---
 date: 2026-11-07
 template: feature
-screen: 07-settings
-crop: bottom
+screen: 08-language
 platforms: facebook, linkedin, x, bluesky, instagram, threads
 approved: en
 ---

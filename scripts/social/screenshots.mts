@@ -112,6 +112,7 @@ try {
       ['05-insights', '/insights'],
       ['06-accounts', '/accounts'],
       ['07-settings', '/settings'],
+      ['08-language', '/settings/language'],
     ] as const) {
       await page.goto(new URL(route, baseUrl).href);
       await settle(page);
