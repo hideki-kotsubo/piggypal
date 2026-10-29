@@ -158,6 +158,139 @@ scroll. No new blocks.
 - Q4: **yes, mockup first**: an interactive prototype at ~820px and
   ~1280px where the entry variants and per-screen split can be toggled.
 
+## Technical plan (2026-10-29)
+
+Written against the code as of app 0.14.1. Nothing built yet.
+
+### What the code looks like today
+
+- Flat routes in `main.tsx` (`BrowserRouter` + `<Routes>`, react-router
+  7, not a data router). Every screen renders its own page:
+  `<main className="home">` + its own `.app-bar` with a back link.
+- `.home` is a centred `max-width: 480px` column (`styles/home.css`).
+  That's useful here: a screen dropped into a 400px list pane or a
+  ~560px detail pane mostly just fits.
+- Entry zone + toast live only in `App.tsx` (Home), the dock is
+  `position: fixed` (docs/31), the toast is Home's local state.
+- Detail screens: `TransactionScreen` (`navigate(-1)` on finish, plus the
+  docs/23 fresh-blank cleanup), `AccountScreen`, `ScheduleScreen`, the
+  Settings sub-pages. Inbox has no detail route: its rows link to
+  `/transactions/:id`.
+- Categories edit in a `BottomSheet` from local state (docs/79 D311);
+  `BottomSheet` portals to `body` with a scrim.
+- Sticky day labels use `top: env(safe-area-inset-top)`; that works
+  inside any scrolling pane too.
+
+### Building blocks
+
+1. **`lib/layout.ts` — `useWidthClass()`**: `compact | medium |
+   expanded` from `matchMedia`, re-rendering on change. Rule: compact if
+   width < 600 **or height < 480**, so an iPhone in landscape (allowed in
+   `Info.plist`, ~850×390) keeps the phone layout. Medium 600–1023,
+   expanded ≥ 1024. Pure `classify(width, height)` with a Vitest test.
+2. **`AppShell`** — one layout route wrapping every route. Compact:
+   renders `<Outlet />` only, so the phone DOM is exactly today's. Wide:
+   `NavRail` + top bar (title + entry, D312) + `<Outlet />` + a toast host.
+   The shell is a fixed-height viewport (`100dvh`); panes scroll
+   individually, the body doesn't.
+3. **`NavRail`** — `NavLink`s for Home, Transactions, Inbox (with count),
+   Insights, Accounts, Categories, Scheduled, Settings; labels at
+   expanded, icons only at medium. Reuses existing `nav.*`/`settings.*`
+   strings where they exist.
+4. **`SplitLayout`** (D313) — a nested-route layout: `list` element on the
+   left, `<Outlet />` (or an empty state) on the right. Compact: the child
+   route if one matched, else the list, which is today's behaviour.
+5. **`PaneContext`** — `usePane()` tells a screen it's in a `list` or
+   `detail` pane, and the list path to close back to. Used to hide each
+   screen's own back link in the list pane (the rail replaces it), and
+   to make the detail pane's back/Done go to the list route instead of
+   `navigate(-1)`. Each screen's `.app-bar` stays; no rewrite of ~20
+   headers.
+6. **`BottomSheet` modes** (D314, P6) — a sheet on compact. Wide: if a
+   `DetailSlot` is provided (Categories' split), it portals inline into
+   the detail pane with no scrim. Otherwise it's a centred dialog (CSS
+   under the shell). One change covers every sheet.
+
+### Routes after the change
+
+| Path | List pane | Detail pane |
+|---|---|---|
+| `/transactions`, `/transactions/:id` | `TransactionList` | `TransactionScreen` |
+| `/inbox`, `/inbox/:id` (**new path**) | `InboxScreen` | `TransactionScreen` |
+| `/accounts`, `/accounts/:id` | `AccountsScreen` | `AccountScreen` |
+| `/schedules`, `/schedules/:id` | `SchedulesScreen` | `ScheduleScreen` |
+| `/settings`, `/settings/*` | `SettingsScreen` hub | sync, appearance, language, entry, household (+ link-device, pin), pair, delete-account, about |
+| `/categories` | `CategoriesScreen` | its edit form via `DetailSlot` (no URL change, as today) |
+
+- `/transactions/duplicates` stays a full-width sibling route (more
+  specific path, ranked first).
+- Inbox rows link to `/inbox/:id` on every width, so the Inbox list stays
+  beside the transaction. On the phone it behaves as today (Back returns
+  to the Inbox).
+- `/about` moves under `/settings/about`, with `/about` redirecting.
+- Deep links stay valid: `/transactions/:id` on desktop now opens with
+  its list beside it.
+
+### Phases (each one shippable, phones unchanged throughout)
+
+1. **Shell**: `useWidthClass`, `AppShell`, `NavRail`, top bar with the
+   screen title (no entry yet), pane scroll model. Every screen still
+   single-pane, centred.
+2. **Splits** (D313, D314): `SplitLayout` + nested routes for the table
+   above, `PaneContext`, row highlight (`aria-current` via `useMatch`),
+   empty-pane states, `BottomSheet` modes.
+3. **Entry** (D312): `EntryZone` in the top bar, parse preview as a
+   drop-down under it, toast host in the shell. Home on wide (P5, see
+   open questions).
+4. **Polish + checks**: `pointer: fine` density and hover, rail/pane
+   strings in all 10 locales (parity test), Playwright pass.
+
+### Risks found while reading the code
+
+- **Blank transactions left behind in the pane.** On the phone, leaving
+  a fresh $0 transaction runs docs/23's cleanup (`finish()`). In a pane
+  you can click another row without pressing Done. The cleanup has to
+  run when the pane's transaction id changes or unmounts too, not only
+  on Done/Back.
+- **Crossing a breakpoint remounts screens** (resizing a window past
+  600/1024). Forms autosave, so nothing saved is lost, but an
+  in-progress entry draft or an open sheet resets. Acceptable; noted.
+- **Fixed elements.** The dock, toast and sheet are `position: fixed`
+  against the viewport. In the shell they must anchor to the main area,
+  not the whole window (the rail would sit under them). Handled by
+  rendering dock/toast only in compact and the shell's own host on wide.
+- **Safe areas** (docs/65) only matter on phones, which stay compact.
+  Recheck when iPad comes (D259).
+- **Phones get the new code too** (native apps bundle `app/dist`), so
+  "compact = today's DOM" is the guarantee to verify, not assume.
+
+### Verification
+
+- Vitest: `classify()`; existing suites and the i18n parity test.
+- Playwright against the dev server (:3001) at 390×844, 844×390 (phone
+  landscape, must stay compact), 820×1180, 1280×800 and 1440×900, light
+  and dark: navigation, each split, Inbox filing, Categories in the pane,
+  a sheet as a dialog, entry → detail pane, blank-row cleanup on
+  switching rows. Screenshots at each width for review.
+- 390×844 compared with a screenshot of the current build: no visible
+  difference.
+- On a real phone after release (user): Home, entry, a transaction, a
+  sheet.
+
+### Open questions for the build
+
+1. **Top bar on every screen, or Home only?** Today the entry only
+   exists on Home (phone). The mockup showed it on every screen.
+   Recommended: every screen, since it's always one click away on
+   desktop and doesn't change what entry does.
+2. **Home on wide (P5).** The mockup put budget bars and the trend on
+   Home next to Recent. docs/07 D147 moved those off Home to Insights on
+   purpose. Options: (a) Home keeps today's blocks (banners + Recent)
+   laid out wider; (b) also show budgets/trend on wide Home, an
+   exception to D147 for desktop only.
+3. **Phone in landscape stays the phone layout** (the height < 480
+   rule). Confirm.
+
 ## Parked (new features, out of this pass, recorded so they're not lost)
 
 All of these follow the same-functionality rule: each needs a phone
