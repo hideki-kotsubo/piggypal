@@ -14,6 +14,14 @@ bullets:
 - Log it the moment you pay, not tonight
 - Don't judge yet, just count
 - Look at the month's total on day 30
+alt: Flowtab tip: $4.50 a day is $99 a month. Log it the moment you pay, don't judge yet, just count, and look at the month's total on day 30.
+short:
+A $4.50 coffee every workday is about $99 a month. Not a reason to quit coffee, a reason to know. ☕
+
+For one month, log every spend the moment you pay. On day 30, look at the totals.
+
+Flowtab makes it three seconds: type or say "coffee 4.50".
+https://myflowtab.com
 caption:
 A $4.50 coffee every workday is about $99 a month. Not a reason to quit coffee, a reason to know. ☕
 

@@ -10,6 +10,14 @@ approved: en
 ## en
 headline: Type it or say it.
 sub: "groceries 86.20 at costco" — Flowtab works out the amount, category and account. You just tap Save.
+alt: The Flowtab app with "groceries 86.20 at costco" typed in, understood as $86.20, Groceries, today, Cash, with a Save button.
+short:
+Budget apps die the day you stop logging. So we made logging take three seconds.
+
+Type or say "groceries 86.20 at costco" and Flowtab fills in the amount, category, date and account. Tap Save.
+
+Free · Offline · 7 languages
+https://myflowtab.com #budgeting
 caption:
 Budget apps die the day you stop logging. So we made logging take three seconds. 👇
 

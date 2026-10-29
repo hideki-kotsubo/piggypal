@@ -11,6 +11,14 @@ is one: personal posts do better with a face or a place. -->
 ## en
 headline: One person, one app, seven languages.
 sub: Flowtab is built in Vancouver by a Brazilian developer who spends in Reais, Dollars and everything in between.
+alt: Flowtab card: One person, one app, seven languages. Built in Vancouver by a Brazilian developer who spends in Reais, Dollars and everything in between.
+short:
+Hi 👋 Flowtab is a one-person app, built in Vancouver.
+
+I'm Brazilian and spend in reais, Canadian and US dollars. Every budget app wanted my bank login or took too long to log a coffee. So I built my own.
+
+Free, offline, no account.
+https://myflowtab.com #buildinpublic
 caption:
 Hi 👋 Flowtab is a one-person app, built in Vancouver.
 
