@@ -2,7 +2,7 @@
 date: 2026-11-05
 template: tip
 platforms: facebook, linkedin, x, bluesky, instagram, threads
-approved:
+approved: en
 ---
 
 <!-- Building in public. Swap in a real photo of the desk/city when there

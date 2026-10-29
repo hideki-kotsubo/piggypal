@@ -4,7 +4,7 @@ template: feature
 screen: 04-transactions
 crop: top
 platforms: facebook, linkedin, x, bluesky, instagram, threads
-approved:
+approved: en
 ---
 
 ## en
