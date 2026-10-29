@@ -2,7 +2,7 @@
 date: 2026-11-12
 template: tip
 platforms: facebook, linkedin, x, bluesky, instagram, threads
-approved:
+approved: en
 ---
 
 <!-- Replaces the 0.7.0 update post (stale by the time posting started).

@@ -4,7 +4,7 @@ template: feature
 screen: 07-settings
 crop: bottom
 platforms: facebook, linkedin, x, bluesky, instagram, threads
-approved:
+approved: en
 ---
 
 ## en

@@ -2,7 +2,7 @@
 date: 2026-11-10
 template: tip
 platforms: facebook, linkedin, x, bluesky, instagram, threads
-approved:
+approved: en
 ---
 
 <!-- Money tip. Arithmetic only, no advice: 4.50 × 22 workdays = 99. -->
