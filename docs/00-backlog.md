@@ -348,6 +348,12 @@ it needs doing.
       unscoped, though it's the same shape of problem as docs/24's
       household-merge review UI, worth a look for reusable patterns.
       Not designed further than this.
+      2026-10-29: brainstorm recorded in
+      `docs/81-statement-import-and-audit.md` (parked): import = audit
+      with nothing to match; wrong-charge checks as well as forgotten
+      entries; PDF parsing options (on-device, user-taught templates, LLM
+      writes the parser from a masked skeleton, opt-in server LLM) with a
+      statement-totals gate. User is checking what each bank exports.
 - [ ] Spreadsheet-style filterable data view for transactions/reports —
       flagged 2026-08-23, not yet scoped. Distinct from the existing
       "Insights screen" filter/report-type open question above (which is
@@ -423,6 +429,12 @@ it needs doing.
       build cost but leaves most of the window empty. Each shown at a
       desktop (~1280px) and tablet (~820px) width since the rail/composer
       collapse differently at each. No direction chosen.
+      2026-10-29: brainstormed again → `docs/80-desktop-layout.md`
+      (design draft). First target is the desktop browser/PWA; scope is
+      layout only, no new features; desktop and phone keep the same
+      functionality. Mix of A (rail) + B (list/detail), existing typed
+      entry as a top bar. Bulk edit, data grid, multi-line paste parked
+      there; statement import/audit split to docs/81.
 - [ ] Household sharing (multi-user) + P2P device sync — designed
       2026-08-14, docs/24-household-sharing.md and
       docs/25-p2p-device-sync.md (D108-D120, +D117a, +D113 revised). A UI
