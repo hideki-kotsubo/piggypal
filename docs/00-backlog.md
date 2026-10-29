@@ -435,6 +435,10 @@ it needs doing.
       functionality. Mix of A (rail) + B (list/detail), existing typed
       entry as a top bar. Bulk edit, data grid, multi-line paste parked
       there; statement import/audit split to docs/81.
+      Same day: interactive mockup
+      (`docs/artifacts/flowtab-desktop-prototype.html`); decided top bar
+      entry (D312) and list + detail on every list screen (D313, D314).
+      Next: technical plan, then build on `feat/desktop-layout`.
 - [ ] Household sharing (multi-user) + P2P device sync — designed
       2026-08-14, docs/24-household-sharing.md and
       docs/25-p2p-device-sync.md (D108-D120, +D117a, +D113 revised). A UI

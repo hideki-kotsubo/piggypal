@@ -1,7 +1,8 @@
 # 80 — Desktop (and later tablet) layout
 
-Status: brainstorm 2026-10-29, design draft. Nothing decided or built yet;
-the proposals below get D-numbers once agreed.
+Status: design, 2026-10-29. Entry placement and list + detail decided
+(D312–D314) after trying the mockup; the rest of the proposals still get
+D-numbers once agreed. Nothing built yet.
 
 Backlog item this covers (docs/00, ⚫ Later): "Custom UI for tablets and
 desktops" (flagged 2026-08-19). Earlier sketch:
@@ -50,6 +51,14 @@ together.
 
 That points to a mix of the 2026-08-20 directions **A (nav rail) and B
 (list + detail)**, not C.
+
+## Decisions
+
+| #    | Decision |
+|------|----------|
+| D312 | **Entry on wide screens is the top bar.** Today's entry zone ("+" and the typed/voice field with its parse preview) moves into a bar across the top of the main area; the preview drops down under it. "+" and Save open the transaction in the detail pane (docs/17's auto-navigate, in the pane). Chosen 2026-10-29 from the mockup's four placements over the bottom dock, the floating panel and the side column. Phone width keeps docs/31's bottom dock unchanged. |
+| D313 | **List + detail side by side on every list screen**: Transactions, Inbox, Accounts, Scheduled, Settings. Selecting a row opens its existing detail screen in the right pane; the URL still changes as today, so links, refresh and Back work. Below 600px, today's push navigation. |
+| D314 | **Categories joins D313 by putting its edit form in the detail pane** (proposed 2026-10-29, pending user confirmation in the mockup). Categories has no detail page (docs/79 D311: a tap opens an edit sheet), so on wide screens the sheet's same fields move into the right pane; a sheet on the phone, unchanged. A real category detail page (spending, budget history, its transactions) would be a new screen on the phone too, so it's parked, not part of this pass. |
 
 ## Proposals (not yet decided)
 
@@ -127,11 +136,9 @@ scroll. No new blocks.
 
 ## Open questions
 
-1. Which screens get the split first (P3)? Transactions is the obvious
-   one; Accounts and Settings already have detail pages to reuse.
-2. Exact fate of the bottom-docked entry zone (docs/31) on wide screens:
-   top bar only, top bar + composer panel, or composer always visible in
-   a right column (direction A)?
+1. ~~Which screens get the split (P3)?~~ Decided: all (D313, D314).
+2. ~~Fate of the bottom-docked entry zone on wide screens?~~ Decided:
+   top bar (D312).
 3. Keyboard shortcuts (P6): first pass or later?
 4. Mockups first: redo the 2026-08-20 directions artifact at ~820px and
    ~1280px with P1–P5, before any code?
@@ -143,10 +150,10 @@ scroll. No new blocks.
 
 ### Answers (2026-10-29)
 
-- Q2 (entry zone on wide screens): undecided; user wants to **try all
-  three** variants hands-on (top bar only / top bar + composer panel /
-  composer always visible in a right column).
-- Q1 (which screens split first): undecided; decide after trying it.
+- Q2 (entry zone on wide screens): tried in the mockup → **top bar**
+  (D312).
+- Q1 (which screens split): **all of them** (D313), Categories via its
+  edit form (D314).
 - Q3 (keyboard shortcuts): **later**, not in the first pass.
 - Q4: **yes, mockup first**: an interactive prototype at ~820px and
   ~1280px where the entry variants and per-screen split can be toggled.
