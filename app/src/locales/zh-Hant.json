@@ -112,6 +112,14 @@
     "home": "首頁",
     "main": "主導覽"
   },
+  "split": {
+    "transaction": "選擇一筆交易即可在此查看。",
+    "inbox": "選擇一個項目來設定分類。",
+    "account": "選擇一個帳戶查看詳情。",
+    "schedule": "選擇一筆定期付款即可在此查看。",
+    "settings": "請選擇一個區塊。",
+    "category": "選擇一個分類進行編輯。"
+  },
   "banner": {
     "inbox_other": "有{{count}}條記錄需要分類",
     "due_other": "有{{count}}筆定期付款到期",

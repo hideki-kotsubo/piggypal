@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
 import { accountLabel, formatAmount, formatRelativeDate, formatTime } from '../lib/format';
@@ -33,7 +33,8 @@ export function InboxScreen() {
           {items.map((tx) => {
             const account = store.accounts.find((a) => a.id === tx.accountId);
             return (
-              <Link key={tx.id} to={`/transactions/${tx.id}`} className="tx-row tx-row-tappable">
+              // docs/80 — /inbox/:id, so on a wide window the Inbox stays beside it.
+              <NavLink key={tx.id} to={`/inbox/${tx.id}`} className="tx-row tx-row-tappable">
                 <div className="tx-main">
                   <span className="tx-note">{tx.aiRaw ?? tx.note ?? t('common.noNote')}</span>
                   <span className="tx-meta">
@@ -43,7 +44,7 @@ export function InboxScreen() {
                 <span className={`tx-amt ${tx.amountCents < 0 ? 'out' : 'in'}`}>
                   {formatAmount(tx.amountCents, tx.currency)}
                 </span>
-              </Link>
+              </NavLink>
             );
           })}
         </div>

@@ -144,16 +144,21 @@
    bar only where it also holds actions (Accounts' +, Transactions'
    duplicates). Deeper screens keep their back link. */
 .shell-root > .home > .app-bar > .back-link,
-.shell-root > .home > .app-bar > .wordmark {
+.shell-root > .home > .app-bar > .wordmark,
+.split-list > .home > .app-bar > .back-link,
+.split-list > .home > .app-bar > .wordmark {
   visibility: hidden;
 }
-.shell-root > .home > .app-bar:not(:has(.app-bar-actions)) {
+.shell-root > .home > .app-bar:not(:has(.app-bar-actions)),
+.split-list > .home > .app-bar:not(:has(.app-bar-actions)) {
   display: none;
 }
-.shell-root > .home {
+.shell-root > .home,
+.split-list > .home {
   padding-top: 1rem;
 }
-.shell-root > .home > .app-bar {
+.shell-root > .home > .app-bar,
+.split-list > .home > .app-bar {
   padding-top: 0;
 }
 /* Home's bar is the wordmark plus Insights/Settings links, all in the rail
@@ -176,4 +181,82 @@
 }
 .shell .toast {
   left: calc(50% + var(--rail-w) / 2);
+}
+
+/* ---------- list + detail (D313, D314) ---------- */
+.split {
+  display: flex;
+  height: 100%;
+}
+.split-list {
+  flex: none;
+  width: 400px;
+  overflow-y: auto;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+}
+.shell-medium .split-list {
+  width: 320px;
+}
+.split-detail {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+.split-list > .home {
+  max-width: none;
+}
+.split-detail > .home {
+  max-width: 560px;
+}
+.split-empty {
+  box-sizing: border-box;
+  height: 100%;
+  margin: 0;
+  padding: 2rem;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: var(--ink-faint);
+  font-size: 0.9rem;
+}
+.split-slot:not(:empty) + .split-empty {
+  display: none;
+}
+/* The selected row, so it's clear what the detail pane is showing. */
+.split-list [aria-current='page'],
+.split-list [aria-current='true'] {
+  background: var(--accent-soft);
+}
+
+/* Categories' edit form, in the detail pane instead of a sheet (D314). */
+.sheet.sheet-inline {
+  position: static;
+  transform: none;
+  width: auto;
+  max-width: 560px;
+  min-height: 100%;
+  max-height: none;
+  margin: 0 auto;
+  border-radius: 0;
+  box-shadow: none;
+  animation: none;
+  padding-top: 0.6rem;
+}
+
+/* Every other sheet is a centred dialog on wide windows (P6). The sheet
+   layer is portalled to <body>, outside .shell, so BottomSheet adds this
+   class itself. */
+.sheet-layer-dialog .sheet {
+  top: 50%;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  width: min(480px, calc(100% - 2rem));
+  max-height: 85dvh;
+  border-radius: 20px;
+  padding-bottom: 0.4rem;
+  animation: none;
+}
+.sheet-layer-dialog .sheet-grab {
+  display: none;
 }

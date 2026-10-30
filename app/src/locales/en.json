@@ -119,6 +119,14 @@
     "home": "Home",
     "main": "Main navigation"
   },
+  "split": {
+    "transaction": "Select a transaction to see it here.",
+    "inbox": "Select an entry to give it a category.",
+    "account": "Select an account to see its details.",
+    "schedule": "Select a scheduled payment to see it here.",
+    "settings": "Pick a section.",
+    "category": "Select a category to edit it."
+  },
   "banner": {
     "inbox_one": "{{count}} entry needs a category",
     "inbox_other": "{{count}} entries need a category",

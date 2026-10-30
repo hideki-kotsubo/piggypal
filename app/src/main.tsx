@@ -34,6 +34,7 @@ import { ScanDeviceLinkScreen } from './components/ScanDeviceLinkScreen'
 import { AboutScreen } from './components/AboutScreen'
 import { AuthVerifyScreen } from './components/AuthVerifyScreen'
 import { AppShell } from './components/AppShell'
+import { SlotSplit, SplitLayout } from './components/SplitLayout'
 
 // Universal Links (iOS) / App Links (Android) hand the tapped magic-link's
 // full https://<app-domain>/... URL to the native shell here — this app
@@ -58,31 +59,39 @@ createRoot(document.getElementById('root')!).render(
           {/* docs/80 — rail + top bar on wide windows; a no-op on phones. */}
           <Route element={<AppShell />}>
             <Route path="/" element={<App />} />
-            <Route path="/transactions" element={<TransactionList />} />
+            {/* docs/80 D313/D314 — list + detail side by side on wide windows. */}
             <Route path="/transactions/duplicates" element={<DuplicateTransactionsScreen />} />
-            <Route path="/transactions/:id" element={<TransactionScreen />} />
-            <Route path="/inbox" element={<InboxScreen />} />
+            <Route path="/transactions" element={<SplitLayout list={<TransactionList />} base="/transactions" emptyKey="split.transaction" />}>
+              <Route path=":id" element={<TransactionScreen />} />
+            </Route>
+            <Route path="/inbox" element={<SplitLayout list={<InboxScreen />} base="/inbox" emptyKey="split.inbox" />}>
+              <Route path=":id" element={<TransactionScreen />} />
+            </Route>
             <Route path="/insights" element={<InsightsScreen />} />
-            <Route path="/settings" element={<SettingsScreen />} />
-            <Route path="/settings/sync" element={<SyncSettingsScreen />} />
-            <Route path="/settings/appearance" element={<AppearanceScreen />} />
-            <Route path="/settings/language" element={<LanguageScreen />} />
-            <Route path="/settings/entry" element={<EntrySettingsScreen />} />
-            <Route path="/settings/pair" element={<PairingScreen />} />
-            <Route path="/settings/household" element={<HouseholdScreen />} />
-            <Route path="/settings/household/link-device" element={<DeviceLinkScreen />} />
-            <Route path="/settings/household/pin" element={<PinScreen />} />
-            <Route path="/settings/delete-account" element={<DeleteAccountScreen />} />
-            {/* docs/71 — the old Profiles screen folded into Household. */}
-            <Route path="/settings/profiles" element={<Navigate to="/settings/household" replace />} />
+            <Route path="/settings" element={<SplitLayout list={<SettingsScreen />} base="/settings" emptyKey="split.settings" />}>
+              <Route path="sync" element={<SyncSettingsScreen />} />
+              <Route path="appearance" element={<AppearanceScreen />} />
+              <Route path="language" element={<LanguageScreen />} />
+              <Route path="entry" element={<EntrySettingsScreen />} />
+              <Route path="pair" element={<PairingScreen />} />
+              <Route path="household" element={<HouseholdScreen />} />
+              <Route path="household/link-device" element={<DeviceLinkScreen />} />
+              <Route path="household/pin" element={<PinScreen />} />
+              <Route path="delete-account" element={<DeleteAccountScreen />} />
+              <Route path="about" element={<AboutScreen />} />
+              {/* docs/71 — the old Profiles screen folded into Household. */}
+              <Route path="profiles" element={<Navigate to="/settings/household" replace />} />
+            </Route>
+            <Route path="/about" element={<Navigate to="/settings/about" replace />} />
             <Route path="/auth/verify" element={<AuthVerifyScreen />} />
             <Route path="/auth/scan" element={<ScanDeviceLinkScreen />} />
-            <Route path="/about" element={<AboutScreen />} />
-            <Route path="/accounts" element={<AccountsScreen />} />
-            <Route path="/accounts/:id" element={<AccountScreen />} />
-            <Route path="/categories" element={<CategoriesScreen />} />
-            <Route path="/schedules" element={<SchedulesScreen />} />
-            <Route path="/schedules/:id" element={<ScheduleScreen />} />
+            <Route path="/accounts" element={<SplitLayout list={<AccountsScreen />} base="/accounts" emptyKey="split.account" />}>
+              <Route path=":id" element={<AccountScreen />} />
+            </Route>
+            <Route path="/categories" element={<SlotSplit emptyKey="split.category"><CategoriesScreen /></SlotSplit>} />
+            <Route path="/schedules" element={<SplitLayout list={<SchedulesScreen />} base="/schedules" emptyKey="split.schedule" />}>
+              <Route path=":id" element={<ScheduleScreen />} />
+            </Route>
           </Route>
         </Routes>
       </StoreProvider>

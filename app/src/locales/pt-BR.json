@@ -126,6 +126,14 @@
     "home": "Início",
     "main": "Navegação principal"
   },
+  "split": {
+    "transaction": "Selecione uma transação para vê-la aqui.",
+    "inbox": "Selecione um lançamento para dar uma categoria.",
+    "account": "Selecione uma conta para ver os detalhes.",
+    "schedule": "Selecione um pagamento agendado para vê-lo aqui.",
+    "settings": "Escolha uma seção.",
+    "category": "Selecione uma categoria para editá-la."
+  },
   "banner": {
     "inbox_one": "{{count}} lançamento precisa de categoria",
     "inbox_other": "{{count}} lançamentos precisam de categoria",

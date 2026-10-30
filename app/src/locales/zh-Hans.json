@@ -112,6 +112,14 @@
     "home": "首页",
     "main": "主导航"
   },
+  "split": {
+    "transaction": "选择一笔交易即可在此查看。",
+    "inbox": "选择一个条目来设置分类。",
+    "account": "选择一个账户查看详情。",
+    "schedule": "选择一笔定期付款即可在此查看。",
+    "settings": "请选择一个分区。",
+    "category": "选择一个分类进行编辑。"
+  },
   "banner": {
     "inbox_other": "有{{count}}条记录需要分类",
     "due_other": "有{{count}}笔定期付款到期",

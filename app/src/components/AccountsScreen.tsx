@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useStore } from '../lib/store';
 import { accountName } from '../lib/starterLabels';
 import { accountLabel, formatAmount, kindLabel } from '../lib/format';
@@ -198,7 +198,7 @@ export function AccountsScreen() {
     }
 
     return (
-      <Link key={account.id} to={`/accounts/${account.id}`} className="account-card-row">
+      <NavLink key={account.id} to={`/accounts/${account.id}`} className="account-card-row">
         <span className="account-card-main">
           <span className="account-name">{label}</span>
           <span className="account-card-sub">
@@ -207,7 +207,7 @@ export function AccountsScreen() {
           </span>
         </span>
         <span className="account-balances">{renderBalances(account)}</span>
-      </Link>
+      </NavLink>
     );
   }
 
