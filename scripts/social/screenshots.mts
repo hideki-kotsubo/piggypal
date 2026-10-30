@@ -6,8 +6,12 @@
 //   npm run social:screenshots                         all languages, against :3001
 //   npm run social:screenshots -- --url http://localhost:3011 --lang pt-BR
 //   npm run social:screenshots -- --size store         440×956 @3x (App Store 6.9")
+//   npm run social:screenshots -- --size tablet        820×1180 @2x (iPad portrait)
+//   npm run social:screenshots -- --size ipad          1032×1376 @2x (App Store 13" iPad)
 //
-// Writes marketing/out/screenshots/<lang>/<screen>.png (git-ignored).
+// Writes marketing/out/screenshots/<lang>/<screen>.png (git-ignored); the
+// wide sizes (docs/80's layout) go to <lang>/<size>/ and also capture a
+// transaction open next to the list.
 // Run it on a Mac: the app uses system fonts (Charter, SF), so a Linux run
 // renders fallbacks and is only good for checking the flow.
 import { mkdirSync } from 'node:fs';
@@ -21,7 +25,14 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const SIZES = {
   social: { width: 390, height: 844, scale: 3 }, // 1170×2532, cropped to 4:5 / 9:16 by compose
   store: { width: 440, height: 956, scale: 3 }, // 1320×2868, App Store 6.9" / Play phone
+  // docs/80 wide layout: nav rail, entry in the top bar, list + detail.
+  tablet: { width: 820, height: 1180, scale: 2 }, // 1640×2360, iPad Air portrait (rail, icons only)
+  'tablet-landscape': { width: 1180, height: 820, scale: 2 }, // 2360×1640, iPad Air landscape
+  ipad: { width: 1032, height: 1376, scale: 2 }, // 2064×2752, App Store 13" iPad
+  desktop: { width: 1440, height: 900, scale: 2 }, // 2880×1800, laptop browser
 } as const;
+type SizeName = keyof typeof SIZES;
+const PHONE_SIZES: SizeName[] = ['social', 'store'];
 
 // Everyday entries, written the way a person would type them. Kept to
 // phrases the parser categorizes, so the screenshots show a tidy list
@@ -54,8 +65,10 @@ function arg(name: string): string | undefined {
 }
 
 const baseUrl = arg('url') ?? 'http://localhost:3001';
-const size = SIZES[(arg('size') as keyof typeof SIZES) ?? 'social'];
-if (!size) throw new Error('--size must be social or store');
+const sizeName = (arg('size') ?? 'social') as SizeName;
+const size = SIZES[sizeName];
+if (!size) throw new Error(`--size must be one of ${Object.keys(SIZES).join(', ')}`);
+const wide = !PHONE_SIZES.includes(sizeName);
 const only = arg('lang') as Language | undefined;
 const theme = arg('theme') ?? 'light';
 const langs = only ? [only] : LANGUAGES;
@@ -67,7 +80,9 @@ async function settle(page: Page) {
 }
 
 async function typeEntry(page: Page, text: string) {
-  const input = page.locator('.entry-zone-dock input[type="text"], .entry-zone-dock input:not([type])').first();
+  // The phone's docked entry, or the wide layout's top-bar one (docs/80 D312).
+  const zone = wide ? '.shell-entry' : '.entry-zone-dock';
+  const input = page.locator(`${zone} input[type="text"], ${zone} input:not([type])`).first();
   await input.fill(text);
   await input.press('Enter'); // shows the "Understood" preview (docs/22)
   await page.locator('.parse-confirm').waitFor({ timeout: 5000 });
@@ -82,7 +97,7 @@ async function addEntry(page: Page, text: string) {
 const browser = await chromium.launch();
 try {
   for (const lang of langs) {
-    const dir = path.join(root, 'marketing/out/screenshots', lang);
+    const dir = path.join(root, 'marketing/out/screenshots', lang, wide ? sizeName : '');
     mkdirSync(dir, { recursive: true });
     const ctx = await browser.newContext({
       viewport: { width: size.width, height: size.height },
@@ -101,6 +116,8 @@ try {
 
     const [first, ...rest] = ENTRIES[lang];
     for (const text of [...rest].reverse()) await addEntry(page, text);
+    // The last entry's "Added" toast (5 s) would sit in the next shot.
+    await page.locator('.toast').waitFor({ state: 'hidden', timeout: 7000 });
     await typeEntry(page, first);
     await shot('02-understood');
     await page.locator('.parse-confirm').click();
@@ -117,6 +134,13 @@ try {
       await page.goto(new URL(route, baseUrl).href);
       await settle(page);
       await shot(name);
+      if (wide && name === '04-transactions') {
+        // The list + detail split (docs/80 D313): the newest transaction
+        // open next to the list.
+        await page.locator('.split-list a[href^="/transactions/"]:not([href$="/duplicates"])').first().click();
+        await page.waitForTimeout(800);
+        await shot('04b-transaction-detail');
+      }
     }
     await ctx.close();
     console.log(`${lang}: ${path.relative(root, dir)}`);
