@@ -6,7 +6,10 @@
   display: flex;
   height: 100dvh;
   overflow: hidden;
-  background: var(--bg);
+  /* The screens' own colour, not the page's --bg: screens are centred
+     columns narrower than their pane, and grey on both sides of a white
+     column reads as two bands. */
+  background: var(--surface);
 }
 .shell-medium {
   --rail-w: 68px;
