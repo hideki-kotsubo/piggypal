@@ -122,7 +122,9 @@
   "nav": {
     "insights": "Análises",
     "settings": "Configurações",
-    "inbox": "Caixa de entrada"
+    "inbox": "Caixa de entrada",
+    "home": "Início",
+    "main": "Navegação principal"
   },
   "banner": {
     "inbox_one": "{{count}} lançamento precisa de categoria",

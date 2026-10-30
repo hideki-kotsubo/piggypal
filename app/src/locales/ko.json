@@ -108,7 +108,9 @@
   "nav": {
     "insights": "분석",
     "settings": "설정",
-    "inbox": "미분류"
+    "inbox": "미분류",
+    "home": "홈",
+    "main": "기본 탐색"
   },
   "banner": {
     "inbox_other": "카테고리가 필요한 내역이 {{count}}건 있습니다",

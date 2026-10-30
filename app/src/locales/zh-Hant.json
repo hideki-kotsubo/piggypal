@@ -108,7 +108,9 @@
   "nav": {
     "insights": "統計",
     "settings": "設定",
-    "inbox": "待分類"
+    "inbox": "待分類",
+    "home": "首頁",
+    "main": "主導覽"
   },
   "banner": {
     "inbox_other": "有{{count}}條記錄需要分類",

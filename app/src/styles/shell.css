@@ -1,0 +1,179 @@
+/* docs/80 — the wide-window frame (AppShell). Nothing here applies on a
+   phone-sized window: AppShell doesn't render .shell there at all. */
+
+.shell {
+  --rail-w: 200px;
+  display: flex;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--bg);
+}
+.shell-medium {
+  --rail-w: 68px;
+}
+
+/* ---------- navigation rail ---------- */
+.shell-rail {
+  flex: none;
+  width: var(--rail-w);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 1rem 0.6rem;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+}
+.shell-medium .shell-rail {
+  align-items: center;
+  padding-inline: 0.5rem;
+}
+.shell-rail-mark {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 1.15rem;
+  color: var(--ink);
+  padding: 0.2rem 0.65rem 1rem;
+}
+.shell-rail-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius-sm);
+  color: var(--ink-muted);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+.shell-medium .shell-rail-item {
+  justify-content: center;
+  padding: 0.6rem;
+}
+.shell-rail-item:hover {
+  background: var(--surface-sunken);
+  color: var(--ink);
+}
+.shell-rail-item[aria-current='page'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+.shell-rail-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.shell-rail-icon {
+  width: 19px;
+  height: 19px;
+  flex: none;
+}
+/* Icon-only at medium width; the label stays for screen readers. */
+.shell-medium .shell-rail-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.shell-rail-badge {
+  margin-left: auto;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  border-radius: 9px;
+  background: var(--warn);
+  color: var(--surface);
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+.shell-medium .shell-rail-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  margin: 0;
+}
+
+/* ---------- main area ---------- */
+.shell-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.shell-topbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 3.5rem;
+  box-sizing: border-box;
+  padding: 0.6rem 1.2rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.shell-title {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.15rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.shell-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+/* Screens are phone-width columns (.home, 480px); a single screen in the
+   main area gets a little more room, and fills the scroll area's height
+   instead of the viewport's. */
+.shell .home {
+  min-height: 100%;
+  max-width: 640px;
+}
+
+/* On a section's own root screen the rail already does what the screen's
+   back link did, and the top bar shows the title. Hide both; keep the
+   bar only where it also holds actions (Accounts' +, Transactions'
+   duplicates). Deeper screens keep their back link. */
+.shell-root > .home > .app-bar > .back-link,
+.shell-root > .home > .app-bar > .wordmark {
+  visibility: hidden;
+}
+.shell-root > .home > .app-bar:not(:has(.app-bar-actions)) {
+  display: none;
+}
+.shell-root > .home {
+  padding-top: 1rem;
+}
+.shell-root > .home > .app-bar {
+  padding-top: 0;
+}
+/* Home's bar is the wordmark plus Insights/Settings links, all in the rail
+   now. */
+.shell-root > .home-with-dock > .app-bar {
+  display: none;
+}
+
+/* The entry dock and toast are fixed to the viewport on the phone; inside
+   the shell they belong to the main area, not the whole window. */
+.shell .entry-zone-dock {
+  position: sticky;
+  left: auto;
+  transform: none;
+  margin-top: auto;
+  max-width: none;
+}
+.shell .home-with-dock {
+  padding-bottom: 0;
+}
+.shell .toast {
+  left: calc(50% + var(--rail-w) / 2);
+}

@@ -115,7 +115,9 @@
   "nav": {
     "insights": "Insights",
     "settings": "Settings",
-    "inbox": "Inbox"
+    "inbox": "Inbox",
+    "home": "Home",
+    "main": "Main navigation"
   },
   "banner": {
     "inbox_one": "{{count}} entry needs a category",

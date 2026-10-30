@@ -108,7 +108,9 @@
   "nav": {
     "insights": "分析",
     "settings": "設定",
-    "inbox": "未分類"
+    "inbox": "未分類",
+    "home": "ホーム",
+    "main": "メインナビゲーション"
   },
   "banner": {
     "inbox_other": "{{count}}件の記録にカテゴリが必要です",

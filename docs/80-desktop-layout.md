@@ -1,7 +1,7 @@
 # 80 — Desktop (and later tablet) layout
 
 Status: design, 2026-10-29. Entry placement and list + detail decided
-(D312–D314) after trying the mockup; the rest of the proposals still get
+(D312–D317) after trying the mockup; the rest of the proposals still get
 D-numbers once agreed. Nothing built yet.
 
 Backlog item this covers (docs/00, ⚫ Later): "Custom UI for tablets and
@@ -59,6 +59,9 @@ That points to a mix of the 2026-08-20 directions **A (nav rail) and B
 | D312 | **Entry on wide screens is the top bar.** Today's entry zone ("+" and the typed/voice field with its parse preview) moves into a bar across the top of the main area; the preview drops down under it. "+" and Save open the transaction in the detail pane (docs/17's auto-navigate, in the pane). Chosen 2026-10-29 from the mockup's four placements over the bottom dock, the floating panel and the side column. Phone width keeps docs/31's bottom dock unchanged. |
 | D313 | **List + detail side by side on every list screen**: Transactions, Inbox, Accounts, Scheduled, Settings. Selecting a row opens its existing detail screen in the right pane; the URL still changes as today, so links, refresh and Back work. Below 600px, today's push navigation. |
 | D314 | **Categories joins D313 by putting its edit form in the detail pane** (proposed 2026-10-29, pending user confirmation in the mockup). Categories has no detail page (docs/79 D311: a tap opens an edit sheet), so on wide screens the sheet's same fields move into the right pane; a sheet on the phone, unchanged. A real category detail page (spending, budget history, its transactions) would be a new screen on the phone too, so it's parked, not part of this pass. |
+| D315 | **The top bar (D312) is on every screen on wide windows**, not only Home, so entry is always one click away. Phone keeps the dock on Home only. (2026-10-29) |
+| D316 | **Wide Home follows the mockup: an exception to docs/07 D147 on desktop only.** Two columns: Recent on the left; due/inbox banners, this month's budget bars and the trend on the right. Phone Home unchanged (D147 stands there). (2026-10-29) |
+| D317 | **Phones are portrait-only in the native apps.** iPhone: landscape removed from `UISupportedInterfaceOrientations` (the `~ipad` list is untouched for a later iPad build). Android: `screenOrientation="portrait"` on the main activity (Android 16 ignores it on large screens, so tablets aren't locked). A browser tab can't be locked, so `useWidthClass()` still treats height < 480 as compact. (2026-10-29) |
 
 ## Proposals (not yet decided)
 
@@ -279,17 +282,11 @@ Written against the code as of app 0.14.1. Nothing built yet.
 
 ### Open questions for the build
 
-1. **Top bar on every screen, or Home only?** Today the entry only
-   exists on Home (phone). The mockup showed it on every screen.
-   Recommended: every screen, since it's always one click away on
-   desktop and doesn't change what entry does.
-2. **Home on wide (P5).** The mockup put budget bars and the trend on
-   Home next to Recent. docs/07 D147 moved those off Home to Insights on
-   purpose. Options: (a) Home keeps today's blocks (banners + Recent)
-   laid out wider; (b) also show budgets/trend on wide Home, an
-   exception to D147 for desktop only.
-3. **Phone in landscape stays the phone layout** (the height < 480
-   rule). Confirm.
+1. ~~Top bar on every screen, or Home only?~~ Every screen (D315).
+2. ~~Home on wide (P5)?~~ Follow the mockup, desktop-only exception to
+   D147 (D316).
+3. ~~Phone in landscape?~~ Native apps locked to portrait on phones,
+   height rule kept for browsers (D317).
 
 ## Parked (new features, out of this pass, recorded so they're not lost)
 

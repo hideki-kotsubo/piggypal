@@ -122,7 +122,9 @@
   "nav": {
     "insights": "Analyses",
     "settings": "Paramètres",
-    "inbox": "Boîte de réception"
+    "inbox": "Boîte de réception",
+    "home": "Accueil",
+    "main": "Navigation principale"
   },
   "banner": {
     "inbox_one": "{{count}} opération à catégoriser",
