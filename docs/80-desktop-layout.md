@@ -319,6 +319,16 @@ Written against the code as of app 0.14.1. Nothing built yet.
   switching rows (5 → 6 → 5), phone detail/back and Home unchanged, no
   page errors. Not yet on a real phone or tablet. Phase 4 (pointer
   density, keyboard later) not started.
+- **Fixes after the user's first try (2026-10-30):** the wide frame is
+  `--surface`, not `--bg`, so a centred screen column has no grey bands
+  beside it. `SplitLayout` keys the detail outlet by pathname: picking
+  another row used to keep the open `TransactionEditForm` with the first
+  record's fields. Location chips (both platforms, transaction and
+  scheduled-payment forms): a set location shows alone as the picked
+  chip, otherwise the six most used (`lib/locationSuggestions.ts`,
+  recency on a tie, starts-with first), narrowed only while typing.
+  Before, the stored value filtered the list, so a longer location hid
+  the others.
 
 ## Parked (new features, out of this pass, recorded so they're not lost)
 
