@@ -16,6 +16,25 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
+## Unreleased
+
+Flowtab now has a proper layout for computers and other wide windows.
+
+- **A menu on the left** takes you straight to Home, Transactions, Inbox,
+  Insights, Accounts, Categories, Scheduled and Settings.
+- **List and details side by side.** Pick a transaction, account,
+  scheduled payment, category or setting and it opens next to the list,
+  so you can go through them one after another.
+- **Add from anywhere.** The "type or say what you spent" box sits at
+  the top of every screen.
+- **Home shows more at once:** your recent spending next to the
+  last 30 days and this month's budgets.
+- On phones the app looks and works as before, and the iPhone and
+  Android apps now stay upright when you turn the phone.
+- **Tidier location suggestions.** A location already filled in shows
+  as one selected chip. An empty field suggests your six most used
+  places, and typing searches all of them.
+
 ## 0.14.1 — 2026-10-28
 
 - **Split purchases show up under each account.** Filtering your

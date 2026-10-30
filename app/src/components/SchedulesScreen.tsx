@@ -1,6 +1,6 @@
 import { centsPerUnit } from '../lib/cents';
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
 import { accountLabel, formatAmount, formatOccurrenceDate } from '../lib/format';
@@ -117,13 +117,13 @@ export function SchedulesScreen() {
       account ? accountLabel(account) : null,
     ].filter(Boolean);
     return (
-      <Link key={rule.id} to={`/schedules/${rule.id}`} className="tx-row tx-row-tappable">
+      <NavLink key={rule.id} to={`/schedules/${rule.id}`} className="tx-row tx-row-tappable">
         <div className="tx-main">
           <span className="tx-note">{rule.name}</span>
           <span className="tx-meta">{meta.join(' · ')}</span>
         </div>
         <span className={`tx-amt ${rule.amountCents < 0 ? 'out' : 'in'}`}>{perOccurrenceLabel(rule)}</span>
-      </Link>
+      </NavLink>
     );
   }
 

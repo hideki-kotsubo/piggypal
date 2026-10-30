@@ -6,8 +6,11 @@ import { DueBanner } from './components/DueBanner';
 import { InboxBanner } from './components/InboxBanner';
 import { RecentList } from './components/RecentList';
 import { SessionExpiredBanner } from './components/SessionExpiredBanner';
+import { BudgetBars } from './components/BudgetBars';
+import { TrendSparkline } from './components/TrendSparkline';
 import { hasHousehold, useHouseholdPeers } from './lib/household';
 import { pickWordmarkPhrase } from './lib/wordmarkPhrases';
+import { useWidthClass } from './lib/layout';
 
 interface ToastState {
   message: string;
@@ -23,6 +26,7 @@ export default function App() {
   // ticking. Only re-rolls again if `household` itself flips (e.g. store
   // data finishes loading after first paint), not on every render.
   const wordmark = useMemo(() => pickWordmarkPhrase(i18n.language, household), [i18n.language, household]);
+  const wide = useWidthClass() !== 'compact';
 
   useEffect(() => {
     if (!toast) return;
@@ -32,6 +36,27 @@ export default function App() {
 
   function showToast(message: string, onUndo?: () => void) {
     setToast({ message, onUndo });
+  }
+
+  // docs/80 D316 — on a wide window Home is two columns, and also shows
+  // this month's budgets and the trend: a desktop-only exception to
+  // docs/07 D147, which moved those to Insights on the phone. Entry and
+  // the toast live in AppShell's top bar there (D312).
+  if (wide) {
+    return (
+      <main className="home home-dashboard">
+        <div className="dashboard-col">
+          <RecentList />
+        </div>
+        <div className="dashboard-col">
+          <SessionExpiredBanner />
+          <DueBanner />
+          <InboxBanner />
+          <TrendSparkline />
+          <BudgetBars />
+        </div>
+      </main>
+    );
   }
 
   return (

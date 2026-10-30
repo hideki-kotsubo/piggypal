@@ -1,0 +1,290 @@
+/* docs/80 — the wide-window frame (AppShell). Nothing here applies on a
+   phone-sized window: AppShell doesn't render .shell there at all. */
+
+.shell {
+  --rail-w: 200px;
+  display: flex;
+  height: 100dvh;
+  overflow: hidden;
+  /* The screens' own colour, not the page's --bg: screens are centred
+     columns narrower than their pane, and grey on both sides of a white
+     column reads as two bands. */
+  background: var(--surface);
+}
+.shell-medium {
+  --rail-w: 68px;
+}
+
+/* ---------- navigation rail ---------- */
+.shell-rail {
+  flex: none;
+  width: var(--rail-w);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 1rem 0.6rem;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+}
+.shell-medium .shell-rail {
+  align-items: center;
+  padding-inline: 0.5rem;
+}
+.shell-rail-mark {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 1.15rem;
+  color: var(--ink);
+  padding: 0.2rem 0.65rem 1rem;
+}
+.shell-rail-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius-sm);
+  color: var(--ink-muted);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+.shell-medium .shell-rail-item {
+  justify-content: center;
+  padding: 0.6rem;
+}
+.shell-rail-item:hover {
+  background: var(--surface-sunken);
+  color: var(--ink);
+}
+.shell-rail-item[aria-current='page'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+.shell-rail-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.shell-rail-icon {
+  width: 19px;
+  height: 19px;
+  flex: none;
+}
+/* Icon-only at medium width; the label stays for screen readers. */
+.shell-medium .shell-rail-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.shell-rail-badge {
+  margin-left: auto;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  border-radius: 9px;
+  background: var(--warn);
+  color: var(--surface);
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+.shell-medium .shell-rail-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  margin: 0;
+}
+
+/* ---------- main area ---------- */
+.shell-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.shell-topbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 3.5rem;
+  box-sizing: border-box;
+  padding: 0.6rem 1.2rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.shell-title {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.15rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.shell-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+/* Screens are phone-width columns (.home, 480px); a single screen in the
+   main area gets a little more room, and fills the scroll area's height
+   instead of the viewport's. */
+.shell .home {
+  min-height: 100%;
+  max-width: 640px;
+}
+
+/* On a section's own root screen the rail already does what the screen's
+   back link did, and the top bar shows the title. Hide both; keep the
+   bar only where it also holds actions (Accounts' +, Transactions'
+   duplicates). Deeper screens keep their back link. */
+.shell-root > .home > .app-bar > .back-link,
+.shell-root > .home > .app-bar > .wordmark,
+.split-list > .home > .app-bar > .back-link,
+.split-list > .home > .app-bar > .wordmark {
+  visibility: hidden;
+}
+.shell-root > .home > .app-bar:not(:has(.app-bar-actions)),
+.split-list > .home > .app-bar:not(:has(.app-bar-actions)) {
+  display: none;
+}
+.shell-root > .home,
+.split-list > .home {
+  padding-top: 1rem;
+}
+.shell-root > .home > .app-bar,
+.split-list > .home > .app-bar {
+  padding-top: 0;
+}
+/* ---------- entry in the top bar (D312, D315) ---------- */
+/* The entry zone keeps its phone markup. In the bar it's a fixed-height
+   slot, and the zone itself is lifted out of flow, so the parse preview
+   (and the voice-language menu) drop down over the content instead of
+   making the bar taller. */
+.shell-entry {
+  position: relative;
+  flex: 1;
+  max-width: 640px;
+  height: 2.6rem;
+  margin-left: auto;
+}
+.shell-entry .entry-zone {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+}
+.shell-entry .entry-zone:has(.parse-preview, .voice-lang-menu) {
+  box-shadow: 0 16px 36px -12px rgba(0, 0, 0, 0.35);
+}
+.shell-entry .entry-input-row {
+  min-height: 2.6rem;
+  box-sizing: border-box;
+}
+
+.shell-toast {
+  left: calc(50% + var(--rail-w) / 2);
+}
+
+/* ---------- Home (D316) ---------- */
+.shell .home.home-dashboard {
+  max-width: 1120px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 0 1.5rem;
+  align-items: start;
+  padding-bottom: 2rem;
+}
+.dashboard-col {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- list + detail (D313, D314) ---------- */
+.split {
+  display: flex;
+  height: 100%;
+}
+.split-list {
+  flex: none;
+  width: 400px;
+  overflow-y: auto;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+}
+.shell-medium .split-list {
+  width: 320px;
+}
+.split-detail {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+.split-list > .home {
+  max-width: none;
+}
+.split-detail > .home {
+  max-width: 560px;
+}
+.split-empty {
+  box-sizing: border-box;
+  height: 100%;
+  margin: 0;
+  padding: 2rem;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: var(--ink-faint);
+  font-size: 0.9rem;
+}
+.split-slot:not(:empty) + .split-empty {
+  display: none;
+}
+/* The selected row, so it's clear what the detail pane is showing. */
+.split-list [aria-current='page'],
+.split-list [aria-current='true'] {
+  background: var(--accent-soft);
+}
+
+/* Categories' edit form, in the detail pane instead of a sheet (D314). */
+.sheet.sheet-inline {
+  position: static;
+  transform: none;
+  width: auto;
+  max-width: 560px;
+  min-height: 100%;
+  max-height: none;
+  margin: 0 auto;
+  border-radius: 0;
+  box-shadow: none;
+  animation: none;
+  padding-top: 0.6rem;
+}
+
+/* Every other sheet is a centred dialog on wide windows (P6). The sheet
+   layer is portalled to <body>, outside .shell, so BottomSheet adds this
+   class itself. */
+.sheet-layer-dialog .sheet {
+  top: 50%;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  width: min(480px, calc(100% - 2rem));
+  max-height: 85dvh;
+  border-radius: 20px;
+  padding-bottom: 0.4rem;
+  animation: none;
+}
+.sheet-layer-dialog .sheet-grab {
+  display: none;
+}

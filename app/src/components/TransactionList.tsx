@@ -1,5 +1,5 @@
 import { Fragment, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, NavLink, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
 import { categoryLabel } from '../lib/starterLabels';
@@ -296,7 +296,7 @@ export function TransactionList() {
                         ? accountLabel(account)
                         : '—';
                   return (
-                    <Link key={tx.id} to={`/transactions/${tx.id}`} className="tx-row tx-row-tappable">
+                    <NavLink key={tx.id} to={{ pathname: `/transactions/${tx.id}`, search: searchParams.size ? `?${searchParams}` : '' }} className="tx-row tx-row-tappable">
                       <div className="tx-left">
                         {showPayerBadge && (
                           <PayerBadge label={personLabel(tx.paidByUserId, peers, store.profiles)} mine={tx.paidByUserId === getLocalUserId()} />
@@ -315,7 +315,7 @@ export function TransactionList() {
                       <span className={`tx-amt ${amountOf(tx) < 0 ? 'out' : 'in'}`}>
                         {formatAmount(amountOf(tx), tx.currency)}
                       </span>
-                    </Link>
+                    </NavLink>
                   );
                 })}
               </div>

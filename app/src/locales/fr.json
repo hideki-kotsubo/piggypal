@@ -122,7 +122,17 @@
   "nav": {
     "insights": "Analyses",
     "settings": "Paramètres",
-    "inbox": "Boîte de réception"
+    "inbox": "Boîte de réception",
+    "home": "Accueil",
+    "main": "Navigation principale"
+  },
+  "split": {
+    "transaction": "Sélectionnez une transaction pour l’afficher ici.",
+    "inbox": "Sélectionnez une entrée pour lui donner une catégorie.",
+    "account": "Sélectionnez un compte pour voir ses détails.",
+    "schedule": "Sélectionnez un paiement planifié pour l’afficher ici.",
+    "settings": "Choisissez une section.",
+    "category": "Sélectionnez une catégorie pour la modifier."
   },
   "banner": {
     "inbox_one": "{{count}} opération à catégoriser",

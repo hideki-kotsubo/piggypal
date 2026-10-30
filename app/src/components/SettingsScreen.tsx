@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { Trans, useTranslation } from 'react-i18next';
 import i18n, { LANGUAGES, useLanguagePreference } from '../lib/i18n';
 import { useStore } from '../lib/store';
@@ -44,7 +44,7 @@ export function SettingsScreen() {
 
       {/* The account card is the way into Account & sync, signed in or not. */}
       <div className="settings-group">
-        <Link to="/settings/sync" className="settings-hub-row settings-hub-account">
+        <NavLink to="/settings/sync" className="settings-hub-row settings-hub-account">
           <span className="settings-hub-avatar" aria-hidden="true">
             {authAccount?.email ? authAccount.email[0].toUpperCase() : <HubIcon name="cloud" />}
           </span>
@@ -64,7 +64,7 @@ export function SettingsScreen() {
             </span>
           </span>
           <Chevron />
-        </Link>
+        </NavLink>
       </div>
 
       <div className="section-label">{t('settingsHub.yourMoney')}</div>
@@ -130,7 +130,7 @@ export function SettingsScreen() {
             )}
           </>
         )}
-        <HubRow to="/about" icon="info" label={t('settings.about')} meta={`v${APP_VERSION}`} />
+        <HubRow to="/settings/about" icon="info" label={t('settings.about')} meta={`v${APP_VERSION}`} />
       </div>
     </main>
   );
@@ -138,14 +138,14 @@ export function SettingsScreen() {
 
 function HubRow({ to, icon, label, meta }: { to: string; icon: IconName; label: string; meta?: string }) {
   return (
-    <Link to={to} className="settings-hub-row">
+    <NavLink to={to} className="settings-hub-row">
       <HubIconBox name={icon} />
       <span className="settings-hub-text">
         <span className="settings-hub-title">{label}</span>
       </span>
       {meta && <span className="settings-hub-value">{meta}</span>}
       <Chevron />
-    </Link>
+    </NavLink>
   );
 }
 

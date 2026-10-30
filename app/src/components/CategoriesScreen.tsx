@@ -180,7 +180,12 @@ export function CategoriesScreen() {
     const budgets = category.kind === 'expense' ? (budgetsByCategory.get(category.id) ?? []) : [];
     const unbudgeted = [...totals.entries()].filter(([currency]) => !budgets.some((b) => b.currency === currency));
     return (
-      <button key={category.id} className={`category-row ${isChild ? 'child' : ''}`} onClick={() => setSheet({ type: 'edit', id: category.id })}>
+      <button
+        key={category.id}
+        className={`category-row ${isChild ? 'child' : ''}`}
+        aria-current={sheet?.type === 'edit' && sheet.id === category.id ? 'true' : undefined}
+        onClick={() => setSheet({ type: 'edit', id: category.id })}
+      >
         <span className="category-row-top">
           <span className="category-name">{categoryLabel(category)}</span>
           {unbudgeted.length > 0 && (
@@ -334,7 +339,11 @@ export function CategoriesScreen() {
                     </section>
                   ) : (
                     <section className="category-card" key={block.parent.id} aria-label={categoryLabel(block.parent)}>
-                      <button className="category-group-head" onClick={() => setSheet({ type: 'edit', id: block.parent.id })}>
+                      <button
+                        className="category-group-head"
+                        aria-current={sheet?.type === 'edit' && sheet.id === block.parent.id ? 'true' : undefined}
+                        onClick={() => setSheet({ type: 'edit', id: block.parent.id })}
+                      >
                         <span className="category-name">{categoryLabel(block.parent)}</span>
                         <GroupTotal month={month.get(block.parent.id)} childMonths={block.children.map((c) => month.get(c.id))} />
                       </button>

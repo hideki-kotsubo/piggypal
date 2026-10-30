@@ -9,6 +9,7 @@ import { CategoryPicker } from './CategoryPicker';
 import { PayerBadge } from './PayerBadge';
 import { hasHousehold, householdMembers, personLabel, useHouseholdPeers } from '../lib/household';
 import { formatAmount, nowUtc } from '../lib/format';
+import { locationSuggestions } from '../lib/locationSuggestions';
 import { useAuthAccount, useVerifiedProfileId } from '../lib/auth';
 import { getLocalUserId } from '../lib/identity';
 import type { Transaction } from '../lib/types';
@@ -64,12 +65,21 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
   const [openLegId, setOpenLegId] = useState<string | null>(null);
   const [legAmountLocal, setLegAmountLocal] = useState(0);
   const category = store.categories.find((c) => c.id === transaction.categoryId);
-  // docs/15 D79: recency order comes from the store; narrowing by the
-  // typed substring (contains, not just starts-with — same rule as the
-  // Institution-autosuggest backlog item) is this component's own job.
-  const merchantSuggestions = store
-    .rankedMerchants(transaction.id)
-    .filter((m) => m.toLowerCase().includes(merchantStr.toLowerCase()));
+  // docs/15 Location chips: the six most used (lib/locationSuggestions).
+  // Narrowing only happens while the user is typing in the field. A
+  // location that's already set (stored, or just picked) shows as its
+  // own single picked chip instead of the whole list: before, the stored
+  // value was used as a filter, so "Costco Richmond" found nothing and
+  // "Costco" found it.
+  const [merchantTyping, setMerchantTyping] = useState(false);
+  const merchantSuggestions =
+    merchantStr && !merchantTyping
+      ? [merchantStr]
+      : locationSuggestions(
+          store.transactions.filter((t) => !t.deletedAt),
+          merchantStr,
+          { excludeId: transaction.id },
+        );
   // <= 0, not < 0 — a brand-new blank transaction (docs/19's "+" quick-add)
   // starts at exactly $0, which a real, already-entered transaction never
   // is; treating that as expense (the common case) rather than income
@@ -436,6 +446,7 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
           onChange={(e) => {
             const v = e.target.value;
             setMerchantStr(v);
+            setMerchantTyping(true);
             commit({ merchant: v || null });
           }}
         />
@@ -448,6 +459,7 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
               className={`chip ${m === merchantStr ? 'picked' : ''}`}
               onClick={() => {
                 setMerchantStr(m);
+                setMerchantTyping(false);
                 commit({ merchant: m });
               }}
             >

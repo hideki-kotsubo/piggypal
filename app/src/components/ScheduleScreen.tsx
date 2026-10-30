@@ -6,6 +6,7 @@ import { useStore } from '../lib/store';
 import { categoryLabel } from '../lib/starterLabels';
 import { totalsByCurrency } from '../lib/filterTransactions';
 import { formatAmount, formatOccurrenceDate, nowUtc } from '../lib/format';
+import { locationSuggestions } from '../lib/locationSuggestions';
 import {
   addDays,
   describeCadence,
@@ -158,12 +159,18 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
   }
 
   const category = store.categories.find((c) => c.id === view.categoryId);
-  // docs/15's recency-ranked Location suggestions, same as
-  // TransactionEditForm's — every posted occurrence copies this onto its
-  // transaction (D216), so it should read the same as one typed there.
-  const merchantSuggestions = store
-    .rankedMerchants()
-    .filter((m) => m.toLowerCase().includes(merchantStr.toLowerCase()));
+  // docs/15's Location chips, same as TransactionEditForm's — every
+  // posted occurrence copies this onto its transaction (D216), so it
+  // should read the same as one typed there: a set location shows alone,
+  // otherwise the six most used, narrowed while typing.
+  const [merchantTyping, setMerchantTyping] = useState(false);
+  const merchantSuggestions =
+    merchantStr && !merchantTyping
+      ? [merchantStr]
+      : locationSuggestions(
+          store.transactions.filter((t) => !t.deletedAt),
+          merchantStr,
+        );
 
   function saveNew() {
     const name = nameStr.trim();
@@ -508,6 +515,7 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
               onChange={(e) => {
                 const v = e.target.value;
                 setMerchantStr(v);
+                setMerchantTyping(true);
                 commit({ merchant: v.trim() || null });
               }}
             />
@@ -520,6 +528,7 @@ function ScheduleEditor({ rule }: { rule: ScheduledPayment | null }) {
                   className={`chip ${m === merchantStr ? 'picked' : ''}`}
                   onClick={() => {
                     setMerchantStr(m);
+                    setMerchantTyping(false);
                     commit({ merchant: m });
                   }}
                 >

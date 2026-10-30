@@ -1,8 +1,15 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { isFreshBlank } from '../lib/freshBlankTransactions';
 import { useStore } from '../lib/store';
 import { TransactionEditForm } from './TransactionEditForm';
+import { usePane } from '../lib/pane';
+
+// How many detail panes currently show each transaction. React StrictMode
+// mounts, unmounts and remounts every effect in development, so "the pane
+// let go of this id" is decided after the current task, by the count.
+const shownInPane = new Map<string, number>();
 
 // docs/17: a dedicated screen for a single transaction, replacing the old
 // inline expand-in-place edit (TransactionList/RecentList used to toggle a
@@ -17,7 +24,11 @@ export function TransactionScreen() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const store = useStore();
+  const pane = usePane();
+  const location = useLocation();
   const transaction = store.transactions.find((tx) => tx.id === id && !tx.deletedAt);
+  const storeRef = useRef(store);
+  storeRef.current = store;
 
   // Quick-add (docs/19) inserts a blank $0 row immediately so this screen has
   // something to edit. Every other entry path requires a nonzero amount
@@ -38,8 +49,29 @@ export function TransactionScreen() {
     if (transaction && transaction.amountCents === 0 && isFreshBlank(transaction.id)) {
       store.deleteTransaction(transaction.id);
     }
-    navigate(-1);
+    // docs/80 — in a detail pane, closing goes back to the list beside it
+    // (keeping its filters), not to whatever the history had before.
+    if (pane?.pane === 'detail') navigate({ pathname: pane.base, search: location.search });
+    else navigate(-1);
   }
+
+  // docs/80 — in a pane you can click another row without pressing Done,
+  // which skips finish(). Run the same fresh-blank cleanup when the pane
+  // stops showing this transaction for any reason.
+  const inPane = pane?.pane === 'detail';
+  useEffect(() => {
+    if (!inPane || !id) return;
+    shownInPane.set(id, (shownInPane.get(id) ?? 0) + 1);
+    return () => {
+      shownInPane.set(id, (shownInPane.get(id) ?? 1) - 1);
+      setTimeout(() => {
+        if ((shownInPane.get(id) ?? 0) > 0) return;
+        shownInPane.delete(id);
+        const current = storeRef.current.transactions.find((tx) => tx.id === id && !tx.deletedAt);
+        if (current && current.amountCents === 0 && isFreshBlank(id)) storeRef.current.deleteTransaction(id);
+      }, 0);
+    };
+  }, [inPane, id]);
 
   return (
     <main className="home">
