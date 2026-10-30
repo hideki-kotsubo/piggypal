@@ -8,6 +8,7 @@
 //   npm run social:screenshots -- --size store         440×956 @3x (App Store 6.9")
 //   npm run social:screenshots -- --size tablet        820×1180 @2x (iPad portrait)
 //   npm run social:screenshots -- --size ipad          1032×1376 @2x (App Store 13" iPad)
+//   npm run social:screenshots -- --size ipad-landscape 1376×1032 @2x (same, landscape)
 //
 // Writes marketing/out/screenshots/<lang>/<screen>.png (git-ignored); the
 // wide sizes (docs/80's layout) go to <lang>/<size>/ and also capture a
@@ -29,6 +30,7 @@ const SIZES = {
   tablet: { width: 820, height: 1180, scale: 2 }, // 1640×2360, iPad Air portrait (rail, icons only)
   'tablet-landscape': { width: 1180, height: 820, scale: 2 }, // 2360×1640, iPad Air landscape
   ipad: { width: 1032, height: 1376, scale: 2 }, // 2064×2752, App Store 13" iPad
+  'ipad-landscape': { width: 1376, height: 1032, scale: 2 }, // 2752×2064, App Store 13" iPad landscape
   desktop: { width: 1440, height: 900, scale: 2 }, // 2880×1800, laptop browser
 } as const;
 type SizeName = keyof typeof SIZES;

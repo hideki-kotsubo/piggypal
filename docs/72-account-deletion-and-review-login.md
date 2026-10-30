@@ -76,6 +76,9 @@ the review account, the next sign-in just creates it again.
 
 ## D259 — iPhone-only for v1
 
+**Superseded 2026-10-30 by docs/80 D318**: iPad is on again, now that the
+tablet layout exists.
+
 `TARGETED_DEVICE_FAMILY = 1` (was `"1,2"`) in both build configurations.
 The UI is a 480px phone column; with iPad on, iPad screenshots are required
 and review tests on an iPad. iPads can still run the iPhone app in
