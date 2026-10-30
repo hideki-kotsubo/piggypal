@@ -16,7 +16,7 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
-## Unreleased
+## 0.15.0 — 2026-10-30
 
 Flowtab now has a proper layout for computers and other wide windows.
 
