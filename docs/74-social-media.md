@@ -23,7 +23,7 @@ real app (dev server) ──► social:screenshots ──┐         ▼
 
 | Command | What it does |
 | --- | --- |
-| `npm run social:screenshots [-- --url U --lang L --size store --theme dark]` | Fresh install per language in headless Chromium, types six everyday entries through the real parser, captures 7 screens to `marketing/out/screenshots/<lang>/`. Default URL `http://localhost:3001`. Wide sizes (docs/80 layout, 2026-10-30): `--size tablet` (820×1180 @2x), `tablet-landscape` (1180×820 @2x), `ipad` (1032×1376 @2x = App Store 13" iPad, 2064×2752), `desktop` (1440×900 @2x); they go to `<lang>/<size>/` and add `04b-transaction-detail` (list + detail). |
+| `npm run social:screenshots [-- --url U --lang L --size store --theme dark]` | Fresh install per language in headless Chromium, types six everyday entries through the real parser, captures 7 screens to `marketing/out/screenshots/<lang>/`. Default URL `http://localhost:3001`. Wide sizes (docs/80 layout, 2026-10-30): `--size tablet` (820×1180 @2x), `tablet-landscape` (1180×820 @2x), `ipad` (1032×1376 @2x = App Store 13" iPad, 2064×2752), `ipad-landscape` (2752×2064), `desktop` (1440×900 @2x); they go to `<lang>/<size>/` and add `04b-transaction-detail` (list + detail). |
 | `npm run social:compose [-- <post-id>]` | Renders each post into a 1080×1350 feed image and a 1080×1920 story image per language, plus the caption as text. |
 | `npm run social:compose -- --profile` | Avatar (1080²) and covers: Facebook, YouTube, LinkedIn, X. |
 | `npm run social:from-changelog -- 0.7.0 [date]` | Draft `update` post from a changelog release, English only. |

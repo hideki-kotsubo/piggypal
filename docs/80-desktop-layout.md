@@ -1,7 +1,8 @@
 # 80 — Desktop (and later tablet) layout
 
-Status: built 2026-10-29 on `feat/desktop-layout` (phases 1–3, not
-released). Decisions D312–D317. See "Built" below.
+Status: built 2026-10-29 (phases 1–3), released in app 0.15.0.
+Decisions D312–D318 (D318: native iPad, 2026-10-30, not released yet).
+See "Built" below.
 
 Backlog item this covers (docs/00, ⚫ Later): "Custom UI for tablets and
 desktops" (flagged 2026-08-19). Earlier sketch:
@@ -61,6 +62,7 @@ That points to a mix of the 2026-08-20 directions **A (nav rail) and B
 | D315 | **The top bar (D312) is on every screen on wide windows**, not only Home, so entry is always one click away. Phone keeps the dock on Home only. (2026-10-29) |
 | D316 | **Wide Home follows the mockup: an exception to docs/07 D147 on desktop only.** Two columns: Recent on the left; due/inbox banners, this month's budget bars and the trend on the right. Phone Home unchanged (D147 stands there). (2026-10-29) |
 | D317 | **Phones are portrait-only in the native apps.** iPhone: landscape removed from `UISupportedInterfaceOrientations` (the `~ipad` list is untouched for a later iPad build). Android: `screenOrientation="portrait"` on the main activity (Android 16 ignores it on large screens, so tablets aren't locked). A browser tab can't be locked, so `useWidthClass()` still treats height < 480 as compact. (2026-10-29) |
+| D318 | **The iOS app supports iPad natively** (supersedes docs/72 D259). `TARGETED_DEVICE_FAMILY = "1,2"` in both build configurations; the `~ipad` orientation list (all four, D317) and the width classes give an iPad the tablet layout, and Split View falls back to the phone layout when narrow. D259's reason (a 480px phone column on iPad) is gone with this layout. Store side: 13" iPad screenshots (`social:screenshots --size ipad` / `ipad-landscape`) and review on an iPad. Apple doesn't let later builds drop iPad once it's live. Not yet tried on an iPad or the simulator. (2026-10-30, user's call) |
 
 ## Proposals (not yet decided)
 
