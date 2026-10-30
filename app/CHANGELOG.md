@@ -31,8 +31,9 @@ Flowtab now has a proper layout for computers and other wide windows.
   last 30 days and this month's budgets.
 - On phones the app looks and works as before, and the iPhone and
   Android apps now stay upright when you turn the phone.
-- A transaction's location now shows as one selected chip; the other
-  suggestions appear when the field is empty or while you type.
+- **Tidier location suggestions.** A location already filled in shows
+  as one selected chip. An empty field suggests your six most used
+  places, and typing searches all of them.
 
 ## 0.14.1 — 2026-10-28
 
