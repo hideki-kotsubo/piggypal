@@ -161,26 +161,51 @@
 .split-list > .home > .app-bar {
   padding-top: 0;
 }
-/* Home's bar is the wordmark plus Insights/Settings links, all in the rail
-   now. */
-.shell-root > .home-with-dock > .app-bar {
-  display: none;
+/* ---------- entry in the top bar (D312, D315) ---------- */
+/* The entry zone keeps its phone markup. In the bar it's a fixed-height
+   slot, and the zone itself is lifted out of flow, so the parse preview
+   (and the voice-language menu) drop down over the content instead of
+   making the bar taller. */
+.shell-entry {
+  position: relative;
+  flex: 1;
+  max-width: 640px;
+  height: 2.6rem;
+  margin-left: auto;
+}
+.shell-entry .entry-zone {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+}
+.shell-entry .entry-zone:has(.parse-preview, .voice-lang-menu) {
+  box-shadow: 0 16px 36px -12px rgba(0, 0, 0, 0.35);
+}
+.shell-entry .entry-input-row {
+  min-height: 2.6rem;
+  box-sizing: border-box;
 }
 
-/* The entry dock and toast are fixed to the viewport on the phone; inside
-   the shell they belong to the main area, not the whole window. */
-.shell .entry-zone-dock {
-  position: sticky;
-  left: auto;
-  transform: none;
-  margin-top: auto;
-  max-width: none;
-}
-.shell .home-with-dock {
-  padding-bottom: 0;
-}
-.shell .toast {
+.shell-toast {
   left: calc(50% + var(--rail-w) / 2);
+}
+
+/* ---------- Home (D316) ---------- */
+.shell .home.home-dashboard {
+  max-width: 1120px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 0 1.5rem;
+  align-items: start;
+  padding-bottom: 2rem;
+}
+.dashboard-col {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ---------- list + detail (D313, D314) ---------- */

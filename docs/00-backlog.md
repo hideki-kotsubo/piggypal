@@ -438,7 +438,9 @@ it needs doing.
       Same day: interactive mockup
       (`docs/artifacts/flowtab-desktop-prototype.html`); decided top bar
       entry (D312) and list + detail on every list screen (D313, D314).
-      Next: technical plan, then build on `feat/desktop-layout`.
+      Built same day on `feat/desktop-layout` (phases 1–3, D315–D317),
+      not released; see docs/80 "Built". Left: real phone/tablet check,
+      phase 4 polish.
 - [ ] Household sharing (multi-user) + P2P device sync — designed
       2026-08-14, docs/24-household-sharing.md and
       docs/25-p2p-device-sync.md (D108-D120, +D117a, +D113 revised). A UI

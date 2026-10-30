@@ -1,8 +1,7 @@
 # 80 — Desktop (and later tablet) layout
 
-Status: design, 2026-10-29. Entry placement and list + detail decided
-(D312–D317) after trying the mockup; the rest of the proposals still get
-D-numbers once agreed. Nothing built yet.
+Status: built 2026-10-29 on `feat/desktop-layout` (phases 1–3, not
+released). Decisions D312–D317. See "Built" below.
 
 Backlog item this covers (docs/00, ⚫ Later): "Custom UI for tablets and
 desktops" (flagged 2026-08-19). Earlier sketch:
@@ -287,6 +286,39 @@ Written against the code as of app 0.14.1. Nothing built yet.
    D147 (D316).
 3. ~~Phone in landscape?~~ Native apps locked to portrait on phones,
    height rule kept for browsers (D317).
+
+## Built (2026-10-29, `feat/desktop-layout`)
+
+- **Phase 1, shell:** `lib/layout.ts` (`classify`/`useWidthClass`, with
+  `layout.test.ts`), `AppShell.tsx` as a layout route around every route
+  in `main.tsx` (compact renders the bare `<Outlet />`), rail with inbox
+  count, top bar title, `styles/shell.css`. Root screens hide their own
+  back link and title there. `nav.home`/`nav.main` strings in all base
+  locales. D317: iPhone `UISupportedInterfaceOrientations` portrait only,
+  Android `screenOrientation="portrait"`.
+- **Phase 2, splits:** `SplitLayout.tsx` (`SplitLayout` route layout,
+  `SlotSplit` for Categories) and `lib/pane.ts` (`usePane`,
+  `useDetailSlot`). Routes nested as in the table above; `/inbox/:id`
+  new, `/about` → `/settings/about`. Rows are `NavLink`s so the selected
+  one is highlighted; Transactions keeps its filters in the detail URL.
+  `TransactionScreen` closes to its list in a pane and runs docs/23's
+  fresh-blank cleanup when the pane lets go of a transaction (counted,
+  so StrictMode's double mount doesn't delete it). `BottomSheet` renders
+  inline in Categories' slot and as a centred dialog elsewhere on wide
+  windows. `split.*` empty-pane strings in all base locales.
+- **Phase 3, entry + Home:** `EntryZone` in the top bar on every screen
+  (D312, D315), its preview dropping over the content; toast host in the
+  shell, so it survives the navigation after "+". Wide Home is two
+  columns: Recent | banners, trend, budget bars (D316). Phone Home
+  untouched.
+- **Checked:** `tsc -b`, oxlint (no new warnings), Vitest 264/264,
+  production build. Playwright against the dev server at 1280×800,
+  820×1180 and 390×844, light and dark: entries through the top bar,
+  each split, Inbox at `/inbox/:id`, Categories in the pane, account
+  edit as a dialog, "+" opening the pane, blank row removed when
+  switching rows (5 → 6 → 5), phone detail/back and Home unchanged, no
+  page errors. Not yet on a real phone or tablet. Phase 4 (pointer
+  density, keyboard later) not started.
 
 ## Parked (new features, out of this pass, recorded so they're not lost)
 

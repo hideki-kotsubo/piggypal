@@ -1,17 +1,34 @@
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
 import { useWidthClass } from '../lib/layout';
+import { EntryZone } from './EntryZone';
+
+interface ToastState {
+  message: string;
+  onUndo?: () => void;
+}
 
 // docs/80 — the wide-window frame around every route. On a phone-sized
 // window (compact) it renders the route alone, so the phone app's DOM is
 // exactly what it was before this existed. Medium and expanded windows
 // get a navigation rail on the left and a top bar with the section's
-// title, and the route scrolls inside the main area instead of the page.
+// title and the entry zone (D312, on every screen: D315), and the route
+// scrolls inside the main area instead of the page.
 export function AppShell() {
   const widthClass = useWidthClass();
   const { pathname } = useLocation();
   const { t } = useTranslation();
+  // Same toast as Home's on the phone, but it lives here, so it survives
+  // the navigation to the new transaction that an entry triggers.
+  const [toast, setToast] = useState<ToastState | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 5000);
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   if (widthClass === 'compact') return <Outlet />;
 
@@ -24,11 +41,30 @@ export function AppShell() {
       <div className="shell-main">
         <header className="shell-topbar">
           <h1 className="shell-title">{section ? t(section.label) : ''}</h1>
+          <div className="shell-entry">
+            <EntryZone onSubmitted={(message, onUndo) => setToast({ message, onUndo })} />
+          </div>
         </header>
         <div className={`shell-content${isRoot ? ' shell-root' : ''}`}>
           <Outlet />
         </div>
       </div>
+      {toast && (
+        <div className="toast shell-toast">
+          <span>{toast.message}</span>
+          {toast.onUndo && (
+            <button
+              className="toast-undo"
+              onClick={() => {
+                toast.onUndo!();
+                setToast(null);
+              }}
+            >
+              {t('common.undo')}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
