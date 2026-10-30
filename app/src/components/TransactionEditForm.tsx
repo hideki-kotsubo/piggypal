@@ -67,9 +67,14 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
   // docs/15 D79: recency order comes from the store; narrowing by the
   // typed substring (contains, not just starts-with — same rule as the
   // Institution-autosuggest backlog item) is this component's own job.
+  // Only while the user is typing in the field: narrowing by a value the
+  // record was opened with hid every other location whenever the stored
+  // one wasn't a substring of them ("Costco Richmond" found nothing,
+  // "Costco" found it).
+  const [merchantTyping, setMerchantTyping] = useState(false);
   const merchantSuggestions = store
     .rankedMerchants(transaction.id)
-    .filter((m) => m.toLowerCase().includes(merchantStr.toLowerCase()));
+    .filter((m) => !merchantTyping || m.toLowerCase().includes(merchantStr.toLowerCase()));
   // <= 0, not < 0 — a brand-new blank transaction (docs/19's "+" quick-add)
   // starts at exactly $0, which a real, already-entered transaction never
   // is; treating that as expense (the common case) rather than income
@@ -436,6 +441,7 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
           onChange={(e) => {
             const v = e.target.value;
             setMerchantStr(v);
+            setMerchantTyping(true);
             commit({ merchant: v || null });
           }}
         />
@@ -448,6 +454,7 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
               className={`chip ${m === merchantStr ? 'picked' : ''}`}
               onClick={() => {
                 setMerchantStr(m);
+                setMerchantTyping(false);
                 commit({ merchant: m });
               }}
             >

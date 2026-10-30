@@ -31,6 +31,8 @@ Flowtab now has a proper layout for computers and other wide windows.
   last 30 days and this month's budgets.
 - On phones the app looks and works as before, and the iPhone and
   Android apps now stay upright when you turn the phone.
+- Location suggestions on a transaction no longer disappear when its
+  location is longer than the others, like "Costco Richmond".
 
 ## 0.14.1 — 2026-10-28
 
