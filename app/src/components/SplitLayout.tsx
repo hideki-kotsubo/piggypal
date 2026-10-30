@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from 'react';
-import { useOutlet } from 'react-router-dom';
+import { Fragment, useState, type ReactNode } from 'react';
+import { useLocation, useOutlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useWidthClass } from '../lib/layout';
 import { DetailSlotContext, PaneContext } from '../lib/pane';
@@ -13,9 +13,17 @@ import { DetailSlotContext, PaneContext } from '../lib/pane';
 export function SplitLayout({ list, base, emptyKey }: { list: ReactNode; base: string; emptyKey: string }) {
   const widthClass = useWidthClass();
   const outlet = useOutlet();
+  const { pathname } = useLocation();
   const { t } = useTranslation();
 
   if (widthClass === 'compact') return outlet ?? <>{list}</>;
+
+  // Keyed by path: picking another row mounts a fresh detail screen, as
+  // the phone does when it goes list → detail. Without it React reuses
+  // the open screen with a new :id, and forms that copy the record into
+  // their own state on mount (TransactionEditForm) keep showing the
+  // first record. Search params aren't in the key, so filters don't
+  // remount it.
 
   return (
     <div className="split">
@@ -23,7 +31,7 @@ export function SplitLayout({ list, base, emptyKey }: { list: ReactNode; base: s
         <section className="split-list">{list}</section>
       </PaneContext.Provider>
       <PaneContext.Provider value={{ pane: 'detail', base }}>
-        <section className="split-detail">{outlet ?? <p className="split-empty">{t(emptyKey)}</p>}</section>
+        <section className="split-detail">{outlet ? <Fragment key={pathname}>{outlet}</Fragment> : <p className="split-empty">{t(emptyKey)}</p>}</section>
       </PaneContext.Provider>
     </div>
   );
