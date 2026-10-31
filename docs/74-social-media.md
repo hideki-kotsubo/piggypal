@@ -120,6 +120,19 @@ recordings of real entries, captioned per language (Playwright can record
 video of the same flow as the screenshots), or templated clips. Videos
 with a face and voice perform best; that part is the user's.
 
+2026-10-31: `npm run social:videos` makes the first of those, two silent
+9:16 clips per language from a fresh install, framed like the story
+images with a hook on top: `type-it` (type "coffee 4.50", see what was
+understood, Save; ~8 s) and `languages` (tap through the languages, the
+screen relabels itself, back to the clip's own; ~13 s, zoomed on the top
+of the screen). Chrome's screencast records the app; each frame is drawn
+in the brand page and piped to ffmpeg. MP4 (H.264) needs ffmpeg on the
+PATH (`brew install ffmpeg` on the Mac); without it the script falls back
+to WebM through Playwright's own ffmpeg, which is only good for checking.
+`ffmpeg-static` was considered and dropped: its install script downloads a
+binary. Sound is added in TikTok/Instagram, where trending audio helps.
+Also posted to Instagram Reels and YouTube Shorts.
+
 **D280 — A weekly Claude routine drafts, the user approves.** Every Friday
 a scheduled Claude session reads `app/CHANGELOG.md`, `marketing/posts/`
 and this doc, and adds the next week's three posts (Tue/Thu/Sat, 09:00

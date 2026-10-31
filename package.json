@@ -16,7 +16,8 @@
     "social:screenshots": "tsx scripts/social/screenshots.mts",
     "social:compose": "tsx scripts/social/compose.mts",
     "social:from-changelog": "tsx scripts/social/from-changelog.mts",
-    "social:publish": "tsx scripts/social/publish.mts"
+    "social:publish": "tsx scripts/social/publish.mts",
+    "social:videos": "tsx scripts/social/videos.mts"
   },
   "devDependencies": {
     "playwright": "^1.62.1",
