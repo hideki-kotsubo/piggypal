@@ -16,7 +16,7 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
-## Unreleased
+## 0.15.1 — 2026-10-31
 
 - **Flowtab on iPad.** The iPhone app now runs full screen on iPad,
   with the menu on the left and lists and details side by side.
