@@ -20,6 +20,9 @@ How to write an entry (docs/59):
 
 - **Flowtab on iPad.** The iPhone app now runs full screen on iPad,
   with the menu on the left and lists and details side by side.
+- **Voice works after switching languages.** Picking another voice
+  language, such as Spanish or Japanese after English, could leave the
+  mic listening without ever hearing anything.
 
 ## 0.15.0 — 2026-10-30
 
