@@ -74,8 +74,13 @@ let sharedRecognition: SpeechRecognitionLike | null = null;
 function configuredRecognition(): SpeechRecognitionLike | null {
   const Ctor = getSpeechRecognitionCtor();
   if (!Ctor) return null;
-  const recognition = sharedRecognition ?? new Ctor();
-  recognition.lang = currentSpeechTag();
+  const lang = currentSpeechTag();
+  // A new voice language gets a new instance: re-pointing a used one's
+  // `lang` left it hearing nothing on iPhone (2026-10-31: English, then
+  // Spanish or Japanese, never answered again). Same cost as any fresh
+  // instance — at most one more permission prompt.
+  const recognition = sharedRecognition && sharedRecognition.lang === lang ? sharedRecognition : new Ctor();
+  recognition.lang = lang;
   recognition.interimResults = false;
   recognition.maxAlternatives = 1;
   return recognition;
@@ -202,6 +207,10 @@ function startWebSpeech(handlers: SpeechInputHandlers): { stop: () => void; abor
     // `end` event, which throws InvalidStateError on an instance that
     // thinks it's still active. Discard and retry on a fresh instance
     // rather than leaving the tap dead.
+    // Detach first: its own pending `end` would otherwise land in this
+    // session's handlers and settle it before the fresh instance hears
+    // anything.
+    recognition.onresult = recognition.onerror = recognition.onend = null;
     sharedRecognition = null;
     recognition = configuredRecognition();
     if (!recognition) return null;

@@ -121,6 +121,38 @@ describe('web speech sessions', () => {
     expect(h.onResult).not.toHaveBeenCalled();
   });
 
+  it('starts a fresh instance when the voice language changes', async () => {
+    const { startSpeechInput } = await load();
+    script = (r) => r.say('x');
+    startSpeechInput(handlers());
+    vi.stubGlobal('localStorage', { getItem: () => 'es' });
+    const h = handlers();
+    startSpeechInput(h);
+    expect(instances).toHaveLength(2);
+    expect(instances[1].lang).toBe('es-MX');
+    expect(h.onResult).toHaveBeenCalledWith('x');
+  });
+
+  it('a restart that hits a still-ending instance is not ended by its late event', async () => {
+    const { startSpeechInput } = await load();
+    let ending: FakeRecognition | null = null;
+    script = (r) => {
+      if (r === ending) throw new Error('InvalidStateError');
+    };
+    const first = startSpeechInput(handlers())!;
+    ending = instances[0];
+    // An abort whose `end` arrives only later, as in a real browser.
+    instances[0].abort = () => {};
+    first.abort();
+    const h = handlers();
+    startSpeechInput(h);
+    expect(instances).toHaveLength(2);
+    ending.onend?.();
+    expect(h.onEnd).not.toHaveBeenCalled();
+    instances[1].say('ok');
+    expect(h.onResult).toHaveBeenCalledWith('ok');
+  });
+
   it('listens in the voice language', async () => {
     const { startSpeechInput } = await load();
     script = (r) => r.say('x');
