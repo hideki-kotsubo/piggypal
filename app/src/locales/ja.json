@@ -371,6 +371,7 @@
     "listeningPlaceholder": "聞き取り中…",
     "listening": "聞き取り中",
     "listeningNow": "聞いています…",
+    "listeningPaused": "一時停止中 — 言語を選んでください",
     "stopListening": "停止",
     "startVoice": "音声入力を開始",
     "stopVoice": "音声入力を停止",

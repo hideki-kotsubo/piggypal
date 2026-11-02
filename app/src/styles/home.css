@@ -371,6 +371,17 @@
   border-radius: 2px;
   background: currentColor;
 }
+/* Paused while a language is picked: no pulse, ring frozen, mic dimmed. */
+.listening-panel.paused .listening-mic::before,
+.listening-panel.paused .listening-mic::after {
+  display: none;
+}
+.listening-panel.paused .listening-timer-ring .progress {
+  animation-play-state: paused;
+}
+.listening-panel.paused .listening-mic {
+  opacity: 0.55;
+}
 @media (prefers-reduced-motion: reduce) {
   .listening-mic::before {
     animation: none;

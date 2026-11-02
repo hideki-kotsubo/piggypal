@@ -371,6 +371,7 @@
     "listeningPlaceholder": "正在聆听…",
     "listening": "正在聆听",
     "listeningNow": "正在听…",
+    "listeningPaused": "已暂停 — 请选择语言",
     "stopListening": "停止",
     "startVoice": "开始语音输入",
     "stopVoice": "停止语音输入",

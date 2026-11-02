@@ -50,6 +50,11 @@ export function EntryZone({ onSubmitted }: Props) {
   const [listening, setListening] = useState(false);
   // Restarts the listening panel's countdown with each session.
   const [listenKey, setListenKey] = useState(0);
+  // Picking a voice language from the listening panel: listening stops,
+  // the panel stays open with its countdown frozen, and the next session
+  // starts once a language is picked.
+  const [voicePaused, setVoicePaused] = useState(false);
+  const voicePanelOpen = listening || voicePaused;
   const recognitionRef = useRef<{ stop: () => void; abort: () => void } | null>(null);
   // Each start gets a number; callbacks from an older session (late
   // events after an abort-and-restart) are ignored.
@@ -232,6 +237,10 @@ export function EntryZone({ onSubmitted }: Props) {
   // when unsupported (e.g. desktop Firefox).
   function toggleVoice() {
     setVoiceMenuOpen(false);
+    if (voicePaused) {
+      setVoicePaused(false);
+      return;
+    }
     if (listening) {
       // Give-up path: abort() cuts the mic immediately and discards
       // whatever's been captured, rather than stop()'s "deliver a final
@@ -251,8 +260,24 @@ export function EntryZone({ onSubmitted }: Props) {
   // was already heard still comes through as a preview.
   function stopVoice() {
     setVoiceMenuOpen(false);
+    setVoicePaused(false);
+    if (!listening) return;
     recognitionRef.current?.stop();
     setListening(false);
+  }
+
+  // The panel's language chip. Pausing aborts rather than waits: a
+  // recognizer left running behind the menu could end on its own and
+  // take the panel with it (real iPhone, 2026-11-01).
+  function toggleVoicePause() {
+    if (voicePaused) {
+      startVoice();
+      return;
+    }
+    voiceSessionRef.current++;
+    recognitionRef.current?.abort();
+    setListening(false);
+    setVoicePaused(true);
   }
 
   function startVoice() {
@@ -260,6 +285,7 @@ export function EntryZone({ onSubmitted }: Props) {
     // starts clean rather than under the last one's result.
     setPreview(null);
     setTypedText('');
+    setVoicePaused(false);
     const session = ++voiceSessionRef.current;
     setListenKey(session);
     const current = () => voiceSessionRef.current === session;
@@ -296,7 +322,8 @@ export function EntryZone({ onSubmitted }: Props) {
   function pickVoiceLanguage(next: VoicePreference) {
     setVoicePreference(next);
     setVoiceMenuOpen(false);
-    if (listening) {
+    if (voicePaused) startVoice();
+    else if (listening) {
       voiceSessionRef.current++;
       recognitionRef.current?.abort();
       startVoice();
@@ -334,7 +361,7 @@ export function EntryZone({ onSubmitted }: Props) {
             and the app's language is already one of the chips (highlighted
             while voice follows it). Settings keeps "Same as app" as the
             default and the way back to it. */}
-        {isSpeechInputSupported() && voiceMenuOpen && !listening && voiceMenu}
+        {isSpeechInputSupported() && voiceMenuOpen && !voicePanelOpen && voiceMenu}
         <div className="entry-input-row">
           <button type="button" className="add-btn" onClick={startBlank} aria-label={t('entry.addTransaction')}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -350,10 +377,10 @@ export function EntryZone({ onSubmitted }: Props) {
           {isSpeechInputSupported() && (
             <button
               type="button"
-              className={`voice-lang-chip ${voiceMenuOpen ? 'open' : ''}`}
-              onClick={() => setVoiceMenuOpen((o) => !o)}
+              className={`voice-lang-chip ${voiceMenuOpen || voicePaused ? 'open' : ''}`}
+              onClick={() => (voicePanelOpen ? toggleVoicePause() : setVoiceMenuOpen((o) => !o))}
               aria-label={t('entry.voiceLanguage', { language: voiceLabel })}
-              aria-expanded={voiceMenuOpen}
+              aria-expanded={voiceMenuOpen || voicePaused}
             >
               {voiceShort}
             </button>
@@ -391,18 +418,18 @@ export function EntryZone({ onSubmitted }: Props) {
         {/* docs/73 — while listening, a panel that can't be missed: a
             big pulsing mic, the voice language (switchable right here)
             and Stop, in the place the preview takes. */}
-        {listening && (
-          <div className="listening-panel">
-            <ListeningIndicator key={listenKey} />
-            {voiceMenuOpen && voiceMenu}
+        {voicePanelOpen && (
+          <div className={`listening-panel ${voicePaused ? 'paused' : ''}`}>
+            <ListeningIndicator key={listenKey} paused={voicePaused} />
+            {voicePaused && voiceMenu}
             <div className="listening-actions">
               <button
                 type="button"
-                className={`chip ${voiceMenuOpen ? 'picked' : ''}`}
+                className={`chip ${voicePaused ? 'picked' : ''}`}
                 lang={voiceTag}
-                onClick={() => setVoiceMenuOpen((o) => !o)}
+                onClick={toggleVoicePause}
                 aria-label={t('entry.voiceLanguage', { language: voiceLabel })}
-                aria-expanded={voiceMenuOpen}
+                aria-expanded={voicePaused}
               >
                 {voiceLabel} ▾
               </button>
@@ -414,7 +441,7 @@ export function EntryZone({ onSubmitted }: Props) {
           </div>
         )}
 
-        {preview && !listening && (
+        {preview && !voicePanelOpen && (
           <div className="parse-preview">
             <p className="parse-label">{t('entry.understood')}</p>
             <div className="parse-fields">
@@ -501,15 +528,22 @@ export function EntryZone({ onSubmitted }: Props) {
 // The listening panel's mic, with a ring that empties over the session
 // timeout (speechInput.ts) and the seconds left, so a session that hears
 // nothing visibly runs out instead of just stopping.
-function ListeningIndicator() {
+// Paused (the language menu is open), both hold still; a picked
+// language starts a new session, and a fresh countdown with it.
+function ListeningIndicator({ paused }: { paused: boolean }) {
   const { t, i18n } = useTranslation();
   const total = SESSION_TIMEOUT_MS / 1000;
   const [left, setLeft] = useState(total);
+  const elapsedRef = useRef(0);
   useEffect(() => {
-    const started = Date.now();
-    const id = setInterval(() => setLeft(Math.max(0, Math.ceil(total - (Date.now() - started) / 1000))), 250);
+    if (paused) return;
+    const resumedAt = Date.now() - elapsedRef.current;
+    const id = setInterval(() => {
+      elapsedRef.current = Date.now() - resumedAt;
+      setLeft(Math.max(0, Math.ceil(total - elapsedRef.current / 1000)));
+    }, 250);
     return () => clearInterval(id);
-  }, [total]);
+  }, [paused, total]);
   const seconds = new Intl.NumberFormat(i18n.language, { style: 'unit', unit: 'second', unitDisplay: 'short' });
   return (
     <>
@@ -522,7 +556,7 @@ function ListeningIndicator() {
           <circle className="progress" cx="50" cy="50" r="48" pathLength={100} style={{ animationDuration: `${SESSION_TIMEOUT_MS}ms` }} />
         </svg>
       </div>
-      <p className="listening-title">{t('entry.listeningNow')}</p>
+      <p className="listening-title">{paused ? t('entry.listeningPaused') : t('entry.listeningNow')}</p>
       <p className="listening-countdown" aria-hidden="true">{seconds.format(left)}</p>
     </>
   );
