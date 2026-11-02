@@ -16,7 +16,7 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
-## Unreleased
+## 0.15.3 — 2026-11-01
 
 - **Tapping away closes the entry card, and only that.** With the
   understood entry or the listening panel open, a tap anywhere else just
