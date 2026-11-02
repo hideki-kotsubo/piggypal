@@ -256,16 +256,6 @@ export function EntryZone({ onSubmitted }: Props) {
     startVoice();
   }
 
-  // The listening panel's Stop: unlike the mic toggle's cancel, whatever
-  // was already heard still comes through as a preview.
-  function stopVoice() {
-    setVoiceMenuOpen(false);
-    setVoicePaused(false);
-    if (!listening) return;
-    recognitionRef.current?.stop();
-    setListening(false);
-  }
-
   // The panel's language chip. Pausing aborts rather than waits: a
   // recognizer left running behind the menu could end on its own and
   // take the panel with it (real iPhone, 2026-11-01).
@@ -433,9 +423,9 @@ export function EntryZone({ onSubmitted }: Props) {
               >
                 {voiceLabel} ▾
               </button>
-              <button type="button" className="listening-stop" onClick={stopVoice}>
-                <span className="listening-stop-square" aria-hidden="true" />
-                {t('entry.stopListening')}
+              {/* Same as the mic toggle: cancels, nothing heard is kept. */}
+              <button type="button" className="listening-cancel" onClick={toggleVoice}>
+                {t('common.cancel')}
               </button>
             </div>
           </div>

@@ -351,7 +351,7 @@
   justify-content: center;
   gap: 0.6rem;
 }
-.listening-stop {
+.listening-cancel {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
@@ -364,12 +364,6 @@
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-}
-.listening-stop-square {
-  width: 0.6rem;
-  height: 0.6rem;
-  border-radius: 2px;
-  background: currentColor;
 }
 /* Paused while a language is picked: no pulse, ring frozen, mic dimmed. */
 .listening-panel.paused .listening-mic::before,
