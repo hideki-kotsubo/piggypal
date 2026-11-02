@@ -16,6 +16,16 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
+## Unreleased
+
+- **Clearer listening.** While the mic is on, a large pulsing mic shows
+  that Flowtab is listening, with a ring counting down the seconds it
+  keeps listening and a **Cancel** button, so you don't have to wait. Tap
+  the language to pause and pick another; listening starts again in it.
+- **Voice log in About.** If voice entry stops hearing you, About now
+  shows what happened in your last few tries (never what you said), so
+  you can copy it into a bug report.
+
 ## 0.15.1 — 2026-10-31
 
 - **Flowtab on iPad.** The iPhone app now runs full screen on iPad,

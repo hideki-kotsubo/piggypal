@@ -255,6 +255,137 @@
   }
 }
 
+/* docs/73 — the listening panel: takes the parse preview's place in the
+   entry card while the mic is on, so "listening" can't be missed. The
+   rings have room here (unlike the 4px ceiling on .mic-btn above). */
+.listening-panel {
+  border-top: 1px solid var(--line);
+  padding: 1.4rem 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+}
+.listening-mic-wrap {
+  position: relative;
+  width: 6rem;
+  height: 6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.listening-mic {
+  position: relative;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  isolation: isolate;
+}
+.listening-mic::before,
+.listening-mic::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  animation: listening-ring 1.8s ease-out infinite;
+  z-index: -1;
+}
+.listening-mic::after {
+  animation-delay: 0.9s;
+}
+@keyframes listening-ring {
+  from { transform: scale(1); opacity: 1; }
+  to { transform: scale(1.45); opacity: 0; }
+}
+/* The countdown: drawn after the mic so the pulses never cover it,
+   emptying clockwise from the top over the session timeout. */
+.listening-timer-ring {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+.listening-timer-ring circle {
+  fill: none;
+  stroke-width: 3;
+}
+.listening-timer-ring .track {
+  stroke: var(--line);
+}
+.listening-timer-ring .progress {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  animation: listening-countdown linear forwards;
+}
+@keyframes listening-countdown {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: 100; }
+}
+.listening-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.listening-countdown {
+  margin: -0.6rem 0 0;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.listening-panel .voice-lang-menu {
+  border-bottom: none;
+  justify-content: center;
+  padding: 0;
+}
+.listening-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+}
+.listening-cancel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+/* Paused while a language is picked: no pulse, ring frozen, mic dimmed. */
+.listening-panel.paused .listening-mic::before,
+.listening-panel.paused .listening-mic::after {
+  display: none;
+}
+.listening-panel.paused .listening-timer-ring .progress {
+  animation-play-state: paused;
+}
+.listening-panel.paused .listening-mic {
+  opacity: 0.55;
+}
+@media (prefers-reduced-motion: reduce) {
+  .listening-mic::before {
+    animation: none;
+    transform: scale(1.25);
+  }
+  .listening-mic::after {
+    display: none;
+  }
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -1397,6 +1528,24 @@
   font-family: var(--mono);
   font-size: 0.75rem;
   color: var(--ink-faint);
+}
+/* About's voice log (voiceLog.ts): one wrapped line per session. */
+.voice-log {
+  margin: 0 1.1rem 0.6rem;
+  padding: 0.7rem 0.8rem;
+  background: var(--surface-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--ink-muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+.voice-log-actions {
+  margin: 0 1.1rem 1.4rem;
 }
 .changelog-entry p {
   margin: 0 0 0.5rem;

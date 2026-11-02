@@ -217,7 +217,13 @@
     "contact": "Contato",
     "version": "Versão",
     "whatsNew": "Novidades",
-    "devPreview": "prévia de desenvolvimento"
+    "devPreview": "prévia de desenvolvimento",
+    "voiceLog": "Registro de voz",
+    "voiceLogIntro": "As últimas tentativas de voz neste dispositivo: o que o reconhecedor informou e quando, nunca o que você disse. Copie para enviar junto com um relato de problema.",
+    "voiceLogEmpty": "Nenhuma tentativa de voz ainda.",
+    "voiceLogCopy": "Copiar",
+    "voiceLogCopied": "Copiado",
+    "voiceLogClear": "Limpar"
   },
   "deleteAccount": {
     "title": "Excluir conta",
@@ -414,6 +420,8 @@
     "placeholder": "digite ou fale o que você gastou…",
     "listeningPlaceholder": "ouvindo…",
     "listening": "Ouvindo",
+    "listeningNow": "Ouvindo…",
+    "listeningPaused": "Pausado — escolha um idioma",
     "startVoice": "Iniciar entrada por voz",
     "stopVoice": "Parar entrada por voz",
     "understood": "entendido",

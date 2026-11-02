@@ -195,7 +195,13 @@
     "contact": "联系",
     "version": "版本",
     "whatsNew": "新功能",
-    "devPreview": "开发预览版"
+    "devPreview": "开发预览版",
+    "voiceLog": "语音日志",
+    "voiceLogIntro": "此设备上最近几次语音输入的记录：只记下识别器何时报告了什么，从不记录你说的内容。报告问题时可复制附上。",
+    "voiceLogEmpty": "还没有语音输入记录。",
+    "voiceLogCopy": "复制",
+    "voiceLogCopied": "已复制",
+    "voiceLogClear": "清除"
   },
   "deleteAccount": {
     "title": "删除账号",
@@ -364,6 +370,8 @@
     "placeholder": "输入或说出你花了多少钱…",
     "listeningPlaceholder": "正在聆听…",
     "listening": "正在聆听",
+    "listeningNow": "正在听…",
+    "listeningPaused": "已暂停 — 请选择语言",
     "startVoice": "开始语音输入",
     "stopVoice": "停止语音输入",
     "understood": "识别结果",

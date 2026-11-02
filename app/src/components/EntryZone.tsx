@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
@@ -7,7 +7,7 @@ import { formatAmount, formatRelativeDate, nowLocal, nowUtc } from '../lib/forma
 import { getLocalUserId } from '../lib/identity';
 import { markFreshBlank } from '../lib/freshBlankTransactions';
 import { parseUtterance } from '../lib/parser';
-import { isSpeechInputSupported, startSpeechInput } from '../lib/speechInput';
+import { SESSION_TIMEOUT_MS, isSpeechInputSupported, startSpeechInput } from '../lib/speechInput';
 import i18n, { LANGUAGES } from '../lib/i18n';
 import { useVoicePreference, voiceLanguage, type VoicePreference } from '../lib/voiceLanguage';
 import { readDollarPreference, resolveDollar } from '../lib/dollar';
@@ -48,6 +48,13 @@ export function EntryZone({ onSubmitted }: Props) {
   const [typedText, setTypedText] = useState('');
   const [preview, setPreview] = useState<Preview | null>(null);
   const [listening, setListening] = useState(false);
+  // Restarts the listening panel's countdown with each session.
+  const [listenKey, setListenKey] = useState(0);
+  // Picking a voice language from the listening panel: listening stops,
+  // the panel stays open with its countdown frozen, and the next session
+  // starts once a language is picked.
+  const [voicePaused, setVoicePaused] = useState(false);
+  const voicePanelOpen = listening || voicePaused;
   const recognitionRef = useRef<{ stop: () => void; abort: () => void } | null>(null);
   // Each start gets a number; callbacks from an older session (late
   // events after an abort-and-restart) are ignored.
@@ -230,6 +237,10 @@ export function EntryZone({ onSubmitted }: Props) {
   // when unsupported (e.g. desktop Firefox).
   function toggleVoice() {
     setVoiceMenuOpen(false);
+    if (voicePaused) {
+      setVoicePaused(false);
+      return;
+    }
     if (listening) {
       // Give-up path: abort() cuts the mic immediately and discards
       // whatever's been captured, rather than stop()'s "deliver a final
@@ -245,8 +256,28 @@ export function EntryZone({ onSubmitted }: Props) {
     startVoice();
   }
 
+  // The panel's language chip. Pausing aborts rather than waits: a
+  // recognizer left running behind the menu could end on its own and
+  // take the panel with it (real iPhone, 2026-11-01).
+  function toggleVoicePause() {
+    if (voicePaused) {
+      startVoice();
+      return;
+    }
+    voiceSessionRef.current++;
+    recognitionRef.current?.abort();
+    setListening(false);
+    setVoicePaused(true);
+  }
+
   function startVoice() {
+    // The listening panel takes the preview's place: a new attempt
+    // starts clean rather than under the last one's result.
+    setPreview(null);
+    setTypedText('');
+    setVoicePaused(false);
     const session = ++voiceSessionRef.current;
+    setListenKey(session);
     const current = () => voiceSessionRef.current === session;
     const handle = startSpeechInput({
       onResult: (transcript) => {
@@ -281,7 +312,8 @@ export function EntryZone({ onSubmitted }: Props) {
   function pickVoiceLanguage(next: VoicePreference) {
     setVoicePreference(next);
     setVoiceMenuOpen(false);
-    if (listening) {
+    if (voicePaused) startVoice();
+    else if (listening) {
       voiceSessionRef.current++;
       recognitionRef.current?.abort();
       startVoice();
@@ -292,6 +324,24 @@ export function EntryZone({ onSubmitted }: Props) {
   const voiceShort = ({ 'pt-BR': 'PT', 'zh-Hans': '简', 'zh-Hant': '繁' } as Record<string, string>)[voiceTag] ?? voiceTag.toUpperCase();
   const voiceLabel = LANGUAGES.find((l) => l.tag === voiceTag)?.label ?? voiceTag;
 
+  const voiceMenu = (
+    <div className="voice-lang-menu" role="menu">
+      {LANGUAGES.map((l) => (
+        <button
+          type="button"
+          role="menuitemradio"
+          aria-checked={voiceTag === l.tag}
+          key={l.tag}
+          lang={l.tag}
+          className={`chip ${voiceTag === l.tag ? 'picked' : ''}`}
+          onClick={() => pickVoiceLanguage(l.tag)}
+        >
+          {l.label}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <div className="entry-zone">
       <form onSubmit={submitTyped}>
@@ -301,23 +351,7 @@ export function EntryZone({ onSubmitted }: Props) {
             and the app's language is already one of the chips (highlighted
             while voice follows it). Settings keeps "Same as app" as the
             default and the way back to it. */}
-        {isSpeechInputSupported() && voiceMenuOpen && (
-          <div className="voice-lang-menu" role="menu">
-            {LANGUAGES.map((l) => (
-              <button
-                type="button"
-                role="menuitemradio"
-                aria-checked={voiceTag === l.tag}
-                key={l.tag}
-                lang={l.tag}
-                className={`chip ${voiceTag === l.tag ? 'picked' : ''}`}
-                onClick={() => pickVoiceLanguage(l.tag)}
-              >
-                {l.label}
-              </button>
-            ))}
-          </div>
-        )}
+        {isSpeechInputSupported() && voiceMenuOpen && !voicePanelOpen && voiceMenu}
         <div className="entry-input-row">
           <button type="button" className="add-btn" onClick={startBlank} aria-label={t('entry.addTransaction')}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -333,10 +367,10 @@ export function EntryZone({ onSubmitted }: Props) {
           {isSpeechInputSupported() && (
             <button
               type="button"
-              className={`voice-lang-chip ${voiceMenuOpen ? 'open' : ''}`}
-              onClick={() => setVoiceMenuOpen((o) => !o)}
+              className={`voice-lang-chip ${voiceMenuOpen || voicePaused ? 'open' : ''}`}
+              onClick={() => (voicePanelOpen ? toggleVoicePause() : setVoiceMenuOpen((o) => !o))}
               aria-label={t('entry.voiceLanguage', { language: voiceLabel })}
-              aria-expanded={voiceMenuOpen}
+              aria-expanded={voiceMenuOpen || voicePaused}
             >
               {voiceShort}
             </button>
@@ -371,7 +405,33 @@ export function EntryZone({ onSubmitted }: Props) {
           <span className="sr-only" role="status">{listening ? t('entry.listening') : ''}</span>
         </div>
 
-        {preview && (
+        {/* docs/73 — while listening, a panel that can't be missed: a
+            big pulsing mic, the voice language (switchable right here)
+            and Stop, in the place the preview takes. */}
+        {voicePanelOpen && (
+          <div className={`listening-panel ${voicePaused ? 'paused' : ''}`}>
+            <ListeningIndicator key={listenKey} paused={voicePaused} />
+            {voicePaused && voiceMenu}
+            <div className="listening-actions">
+              <button
+                type="button"
+                className={`chip ${voicePaused ? 'picked' : ''}`}
+                lang={voiceTag}
+                onClick={toggleVoicePause}
+                aria-label={t('entry.voiceLanguage', { language: voiceLabel })}
+                aria-expanded={voicePaused}
+              >
+                {voiceLabel} ▾
+              </button>
+              {/* Same as the mic toggle: cancels, nothing heard is kept. */}
+              <button type="button" className="listening-cancel" onClick={toggleVoice}>
+                {t('common.cancel')}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {preview && !voicePanelOpen && (
           <div className="parse-preview">
             <p className="parse-label">{t('entry.understood')}</p>
             <div className="parse-fields">
@@ -455,9 +515,46 @@ export function EntryZone({ onSubmitted }: Props) {
   );
 }
 
-function MicIcon() {
+// The listening panel's mic, with a ring that empties over the session
+// timeout (speechInput.ts) and the seconds left, so a session that hears
+// nothing visibly runs out instead of just stopping.
+// Paused (the language menu is open), both hold still; a picked
+// language starts a new session, and a fresh countdown with it.
+function ListeningIndicator({ paused }: { paused: boolean }) {
+  const { t, i18n } = useTranslation();
+  const total = SESSION_TIMEOUT_MS / 1000;
+  const [left, setLeft] = useState(total);
+  const elapsedRef = useRef(0);
+  useEffect(() => {
+    if (paused) return;
+    const resumedAt = Date.now() - elapsedRef.current;
+    const id = setInterval(() => {
+      elapsedRef.current = Date.now() - resumedAt;
+      setLeft(Math.max(0, Math.ceil(total - elapsedRef.current / 1000)));
+    }, 250);
+    return () => clearInterval(id);
+  }, [paused, total]);
+  const seconds = new Intl.NumberFormat(i18n.language, { style: 'unit', unit: 'second', unitDisplay: 'short' });
   return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+    <>
+      <div className="listening-mic-wrap" aria-hidden="true">
+        <div className="listening-mic">
+          <MicIcon size={30} />
+        </div>
+        <svg className="listening-timer-ring" viewBox="0 0 100 100">
+          <circle className="track" cx="50" cy="50" r="48" />
+          <circle className="progress" cx="50" cy="50" r="48" pathLength={100} style={{ animationDuration: `${SESSION_TIMEOUT_MS}ms` }} />
+        </svg>
+      </div>
+      <p className="listening-title">{paused ? t('entry.listeningPaused') : t('entry.listeningNow')}</p>
+      <p className="listening-countdown" aria-hidden="true">{seconds.format(left)}</p>
+    </>
+  );
+}
+
+function MicIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 14 14" fill="none">
       <rect x="5" y="1" width="4" height="7" rx="2" stroke="currentColor" strokeWidth="1.3" />
       <path d="M2.5 6.5C2.5 9 4.5 11 7 11C9.5 11 11.5 9 11.5 6.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
       <path d="M7 11V13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />

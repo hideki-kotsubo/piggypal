@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import changelogSource from '../../CHANGELOG.md?raw';
@@ -10,6 +11,7 @@ import {
   releasedEntries,
 } from '../lib/changelog';
 import { APP_COMMIT, APP_VERSION } from '../lib/version';
+import { clearVoiceLog, formatVoiceLog, readVoiceLog } from '../lib/voiceLog';
 
 // docs/59 — the newest few releases from app/CHANGELOG.md. Dev builds also
 // show the not-yet-released notes, to preview how they read.
@@ -47,6 +49,49 @@ function ChangelogItem({ entry }: { entry: ChangelogEntry }) {
   );
 }
 
+// See voiceLog.ts: diagnostics for voice entry, read back from a phone.
+function VoiceLog() {
+  const { t } = useTranslation();
+  const [text, setText] = useState(() => formatVoiceLog(readVoiceLog()));
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+    } catch {
+      // No clipboard access — the text is still selectable.
+    }
+  }
+  return (
+    <>
+      <div className="section-label">{t('about.voiceLog')}</div>
+      <p className="about-text">{t('about.voiceLogIntro')}</p>
+      {text ? (
+        <>
+          <pre className="voice-log">{text}</pre>
+          <div className="chip-row voice-log-actions">
+            <button type="button" className="chip" onClick={copy}>
+              {copied ? t('about.voiceLogCopied') : t('about.voiceLogCopy')}
+            </button>
+            <button
+              type="button"
+              className="chip"
+              onClick={() => {
+                clearVoiceLog();
+                setText('');
+              }}
+            >
+              {t('about.voiceLogClear')}
+            </button>
+          </div>
+        </>
+      ) : (
+        <p className="about-text">{t('about.voiceLogEmpty')}</p>
+      )}
+    </>
+  );
+}
+
 export function AboutScreen() {
   const { t } = useTranslation();
   return (
@@ -79,6 +124,8 @@ export function AboutScreen() {
           ))}
         </>
       )}
+
+      <VoiceLog />
     </main>
   );
 }

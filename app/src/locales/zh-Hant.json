@@ -195,7 +195,13 @@
     "contact": "聯絡",
     "version": "版本",
     "whatsNew": "新功能",
-    "devPreview": "開發預覽版"
+    "devPreview": "開發預覽版",
+    "voiceLog": "語音紀錄",
+    "voiceLogIntro": "此裝置上最近幾次語音輸入的紀錄：只記下辨識器何時回報了什麼，從不記錄你說的內容。回報問題時可複製附上。",
+    "voiceLogEmpty": "還沒有語音輸入紀錄。",
+    "voiceLogCopy": "複製",
+    "voiceLogCopied": "已複製",
+    "voiceLogClear": "清除"
   },
   "deleteAccount": {
     "title": "刪除帳號",
@@ -364,6 +370,8 @@
     "placeholder": "輸入或說出你花了多少錢…",
     "listeningPlaceholder": "正在聆聽…",
     "listening": "正在聆聽",
+    "listeningNow": "正在聽…",
+    "listeningPaused": "已暫停 — 請選擇語言",
     "startVoice": "開始語音輸入",
     "stopVoice": "停止語音輸入",
     "understood": "識別結果",
