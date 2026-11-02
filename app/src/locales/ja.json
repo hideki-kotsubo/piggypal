@@ -370,6 +370,8 @@
     "placeholder": "使った金額を入力するか話してください…",
     "listeningPlaceholder": "聞き取り中…",
     "listening": "聞き取り中",
+    "listeningNow": "聞いています…",
+    "stopListening": "停止",
     "startVoice": "音声入力を開始",
     "stopVoice": "音声入力を停止",
     "understood": "認識結果",

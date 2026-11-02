@@ -245,7 +245,19 @@ export function EntryZone({ onSubmitted }: Props) {
     startVoice();
   }
 
+  // The listening panel's Stop: unlike the mic toggle's cancel, whatever
+  // was already heard still comes through as a preview.
+  function stopVoice() {
+    setVoiceMenuOpen(false);
+    recognitionRef.current?.stop();
+    setListening(false);
+  }
+
   function startVoice() {
+    // The listening panel takes the preview's place: a new attempt
+    // starts clean rather than under the last one's result.
+    setPreview(null);
+    setTypedText('');
     const session = ++voiceSessionRef.current;
     const current = () => voiceSessionRef.current === session;
     const handle = startSpeechInput({
@@ -292,6 +304,24 @@ export function EntryZone({ onSubmitted }: Props) {
   const voiceShort = ({ 'pt-BR': 'PT', 'zh-Hans': '简', 'zh-Hant': '繁' } as Record<string, string>)[voiceTag] ?? voiceTag.toUpperCase();
   const voiceLabel = LANGUAGES.find((l) => l.tag === voiceTag)?.label ?? voiceTag;
 
+  const voiceMenu = (
+    <div className="voice-lang-menu" role="menu">
+      {LANGUAGES.map((l) => (
+        <button
+          type="button"
+          role="menuitemradio"
+          aria-checked={voiceTag === l.tag}
+          key={l.tag}
+          lang={l.tag}
+          className={`chip ${voiceTag === l.tag ? 'picked' : ''}`}
+          onClick={() => pickVoiceLanguage(l.tag)}
+        >
+          {l.label}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <div className="entry-zone">
       <form onSubmit={submitTyped}>
@@ -301,23 +331,7 @@ export function EntryZone({ onSubmitted }: Props) {
             and the app's language is already one of the chips (highlighted
             while voice follows it). Settings keeps "Same as app" as the
             default and the way back to it. */}
-        {isSpeechInputSupported() && voiceMenuOpen && (
-          <div className="voice-lang-menu" role="menu">
-            {LANGUAGES.map((l) => (
-              <button
-                type="button"
-                role="menuitemradio"
-                aria-checked={voiceTag === l.tag}
-                key={l.tag}
-                lang={l.tag}
-                className={`chip ${voiceTag === l.tag ? 'picked' : ''}`}
-                onClick={() => pickVoiceLanguage(l.tag)}
-              >
-                {l.label}
-              </button>
-            ))}
-          </div>
-        )}
+        {isSpeechInputSupported() && voiceMenuOpen && !listening && voiceMenu}
         <div className="entry-input-row">
           <button type="button" className="add-btn" onClick={startBlank} aria-label={t('entry.addTransaction')}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -371,7 +385,36 @@ export function EntryZone({ onSubmitted }: Props) {
           <span className="sr-only" role="status">{listening ? t('entry.listening') : ''}</span>
         </div>
 
-        {preview && (
+        {/* docs/73 — while listening, a panel that can't be missed: a
+            big pulsing mic, the voice language (switchable right here)
+            and Stop, in the place the preview takes. */}
+        {listening && (
+          <div className="listening-panel">
+            <div className="listening-mic" aria-hidden="true">
+              <MicIcon size={30} />
+            </div>
+            <p className="listening-title">{t('entry.listeningNow')}</p>
+            {voiceMenuOpen && voiceMenu}
+            <div className="listening-actions">
+              <button
+                type="button"
+                className={`chip ${voiceMenuOpen ? 'picked' : ''}`}
+                lang={voiceTag}
+                onClick={() => setVoiceMenuOpen((o) => !o)}
+                aria-label={t('entry.voiceLanguage', { language: voiceLabel })}
+                aria-expanded={voiceMenuOpen}
+              >
+                {voiceLabel} ▾
+              </button>
+              <button type="button" className="listening-stop" onClick={stopVoice}>
+                <span className="listening-stop-square" aria-hidden="true" />
+                {t('entry.stopListening')}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {preview && !listening && (
           <div className="parse-preview">
             <p className="parse-label">{t('entry.understood')}</p>
             <div className="parse-fields">
@@ -455,9 +498,9 @@ export function EntryZone({ onSubmitted }: Props) {
   );
 }
 
-function MicIcon() {
+function MicIcon({ size = 14 }: { size?: number }) {
   return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+    <svg width={size} height={size} viewBox="0 0 14 14" fill="none">
       <rect x="5" y="1" width="4" height="7" rx="2" stroke="currentColor" strokeWidth="1.3" />
       <path d="M2.5 6.5C2.5 9 4.5 11 7 11C9.5 11 11.5 9 11.5 6.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
       <path d="M7 11V13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />

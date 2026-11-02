@@ -370,6 +370,8 @@
     "placeholder": "쓴 돈을 입력하거나 말해 보세요…",
     "listeningPlaceholder": "듣는 중…",
     "listening": "듣는 중",
+    "listeningNow": "듣고 있어요…",
+    "stopListening": "중지",
     "startVoice": "음성 입력 시작",
     "stopVoice": "음성 입력 중지",
     "understood": "인식 결과",

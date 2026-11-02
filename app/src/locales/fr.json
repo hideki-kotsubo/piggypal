@@ -421,6 +421,8 @@
     "placeholder": "écrivez ou dites ce que vous avez dépensé…",
     "listeningPlaceholder": "écoute…",
     "listening": "Écoute en cours",
+    "listeningNow": "J’écoute…",
+    "stopListening": "Arrêter",
     "startVoice": "Démarrer la saisie vocale",
     "stopVoice": "Arrêter la saisie vocale",
     "understood": "compris",

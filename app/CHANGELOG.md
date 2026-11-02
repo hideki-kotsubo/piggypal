@@ -18,6 +18,9 @@ How to write an entry (docs/59):
 
 ## Unreleased
 
+- **Clearer listening.** While the mic is on, a large pulsing mic shows
+  that Flowtab is listening, with the voice language right there to
+  switch and a **Stop** button, so you don't have to wait.
 - **Voice log in About.** If voice entry stops hearing you, About now
   shows what happened in your last few tries (never what you said), so
   you can copy it into a bug report.

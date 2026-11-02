@@ -184,7 +184,7 @@
   z-index: 20;
   margin: 0;
 }
-.shell-entry .entry-zone:has(.parse-preview, .voice-lang-menu) {
+.shell-entry .entry-zone:has(.parse-preview, .voice-lang-menu, .listening-panel) {
   box-shadow: 0 16px 36px -12px rgba(0, 0, 0, 0.35);
 }
 .shell-entry .entry-input-row {

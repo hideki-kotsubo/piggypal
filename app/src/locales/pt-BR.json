@@ -420,6 +420,8 @@
     "placeholder": "digite ou fale o que você gastou…",
     "listeningPlaceholder": "ouvindo…",
     "listening": "Ouvindo",
+    "listeningNow": "Ouvindo…",
+    "stopListening": "Parar",
     "startVoice": "Iniciar entrada por voz",
     "stopVoice": "Parar entrada por voz",
     "understood": "entendido",

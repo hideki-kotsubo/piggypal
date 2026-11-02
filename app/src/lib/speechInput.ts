@@ -125,6 +125,7 @@ function nativeErrorCode(err: unknown): string {
 
 function startNativeSpeech(handlers: SpeechInputHandlers): { stop: () => void; abort: () => void } {
   let aborted = false;
+  let stopped = false;
   let log: (event: string) => void = () => {};
   void (async () => {
     try {
@@ -145,17 +146,21 @@ function startNativeSpeech(handlers: SpeechInputHandlers): { stop: () => void; a
       log(matches?.[0] ? 'result' : 'no match');
       if (aborted) return;
       if (matches?.[0]) handlers.onResult(matches[0]);
-      else handlers.onError?.('no-speech');
+      else handlers.onError?.(stopped ? 'aborted' : 'no-speech');
     } catch (err) {
-      log(`error ${nativeErrorCode(err)}`);
-      if (!aborted) handlers.onError?.(nativeErrorCode(err));
+      const code = nativeErrorCode(err);
+      log(`error ${code}`);
+      if (!aborted) handlers.onError?.(code === 'no-speech' && stopped ? 'aborted' : code);
     } finally {
       log('end');
       handlers.onEnd?.();
     }
   })();
   return {
-    stop: () => void NativeSpeech.stop(),
+    stop: () => {
+      stopped = true;
+      void NativeSpeech.stop();
+    },
     abort: () => {
       aborted = true;
       log('cancelled');
@@ -182,6 +187,7 @@ function startWebSpeech(handlers: SpeechInputHandlers): { stop: () => void; abor
   let settled = false;
   let gotResult = false;
   let userAborted = false;
+  let userStopped = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   const finish = (error: string | null) => {
     if (settled) return;
@@ -189,7 +195,8 @@ function startWebSpeech(handlers: SpeechInputHandlers): { stop: () => void; abor
     clearTimeout(timer);
     if (error) {
       if (!(error === 'aborted' && userAborted) && sharedRecognition === recognition) sharedRecognition = null;
-      handlers.onError?.(error);
+      // Stopped by the user before anything was heard: nothing to report.
+      handlers.onError?.(error === 'no-speech' && userStopped ? 'aborted' : error);
     }
     handlers.onEnd?.();
   };
@@ -262,7 +269,10 @@ function startWebSpeech(handlers: SpeechInputHandlers): { stop: () => void; abor
   }
 
   return {
+    // For "Stop" on the listening panel: ends listening but still
+    // delivers what was heard, if anything.
     stop: () => {
+      userStopped = true;
       log('stop');
       session.stop();
     },

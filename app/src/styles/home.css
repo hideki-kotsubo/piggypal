@@ -255,6 +255,94 @@
   }
 }
 
+/* docs/73 — the listening panel: takes the parse preview's place in the
+   entry card while the mic is on, so "listening" can't be missed. The
+   rings have room here (unlike the 4px ceiling on .mic-btn above). */
+.listening-panel {
+  border-top: 1px solid var(--line);
+  padding: 1.4rem 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+}
+.listening-mic {
+  position: relative;
+  width: 4.5rem;
+  height: 4.5rem;
+  margin: 0.4rem 0;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  isolation: isolate;
+}
+.listening-mic::before,
+.listening-mic::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  animation: listening-ring 1.8s ease-out infinite;
+  z-index: -1;
+}
+.listening-mic::after {
+  animation-delay: 0.9s;
+}
+@keyframes listening-ring {
+  from { transform: scale(1); opacity: 1; }
+  to { transform: scale(1.6); opacity: 0; }
+}
+.listening-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.listening-panel .voice-lang-menu {
+  border-bottom: none;
+  justify-content: center;
+  padding: 0;
+}
+.listening-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+}
+.listening-stop {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.listening-stop-square {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 2px;
+  background: currentColor;
+}
+@media (prefers-reduced-motion: reduce) {
+  .listening-mic::before {
+    animation: none;
+    transform: scale(1.25);
+  }
+  .listening-mic::after {
+    display: none;
+  }
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

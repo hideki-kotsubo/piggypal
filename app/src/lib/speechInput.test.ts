@@ -153,6 +153,28 @@ describe('web speech sessions', () => {
     expect(h.onResult).toHaveBeenCalledWith('ok');
   });
 
+  it('a Stop before anything was heard ends quietly', async () => {
+    const { startSpeechInput } = await load();
+    script = () => {};
+    const h = handlers();
+    const session = startSpeechInput(h)!;
+    session.stop();
+    instances[0].onend?.();
+    expect(h.onError).toHaveBeenCalledWith('aborted');
+    expect(h.onEnd).toHaveBeenCalledTimes(1);
+  });
+
+  it('a Stop after speaking still delivers what was heard', async () => {
+    const { startSpeechInput } = await load();
+    script = () => {};
+    const h = handlers();
+    const session = startSpeechInput(h)!;
+    session.stop();
+    instances[0].say('12 dollars lunch');
+    expect(h.onResult).toHaveBeenCalledWith('12 dollars lunch');
+    expect(h.onError).not.toHaveBeenCalled();
+  });
+
   it('listens in the voice language', async () => {
     const { startSpeechInput } = await load();
     script = (r) => r.say('x');

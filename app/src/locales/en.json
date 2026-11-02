@@ -398,6 +398,8 @@
     "placeholder": "type or say what you spent…",
     "listeningPlaceholder": "listening…",
     "listening": "Listening",
+    "listeningNow": "Listening…",
+    "stopListening": "Stop",
     "startVoice": "Start voice input",
     "stopVoice": "Stop voice input",
     "understood": "understood",

@@ -370,6 +370,8 @@
     "placeholder": "輸入或說出你花了多少錢…",
     "listeningPlaceholder": "正在聆聽…",
     "listening": "正在聆聽",
+    "listeningNow": "正在聽…",
+    "stopListening": "停止",
     "startVoice": "開始語音輸入",
     "stopVoice": "停止語音輸入",
     "understood": "識別結果",
