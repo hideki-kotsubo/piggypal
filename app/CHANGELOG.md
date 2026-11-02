@@ -16,6 +16,11 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
+## Unreleased
+
+- **iPad: nothing hidden under the status bar.** The menu and the top
+  bar now start below the clock and battery, instead of under them.
+
 ## 0.15.3 — 2026-11-01
 
 - **Tapping away closes the entry card, and only that.** With the
