@@ -266,11 +266,18 @@
   align-items: center;
   gap: 0.9rem;
 }
+.listening-mic-wrap {
+  position: relative;
+  width: 6rem;
+  height: 6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 .listening-mic {
   position: relative;
   width: 4.5rem;
   height: 4.5rem;
-  margin: 0.4rem 0;
   border-radius: 50%;
   background: var(--accent);
   color: var(--accent-ink);
@@ -294,13 +301,44 @@
 }
 @keyframes listening-ring {
   from { transform: scale(1); opacity: 1; }
-  to { transform: scale(1.6); opacity: 0; }
+  to { transform: scale(1.45); opacity: 0; }
+}
+/* The countdown: drawn after the mic so the pulses never cover it,
+   emptying clockwise from the top over the session timeout. */
+.listening-timer-ring {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+.listening-timer-ring circle {
+  fill: none;
+  stroke-width: 3;
+}
+.listening-timer-ring .track {
+  stroke: var(--line);
+}
+.listening-timer-ring .progress {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  animation: listening-countdown linear forwards;
+}
+@keyframes listening-countdown {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: 100; }
 }
 .listening-title {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
   color: var(--ink);
+}
+.listening-countdown {
+  margin: -0.6rem 0 0;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
 }
 .listening-panel .voice-lang-menu {
   border-bottom: none;

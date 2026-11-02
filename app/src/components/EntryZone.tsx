@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
@@ -7,7 +7,7 @@ import { formatAmount, formatRelativeDate, nowLocal, nowUtc } from '../lib/forma
 import { getLocalUserId } from '../lib/identity';
 import { markFreshBlank } from '../lib/freshBlankTransactions';
 import { parseUtterance } from '../lib/parser';
-import { isSpeechInputSupported, startSpeechInput } from '../lib/speechInput';
+import { SESSION_TIMEOUT_MS, isSpeechInputSupported, startSpeechInput } from '../lib/speechInput';
 import i18n, { LANGUAGES } from '../lib/i18n';
 import { useVoicePreference, voiceLanguage, type VoicePreference } from '../lib/voiceLanguage';
 import { readDollarPreference, resolveDollar } from '../lib/dollar';
@@ -48,6 +48,8 @@ export function EntryZone({ onSubmitted }: Props) {
   const [typedText, setTypedText] = useState('');
   const [preview, setPreview] = useState<Preview | null>(null);
   const [listening, setListening] = useState(false);
+  // Restarts the listening panel's countdown with each session.
+  const [listenKey, setListenKey] = useState(0);
   const recognitionRef = useRef<{ stop: () => void; abort: () => void } | null>(null);
   // Each start gets a number; callbacks from an older session (late
   // events after an abort-and-restart) are ignored.
@@ -259,6 +261,7 @@ export function EntryZone({ onSubmitted }: Props) {
     setPreview(null);
     setTypedText('');
     const session = ++voiceSessionRef.current;
+    setListenKey(session);
     const current = () => voiceSessionRef.current === session;
     const handle = startSpeechInput({
       onResult: (transcript) => {
@@ -390,10 +393,7 @@ export function EntryZone({ onSubmitted }: Props) {
             and Stop, in the place the preview takes. */}
         {listening && (
           <div className="listening-panel">
-            <div className="listening-mic" aria-hidden="true">
-              <MicIcon size={30} />
-            </div>
-            <p className="listening-title">{t('entry.listeningNow')}</p>
+            <ListeningIndicator key={listenKey} />
             {voiceMenuOpen && voiceMenu}
             <div className="listening-actions">
               <button
@@ -495,6 +495,36 @@ export function EntryZone({ onSubmitted }: Props) {
         )}
       </form>
     </div>
+  );
+}
+
+// The listening panel's mic, with a ring that empties over the session
+// timeout (speechInput.ts) and the seconds left, so a session that hears
+// nothing visibly runs out instead of just stopping.
+function ListeningIndicator() {
+  const { t, i18n } = useTranslation();
+  const total = SESSION_TIMEOUT_MS / 1000;
+  const [left, setLeft] = useState(total);
+  useEffect(() => {
+    const started = Date.now();
+    const id = setInterval(() => setLeft(Math.max(0, Math.ceil(total - (Date.now() - started) / 1000))), 250);
+    return () => clearInterval(id);
+  }, [total]);
+  const seconds = new Intl.NumberFormat(i18n.language, { style: 'unit', unit: 'second', unitDisplay: 'short' });
+  return (
+    <>
+      <div className="listening-mic-wrap" aria-hidden="true">
+        <div className="listening-mic">
+          <MicIcon size={30} />
+        </div>
+        <svg className="listening-timer-ring" viewBox="0 0 100 100">
+          <circle className="track" cx="50" cy="50" r="48" />
+          <circle className="progress" cx="50" cy="50" r="48" pathLength={100} style={{ animationDuration: `${SESSION_TIMEOUT_MS}ms` }} />
+        </svg>
+      </div>
+      <p className="listening-title">{t('entry.listeningNow')}</p>
+      <p className="listening-countdown" aria-hidden="true">{seconds.format(left)}</p>
+    </>
   );
 }
 

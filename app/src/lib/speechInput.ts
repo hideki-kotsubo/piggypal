@@ -99,7 +99,7 @@ function configuredRecognition(): SpeechRecognitionLike | null {
 // throws its instance away, and the next tap starts a fresh one. A fresh
 // instance can mean one more permission prompt on iOS, which beats a
 // dead mic button. A cancel the user tapped keeps the instance.
-const SESSION_TIMEOUT_MS = 15_000;
+export const SESSION_TIMEOUT_MS = 15_000;
 
 // docs/16 D161 tried priming with a getUserMedia call before ever
 // touching SpeechRecognition, on the theory that its grant persists per-
