@@ -16,7 +16,7 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
-## Unreleased
+## 0.15.2 — 2026-11-01
 
 - **Clearer listening.** While the mic is on, a large pulsing mic shows
   that Flowtab is listening, with a ring counting down the seconds it
