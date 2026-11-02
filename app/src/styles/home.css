@@ -151,11 +151,15 @@
 }
 /* .toast (bottom: 1.5rem) would otherwise render underneath the dock,
    which sits on top of it (both fixed to the screen bottom) — lift it
-   above the dock's idle height instead, Home-only. Two classes, not
-   one: .toast's own rule (same specificity) is declared later in this
-   file and would otherwise win the cascade on source order alone. */
+   just above the dock, Home-only. --dock-h is the dock's measured height
+   (App.tsx sets it on .home, safe-area inset included); the fallback only
+   covers the first frame before it's measured. Two classes, not one:
+   .toast's own rule (same specificity) is declared later in this file
+   and would otherwise win the cascade on source order alone. Above the
+   dock's z-index too, in case the two ever overlap. */
 .toast.toast-above-dock {
-  bottom: 6.5rem;
+  bottom: calc(var(--dock-h, calc(6.5rem + env(safe-area-inset-bottom, 0px))) + 0.75rem);
+  z-index: 11;
 }
 .entry-input-row {
   display: flex;
