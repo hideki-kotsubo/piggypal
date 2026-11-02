@@ -10,6 +10,10 @@
      columns narrower than their pane, and grey on both sides of a white
      column reads as two bands. */
   background: var(--surface);
+  /* docs/65 for the wide frame (iPad): the frame clears the status bar
+     once, so the rail and top bar start below it. Zero off iOS. */
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
 }
 .shell-medium {
   --rail-w: 68px;
@@ -140,6 +144,16 @@
 .shell .home {
   min-height: 100%;
   max-width: 640px;
+  /* The frame above already cleared the status bar; .home's own
+     phone-sized inset and the bar's reduced padding would double it. */
+  padding-top: 0;
+}
+.shell .app-bar {
+  padding-top: 1.6rem;
+}
+/* Sticky inside .shell-content, which starts below the status bar. */
+.shell .day-label {
+  top: 0;
 }
 
 /* On a section's own root screen the rail already does what the screen's
