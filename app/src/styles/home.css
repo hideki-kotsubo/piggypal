@@ -109,6 +109,14 @@
   border-top-right-radius: 22px;
   box-shadow: 0 -14px 28px -10px rgba(30, 33, 28, 0.22);
 }
+/* docs/31 D319 — invisible, under the dock (z-index 10) and the desktop
+   top bar's entry (20): while the preview or listening panel is open, a
+   tap anywhere else closes it instead of reaching the list. */
+.entry-tap-catcher {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+}
 /* The dock supplies its own margin (above); .entry-zone's usual top
    margin would double up with the dock's own padding. */
 .entry-zone-dock .entry-zone {

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
@@ -55,6 +56,18 @@ export function EntryZone({ onSubmitted }: Props) {
   // starts once a language is picked.
   const [voicePaused, setVoicePaused] = useState(false);
   const voicePanelOpen = listening || voicePaused;
+
+  // docs/31 D319 — while the preview or the listening panel is open, a
+  // tap outside the card only closes it. With no catcher it went through
+  // to the list too (D160's "no scrim") and opened a record behind it.
+  function dismissPanel() {
+    if (voicePanelOpen) {
+      toggleVoice();
+      return;
+    }
+    setPreview(null);
+    setTypedText('');
+  }
   const recognitionRef = useRef<{ stop: () => void; abort: () => void } | null>(null);
   // Each start gets a number; callbacks from an older session (late
   // events after an abort-and-restart) are ignored.
@@ -344,6 +357,8 @@ export function EntryZone({ onSubmitted }: Props) {
 
   return (
     <div className="entry-zone">
+      {(preview || voicePanelOpen) &&
+        createPortal(<div className="entry-tap-catcher" onClick={dismissPanel} aria-hidden="true" />, document.body)}
       <form onSubmit={submitTyped}>
         {/* In the card's flow rather than a floating popover: .entry-zone
             clips overflow, and the docked card grows upward anyway. No

@@ -81,6 +81,7 @@ trial are still genuinely open, not settled by the decision itself:
 |---|---|---|
 | D159 | Home's entry zone docks to the bottom of the screen (fixed, chat-input style), superseding docs/07 D22-26's top-of-page placement | User's explicit call after reviewing the Home-directions design exploration and trying the live implementation |
 | D160 | The overlay variant specifically (composer floats over Recent, no scrim, list never reflows) rather than push/shrink | Matches the "quick capture, data still visible" reasoning docs/07 D24 already established; push/shrink's per-keystroke layout reflow was the less-preferred alternative surfaced during the design review |
+| D319 | Refines D160 (2026-11-01): while the parse preview or the listening panel is open, an invisible full-screen catcher under the card turns a tap anywhere else into "close the panel" only. The list stays visible but doesn't take taps until the panel closes | Real phone report: giving up on a preview by tapping above it also opened the record underneath, since with no scrim the tap went through to the list. Idle (nothing open), the list is fully usable as D160 intended |
 
 **Revised same day**: the initial pass reused `.entry-zone`'s original
 sizing (2.2rem buttons, tight row padding) verbatim, which read as
