@@ -103,7 +103,10 @@
   bottom: 0;
   z-index: 10;
   box-sizing: border-box;
-  padding: 1rem 1.1rem calc(1.2rem + env(safe-area-inset-bottom, 0px));
+  /* Bottom: about half the old 1.2rem + inset gap. On an iPhone the input
+     still clears the home indicator (inset 34px - 8px = 26px); with no
+     inset (desktop, most Android) it's 0.75rem. */
+  padding: 1rem 1.1rem max(0.75rem, calc(env(safe-area-inset-bottom, 0px) - 0.5rem));
   background: var(--surface);
   border-top-left-radius: 22px;
   border-top-right-radius: 22px;
