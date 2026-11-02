@@ -149,6 +149,7 @@
     "loading": "Chargement de vos données",
     "recent": "Récentes",
     "empty": "Rien d’enregistré pour l’instant — essayez la zone de saisie ci-dessus.",
+    "emptyBelow": "Rien d’enregistré pour l’instant — essayez la zone de saisie ci-dessous.",
     "seeAll": "tout voir →"
   },
   "keypad": {

@@ -149,6 +149,7 @@
     "loading": "Carregando seus dados",
     "recent": "Recentes",
     "empty": "Nada registrado ainda — experimente a caixa de entrada acima.",
+    "emptyBelow": "Nada registrado ainda — experimente a caixa de entrada abaixo.",
     "seeAll": "ver tudo →"
   },
   "keypad": {
