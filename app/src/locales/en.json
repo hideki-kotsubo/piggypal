@@ -140,6 +140,7 @@
     "loading": "Loading your data",
     "recent": "Recent",
     "empty": "Nothing logged yet — try the entry box above.",
+    "emptyBelow": "Nothing logged yet — try the entry box below.",
     "seeAll": "see all →"
   },
   "keypad": {

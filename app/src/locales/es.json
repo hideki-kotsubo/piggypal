@@ -149,6 +149,7 @@
     "loading": "Cargando tus datos",
     "recent": "Recientes",
     "empty": "Aún no hay nada registrado: prueba el cuadro de entrada de arriba.",
+    "emptyBelow": "Aún no hay nada registrado: prueba el cuadro de entrada de abajo.",
     "seeAll": "ver todo →"
   },
   "keypad": {

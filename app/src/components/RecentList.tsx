@@ -8,6 +8,7 @@ import { getLocalUserId } from '../lib/identity';
 import { hasHousehold, personLabel, useHouseholdPeers } from '../lib/household';
 import { PayerBadge } from './PayerBadge';
 import { PrivateMark } from './PrivateMark';
+import { useWidthClass } from '../lib/layout';
 
 const PREVIEW_COUNT = 5;
 
@@ -16,6 +17,9 @@ export function RecentList() {
   const { t } = useTranslation();
   const peers = useHouseholdPeers();
   const showPayerBadge = hasHousehold(peers);
+  // Phones dock the entry box at the bottom of Home (docs/31); wider
+  // windows put it in the top bar (docs/80 D312) — same check as App.tsx.
+  const entryBelow = useWidthClass() === 'compact';
   const active = [...store.transactions]
     .filter((tx) => !tx.deletedAt)
     .sort((a, b) => (a.occurredAt < b.occurredAt ? 1 : -1));
@@ -34,7 +38,7 @@ export function RecentList() {
     return (
       <section>
         <div className="section-label">{t('home.recent')}</div>
-        <p className="empty-note">{t('home.empty')}</p>
+        <p className="empty-note">{t(entryBelow ? 'home.emptyBelow' : 'home.empty')}</p>
       </section>
     );
   }

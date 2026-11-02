@@ -25,6 +25,8 @@ How to write an entry (docs/59):
 - **Undo is back in view.** After saving an entry, the "Added · Undo"
   message now shows just above the entry bar, instead of hidden behind
   it on iPhones.
+- On a phone, an empty Home now points you to the entry box **below**,
+  where it actually is.
 
 ## 0.15.3 — 2026-11-01
 
