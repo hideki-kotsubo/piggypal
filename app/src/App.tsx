@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { EntryZone } from './components/EntryZone';
@@ -34,6 +34,22 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [toast]);
 
+  // The toast sits just above the dock. The dock's height isn't fixed: it
+  // includes the device's bottom safe-area inset and grows with the parse
+  // preview, so it's measured rather than guessed in CSS (a guessed
+  // 6.5rem left the toast hidden behind the dock on iPhones).
+  const dockRef = useRef<HTMLDivElement>(null);
+  const [dockHeight, setDockHeight] = useState<number | null>(null);
+  useEffect(() => {
+    const el = dockRef.current;
+    if (!el) return;
+    const measure = () => setDockHeight(el.offsetHeight);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [wide]);
+
   function showToast(message: string, onUndo?: () => void) {
     setToast({ message, onUndo });
   }
@@ -60,7 +76,10 @@ export default function App() {
   }
 
   return (
-    <main className="home home-with-dock">
+    <main
+      className="home home-with-dock"
+      style={dockHeight === null ? undefined : ({ '--dock-h': `${dockHeight}px` } as CSSProperties)}
+    >
       <div className="app-bar">
         <span className="wordmark">{wordmark}</span>
         <div className="app-bar-actions">
@@ -82,7 +101,7 @@ export default function App() {
           kept last, after the scrolling content, to match visual reading
           order top-to-bottom into the composer (same reasoning most
           chat-style UIs place their composer last). */}
-      <div className="entry-zone-dock">
+      <div className="entry-zone-dock" ref={dockRef}>
         <EntryZone onSubmitted={showToast} />
       </div>
 

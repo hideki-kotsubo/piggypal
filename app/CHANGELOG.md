@@ -22,6 +22,9 @@ How to write an entry (docs/59):
   bar now start below the clock and battery, instead of under them.
 - **Slimmer entry bar on phones.** Less empty space under the "type or
   say what you spent" box at the bottom of Home.
+- **Undo is back in view.** After saving an entry, the "Added · Undo"
+  message now shows just above the entry bar, instead of hidden behind
+  it on iPhones.
 
 ## 0.15.3 — 2026-11-01
 
