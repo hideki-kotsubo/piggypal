@@ -20,6 +20,8 @@ How to write an entry (docs/59):
 
 - **iPad: nothing hidden under the status bar.** The menu and the top
   bar now start below the clock and battery, instead of under them.
+- **Slimmer entry bar on phones.** Less empty space under the "type or
+  say what you spent" box at the bottom of Home.
 
 ## 0.15.3 — 2026-11-01
 
