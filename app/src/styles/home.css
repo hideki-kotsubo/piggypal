@@ -1398,6 +1398,24 @@
   font-size: 0.75rem;
   color: var(--ink-faint);
 }
+/* About's voice log (voiceLog.ts): one wrapped line per session. */
+.voice-log {
+  margin: 0 1.1rem 0.6rem;
+  padding: 0.7rem 0.8rem;
+  background: var(--surface-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--ink-muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+.voice-log-actions {
+  margin: 0 1.1rem 1.4rem;
+}
 .changelog-entry p {
   margin: 0 0 0.5rem;
 }

@@ -24,6 +24,7 @@
 import { Capacitor } from '@capacitor/core';
 import { SpeechRecognition as NativeSpeech } from '@capacitor-community/speech-recognition';
 import { currentSpeechTag } from './voiceLanguage';
+import { startVoiceLog } from './voiceLog';
 
 interface SpeechRecognitionResultLike {
   0: { transcript: string };
@@ -31,7 +32,11 @@ interface SpeechRecognitionResultLike {
 interface SpeechRecognitionEventLike {
   results: SpeechRecognitionResultLike[];
 }
-interface SpeechRecognitionLike {
+// Progress events, only recorded in the voice log (voiceLog.ts).
+const PROGRESS_EVENTS = ['audiostart', 'soundstart', 'speechstart', 'speechend', 'soundend', 'audioend'] as const;
+type ProgressHandlers = { [K in (typeof PROGRESS_EVENTS)[number] as `on${K}`]?: (() => void) | null };
+
+interface SpeechRecognitionLike extends ProgressHandlers {
   lang: string;
   interimResults: boolean;
   maxAlternatives: number;
@@ -120,6 +125,7 @@ function nativeErrorCode(err: unknown): string {
 
 function startNativeSpeech(handlers: SpeechInputHandlers): { stop: () => void; abort: () => void } {
   let aborted = false;
+  let log: (event: string) => void = () => {};
   void (async () => {
     try {
       let permission = (await NativeSpeech.checkPermissions()).speechRecognition;
@@ -128,18 +134,23 @@ function startNativeSpeech(handlers: SpeechInputHandlers): { stop: () => void; a
         handlers.onError?.('not-allowed');
         return;
       }
+      const language = currentSpeechTag();
+      log = startVoiceLog('native', language);
       const { matches } = await NativeSpeech.start({
-        language: currentSpeechTag(),
+        language,
         maxResults: 1,
         partialResults: false,
         popup: false,
       });
+      log(matches?.[0] ? 'result' : 'no match');
       if (aborted) return;
       if (matches?.[0]) handlers.onResult(matches[0]);
       else handlers.onError?.('no-speech');
     } catch (err) {
+      log(`error ${nativeErrorCode(err)}`);
       if (!aborted) handlers.onError?.(nativeErrorCode(err));
     } finally {
+      log('end');
       handlers.onEnd?.();
     }
   })();
@@ -147,6 +158,7 @@ function startNativeSpeech(handlers: SpeechInputHandlers): { stop: () => void; a
     stop: () => void NativeSpeech.stop(),
     abort: () => {
       aborted = true;
+      log('cancelled');
       void NativeSpeech.stop();
     },
   };
@@ -158,8 +170,11 @@ export function startSpeechInput(handlers: SpeechInputHandlers): { stop: () => v
 }
 
 function startWebSpeech(handlers: SpeechInputHandlers): { stop: () => void; abort: () => void } | null {
+  const previous = sharedRecognition;
   let recognition = configuredRecognition();
   if (!recognition) return null;
+  const log = startVoiceLog('web', recognition.lang);
+  log(recognition === previous ? 'reused' : 'new');
 
   // One session per tap. Handlers on a reused instance are replaced by the
   // next session's, and `settled` stops a discarded instance's late
@@ -179,7 +194,9 @@ function startWebSpeech(handlers: SpeechInputHandlers): { stop: () => void; abor
     handlers.onEnd?.();
   };
   const attach = (r: SpeechRecognitionLike) => {
+    for (const name of PROGRESS_EVENTS) r[`on${name}`] = () => log(name);
     r.onresult = (event) => {
+      log('result');
       if (settled) return;
       gotResult = true;
       // continuous is unset (false), which per spec should auto-stop the
@@ -191,8 +208,14 @@ function startWebSpeech(handlers: SpeechInputHandlers): { stop: () => void; abor
       handlers.onResult(event.results[0]?.[0]?.transcript ?? '');
       finish(null);
     };
-    r.onerror = (event) => finish(event.error);
-    r.onend = () => finish(gotResult ? null : userAborted ? 'aborted' : 'no-speech');
+    r.onerror = (event) => {
+      log(`error ${event.error}`);
+      finish(event.error);
+    };
+    r.onend = () => {
+      log('end');
+      finish(gotResult ? null : userAborted ? 'aborted' : 'no-speech');
+    };
   };
 
   attach(recognition);
@@ -211,9 +234,12 @@ function startWebSpeech(handlers: SpeechInputHandlers): { stop: () => void; abor
     // session's handlers and settle it before the fresh instance hears
     // anything.
     recognition.onresult = recognition.onerror = recognition.onend = null;
+    for (const name of PROGRESS_EVENTS) recognition[`on${name}`] = null;
+    log('start threw');
     sharedRecognition = null;
     recognition = configuredRecognition();
     if (!recognition) return null;
+    log('new');
     attach(recognition);
     sharedRecognition = recognition;
     recognition.start();
@@ -222,6 +248,7 @@ function startWebSpeech(handlers: SpeechInputHandlers): { stop: () => void; abor
   if (!settled) {
     timer = setTimeout(() => {
       if (settled) return;
+      log('timeout');
       // Report first: the abort below fires its own "aborted" event,
       // which must not pass for a cancel the user tapped.
       finish('no-speech');
@@ -235,13 +262,17 @@ function startWebSpeech(handlers: SpeechInputHandlers): { stop: () => void; abor
   }
 
   return {
-    stop: () => session.stop(),
+    stop: () => {
+      log('stop');
+      session.stop();
+    },
     // For the user bailing out mid-recording: abort() cuts the mic
     // immediately and discards whatever's been captured so far, unlike
     // stop() which still tries to deliver a final (possibly garbled,
     // half-spoken) result via onresult.
     abort: () => {
       userAborted = true;
+      log('cancelled');
       session.abort();
     },
   };

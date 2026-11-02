@@ -217,7 +217,13 @@
     "contact": "Contacto",
     "version": "Versión",
     "whatsNew": "Novedades",
-    "devPreview": "vista previa de desarrollo"
+    "devPreview": "vista previa de desarrollo",
+    "voiceLog": "Registro de voz",
+    "voiceLogIntro": "Los últimos intentos de voz en este dispositivo: lo que informó el reconocedor y cuándo, nunca lo que dijiste. Cópialo para enviarlo con un reporte de error.",
+    "voiceLogEmpty": "Todavía no hay intentos de voz.",
+    "voiceLogCopy": "Copiar",
+    "voiceLogCopied": "Copiado",
+    "voiceLogClear": "Borrar"
   },
   "deleteAccount": {
     "title": "Eliminar cuenta",

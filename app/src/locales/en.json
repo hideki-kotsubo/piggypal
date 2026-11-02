@@ -206,7 +206,13 @@
     "contact": "Contact",
     "version": "Version",
     "whatsNew": "What's new",
-    "devPreview": "dev preview"
+    "devPreview": "dev preview",
+    "voiceLog": "Voice log",
+    "voiceLogIntro": "The last few voice attempts on this device: what the recognizer reported and when, never what you said. Copy it to send with a bug report.",
+    "voiceLogEmpty": "No voice attempts yet.",
+    "voiceLogCopy": "Copy",
+    "voiceLogCopied": "Copied",
+    "voiceLogClear": "Clear"
   },
   "deleteAccount": {
     "title": "Delete account",

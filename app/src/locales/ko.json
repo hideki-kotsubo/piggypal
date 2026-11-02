@@ -195,7 +195,13 @@
     "contact": "문의",
     "version": "버전",
     "whatsNew": "새로운 기능",
-    "devPreview": "개발 미리보기"
+    "devPreview": "개발 미리보기",
+    "voiceLog": "음성 기록",
+    "voiceLogIntro": "이 기기에서 최근 음성 입력 시도 기록입니다. 인식기가 언제 무엇을 보고했는지만 남기고, 말한 내용은 남기지 않습니다. 문제를 알릴 때 복사해서 보내 주세요.",
+    "voiceLogEmpty": "아직 음성 입력 기록이 없습니다.",
+    "voiceLogCopy": "복사",
+    "voiceLogCopied": "복사됨",
+    "voiceLogClear": "지우기"
   },
   "deleteAccount": {
     "title": "계정 삭제",

@@ -195,7 +195,13 @@
     "contact": "お問い合わせ",
     "version": "バージョン",
     "whatsNew": "新機能",
-    "devPreview": "開発版プレビュー"
+    "devPreview": "開発版プレビュー",
+    "voiceLog": "音声ログ",
+    "voiceLogIntro": "このデバイスでの最近の音声入力の記録です。認識エンジンが何をいつ返したかだけを残し、話した内容は残しません。不具合の報告にコピーして添えてください。",
+    "voiceLogEmpty": "まだ音声入力の記録はありません。",
+    "voiceLogCopy": "コピー",
+    "voiceLogCopied": "コピーしました",
+    "voiceLogClear": "消去"
   },
   "deleteAccount": {
     "title": "アカウントを削除",
