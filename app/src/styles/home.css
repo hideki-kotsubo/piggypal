@@ -1210,6 +1210,28 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
 }
+/* iOS/iPadOS WebKit gives native date/time inputs an intrinsic minimum
+   width and ignores width: 100% below it, so in .field-pair the Time box
+   spilled past its column (over the Date box on iPad, off the screen edge
+   on iPhone). Dropping the native appearance lets width: 100% win; the
+   picker still opens on tap. Without the native look an empty one would
+   collapse and iOS sizes them taller than a text field, hence the fixed
+   height (= a plain .text-input: one line + padding + border), and WebKit
+   would centre the value, hence the left alignment to match every other
+   field. */
+.text-input[type='date'],
+.text-input[type='time'] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+  height: calc(1.15em + 1.1rem + 2px);
+  line-height: 1.15;
+  text-align: left;
+}
+.text-input[type='date']::-webkit-date-and-time-value,
+.text-input[type='time']::-webkit-date-and-time-value {
+  text-align: left;
+}
 .goal-section {
   display: flex;
   flex-direction: column;
