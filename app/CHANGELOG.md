@@ -16,7 +16,7 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
-## Unreleased
+## 0.15.5 — 2026-11-02
 
 - **Date and Time line up on iPhone and iPad.** On a transaction, the
   Time box no longer spills over the Date box or off the screen edge.
