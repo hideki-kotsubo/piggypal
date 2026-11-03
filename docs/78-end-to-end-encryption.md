@@ -152,8 +152,9 @@ locally (locked decision 1), so one table can't hold both.
   nothing readable is ever stored. The api must not log utterances, and
   Anthropic sees the text in transit. D7's `category_keywords` are now
   encrypted, so the client sends the relevant keywords in the request
-  body instead of the server reading them. The same applies to docs/77
-  R-D11 receipt auto-fill: the photo goes to the api for that one call.
+  body instead of the server reading them. docs/77 R-D11 receipt
+  auto-fill no longer needs this exception: since 2026-11-03 it runs on
+  the device only, and the photo never reaches the api.
 - **Email address and subscription state** stay plaintext. They're
   needed for sign-in and billing.
 
@@ -193,8 +194,9 @@ locally (locked decision 1), so one table can't hold both.
    with a "Show again" option in Settings while a device is unlocked.
 3. **Should E-D11 replace P-D8** (the profile PIN from docs/77)?
 4. **Rotation (E-D12):** on person removal and lost devices only?
-5. **Tier 2 / receipt OCR:** are "processed in transit, never stored"
-   semantics acceptable for paid AI features?
+5. **Tier 2:** are "processed in transit, never stored" semantics
+   acceptable for paid AI features? (Receipt auto-fill dropped out of
+   this question on 2026-11-03: it's on-device now, docs/77 R-D11.)
 6. **Migration:** automatic for all synced accounts, or opt-in first?
    Proposal: opt-in beta for one release, then automatic.
 
