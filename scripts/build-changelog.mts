@@ -109,6 +109,7 @@ ${body}  </section>
       <a href="./">Home</a>
       <a href="https://app.myflowtab.com/">Open the app</a>
       <a href="privacy.html">Privacy</a>
+      <a href="delete-account.html">Delete account</a>
       <span>© 2026 Flowtab</span>
     </div>
     <nav class="foot-social" aria-label="Flowtab on social media">
