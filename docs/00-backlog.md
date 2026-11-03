@@ -47,6 +47,18 @@ it needs doing.
         shared heuristic `receiptParser.ts`, every tier, no server.
         Apple Foundation Models (R-D17) only if the spike shows a gap.
         Doesn't depend on phase 2. Web: no scanning at first (R-D18).
+  - [ ] Receipt ideas parked (docs/77 R-D11 open questions, 2026-11-03),
+        decide after the spike:
+    - [ ] PDF / emailed receipts: text PDFs need no OCR, only
+          `receiptParser.ts` (overlaps docs/81 statement import).
+    - [ ] Web/PWA scanning: accept the gap, or Tesseract.js beta
+          (Latin only) / PaddleOCR via ONNX.
+    - [ ] Brazilian NFC-e QR codes as a merchant hint (research first).
+    - [ ] "Improve with AI": opt-in Claude vision for paid users on a
+          badly-read scan (needs Tier 2 + Stripe).
+    - [ ] Search over receipt text (R-D20 stores none today).
+    - [ ] Line items → split by category (needs category splits,
+          docs/50 D187).
 
 - [ ] **End-to-end encryption** (docs/78, design draft, proposals not
       yet decided). Added 2026-10-26.
