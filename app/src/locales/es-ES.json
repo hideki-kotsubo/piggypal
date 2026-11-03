@@ -40,7 +40,7 @@
     "signInFirst": "Inicia sesión (Ajustes → Cuenta) para administrar las personas y los dispositivos de tu hogar.",
     "addPerson": "+ Añadir persona",
     "addDevice": "+ Añadir un dispositivo a esta cuenta",
-    "addDeviceHint": "Al añadir un dispositivo se muestra un código para escanear desde el nuevo dispositivo, sin necesidad de correo. Para sincronizar directamente con un dispositivo cercano sin la nube, usa Ajustes → Conectar un dispositivo."
+    "addDeviceHint": "Al añadir un dispositivo se muestra un código para escanear desde el nuevo dispositivo, sin necesidad de correo. Para sincronizar directamente con un dispositivo cercano sin la nube, usa Ajustes → Sincronizar directo con un dispositivo."
   },
   "accounts": {
     "add": "Añadir cuenta",

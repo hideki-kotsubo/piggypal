@@ -11,6 +11,7 @@ import { effectiveDeviceLabel } from '../lib/settings';
 import { useStore } from '../lib/store';
 import type { MergeSummary, PeerDataset, Transaction, TransactionSplit } from '../lib/types';
 import { QrCanvas, QrScanStep } from './Qr';
+import { useAuthAccount } from '../lib/auth';
 
 // docs/27's sketch (frames 2-5), implemented for real, now with docs/24's
 // actual merge wired in (previously stubbed — see docs/00-backlog). One
@@ -63,6 +64,7 @@ type Step =
 export function PairingScreen() {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const [authAccount] = useAuthAccount();
   const store = useStore();
   const [searchParams] = useSearchParams();
   const [peers, recordSync] = usePairedPeers();
@@ -308,6 +310,14 @@ export function PairingScreen() {
               <span className="choice-sub">{t('pairing.someoneElseSub')}</span>
             </button>
           </div>
+          {/* This is peer-to-peer pairing; signed in, adding a device to
+              the cloud account is Household's QR (docs/71 D255) instead. */}
+          {authAccount && (
+            <p className="pairing-cloud-hint">
+              {t('pairing.cloudHint')}{' '}
+              <Link to="/settings/household" className="text-link">{t('pairing.cloudHintLink')}</Link>
+            </p>
+          )}
         </>
       )}
 
