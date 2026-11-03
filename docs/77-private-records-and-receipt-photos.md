@@ -220,36 +220,166 @@ Attach one or more photos of a receipt to a transaction.
 3. **Quota for paid accounts:** not decided yet. Also blocks phase 2
    only.
 4. **Receipt OCR / auto-fill: wanted.** Its own phase (R-D11 below).
+   2026-11-03: on the device only, no server-side processing.
 5. Receipts on scheduled payments' posted occurrences: these are normal
    transactions, so this works with no extra work.
 
-### R-D11 — Receipt auto-fill (OCR), proposed
+### R-D11 — Receipt auto-fill, on the device (revised 2026-11-03)
 
 From a receipt photo, suggest amount, currency, date, merchant and
 category, and show them in the same preview-then-Save confirmation as
 typed/voice entry (docs/22). Nothing is ever written without the user
-confirming. Two possible paths:
+confirming.
 
-- **On-device text recognition** (Apple Vision / Google ML Kit through a
-  Capacitor plugin), with the text then fed to the existing Tier 1
-  `parser.ts`. It's free, offline, and available to every tier. Receipts
-  are noisy, so expect weaker results, especially for totals vs
-  subtotals. Not available on the plain web/PWA.
-- **Claude vision through Tier 2** (`/api/parse`, docs/04, still
-  unbuilt). Much better at picking the real total, the merchant and
-  foreign-language receipts. It needs paid tier, is online only, and
-  would be the first real piece of Tier 2. Cost per call to be checked.
+**Revision.** The first draft (2026-10-26) proposed Claude vision through
+Tier 2 first. On 2026-11-03 the user asked for a design with no
+server-side processing at all, and that's the proposal now. Why:
 
-Proposal: build the Tier 2 path first (it fits locked decision 4: the
-free tier stays on-device and the paid tier uses the LLM), and maybe add
-on-device recognition later as the free fallback. Not decided.
+- **Privacy.** The photo never leaves the phone. That fits the "private"
+  positioning and docs/78's E2EE plan with no "processed in transit"
+  exception (docs/78 open question 5 no longer applies to receipts).
+- **No billing dependency.** Stripe (docs/06) doesn't exist yet, so a
+  per-call server feature would have nothing to gate it. On the device it
+  costs nothing, so it can be on for every tier, including the free tier,
+  which never signs in.
+- **Offline.** It works with no network, like the rest of the app (locked
+  decision 1).
+- **Doesn't wait for phase 2.** It needs neither blob storage nor a quota.
+
+What it costs: more engineering (a native plugin and a heuristic parser),
+weaker results than an LLM on messy or unusual receipts, and nothing good
+on the plain web/PWA.
+
+Claude vision through Tier 2 stays a possible **later opt-in** for paid
+users ("Improve with AI" on a scan the device read badly). Not part of
+this plan.
+
+#### Proposed design
+
+- **R-D11: two steps.** (1) Text recognition: image → lines of text with
+  bounding boxes. (2) Extraction: lines → amount, currency, date,
+  merchant, category. Step 1 is native and differs per platform. Step 2
+  is one shared, pure TypeScript module, so it's the same on every
+  platform and can be unit-tested.
+- **R-D12: text recognition, iOS.** Apple Vision
+  (`VNRecognizeTextRequest`, accurate mode). On-device, free, offline.
+  Covers the Latin languages plus Japanese, Korean and Chinese (Simplified
+  and Traditional) on recent iOS versions. Check the exact iOS version per
+  language during the spike. Pass the recognition languages in order:
+  voice/UI language first, then the others.
+- **R-D13: text recognition, Android.** Google ML Kit Text Recognition v2.
+  On-device, free, offline. Latin, Chinese, Japanese and Korean are
+  separate models. Proposal: bundle Latin, and download CJK through Play
+  Services, so the APK doesn't grow by every model (bundled vs downloaded
+  to be decided in the spike).
+- **R-D14: our own small Capacitor plugin** (Swift + Kotlin) returning
+  `{ lines: [{ text, box, confidence }] }`, the same shape on both
+  platforms. Community plugins exist but vary in quality and upkeep, and
+  we already maintain native plugin wiring (docs/64). The plugin can also
+  expose the platform document scanner (R-D15).
+- **R-D15: capture with the document scanner** where available: VisionKit's
+  document camera on iOS and ML Kit Document Scanner on Android. Both find
+  the receipt's edges, crop and flatten it, which helps recognition a lot
+  and gives a cleaner stored photo. Picking from the gallery still works
+  (no cropping). The scanned image goes through R-D5's compression and
+  becomes a normal attachment, so phase 1's storage is reused.
+- **R-D16: extraction, `app/src/lib/receiptParser.ts`.** Heuristics,
+  reusing `parser.ts`'s per-language vocabulary (`parserVocab.ts`,
+  docs/73/76) for amounts, currencies and dates:
+  - **Total:** keyword lines (TOTAL, VALOR TOTAL, TOTAL A PAGAR, MONTANT,
+    合計, お会計, 합계, 合计/總計 ...), with the amount taken from the
+    same row using the bounding boxes (right-aligned value at the same
+    height). Skip subtotal, tax, change/troco, tip/gorjeta, discount
+    lines. Fallback: the largest amount in the bottom half. Return a
+    confidence, and when two candidates are close, show both in the
+    preview to pick from.
+  - **Date:** `parser.ts`'s date patterns plus numeric formats. DD/MM vs
+    MM/DD from the receipt's language and currency; an impossible reading
+    (month > 12) decides it. A date in the future or more than a year back
+    gets flagged in the preview.
+  - **Currency:** symbols and codes (R$, C$, US$, ¥, ₩, 円, 元), then the
+    receipt's language/script, then the selected account's last-used
+    currency (docs/07 D44).
+  - **Merchant:** the top lines (skipping addresses, phone numbers, tax
+    ids like CNPJ/GST/HST numbers), matched first against known merchants
+    (`rankedMerchants`). A new name is flagged like `merchantGuessed`
+    (docs/16 D151).
+  - **Category:** the merchant's most recent category, then
+    `category_keywords`. Otherwise left empty, so the row goes to the
+    inbox (locked decision 4).
+- **R-D17: Apple Foundation Models (optional upgrade).** On iPhones that
+  support Apple Intelligence, iOS 26's on-device model can take the
+  recognized text and return the fields as structured output (guided
+  generation). Still fully local and free, and better at "which number is
+  the total". Used only where available, with R-D16's parser as the
+  fallback and the check on its answer (an amount the LLM returns must
+  appear in the recognized text). Language coverage to be checked.
+  Android's equivalent (Gemini Nano) runs on few devices; not planned.
+  Built after R-D11–R-D16, and only if the spike shows a real gap.
+- **R-D18: web/PWA.** Photo attach works (phase 1); scanning is not
+  offered at first. A lazy-loaded Tesseract.js (WASM, Latin only, slow,
+  weak on thermal paper) is the possible later "beta"; ONNX-based
+  PaddleOCR is more accurate but 10–20 MB of models. Chrome's
+  `TextDetector` isn't usable. This is a flagged gap against docs/80's
+  "desktop and phone always have the same functionality" rule; desktop
+  users mostly have receipts as PDFs/emails anyway, which is a separate
+  question (below).
+- **R-D19: entry points.** (a) "Scan receipt" next to typed/voice entry:
+  scan → preview → Save creates the transaction with the photo attached.
+  (b) "Fill from photo" on an existing transaction's photo: fills **empty
+  fields only**, never overwrites what the user entered, still through a
+  preview.
+- **R-D20: nothing extra is stored.** The recognized text isn't saved
+  (no new column, no sync). It can be re-run from the photo if needed.
+  Search over receipt text would be a later, separate decision.
+
+#### Spike before building (plan)
+
+Accuracy on real receipts decides whether this is good enough, so measure
+it first:
+
+1. The user collects 20–30 real receipts: Brazilian (NFC-e, supermarket,
+   restaurant), Canadian (with GST/HST and tip), Japanese, plus some
+   crumpled or faded thermal ones, and one or two in Korean/Chinese if
+   available. Photos into a folder, with the true total, date, merchant
+   and currency in a small JSON file next to them.
+2. Run them through Apple Vision and ML Kit (a minimal test app or the
+   plugin's first version on the user's Mac/phone) and save each result's
+   `lines` JSON.
+3. Write `receiptParser.ts` against those saved results. Each receipt
+   becomes a Vitest fixture (`app/src/lib/receiptParser.test.ts`), so the
+   parser is developed and checked on this server without a phone.
+4. Report per field: how often total, date, currency and merchant are
+   right, and how often the preview would show "not sure". Decide from
+   that whether R-D17 is needed, and whether the plan holds.
+
+Fixture photos of real receipts may contain personal data (card digits,
+addresses). Keep only the `lines` JSON in the repo, with those redacted,
+and keep the photos out of git.
+
+#### Open questions
+
+1. **PDF and emailed receipts** (invoices, e-receipts): worth a separate
+   path? PDFs with real text need no OCR at all, only R-D16's extraction.
+   Overlaps docs/81's statement import.
+2. **Line items → split by category?** Out of scope: `transaction_splits`
+   splits by account, not by category (docs/50 D187).
+3. **Brazilian NFC-e QR codes:** they identify the issuer and the invoice.
+   Possibly useful for the merchant, but needs research before relying on
+   it, and fetching the full invoice would mean calling SEFAZ's site.
+4. **Web scanning (R-D18):** accept the gap, or add Tesseract.js as a beta?
 
 ---
 
 ## Suggested order
 
+Revised 2026-11-03: auto-fill no longer depends on phase 2.
+
 1. Part A (with the PIN): built 2026-10-26.
 2. Part B phase 1: local-only photos (free tier works, no server).
-3. Part B phase 2: blob storage + sync + quota (after storage and quota
-   are decided).
-4. Part B phase 3: receipt auto-fill (R-D11).
+3. R-D11 spike: real receipts → recognized text → Vitest fixtures. Can
+   start alongside phase 1.
+4. Part B phase 3: on-device receipt auto-fill (R-D11–R-D16, then R-D17
+   if the spike shows the need).
+5. Part B phase 2: blob storage + sync + quota (after storage and quota
+   are decided). Independent of 3–4.

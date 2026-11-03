@@ -38,8 +38,15 @@ it needs doing.
   - [ ] Decide (user): storage (Azure Blob vs MinIO) and paid quota.
   - [ ] Part B phase 2: object storage, signed URLs, sync, quota
         (flagged: adds a 4th subscription-gate point to locked decision 5).
-  - [ ] Part B phase 3: receipt auto-fill (R-D11): Claude vision via
-        Tier 2 first, on-device text recognition maybe later.
+  - [ ] R-D11 spike (revised 2026-11-03): user collects 20–30 real
+        receipts (BR/CA/JP, some crumpled) with true values; run Apple
+        Vision + ML Kit; saved text becomes Vitest fixtures for
+        `receiptParser.ts`; report per-field accuracy. Starts Vitest setup.
+  - [ ] Part B phase 3: on-device receipt auto-fill (R-D11–R-D20):
+        own Capacitor plugin (Vision / ML Kit + document scanner),
+        shared heuristic `receiptParser.ts`, every tier, no server.
+        Apple Foundation Models (R-D17) only if the spike shows a gap.
+        Doesn't depend on phase 2. Web: no scanning at first (R-D18).
 
 - [ ] **End-to-end encryption** (docs/78, design draft, proposals not
       yet decided). Added 2026-10-26.
