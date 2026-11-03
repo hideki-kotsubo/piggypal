@@ -129,6 +129,15 @@ pairing. `/settings/profiles` redirects here; `ProfilesScreen.tsx` is
 gone. docs/25's "+ Connect a device" (P2P) is unchanged. The Household
 screen's hint explains the difference.
 
+**Revised 2026-11-02.** The Household row now shows signed out too, so
+people can find it. Its second line says "Sign in to add people and
+devices". Signed out, the screen explains that Household works through
+cloud sync, offers Sign in, points to direct sync (P2P pairing, now
+labelled "Sync directly with a device"), and shows the read-only P2P
+members list, which moved here from the bottom of Account & sync. Adding
+people still needs sign-in: a person added signed out would have no
+account to sync through.
+
 **Not built: renaming or moving someone else's device.** A device
 rewrites its own row from its local label and identity on every connect
 (`touchDevice()`), so a remote edit would be silently undone. Rename a

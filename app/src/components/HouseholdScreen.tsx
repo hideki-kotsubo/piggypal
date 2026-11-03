@@ -7,14 +7,17 @@ import { getDeviceId, getLocalUserId } from '../lib/identity';
 import { useOnline } from '../lib/syncNow';
 import { useStore } from '../lib/store';
 import type { Device, Profile } from '../lib/types';
+import { hasHousehold, householdMembers, useHouseholdPeers } from '../lib/household';
 import { PayerBadge } from './PayerBadge';
 import { PinResetNotice } from './PinScreen';
 
 // docs/71 — one place to manage who's in the household and which devices
 // they use, replacing Settings' separate "Household profiles" screen
 // (docs/48 D175), read-only "Household devices" list (D179) and members
-// list (docs/38). Signed-in only: profiles and devices only exist on the
-// synced tier (docs/48).
+// list (docs/38). Managing is signed-in only: profiles and devices only
+// exist on the synced tier (docs/48). Signed out, the screen explains
+// that and shows the read-only members of a P2P-only household (docs/26
+// D124), which used to sit at the bottom of Account & sync.
 //
 // Deliberately absent: renaming or moving *another* device. A device's
 // own row is rewritten from its local label and identity every time it
@@ -91,7 +94,7 @@ export function HouseholdScreen() {
       </div>
 
       {!authAccount ? (
-        <p className="empty-note">{t('household.signInFirst')}</p>
+        <SignedOutHousehold />
       ) : (
         <>
           {error && <p className="household-error">{error}</p>}
@@ -278,5 +281,45 @@ function DeviceRow({ device, online, onRemove }: { device: Device; online: boole
         </button>
       )}
     </div>
+  );
+}
+
+// Signed out: nothing to manage, so say why and where to go. No adding
+// people here — they'd have no account to sync through.
+function SignedOutHousehold() {
+  const store = useStore();
+  const { t } = useTranslation();
+  const peers = useHouseholdPeers();
+  return (
+    <>
+      <div className="settings-field">
+        <p className="delete-account-text">{t('household.signedOutIntro')}</p>
+        <Link to="/settings/sync" className="save-btn household-signin-btn">
+          {t('settings.signIn')}
+        </Link>
+        <p className="household-hint household-direct-hint">
+          {t('household.directSyncHint')}{' '}
+          <Link to="/settings/pair" className="text-link">{t('household.directSyncLink')}</Link>
+        </p>
+      </div>
+      {/* docs/26 D124 — bare read-only list, just enough to say who the
+          payer/owner badges elsewhere refer to. */}
+      {hasHousehold(peers) && (
+        <>
+          <div className="section-label">{t('household.directSyncPeople')}</div>
+          <div className="accounts-list">
+            {householdMembers(peers, store.profiles).map((m) => (
+              <div className="member-row" key={m.userId}>
+                <PayerBadge label={m.label} mine={m.isYou} className="member-badge" />
+                <span className="member-name">
+                  {m.label}
+                  {m.isYou && <span className="member-you">{t('household.you')}</span>}
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </>
   );
 }
