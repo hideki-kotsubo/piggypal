@@ -4,8 +4,6 @@ import { useStore } from '../lib/store';
 import { Trans, useTranslation } from 'react-i18next';
 import { guessDeviceLabel, useDeviceLabel } from '../lib/settings';
 import { usePairedPeers } from '../lib/peers';
-import { hasHousehold, householdMembers, useHouseholdPeers } from '../lib/household';
-import { PayerBadge } from './PayerBadge';
 import { formatTimeAgo } from '../lib/format';
 import {
   clearPendingEmail,
@@ -29,7 +27,6 @@ export function SyncSettingsScreen() {
   const { t } = useTranslation();
   const [deviceLabel, setDeviceLabel] = useDeviceLabel();
   const [peers] = usePairedPeers();
-  const householdPeers = useHouseholdPeers();
   const [authAccount, setAuthAccount] = useAuthAccount();
   const syncStatus = useSyncStatus();
   const sessionExpired = useSessionExpired();
@@ -388,29 +385,6 @@ export function SyncSettingsScreen() {
                 <span>{p.label}</span>
                 <span style={{ color: 'var(--ink-faint)', fontSize: '0.8rem' }}>{t('settings.synced', { time: formatTimeAgo(p.lastSyncedAt) })}</span>
               </Link>
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* Signed in, the Household screen covers this (docs/71); this stays
-          for a household formed only through docs/25's P2P pairing. */}
-      {!authAccount && hasHousehold(householdPeers) && (
-        <>
-          {/* docs/26 D124 — bare read-only members list, just enough to say
-              who the payer/owner badges elsewhere refer to. No invite/
-              pair/leave actions here; that surface belongs to docs/25's
-              pairing flow above, not this list. */}
-          <div className="section-label">{t('settings.household')}</div>
-          <div className="accounts-list">
-            {householdMembers(householdPeers, store.profiles).map((m) => (
-              <div className="member-row" key={m.userId}>
-                <PayerBadge label={m.label} mine={m.isYou} className="member-badge" />
-                <span className="member-name">
-                  {m.label}
-                  {m.isYou && <span className="member-you">{t('household.you')}</span>}
-                </span>
-              </div>
             ))}
           </div>
         </>

@@ -81,13 +81,22 @@ export function SettingsScreen() {
 
       <div className="section-label">{t('settingsHub.syncHousehold')}</div>
       <div className="settings-group">
-        {/* docs/71 — people and devices in one place, once signed in. */}
-        {authAccount && (
+        {/* docs/71 — people and devices in one place. Shown signed out
+            too, so it's discoverable; the screen then explains that it
+            needs sign-in (docs/71 D256 revised 2026-11-02). */}
+        {authAccount ? (
           <HubRow
             to="/settings/household"
             icon="people"
             label={t('settings.household')}
             meta={householdSummary(store.profiles.filter((p) => !p.deletedAt).length, store.devices.length)}
+          />
+        ) : (
+          <HubRow
+            to="/settings/household"
+            icon="people"
+            label={t('settings.household')}
+            sub={t('settingsHub.householdSignedOut')}
           />
         )}
         {/* Peer-to-peer pairing (docs/27/28), not cloud sync — the sub-line

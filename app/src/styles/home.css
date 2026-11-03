@@ -2701,3 +2701,18 @@
 .pairing-cloud-hint .text-link {
   font-size: inherit;
 }
+
+/* Household, signed out: Sign in as a link styled like .save-btn. */
+.household-signin-btn {
+  display: inline-block;
+  text-decoration: none;
+}
+.household-hint.household-direct-hint {
+  margin: 1rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+.household-direct-hint .text-link {
+  font-size: inherit;
+}
