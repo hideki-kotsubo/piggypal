@@ -16,7 +16,7 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
-## Unreleased
+## 0.15.4 — 2026-11-02
 
 - **iPad: nothing hidden under the status bar.** The menu and the top
   bar now start below the clock and battery, instead of under them.
