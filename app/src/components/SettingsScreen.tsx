@@ -90,7 +90,14 @@ export function SettingsScreen() {
             meta={householdSummary(store.profiles.filter((p) => !p.deletedAt).length, store.devices.length)}
           />
         )}
-        <HubRow to="/settings/pair" icon="phone" label={t('settingsHub.connectDevice')} />
+        {/* Peer-to-peer pairing (docs/27/28), not cloud sync — the sub-line
+            says so, since the cloud QR lives under Household. */}
+        <HubRow
+          to="/settings/pair"
+          icon="phone"
+          label={t('settingsHub.connectDevice')}
+          sub={t(authAccount ? 'settingsHub.connectDeviceSubSignedIn' : 'settingsHub.connectDeviceSub')}
+        />
       </div>
 
       <div className="section-label">{t('settingsHub.preferences')}</div>
@@ -136,12 +143,13 @@ export function SettingsScreen() {
   );
 }
 
-function HubRow({ to, icon, label, meta }: { to: string; icon: IconName; label: string; meta?: string }) {
+function HubRow({ to, icon, label, meta, sub }: { to: string; icon: IconName; label: string; meta?: string; sub?: string }) {
   return (
     <NavLink to={to} className="settings-hub-row">
       <HubIconBox name={icon} />
       <span className="settings-hub-text">
         <span className="settings-hub-title">{label}</span>
+        {sub && <span className="settings-hub-meta">{sub}</span>}
       </span>
       {meta && <span className="settings-hub-value">{meta}</span>}
       <Chevron />

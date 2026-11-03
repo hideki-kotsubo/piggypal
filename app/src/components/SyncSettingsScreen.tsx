@@ -349,7 +349,7 @@ export function SyncSettingsScreen() {
           {linkState === 'error' && <p className="qr-caption">{linkError}</p>}
           {/* docs/71 D255 — no email needed when another device is
               already signed in to the account. */}
-          <Link to="/auth/scan" className="text-link signin-scan-link">
+          <Link to="/auth/scan" className="secondary-btn signin-scan-btn">
             {t('settings.scanCode')}
           </Link>
         </div>

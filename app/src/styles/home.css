@@ -1966,8 +1966,27 @@
   font-size: 0.8rem;
   color: var(--ink-faint);
 }
-.signin-scan-link {
+/* Outlined twin of .save-btn: same pill, size and weight, for the
+   secondary action beside a primary one. Works on <a> and <button>. */
+.secondary-btn {
   display: inline-block;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  background: none;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  text-decoration: none;
+  cursor: pointer;
+}
+.secondary-btn:hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.signin-scan-btn {
+  display: block;
+  width: fit-content;
   margin-top: 0.8rem;
 }
 
@@ -2670,4 +2689,15 @@
 }
 .category-row .merge-disabled-note {
   margin: 0;
+}
+
+/* Signed-in pointer from peer pairing to Household's cloud QR. */
+.pairing-cloud-hint {
+  margin: 1rem 1.1rem 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+.pairing-cloud-hint .text-link {
+  font-size: inherit;
 }
