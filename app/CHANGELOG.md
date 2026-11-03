@@ -27,6 +27,15 @@ How to write an entry (docs/59):
   it on iPhones.
 - On a phone, an empty Home now points you to the entry box **below**,
   where it actually is.
+- **Clearer ways to add a device.** In Settings, "Connect a device" is
+  now **Sync directly with a device**, with a line saying it works
+  device to device, without cloud sync. To add a device to your
+  account, use **Household → Add a device**.
+- **Household shows even when you're signed out.** It explains that it
+  works through cloud sync and offers Sign in. People you sync with
+  directly are listed there too.
+- "Scan a code from a signed-in device" on the sign-in screen is now a
+  proper button.
 
 ## 0.15.3 — 2026-11-01
 
