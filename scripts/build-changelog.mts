@@ -86,6 +86,7 @@ function renderPage(entries: ChangelogEntry[]): string {
   .entry strong { font-weight: 600; }
   .empty { color: var(--ink-soft); }
 </style>
+<script defer src="https://stats.myflowtab.com/insights.js" data-website-id="095ba6af-b80e-4045-8b0c-d40cd0426bb4" data-domains="myflowtab.com"></script>
 </head>
 <body>
 <nav class="wrap site-nav">
