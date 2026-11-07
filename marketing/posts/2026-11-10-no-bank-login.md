@@ -1,5 +1,5 @@
 ---
-date: 2026-11-07
+date: 2026-11-10
 template: tip
 platforms: facebook, linkedin, x, bluesky, instagram, threads
 approved: en
