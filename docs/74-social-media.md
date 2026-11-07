@@ -159,8 +159,8 @@ table changes.
 | Facebook | [facebook.com/myflowtab](https://www.facebook.com/myflowtab) | Page under the user's personal Facebook. |
 | Reddit | [u/flowtab](https://www.reddit.com/user/flowtab), [r/flowtab](https://www.reddit.com/r/flowtab/) | u/myflowtab belongs to an unrelated 18+ account. Not posted to by `social:publish`; promotion happens from the user's own account, disclosed. |
 | YouTube | [@myflowtab](https://www.youtube.com/@myflowtab) | Brand Account channel under `flowtabit@gmail.com` (Google wouldn't verify another account with the user's phone). Public contact `social@myflowtab.com`. |
-| Instagram | **disabled by Meta** on 2026-10-23, one day after sign-up | Automated, no review offered. Next: one appeal through Meta's help form; then, if refused, create it from Meta Business Suite under the Facebook Page, on the phone, no VPN, waiting a few days before switching to Business. `myflowtab` stays held by the disabled account: plan for `flowtabapp`. |
-| Threads | not yet | Follows Instagram. |
+| Instagram | [@flowtabapp](https://www.instagram.com/flowtabapp/) | The first account (`myflowtab`) was disabled by Meta on 2026-10-23, one day after sign-up, with no review offered. Re-created 2026-10-29 from Meta Business Suite, linked to the Facebook Page (category App Page), with a quiet first week before posting; `myflowtab` stays held by the disabled account. Posts from Business Suite with Facebook unticked. |
+| Threads | [@flowtabapp](https://www.threads.com/@flowtabapp) | Logged in with the Instagram account (2026-11-07); uses the X/Bluesky short text. |
 
 The login email is `social@myflowtab.com` everywhere except YouTube.
 Birthdays are the user's real one (identity checks compare them).
@@ -186,9 +186,11 @@ First two weeks, re-dated 2026-10-27 to start Tue Nov 3, then on
 accounts aren't empty when the founder posts send people to them; Tue
 Nov 3 stays launch day: `2026-10-29-type-it-or-say-it`,
 `2026-10-31-small-spends`, `2026-11-03-built-in-vancouver`,
-`2026-11-05-seven-languages`, `2026-11-07-no-bank-login`,
-`2026-11-10-every-day-added-up`. Instagram (re-created 2026-10-29)
-joins from about Nov 5, after a quiet first week. The 0.7.0 update post was dropped (stale
+`2026-11-05-seven-languages`, `2026-11-10-no-bank-login`,
+`2026-11-12-every-day-added-up`. Instagram (re-created 2026-10-29)
+joins from about Nov 5, after a quiet first week. The Nov 5 slot was
+missed and posted Sat Nov 7 instead (with Instagram's and Threads'
+first posts), so the last two moved one slot each. The 0.7.0 update post was dropped (stale
 by then); `no-bank-login` replaces it. Japanese, Korean and Chinese
 (docs/76) were first held out of posts until native reviewers checked
 them; dropped the same day after the user's tests with real users found
