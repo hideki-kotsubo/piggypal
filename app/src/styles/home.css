@@ -2738,3 +2738,108 @@
 .household-direct-hint .text-link {
   font-size: inherit;
 }
+
+/* docs/81 — Settings → Import. Reuses .settings-group cards and
+   .section-label; only the bits a review list needs are new. */
+.import-text {
+  margin: 0.4rem 1.1rem 0.6rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+.import-hint {
+  font-size: 0.82rem;
+  color: var(--ink-muted);
+  margin: 0.2rem 0 0.8rem;
+}
+.import-text.import-hint {
+  margin: 0.6rem 1.1rem 0.6rem;
+}
+.import-pad {
+  padding: 0.85rem 0.95rem;
+}
+.import-title {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.import-file {
+  display: inline-block;
+}
+.import-error {
+  margin: 0.7rem 0 0;
+  font-size: 0.85rem;
+  color: var(--warn);
+}
+.import-map-row {
+  display: block;
+  padding: 0.45rem 0;
+}
+.import-map-row + .import-map-row {
+  border-top: 1px solid var(--line);
+}
+.import-map-name {
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
+.import-count {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+  margin-left: 0.35rem;
+}
+.import-summary-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.88rem;
+  padding: 0.2rem 0;
+}
+.import-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  margin: 1rem 1.1rem 1.4rem;
+}
+.import-actions a.save-btn {
+  text-decoration: none;
+}
+.import-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.6rem 0.95rem;
+  font-size: 0.88rem;
+}
+.import-row + .import-row {
+  border-top: 1px solid var(--line);
+}
+.import-row-pickable {
+  cursor: pointer;
+}
+.import-row-pickable input {
+  margin-top: 0.2rem;
+  accent-color: var(--accent);
+}
+.import-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1;
+  min-width: 0;
+}
+.import-row-title {
+  overflow-wrap: anywhere;
+}
+.import-row-meta {
+  font-size: 0.76rem;
+  color: var(--ink-muted);
+  overflow-wrap: anywhere;
+}
+.import-row-flag {
+  font-size: 0.76rem;
+  color: var(--warn);
+}
+.import-row .tx-amt {
+  white-space: nowrap;
+}

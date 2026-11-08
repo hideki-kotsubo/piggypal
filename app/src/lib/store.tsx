@@ -8,6 +8,7 @@ import { clearPairedPeers } from './peers';
 import { nowUtc, setDollarCurrenciesInUse } from './format';
 import { computeBalances } from './balances';
 import type { AccountRewrite, CategoryRewrite } from './mergeMatch';
+import type { ImportBatch } from './importPlan';
 import { effectiveDeviceLabel } from './settings';
 import type { Account, AccountKind, ApiProfileField, Budget, Category, CategoryKeyword, Device, MergeSummary, PeerDataset, Profile, ScheduledPayment, Transaction, TransactionSplit } from './types';
 import {
@@ -662,6 +663,13 @@ interface StoreApi extends StoreState {
   // it posted, in one atomic write. Already-skipped rows are left as they
   // are (they're deleted already).
   deleteScheduledPayment: (ruleId: string) => Promise<void>;
+  // docs/81 — writes a built import (importPlan.ts buildImportBatch) in
+  // one atomic write: new accounts and categories first, then
+  // transactions and their split legs. Any id already present is left
+  // as it is (a second tap, or a row that arrived by sync meanwhile), so
+  // importing twice can't duplicate. Returns how many transactions were
+  // actually written.
+  importBatch: (batch: ImportBatch) => Promise<number>;
   addAccount: (account: Account) => void;
   updateAccount: (accountId: string, patch: Partial<Account>) => void;
   addCategory: (category: Category) => void;
@@ -1223,6 +1231,49 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             [now, now, ruleId],
           );
         });
+      },
+
+      async importBatch(batch) {
+        let written = 0;
+        await db.writeTransaction(async (tx) => {
+          const exists = async (table: string, id: string) =>
+            (await tx.getAll<{ id: string }>(`SELECT id FROM ${table} WHERE id = ?`, [id])).length > 0;
+          for (const a of batch.accounts) {
+            if (await exists('accounts', a.id)) continue;
+            await tx.execute(
+              `INSERT INTO accounts (id, institution, name, kind, archived, owner_user_id, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+              [a.id, a.institution, a.name, a.kind, a.archived ? 1 : 0, a.ownerUserId, a.updatedAt],
+            );
+          }
+          for (const c of batch.categories) {
+            if (await exists('categories', c.id)) continue;
+            await tx.execute(`INSERT INTO categories (id, name, kind, parent_id, archived, updated_at) VALUES (?, ?, ?, ?, ?, ?)`, [
+              c.id,
+              c.name,
+              c.kind,
+              c.parentId,
+              c.archived ? 1 : 0,
+              c.updatedAt,
+            ]);
+          }
+          const skipped = new Set<string>();
+          for (const t of batch.transactions) {
+            if (await exists('transactions', t.id)) {
+              skipped.add(t.id);
+              continue;
+            }
+            await insertTransactionRow(tx, t);
+            written += 1;
+          }
+          for (const sp of batch.splits) {
+            if (skipped.has(sp.transactionId)) continue;
+            await tx.execute(
+              'INSERT INTO transaction_splits (id, transaction_id, account_id, amount_cents, updated_at) VALUES (?, ?, ?, ?, ?)',
+              [sp.id, sp.transactionId, sp.accountId, sp.amountCents, sp.updatedAt],
+            );
+          }
+        });
+        return written;
       },
 
       addAccount(account) {

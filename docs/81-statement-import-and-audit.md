@@ -244,6 +244,42 @@ Known specifics:
 | 3 | Re-import the former-app file with transfers; then OFX; then Flowtab CSV v2 (export + import) | this doc |
 | 4 | Paid LLM import (PDFs, other apps), after Stripe + server LLM | this doc |
 
+### Step 1, built 2026-11-07 (branch `feat/statement-import`, not released)
+
+The user had no objections to I-D1–I-D9 (2026-11-07); they stay
+proposals until confirmed as D-numbers.
+
+- `lib/importFormerApp.ts`: the adapter (file → `ImportLine[]`, per-type
+  checks as issues, UTC → local with the device's time zone rules).
+- `lib/importPlan.ts`: format-independent. `suggestMapping` (remembered
+  choice → name match incl. translated starter labels → create),
+  `planImport` (by id: imported before, deleted rows included and never
+  revived; else a hand-logged twin: same currency + amount, every leg's
+  account, ±3 days, closest first, each existing row once; flags for
+  same charge ≤10 min apart and a currency a wallet almost never uses),
+  `buildImportBatch` (creates only the accounts/categories actually used;
+  `Parent › Child` paths; payer = the account owner via
+  `defaultPayerFor`).
+- `store.importBatch`: one atomic write; an id already present is
+  skipped, so a double tap or a re-import can't duplicate.
+- `ImportScreen.tsx` at `/settings/import`: pick file → map wallets and
+  categories (native selects; mapping remembered in localStorage) →
+  review (to add, check these, looks already logged — unticked by
+  default, can't import, transfers skipped) → import. Strings in all 10
+  locales. The Settings row shows in dev builds only; on staging and
+  production the screen is reached by URL until OFX makes it useful to
+  everyone.
+- Checked: 33 unit tests; headless Chromium at 390px and 1280px against
+  the dev server with a sample file (6 added, 1 transfer skipped, 1
+  refused, second import of the same file: 6 "imported before", 0 to
+  add, no page errors). Not on a phone; not with the real 3-year file.
+- Time zones: dates use the device's own zone rules. Node's current
+  tzdata already has America/Vancouver on UTC−7 all year (B.C.'s
+  permanent daylight time), while the headless Chromium build here still
+  switched to UTC−8 in November, so an evening record can differ by an
+  hour between devices with old and new zone data. The day only changes
+  for records within an hour of midnight.
+
 ## Open questions
 
 1. Bank formats (checklist above) — user gathering. Less urgent since

@@ -14,6 +14,17 @@ it needs doing.
 
 ## ⚪ Next
 
+- [ ] **Statement import + transfers** (docs/81, docs/82). Added 2026-11-07.
+  - [x] Step 1: import engine + former-app JSON adapter, transfers
+        skipped. Built 2026-11-07 on `feat/statement-import`.
+  - [ ] User: import the real 3-year file (dev first), report mapping /
+        review problems; confirm what `amounts` holds if ever non-empty.
+  - [ ] User: create Adriana's profile + her card (owned by her) first.
+  - [ ] Step 2: transfers (docs/82), then re-import the same file.
+  - [ ] Step 3: OFX/QFX, Flowtab CSV v2 (export + import); make the
+        Settings row public.
+  - [ ] Step 4: paid LLM import (needs Stripe + server LLM).
+
 - [ ] **Private records + receipt photos** (docs/77). Added 2026-10-26.
   - [x] Part A, "Only me" records + per-profile PIN (D293–D301), built
         2026-10-26 on `feat/private-records`: api 55/55 on throwaway
