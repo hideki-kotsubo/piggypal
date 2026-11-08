@@ -1,6 +1,7 @@
 # 81 — Statement import and audit
 
-Status: brainstorm 2026-10-29, **parked**. Split out of the desktop
+Status: brainstorm 2026-10-29, parked; **unparked 2026-11-07**, see
+"Direction, 2026-11-07" below. Split out of the desktop
 layout brainstorm (docs/80) so desktop can ship as layout only. Nothing
 decided or built.
 
@@ -120,9 +121,133 @@ error shows up as a false "wrong charge".
 Leaning from the brainstorm (not decided): A + B + C as the default
 path, totals check as a hard gate, D opt-in last resort, E/F later.
 
+## Direction, 2026-11-07 (proposals, not locked)
+
+Unparked 2026-11-07 (branch `feat/statement-import`). The user's worry:
+supporting every bank's format by hand is too much work for one person,
+and banks change formats without notice. Proposals I-D1 to I-D9 below
+become D-numbers once the user confirms them.
+
+- **I-D1. Paid import is LLM-assisted (option D moves up).** On the paid
+  tier, the server LLM reads the statement and returns statement lines.
+  No per-bank code, and a changed layout needs no fix. Option C (the LLM
+  writes a template from a masked layout) is a later upgrade for cost or
+  privacy, not v1.
+- **I-D2. Privacy rules for paid import.** The device strips account and
+  card numbers, name and address before sending. The user agrees on each
+  import, not once in Settings. The api never logs the text or keeps the
+  file. The privacy policy says statements are sent to Anthropic to be
+  read. Same "processed in transit, never stored" rule as docs/78 for
+  Tier 2.
+- **I-D3. The LLM only reads.** It returns lines; matching and inserting
+  happen on the device through the normal upload path (locked decision
+  3). The statement-totals gate stays required and also catches made-up
+  lines.
+- **I-D4. New gated endpoint** (e.g. `/api/import`). ⚠️ Adds a fourth
+  gate point to locked decision 5's "nowhere else" list. Depends on
+  Stripe (docs/06) and the server LLM (docs/04 Tier 2), neither built
+  yet.
+- **I-D5. Free tier: two formats parsed on the device.**
+  - **OFX/QFX.** A standard, so one parser serves every bank that exports
+    it; `FITID` gives exact re-import matching, and the file carries the
+    balance for the totals gate.
+  - **Flowtab CSV v2**, the same format export writes (whatever you
+    export, you can import back). D29's columns predate currencies,
+    merchants and splits, so export and import change together (table
+    below).
+- **I-D6. Other apps' exports are a third kind of source.** One built-in
+  adapter for the user's own former app (below); anything else goes
+  through paid import (I-D1), which handles structured JSON/CSV better
+  than PDFs.
+- **I-D7. Importing again is safe.** Rows that carry an id (Flowtab CSV
+  `id`, OFX `FITID`, the old app's `id`) keep it, so a second import of
+  the same file adds only what's missing. This is what lets transfers
+  arrive in a later import (I-D9).
+- **I-D8. Mapping is asked once per import, then remembered.** Unknown
+  category names, wallet/account names and payers go through one mapping
+  step ("Grocery" → Groceries, "Adriana" → her card + payer Adriana).
+  Saved for the next import from the same source.
+- **I-D9. Transfers are their own design (docs/82), not two plain
+  transactions.** Step 1 skips transfer rows; once docs/82 is built, the
+  same file is imported again (I-D7) and only the transfers come in.
+
+### Flowtab CSV v2 (export and import)
+
+| Column | Notes |
+|---|---|
+| `id` | Optional on import; exact match on re-import |
+| `date` | ISO `YYYY-MM-DD` |
+| `amount` | Signed decimal, negative = expense |
+| `currency` | New |
+| `category` | Name; `Group › Child` for subcategories (docs/14) |
+| `account` | Name |
+| `merchant` | New |
+| `note` | |
+| `split_of` | New. Rows of one split purchase share it, one row per account leg; shared fields must be equal on every leg, or the row goes to review |
+
+Left out on purpose: scheduled payments, budgets, household payer/owner,
+private records. A full backup/restore would be its own JSON format,
+probably reusing `applyPeerDataset` (docs/24/25). Not planned yet.
+
+### Adapter: the user's former app (JSON)
+
+The user built this app and is moving off it: about 3 years of data,
+including transfers. One JSON array of records. Checked against real
+samples on 2026-11-07, including a test income, a transfer and a
+two-account expense.
+
+| Field | Flowtab | Rule |
+|---|---|---|
+| `id` | `transactions.id` | Lowercased UUID (I-D7) |
+| `when` | date + time | **UTC.** Convert to the device's time zone before taking the date: `2026-11-08T00:21:29Z` is Nov 7 in Vancouver |
+| `dateCreated` | — | When it was logged; ignored |
+| `what` | `note` | |
+| `where` | `merchant` | Matched against known merchants (docs/15); empty → none |
+| `currency` | currency | One per record; payments carry none, so every leg uses it |
+| `amount` | `amount_cents` | Float; round to cents |
+| `category` / `subCategory` | category | By name through the mapping step (I-D8); empty → Inbox. `subCategory` empty in every sample so far |
+| `payments[]` | account(s) | `wallet` = account name; `amount` is a **string** (`"100"` and `"100.00"` both occur), parsed as exact decimal |
+| `type` | kind | `1` expense, `2` income, `3` transfer |
+| `amounts[]` | — | Empty in every sample. Unknown meaning: the adapter flags any record where it's non-empty instead of dropping it |
+
+Checks per type (failures go to review, never guessed):
+
+| `type` | Sign of `amount` | `payments` |
+|---|---|---|
+| 1 expense | negative | all negative, sum = `amount`. 2+ entries = account split (docs/50) |
+| 2 income | positive | all positive, sum = `amount` |
+| 3 transfer | positive (the amount moved) | exactly two, one negative one positive, summing to 0. Skipped until docs/82 |
+
+Known specifics:
+- Wallet `Adriana` is a person, not an account: map to payer Adriana
+  (household profile, docs/71) + her own credit card account (owned by
+  her). The user creates both before importing.
+- Categories may be in Portuguese (`Salário/Retirada`) or typo'd
+  (`Grocery` next to `Groceries`). The mapping step handles both.
+- Same institution, different accounts: `Banco C6` (bank) and
+  `C6 - Mastercard` (card). Not merged; the mapping step assigns
+  institutions (docs/12).
+- Data errors seen in the real file (Amazon.ca on a CAD card marked
+  `BRL`; a R$27.30 Vivo top-up twice a minute apart) are imported as
+  they are but flagged in review, using the wrong-charge checks above.
+- The user's three test records from 2026-11-08 ("test" at 101 Boba,
+  the $100 Savings → Checking transfer, "Job ABC") should be deleted
+  in the old app before exporting the real file, or left unchecked in
+  review.
+
+### Order of work
+
+| Step | What | Where |
+|---|---|---|
+| 1 | Engine: statement lines → matching → review → insert, plus the former-app adapter. Transfers skipped | this doc |
+| 2 | Transfers: model, entry UI, balances, kept out of budgets | docs/82 |
+| 3 | Re-import the former-app file with transfers; then OFX; then Flowtab CSV v2 (export + import) | this doc |
+| 4 | Paid LLM import (PDFs, other apps), after Stripe + server LLM | this doc |
+
 ## Open questions
 
-1. Bank formats (checklist above) — user gathering.
+1. Bank formats (checklist above) — user gathering. Less urgent since
+   I-D1: only matters for what the free OFX path covers.
 2. C sends layout-only data to the server: OK on the free tier, or does
    the free tier never contact the server (docs/05 D10), making C
    paid-only?
