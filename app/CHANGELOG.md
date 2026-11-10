@@ -16,7 +16,7 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
-## Unreleased
+## 0.15.6 — 2026-11-10
 
 - Fixed: on some accounts, the person who created the account couldn't
   delete it, or reset their PIN with an emailed code, because the app
