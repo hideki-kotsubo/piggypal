@@ -250,7 +250,11 @@ create table profiles (
   -- person's own verified device, shown to them until dismissed. api only.
   pin_reset_at     timestamptz,
   pin_reset_by     uuid,                    -- acting profile (self = emailed code)
-  pin_reset_device text                     -- that device's label
+  pin_reset_device text,                    -- that device's label
+  -- docs/83 D321: mirrors users.owner_profile_id, kept by the triggers
+  -- below; uploads can't write it. Synced so the apps know the owner.
+  is_owner     boolean not null default false,
+  unique (user_id, id)                      -- target of users_owner_profile_fkey
 );
 
 -- docs/48 D176 — one row per physical device. `id` reuses
@@ -289,8 +293,40 @@ create index on transactions (private_to_profile_id) where private_to_profile_id
 create table users (
   id          uuid primary key,          -- == the client's local user_id on first sign-up
   email       text not null unique,
-  created_at  timestamptz not null default now()
+  created_at  timestamptz not null default now(),
+  -- docs/83 D320: the owner's profile, created with the account in the
+  -- same transaction. Checked at commit, so an account can never be left
+  -- without one. Usually == id, but not always (migrated accounts).
+  owner_profile_id uuid not null,
+  constraint users_owner_profile_fkey foreign key (id, owner_profile_id)
+    references profiles (user_id, id) deferrable initially deferred
 );
+
+-- docs/83 D321/D322 — profiles.is_owner always mirrors users.owner_profile_id,
+-- and the owner's profile can't be removed (only account deletion does).
+create or replace function profiles_owner_flag() returns trigger language plpgsql as $$
+begin
+  new.is_owner := exists (select 1 from users where id = new.user_id and owner_profile_id = new.id);
+  if new.is_owner and new.deleted_at is not null then
+    raise exception 'The account owner''s profile can''t be removed' using errcode = 'check_violation';
+  end if;
+  return new;
+end $$;
+
+create trigger profiles_owner_flag
+  before insert or update on profiles
+  for each row execute function profiles_owner_flag();
+
+create or replace function users_owner_sync() returns trigger language plpgsql as $$
+begin
+  update profiles set is_owner = (id = new.owner_profile_id)
+   where user_id = new.id and is_owner <> (id = new.owner_profile_id);
+  return null;
+end $$;
+
+create trigger users_owner_sync
+  after insert or update of owner_profile_id on users
+  for each row execute function users_owner_sync();
 
 create table magic_links (
   id           uuid primary key default gen_random_uuid(),
@@ -396,4 +432,5 @@ insert into schema_migrations (filename) values
   ('2026-10-14-household-management.sql'),
   ('2026-10-15-deleted-accounts.sql'),
   ('2026-10-26-private-records.sql'),
-  ('2026-10-27-pin-recovery.sql');
+  ('2026-10-27-pin-recovery.sql'),
+  ('2026-11-10-account-owner.sql');

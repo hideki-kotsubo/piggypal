@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Trans, useTranslation } from 'react-i18next';
 import { deleteAccount, useAuthAccount } from '../lib/auth';
 import { connectSync, disconnectSync } from '../lib/db';
+import { ownerProfileId } from '../lib/household';
 import { getDeviceId, getLocalUserId } from '../lib/identity';
 import { useOnline } from '../lib/syncNow';
 import { useStore } from '../lib/store';
@@ -13,8 +14,8 @@ const CONFIRM_WORD_EN = 'DELETE';
 
 // docs/72 D257 — App Review 5.1.1(v): delete the account from inside the
 // app. One account is the whole household (docs/48), so this removes the
-// synced data for everyone in it, and only the owner (the profile whose id
-// is the account's own id) can do it. This device keeps its data and
+// synced data for everyone in it, and only the owner (docs/83 D321) can
+// do it. This device keeps its data and
 // carries on without an account, like signing out.
 export function DeleteAccountScreen() {
   const store = useStore();
@@ -28,9 +29,10 @@ export function DeleteAccountScreen() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
-  const isOwner = authAccount !== null && getLocalUserId() === authAccount.userId;
-  const ownerName = store.profiles.find((p) => p.id === authAccount?.userId)?.displayName;
-  const others = store.profiles.filter((p) => !p.deletedAt && p.id !== authAccount?.userId).map((p) => p.displayName);
+  const ownerId = authAccount ? ownerProfileId(store.profiles, authAccount.userId) : null;
+  const isOwner = ownerId !== null && getLocalUserId() === ownerId;
+  const ownerName = store.profiles.find((p) => p.id === ownerId)?.displayName;
+  const others = store.profiles.filter((p) => !p.deletedAt && p.id !== ownerId).map((p) => p.displayName);
   const otherDevices = store.devices.filter((d) => d.id !== getDeviceId()).length;
 
   // Sync goes off first: the server's deletions would otherwise stream

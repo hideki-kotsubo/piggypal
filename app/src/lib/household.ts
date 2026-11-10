@@ -68,6 +68,14 @@ export function personLabel(userId: string, peers: PairedPeer[], profiles: Profi
   );
 }
 
+// docs/83 D321 — the account owner's profile id: the one the server marks
+// is_owner. Falls back to the account's own id (docs/72 D257's old rule)
+// only while no profile carries the flag yet: a device that hasn't had its
+// first download since signing up, or an api older than docs/83.
+export function ownerProfileId(profiles: Profile[], accountUserId: string): string {
+  return profiles.find((p) => p.isOwner)?.id ?? accountUserId;
+}
+
 // docs/00-backlog 2026-08-29 — P2P pairing (docs/25) isn't the only way a
 // second household member's data reaches this device: magic-link sign-in
 // has its own "someone else" fork (AuthVerifyScreen.tsx, docs/46

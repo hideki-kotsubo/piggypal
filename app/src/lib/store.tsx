@@ -251,6 +251,7 @@ interface ProfileRow {
   pin_reset_at: string | null;
   pin_reset_by: string | null;
   pin_reset_device: string | null;
+  is_owner: number | null; // docs/83 D321
 }
 function rowToProfile(r: ProfileRow): Profile {
   return {
@@ -260,6 +261,7 @@ function rowToProfile(r: ProfileRow): Profile {
     deletedAt: r.deleted_at ?? null,
     hasPin: Boolean(r.has_pin),
     pinReset: r.pin_reset_at ? { at: r.pin_reset_at, byProfileId: r.pin_reset_by, deviceLabel: r.pin_reset_device } : null,
+    isOwner: Boolean(r.is_owner),
   };
 }
 
@@ -362,7 +364,7 @@ const TRANSACTION_SPLIT_COLUMNS: Record<keyof TransactionSplit, string> = {
   updatedAt: 'updated_at',
 };
 
-// hasPin and pinReset aren't here: the api alone writes them (docs/77).
+// hasPin, pinReset and isOwner aren't here: the api alone writes them (docs/77, docs/83).
 const PROFILE_COLUMNS: Record<keyof Omit<Profile, ApiProfileField>, string> = {
   id: 'id',
   displayName: 'display_name',

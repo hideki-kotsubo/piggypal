@@ -110,6 +110,14 @@ async function callerDeviceId(client: PoolClient, req: Request, userId: string):
   return session.rows[0]?.device_id ?? null;
 }
 
+// docs/83 D320 — the account owner's profile. Not assumed to be users.id
+// (docs/72 D257's old rule): accounts fixed by the 2026-11-10 migration
+// have an owner with another id.
+async function ownerProfileId(client: PoolClient, userId: string): Promise<string | null> {
+  const user = await client.query<{ owner_profile_id: string }>('SELECT owner_profile_id FROM users WHERE id = $1', [userId]);
+  return user.rows[0]?.owner_profile_id ?? null;
+}
+
 // docs/72 D258 — one fixed email + code for App Store / Play review, whose
 // reviewers can't receive our email. Both env vars must be set, and the
 // code must be 6 digits, or this is off. Everything else about sign-in
@@ -190,7 +198,16 @@ async function completeSignIn(
     ]);
     userId = taken.rows[0] ? randomUUID() : localUserId;
     isNewUser = true;
-    await client.query('INSERT INTO users (id, email) VALUES ($1, $2)', [userId, link.email]);
+    // docs/83 D320: the owner's profile is created here, with the account,
+    // not later by the device — the database refuses to commit one without
+    // the other. Named after the email until the app sends its own name
+    // (its profile upload updates this row); that name is what the picker
+    // shows if this device never gets that far.
+    await client.query('INSERT INTO users (id, email, owner_profile_id) VALUES ($1, $2, $1)', [userId, link.email]);
+    await client.query('INSERT INTO profiles (id, user_id, display_name) VALUES ($1, $1, $2)', [
+      userId,
+      link.email.split('@')[0],
+    ]);
     // docs/72 D260: the owner signing up again reuses the deleted id.
     await client.query('DELETE FROM deleted_accounts WHERE user_id = $1', [userId]);
   }
@@ -525,7 +542,8 @@ authRouter.post('/devices/:deviceId/revoke', requireAccessToken, async (req: Aut
 
 // docs/72 D257 — App Review 5.1.1(v): deletes the account and everything
 // synced under it, for every person in the household (one account, docs/48).
-// Only the owner may do it: the profile whose id is users.id itself. The
+// Only the owner may do it: users.owner_profile_id (docs/83 D320; it was
+// "the profile whose id is users.id" until then). The
 // caller proves which device it is with its own refresh token (the cookie
 // on the web, the body from the native apps), and that device's synced row
 // has to belong to the owner's profile. That stops another household
@@ -577,7 +595,8 @@ authRouter.post('/delete-account', requireAccessToken, async (req: AuthedRequest
       deviceId,
       userId,
     ]);
-    if (device.rows[0]?.profile_id !== userId) {
+    const owner = await ownerProfileId(client, userId);
+    if (!owner || device.rows[0]?.profile_id !== owner) {
       await client.query('ROLLBACK');
       res.status(403).json({ error: 'Only the account owner can delete the account.', code: 'not_owner' });
       return;
@@ -827,8 +846,8 @@ authRouter.post('/profile-pin/reset', requireAccessToken, async (req: AuthedRequ
       [profileId, actor.profile_id, deviceLabel],
     );
     await client.query('DELETE FROM device_profiles WHERE user_id = $1 AND profile_id = $2', [userId, profileId]);
-    if (profileId === userId) {
-      // The owner (docs/72 D257: profile id == users.id) owns the email.
+    if (profileId === (await ownerProfileId(client, userId))) {
+      // The owner (docs/83 D320) owns the email.
       const user = await client.query<{ email: string }>('SELECT email FROM users WHERE id = $1', [userId]);
       if (user.rows[0]) notify = { email: user.rows[0].email, byName: actor.display_name, deviceLabel: deviceLabel ?? actor.display_name };
     }
@@ -868,10 +887,11 @@ authRouter.post('/profile-pin/email-code', requireAccessToken, async (req: Authe
       res.status(401).json({ error: 'Sign in again on this device.', code: 'sign_in_again' });
       return;
     }
+    const owner = await ownerProfileId(client, userId);
     const updated = await client.query(
       `UPDATE profile_pins SET reset_code_hash = $2, reset_code_expires_at = now() + interval '${MAGIC_LINK_TTL_MINUTES} minutes', reset_code_attempts = 0
        WHERE profile_id = $1`,
-      [userId, hashToken(code)],
+      [owner, hashToken(code)],
     );
     if (updated.rowCount === 0) {
       await client.query('ROLLBACK');
@@ -912,10 +932,11 @@ authRouter.post('/profile-pin/email-reset', requireAccessToken, async (req: Auth
       res.status(401).json({ error: 'Sign in again on this device.', code: 'sign_in_again' });
       return;
     }
+    const owner = (await ownerProfileId(client, userId))!;
     const stored = (
       await client.query<{ reset_code_hash: string | null; reset_code_expires_at: Date | null; reset_code_attempts: number }>(
         'SELECT reset_code_hash, reset_code_expires_at, reset_code_attempts FROM profile_pins WHERE profile_id = $1 FOR UPDATE',
-        [userId],
+        [owner],
       )
     ).rows[0];
     const live = stored?.reset_code_hash && stored.reset_code_expires_at && stored.reset_code_expires_at.getTime() > Date.now();
@@ -927,7 +948,7 @@ authRouter.post('/profile-pin/email-reset', requireAccessToken, async (req: Auth
           `UPDATE profile_pins SET reset_code_attempts = $2,
              reset_code_hash = CASE WHEN $3 THEN NULL ELSE reset_code_hash END
            WHERE profile_id = $1`,
-          [userId, attempts, attempts >= MAX_CODE_ATTEMPTS],
+          [owner, attempts, attempts >= MAX_CODE_ATTEMPTS],
         );
         await client.query('COMMIT');
       } else {
@@ -943,21 +964,21 @@ authRouter.post('/profile-pin/email-reset', requireAccessToken, async (req: Auth
       `UPDATE profile_pins SET pin_hash = $2, failed_attempts = 0, locked_until = NULL,
          reset_code_hash = NULL, reset_code_expires_at = NULL, reset_code_attempts = 0, updated_at = now()
        WHERE profile_id = $1`,
-      [userId, await hashPin(pin)],
+      [owner, await hashPin(pin)],
     );
     await client.query(
       `UPDATE profiles SET has_pin = true, pin_reset_at = now(), pin_reset_by = $1, pin_reset_device = $2, updated_at = now()
        WHERE id = $1`,
-      [userId, deviceLabel],
+      [owner, deviceLabel],
     );
-    await client.query('DELETE FROM device_profiles WHERE user_id = $1 AND profile_id = $1', [userId]);
+    await client.query('DELETE FROM device_profiles WHERE user_id = $1 AND profile_id = $2', [userId, owner]);
     await client.query(
-      `INSERT INTO device_profiles (user_id, device_id, profile_id) VALUES ($1, $2, $1)
-       ON CONFLICT (user_id, device_id) DO UPDATE SET profile_id = $1, verified_at = now()`,
-      [userId, deviceId],
+      `INSERT INTO device_profiles (user_id, device_id, profile_id) VALUES ($1, $2, $3)
+       ON CONFLICT (user_id, device_id) DO UPDATE SET profile_id = $3, verified_at = now()`,
+      [userId, deviceId, owner],
     );
     await client.query('COMMIT');
-    res.json({ accessToken: await signAccessToken(userId, userId) });
+    res.json({ accessToken: await signAccessToken(userId, owner) });
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
