@@ -23,6 +23,11 @@ the privacy policy said before) is a common rejection.
 several profiles). Deleting it removes the synced data for every person in
 it. That's why only the owner can do it.
 
+> **2026-11-10, docs/83:** "the owner" is no longer "the profile whose id
+> is `users.id`". An account could end up with no such profile, and then
+> nobody could delete it. The owner is now `users.owner_profile_id`,
+> created with the account and enforced by the database (D320–D323).
+
 **Owner.** The profile whose id is `users.id` itself: the device that
 first signed up (docs/05 D11), plus any device that later picked that
 profile in the sign-in picker. App side: `getLocalUserId() ===

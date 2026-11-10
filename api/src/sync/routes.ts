@@ -288,6 +288,19 @@ syncRouter.post('/upload', requireAccessToken, async (req: AuthedRequest, res) =
         continue;
       }
 
+      // docs/83 D322 — the owner's profile can't be removed (the database
+      // refuses it too, profiles_owner_flag). Skipped here rather than left
+      // to that error, which would fail the whole batch and keep the device
+      // retrying it forever. The device gets the row back on its next
+      // download.
+      if (op.table === 'profiles' && (op.op === 'DELETE' || (op.data?.deleted_at ?? null) !== null)) {
+        const owner = await client.query('SELECT 1 FROM users WHERE id = $1 AND owner_profile_id = $2', [userId, op.id]);
+        if ((owner.rowCount ?? 0) > 0) {
+          result.skipped.push({ table: op.table, id: op.id, reason: 'owner-profile' });
+          continue;
+        }
+      }
+
       // docs/48 D176 — a devices row whose profile_id isn't one of this
       // user's profiles (a device whose getLocalUserId() never became a
       // profile, e.g. adopted from a P2P peer) used to hit
@@ -479,7 +492,7 @@ syncRouter.get('/snapshot', requireAccessToken, async (req: AuthedRequest, res) 
     // to show a profile list from yet.
     // docs/71 D252 — a removed person isn't offered to a new device.
     const profiles = await client.query(
-      'SELECT id, display_name, has_pin, updated_at FROM profiles WHERE user_id = $1 AND deleted_at IS NULL',
+      'SELECT id, display_name, has_pin, is_owner, updated_at FROM profiles WHERE user_id = $1 AND deleted_at IS NULL',
       [userId],
     );
     res.json({
@@ -504,6 +517,7 @@ syncRouter.get('/snapshot', requireAccessToken, async (req: AuthedRequest, res) 
         id: p.id,
         displayName: p.display_name,
         hasPin: p.has_pin, // docs/77 — the picker asks for it
+        isOwner: p.is_owner, // docs/83 D321
         updatedAt: p.updated_at,
       })),
     });

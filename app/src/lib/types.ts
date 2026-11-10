@@ -182,10 +182,14 @@ export interface Profile {
   // else's device (byProfileId) or with the owner's emailed code
   // (byProfileId = their own id), until they dismiss it. api only.
   pinReset: { at: string; byProfileId: string | null; deviceLabel: string | null } | null;
+  // docs/83 D321 — the account owner (the one who can delete the account
+  // and reset their PIN by email). Kept by the server; read it through
+  // household.ts's ownerProfileId().
+  isOwner: boolean;
 }
 
 // Profile fields only the api writes; uploads never carry them.
-export type ApiProfileField = 'hasPin' | 'pinReset';
+export type ApiProfileField = 'hasPin' | 'pinReset' | 'isOwner';
 
 // docs/48 D176 — one row per physical device, `id` reusing identity.ts's
 // getDeviceId().

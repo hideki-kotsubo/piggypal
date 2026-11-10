@@ -1041,6 +1041,13 @@ it needs doing.
       Deferred — parked per user 2026-08-11, revisit later.
 ## ✅ Done
 
+- [x] Every account has an owner (docs/83, 2026-11-10): the owner of the
+      dev account couldn't delete it because no profile had `users.id`'s
+      id. The server now creates the owner profile with the account, and
+      Postgres refuses an account without one (`users.owner_profile_id`,
+      D320); `profiles.is_owner` for the apps (D321); the owner can't be
+      removed (D322); existing accounts backfilled (D323).
+
 - [x] Sign-out erases the device by default (docs/75, 2026-10-20):
       **Disconnect and keep data** as the second option, remembered per
       account (D283/D284); another account's data is erased, never

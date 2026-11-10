@@ -256,8 +256,9 @@ function PersonCard({
         )
       )}
       {/* You can't remove yourself here — signing out (Settings) is how a
-          device leaves; another person's device can remove you. */}
-      {!isYou && (
+          device leaves; another person's device can remove you. The
+          account owner can't be removed at all (docs/83 D322). */}
+      {!isYou && !profile.isOwner && (
         <button type="button" className="text-link household-remove-person" disabled={!online} onClick={onRemovePerson}>
           {t('household.removePerson', { name: profile.displayName })}
         </button>

@@ -13,6 +13,7 @@ import {
   verifySessionProfile,
 } from '../lib/auth';
 import { getLocalUserId } from '../lib/identity';
+import { ownerProfileId } from '../lib/household';
 import { useStore } from '../lib/store';
 import { useOnline } from '../lib/syncNow';
 import type { Profile } from '../lib/types';
@@ -162,7 +163,7 @@ export function PinPrompt({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [forgot, setForgot] = useState<false | 'options' | 'email'>(false);
-  const isOwner = profileId === accountUserId;
+  const isOwner = profileId === ownerProfileId(store.profiles, accountUserId);
   const othersInHousehold = store.profiles.some((p) => p.id !== profileId && !p.deletedAt);
 
   async function handleVerify() {
