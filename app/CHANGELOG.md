@@ -16,6 +16,13 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
+## Unreleased
+
+- Fixed: on some accounts, the person who created the account couldn't
+  delete it, or reset their PIN with an emailed code, because the app
+  didn't recognise them as the owner.
+- The account owner no longer has a Remove button in Household.
+
 ## 0.15.5 — 2026-11-02
 
 - **Date and Time line up on iPhone and iPad.** On a transaction, the

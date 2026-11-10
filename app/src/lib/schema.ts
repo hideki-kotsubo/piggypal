@@ -143,6 +143,7 @@ const profiles = new Table({
   pin_reset_at: column.text,
   pin_reset_by: column.text,
   pin_reset_device: column.text,
+  is_owner: column.integer, // docs/83 D321 — kept by the server only
 });
 
 // docs/48 D176 — one row per physical device, `id` reusing identity.ts's
