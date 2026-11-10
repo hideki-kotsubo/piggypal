@@ -77,6 +77,11 @@ export function SettingsScreen() {
           label={t('settings.scheduledPayments')}
           meta={scheduleCount > 0 ? t('settingsHub.activeCount', { count: scheduleCount }) : undefined}
         />
+        {/* docs/81 — only the former-app adapter exists so far, which is
+            useful to the owner alone, so the row shows in dev builds only;
+            elsewhere the screen is reachable at /settings/import. Public
+            once OFX lands (step 3). */}
+        {import.meta.env.DEV && <HubRow to="/settings/import" icon="upload" label={t('import.title')} sub={t('import.hubSub')} />}
       </div>
 
       <div className="section-label">{t('settingsHub.syncHousehold')}</div>
@@ -174,7 +179,7 @@ function Chevron() {
   );
 }
 
-type IconName = 'wallet' | 'tag' | 'calendar' | 'people' | 'phone' | 'sun' | 'globe' | 'mic' | 'info' | 'download' | 'cloud';
+type IconName = 'wallet' | 'tag' | 'calendar' | 'people' | 'phone' | 'sun' | 'globe' | 'mic' | 'info' | 'download' | 'upload' | 'cloud';
 
 const ICON_PATHS: Record<IconName, ReactNode> = {
   wallet: <><rect x="3" y="6" width="18" height="13" rx="2" /><path d="M3 10h18" /></>,
@@ -187,6 +192,7 @@ const ICON_PATHS: Record<IconName, ReactNode> = {
   mic: <><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></>,
   info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></>,
   download: <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />,
+  upload: <path d="M12 15V4M7 9l5-5 5 5M5 20h14" />,
   cloud: <path d="M7 18h10a4 4 0 0 0 .5-8A6 6 0 0 0 6 9.5 4.3 4.3 0 0 0 7 18z" />,
 };
 

@@ -15,6 +15,7 @@ import { StoreProvider } from './lib/store'
 import { TransactionList } from './components/TransactionList'
 import { TransactionScreen } from './components/TransactionScreen'
 import { DuplicateTransactionsScreen } from './components/DuplicateTransactionsScreen'
+import { ImportScreen } from './components/ImportScreen'
 import { InboxScreen } from './components/InboxScreen'
 import { AccountsScreen } from './components/AccountsScreen'
 import { AccountScreen } from './components/AccountScreen'
@@ -79,6 +80,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="household/pin" element={<PinScreen />} />
               <Route path="delete-account" element={<DeleteAccountScreen />} />
               <Route path="about" element={<AboutScreen />} />
+              <Route path="import" element={<ImportScreen />} />
               {/* docs/71 — the old Profiles screen folded into Household. */}
               <Route path="profiles" element={<Navigate to="/settings/household" replace />} />
             </Route>
