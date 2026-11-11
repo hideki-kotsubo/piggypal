@@ -2,7 +2,7 @@
 date: 2026-11-21
 template: tip
 platforms: facebook, linkedin, x, bluesky, instagram, threads
-approved:
+approved: en
 ---
 
 <!-- Building in public. Typed entries are parsed on the device by a

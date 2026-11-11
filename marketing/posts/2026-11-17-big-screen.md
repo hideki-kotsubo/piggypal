@@ -2,7 +2,7 @@
 date: 2026-11-17
 template: tip
 platforms: facebook, linkedin, x, bluesky, instagram, threads
-approved:
+approved: en
 ---
 
 <!-- Product update, 0.15.0 (wide layout) and 0.15.1 (iPad), app/CHANGELOG.md.
