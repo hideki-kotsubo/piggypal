@@ -2,7 +2,7 @@
 date: 2026-11-14
 template: tip
 platforms: facebook, linkedin, x, bluesky, instagram, threads
-approved:
+approved: en
 ---
 
 <!-- Money tip. Arithmetic only: 15.99 × 12 = 191.88; 39,90 × 12 = 478,80;

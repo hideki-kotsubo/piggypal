@@ -2,7 +2,7 @@
 date: 2026-11-24
 template: tip
 platforms: facebook, linkedin, x, bluesky, instagram, threads
-approved:
+approved: en
 ---
 
 <!-- Community. Per-currency totals, never converted: website, posts

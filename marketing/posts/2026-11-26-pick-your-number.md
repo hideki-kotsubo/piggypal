@@ -2,7 +2,7 @@
 date: 2026-11-26
 template: tip
 platforms: facebook, linkedin, x, bluesky, instagram, threads
-approved:
+approved: en
 ---
 
 <!-- Money tip, the day before Black Friday (Nov 27). A habit, no
