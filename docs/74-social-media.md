@@ -190,7 +190,19 @@ Nov 3 stays launch day: `2026-10-29-type-it-or-say-it`,
 `2026-11-12-every-day-added-up`. Instagram (re-created 2026-10-29)
 joins from about Nov 5, after a quiet first week. The Nov 5 slot was
 missed and posted Sat Nov 7 instead (with Instagram's and Threads'
-first posts), so the last two moved one slot each. The 0.7.0 update post was dropped (stale
+first posts), so the last two moved one slot each.
+
+Next two weeks, drafted 2026-11-11 (all `approved:` empty, en with
+`short:`/`alt:`): `2026-11-14-subscriptions` (money tip),
+`2026-11-17-big-screen` (update: 0.15.0/0.15.1 wide layout), `2026-11-19-only-me`
+(how-to: household and Only me), `2026-11-21-how-it-reads` (building in
+public: the on-device parser), `2026-11-24-two-currencies` (community),
+`2026-11-26-pick-your-number` (money tip, the day before Black Friday).
+All text cards: on a fresh install Insights and Accounts look too empty to
+show. Videos and their captions: `marketing/videos.md`, with a third clip,
+`three-entries`. Checking the examples against the parser found that
+"500 MXN", "pesos" and "50 EUR" don't set the currency ("50 €", "50 USD",
+"R$ 50" and "50 dólares" do) and that "headphones" is filed under Phone. The 0.7.0 update post was dropped (stale
 by then); `no-bank-login` replaces it. Japanese, Korean and Chinese
 (docs/76) were first held out of posts until native reviewers checked
 them; dropped the same day after the user's tests with real users found

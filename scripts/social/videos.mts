@@ -110,6 +110,33 @@ const CLIPS: Record<string, Clip> = {
       await page.waitForTimeout(2500);
     },
   },
+  // Three entries typed and saved back to back on an empty Home, which
+  // fills up as they go. The hook promises 15 s: keep play() under it.
+  'three-entries': {
+    hook: {
+      en: 'Three spends. Fifteen seconds.',
+      'pt-BR': 'Três gastos. Quinze segundos.',
+      es: 'Tres gastos. Quince segundos.',
+      fr: 'Trois dépenses. Quinze secondes.',
+    },
+    view: 'whole',
+    async setup() {},
+    async play(page, lang) {
+      await page.waitForTimeout(700);
+      const [groceries, coffee, ride] = ENTRIES[lang];
+      for (const text of [coffee, ride, groceries]) {
+        const input = entryInput(page);
+        await tap(page, input);
+        await input.pressSequentially(text, { delay: 70 });
+        await input.press('Enter');
+        await page.locator('.parse-confirm').waitFor({ timeout: 5000 });
+        await page.waitForTimeout(900);
+        await tap(page, page.locator('.parse-confirm'));
+        await page.waitForTimeout(700);
+      }
+      await page.waitForTimeout(1300);
+    },
+  },
 };
 
 // ---- driving the app ----
