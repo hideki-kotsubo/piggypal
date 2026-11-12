@@ -24,6 +24,11 @@ it needs doing.
   - [ ] Step 3: OFX/QFX, Flowtab CSV v2 (export + import); make the
         Settings row public.
   - [ ] Step 4: paid LLM import (needs Stripe + server LLM).
+  - [ ] Bank CSV + PDF statement importer (idea re-flagged 2026-11-12):
+        CSV with per-bank column mapping/presets, PDF via the options in
+        docs/81 (on-device text layer first, statement-totals gate).
+        Fits after step 3; overlaps the "Import records from CSV/XLSX"
+        item under Later, which has the older notes.
 
 - [ ] **Private records + receipt photos** (docs/77). Added 2026-10-26.
   - [x] Part A, "Only me" records + per-profile PIN (D293–D301), built
@@ -384,6 +389,113 @@ it needs doing.
       entries; PDF parsing options (on-device, user-taught templates, LLM
       writes the parser from a masked skeleton, opt-in server LLM) with a
       statement-totals gate. User is checking what each bank exports.
+- [ ] Capture expenses from bank push notifications / SMS (docs/84 C-3) — idea,
+      2026-11-12, not scoped. iOS: no app can read other apps'
+      notifications or SMS, so the route is an iOS Shortcuts automation
+      (e.g. "Message received" trigger, or the user sharing the text) that
+      sends the text to Flowtab via an App Intent / URL scheme. Android:
+      a `NotificationListenerService` (user grants notification access)
+      and/or SMS read — needs a custom Capacitor plugin, and Google Play
+      restricts SMS permissions heavily, so notifications are the safer
+      path. Either way the text goes through the existing docs/16 parser
+      and lands in the Inbox; dedupe against hand-entered records and
+      later statement imports (docs/81) matters. Open: per-bank message
+      formats (BR/CA/JP), privacy wording, battery/background limits.
+      2026-11-12: sending SMS to the server instead was considered and
+      rejected. Every forwarding route (iOS Shortcut POST, Android
+      forwarder app, Twilio number) already runs on the phone, so parsing
+      there is simpler, works offline, suits the free tier and keeps the
+      text private. Also, BR banks mostly use push notifications, not SMS.
+- [ ] Email-forwarding capture (paid, docs/84 C-4) — idea, 2026-11-12, not scoped.
+      Each account gets a private inbound address (long random token,
+      e.g. `<token>@in.myflowtab.com`, can be regenerated). The user
+      points bank alert emails at it, or sets a Gmail/Outlook auto-forward
+      rule. Works on every platform, CA/BR banks nearly all send email
+      alerts, and their format is fixed, so they're much easier to parse
+      than PDF statements.
+      Must respect locked decisions: (3) the server never inserts
+      transactions. It writes a "pending capture" row (new synced table)
+      and the device turns it into an Inbox item through the normal local
+      write path. (5) it needs an account and sync, so it's paid. The
+      inbound endpoint becomes another subscription-gate point (flag it,
+      same as docs/77 Part B phase 2). Privacy: keep only the extracted
+      fields, drop the raw email within minutes, update the privacy policy
+      and the App Store / Play data-safety answers.
+      Risks/design points: spoofing (token address, optional allowed
+      bank senders checked with DKIM, always Inbox review, never posted
+      automatically); Gmail/Outlook send a confirmation email to the new
+      address before forwarding works, so the app must show that
+      code/link; alerts often show only the card's last 4 digits, so
+      accounts need a last-4 field; parsing is per-bank templates first,
+      Tier 2 LLM fallback; dedupe against hand-entered records and
+      statement imports reuses docs/81 matching. Infra: inbound mail
+      provider with a webhook (Postmark / Mailgun / SendGrid Inbound
+      Parse) or own MX; check whether SMTP2GO has inbound.
+- [ ] Bank-data aggregator integration (Plaid, Flinks, GoCardless Bank
+      Account Data, Belvo, Akahu, Stitch; docs/84 C-11) — possible future idea,
+      2026-11-12. Region split: Plaid/Flinks (US/CA), GoCardless (EU/UK),
+      Belvo (LatAm/BR), Akahu (NZ), Stitch (ZA). All need a server (the
+      app is local-first today), per-connection fees that point to a
+      paid tier, provider approval/compliance reviews, and storing bank
+      tokens securely. Imported rows would reuse the statement
+      import/reconciliation flow (docs/81) rather than a separate path.
+- [ ] Apple FinanceKit import (iOS only, docs/84 C-10) — idea, 2026-11-12. Read-only,
+      on-device access to Wallet transactions/balances after the user
+      approves; newer iOS can deliver new transactions in the background.
+      Fits local-first (no server, no per-connection fee); needs a small
+      custom Swift Capacitor plugin feeding the docs/81 import/matching
+      flow. Limits: coverage is mainly US Apple Card (plus probably Apple
+      Cash/Savings; UK Wallet-connected cards unconfirmed), nothing found
+      for CA/BR/JP, and regular cards in Apple Pay don't expose history.
+      Needs a managed entitlement (request form, reviewed by Apple) and an
+      organization developer account. Check Apple's current country list
+      before picking it up. Android has no equivalent.
+- [ ] Faster entry ideas (docs/84) — brainstorm 2026-11-12, none scoped. Suggested
+      order: native capture layer + Apple Pay tap, then repeat/favorites
+      and multi-entry, then share target.
+  - [ ] Native quick-capture layer (do first; the others build on it).
+        iOS: one App Intent "Log expense" (text input) + App Shortcuts
+        provider, so Siri / Spotlight / Shortcuts get it with no setup.
+        A free-form text can't be part of the Siri phrase itself, so
+        Siri asks a follow-up ("What did you spend?"). The intent doesn't
+        run the JS parser: it writes the raw text into a small native
+        queue (App Group file) and the app turns queued items into Inbox
+        records through the normal local write path on next open
+        (optionally shows a "Saved" confirmation). Plus a widget extension
+        (Home/Lock Screen widget, iOS 18 Control Center control, Action
+        Button) that deep-links into voice entry, no data shown, so no
+        shared database needed. Android: static/dynamic app shortcuts
+        (long-press icon, no setup), Quick Settings tile and a home
+        widget, both addable through a one-tap system prompt
+        (`requestAddTileService` / `requestPinAppWidget`). Custom
+        Capacitor plugin + new native targets.
+  - [ ] Apple Pay tap automation (iOS 17+ Shortcuts Wallet "Transaction"
+        trigger): passes merchant, amount and card name on every Apple Pay
+        tap with the chosen cards; any country, no entitlement, no server.
+        Only in-person Apple Pay taps. Apps can't create automations, so
+        the user sets it up once in Shortcuts (Automation → Wallet → cards
+        → Run Immediately → Flowtab's "Log expense" action); needs an
+        in-app guide with screenshots. Card name can map to an account.
+        Needs the capture layer above.
+  - [ ] Share to Flowtab (share target/extension): text, screenshots,
+        PDFs, images. BR Pix receipts (comprovantes) have a fixed layout;
+        also order confirmations and copied bank text. Images reuse
+        docs/77 Part B's OCR plugin.
+  - [ ] Fewer fields: repeat last / favorites / recent merchants as
+        one-tap chips, time-of-day suggestions; smart default account per
+        merchant/category; travel mode (country change suggests default
+        currency + card). Pairs with the docs/04 learning loop (deferred
+        item below), which cuts Inbox items for every channel.
+  - [ ] Several purchases in one sentence ("coffee 5 and lunch 18 and
+        uber 22" → three records). Parser change only; pairs with the
+        parked desktop multi-line paste.
+  - [ ] End-of-day reminder: opt-in local notification ("Anything to log
+        today?") with inline quick reply parsed on-device, skipped on days
+        with entries. No server.
+  - [ ] Later: Apple Watch / Wear OS voice entry (separate native app);
+        WhatsApp/Telegram bot (popular in BR, but server-side, privacy
+        cost, WhatsApp API is paid; would reuse the email-forwarding
+        "pending capture" pattern).
 - [ ] Spreadsheet-style filterable data view for transactions/reports —
       flagged 2026-08-23, not yet scoped. Distinct from the existing
       "Insights screen" filter/report-type open question above (which is
