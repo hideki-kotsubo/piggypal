@@ -15,8 +15,11 @@ anything here.
 2. Work out next week's Tuesday, Thursday and Saturday. Skip a day that
    already has a post file.
 3. For each free day write one post in `marketing/posts/<date>-<slug>.md`
-   from `marketing/posts/_TEMPLATE.md`, rotating the five themes in
-   docs/74's content plan. If a release has shipped since the last update
+   from `marketing/posts/_TEMPLATE.md`, following docs/74 D324: Tuesday
+   is How to use Flowtab and Thursday is Money habits (both carousels as
+   a rule), Saturday rotates the other themes. Money habits stay habits
+   and arithmetic, never investment, debt or tax advice. Run every example
+   entry through the parser before using it. If a release has shipped since the last update
    post, one of the three is its update post: start it with
    `npm run social:from-changelog -- <version> <date>`, then edit it.
 4. Write all four languages: en, pt-BR, es (Latin American), fr

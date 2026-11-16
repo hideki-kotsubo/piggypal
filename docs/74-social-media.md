@@ -181,6 +181,26 @@ can look like spam. Rotate five themes:
 5. **Community.** Brazilians, Latin Americans and francophones in Canada;
    travel and living in more than one currency.
 
+**D324 — Two teaching series and a weekly rhythm (2026-11-16).** The
+user asked for posts that teach: how to use the app, and money habits
+(why small spends matter, am I spending more than I earn, how to get more
+control). From the batch starting Nov 28 the week runs **Tuesday: How to
+use Flowtab** (one feature, step by step), **Thursday: Money habits**
+(one habit, ending with how Flowtab helps) and **Saturday: one of the
+other themes** (update, building in public, community). The line stays
+habits and arithmetic: tracking, comparing money in and out, giving a
+category a ceiling; never what to invest in, which debt to pay, or tax.
+Teaching posts are **carousels** (`template: carousel`, 2-8 slides, each
+with an optional app screen): they suit a few steps better than one image
+and get saved and shared most on Instagram and LinkedIn. `social:compose`
+renders the cover (the feed image, with "Swipe →"), the slides, an end
+slide with the link, and the same slides as `<lang>-carousel.pdf` for
+LinkedIn, which shows carousels only as document posts; the captions file
+says which images go where (X and Bluesky take four). Two screenshots
+were added for them: `09-categories` (what each category spent this
+month) and `10-account` (an account's page after a salary is logged, so
+"This month" shows In and Out).
+
 First two weeks, re-dated 2026-10-27 to start Tue Nov 3, then on
 2026-10-29 (all six approved for English) moved earlier so the brand
 accounts aren't empty when the founder posts send people to them; Tue
@@ -202,7 +222,17 @@ All text cards: on a fresh install Insights and Accounts look too empty to
 show. Videos and their captions: `marketing/videos.md`, with a third clip,
 `three-entries`. Checking the examples against the parser found that
 "500 MXN", "pesos" and "50 EUR" don't set the currency ("50 €", "50 USD",
-"R$ 50" and "50 dólares" do) and that "headphones" is filed under Phone. The 0.7.0 update post was dropped (stale
+"R$ 50" and "50 dólares" do) and that "headphones" is filed under Phone.
+
+Nov 28 – Dec 12, drafted 2026-11-16 in the D324 rhythm (all `approved:`
+empty): `2026-11-28-small-spends-add-up` (habit, carousel),
+`2026-12-01-your-first-entry` (how-to, carousel),
+`2026-12-03-in-versus-out` (habit, carousel), `2026-12-05-travel-currency`
+(community, tip), `2026-12-08-fix-what-it-understood` (how-to, carousel),
+`2026-12-10-find-your-leak` (habit, carousel), `2026-12-12-bills-you-know`
+(habit, tip). Parser gaps found while checking them: Canadian
+"paycheque" isn't an income word, "5000 JPY" doesn't set yen ("1200円"
+does), Spanish "comida" gets no category. The 0.7.0 update post was dropped (stale
 by then); `no-bank-login` replaces it. Japanese, Korean and Chinese
 (docs/76) were first held out of posts until native reviewers checked
 them; dropped the same day after the user's tests with real users found

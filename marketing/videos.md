@@ -74,3 +74,16 @@ $15.99 a month is $191.88 a year 📺 Once a year, list every subscription and k
 
 #moneytips #subscriptions #budgeting #personalfinance
 ```
+
+## Nov 28 – Dec 12 (drafted 2026-11-16)
+
+Carousels double as TikTok photo posts: all `<lang>-slide-*.png` in
+order, with a sound, and the Instagram caption.
+
+| Date | What | Where |
+| --- | --- | --- |
+| Sun Nov 29 | `small-spends-add-up` slides | TikTok (photo post) |
+| Wed Dec 2 | `three-entries` | TikTok, if not posted on Nov 18 |
+| Sun Dec 6 | `in-versus-out` slides | TikTok (photo post) |
+| Sun Dec 6 | `type-it` | Reels, Shorts, if not posted on Nov 15 |
+| Sun Dec 13 | `find-your-leak` slides | TikTok (photo post) |

@@ -3,7 +3,7 @@
 //
 //   ---
 //   date: 2026-10-21            the day it should go out (local time)
-//   template: feature           feature | tip | update
+//   template: feature           feature | tip | update | carousel
 //   screen: 02-understood       a screenshots.mts name (feature, update)
 //   crop: bottom                which part of the screenshot shows: top | bottom
 //   platforms: instagram, facebook, tiktok, threads, linkedin
@@ -15,6 +15,10 @@
 //   sub: It's on the tab.
 //   bullets:                    (update template only, one "- " per line)
 //   - First thing
+//   slides:                     (carousel only, 2-8 slides: "- " starts one
+//   - Title of a slide           with its title, indented lines are its text,
+//     Its text.                  and "  screen: 02-understood" shows that
+//     screen: 02-understood      screenshot under it)
 //   alt: What the image shows, for screen readers (one line).
 //   short:
 //   The X and Bluesky text, link included, until "caption:". Needed when
@@ -31,15 +35,22 @@ import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { isLanguage, type Language } from './languages.mts';
 
-export const TEMPLATES = ['feature', 'tip', 'update'] as const;
+export const TEMPLATES = ['feature', 'tip', 'update', 'carousel'] as const;
 export type Template = (typeof TEMPLATES)[number];
 export const PLATFORMS = ['instagram', 'facebook', 'tiktok', 'threads', 'linkedin', 'youtube', 'x', 'bluesky'] as const;
 export type Platform = (typeof PLATFORMS)[number];
+
+export interface Slide {
+  title: string;
+  text: string;
+  screen: string | null;
+}
 
 export interface PostCopy {
   headline: string;
   sub: string;
   bullets: string[];
+  slides: Slide[];
   alt: string;
   short: string;
   caption: string;
@@ -85,27 +96,36 @@ export function parsePost(source: string, file: string): Post {
     const [heading, ...lines] = section.split('\n');
     const lang = heading.trim();
     if (!isLanguage(lang)) throw new Error(`${where}: unknown language section "## ${lang}"`);
-    const c: PostCopy = { headline: '', sub: '', bullets: [], alt: '', short: '', caption: '' };
-    let field: 'bullets' | 'short' | 'caption' | null = null;
+    const c: PostCopy = { headline: '', sub: '', bullets: [], slides: [], alt: '', short: '', caption: '' };
+    let field: 'bullets' | 'slides' | 'short' | 'caption' | null = null;
     const block = { short: [] as string[], caption: [] as string[] };
     for (const line of lines) {
       if (field === 'caption') {
         block.caption.push(line);
         continue;
       }
-      const kv = /^(headline|sub|alt|bullets|short|caption):\s*(.*)$/.exec(line);
+      const kv = /^(headline|sub|alt|bullets|slides|short|caption):\s*(.*)$/.exec(line);
       if (kv) {
         if (kv[1] === 'headline' || kv[1] === 'sub' || kv[1] === 'alt') {
           c[kv[1]] = kv[2].trim();
           field = null;
-        } else field = kv[1] as 'bullets' | 'short' | 'caption';
+        } else field = kv[1] as 'bullets' | 'slides' | 'short' | 'caption';
         if ((kv[1] === 'short' || kv[1] === 'caption') && kv[2].trim()) block[kv[1]].push(kv[2]);
       } else if (field === 'bullets' && /^- /.test(line)) c.bullets.push(line.slice(2).trim());
+      else if (field === 'slides' && /^- /.test(line)) c.slides.push({ title: line.slice(2).trim(), text: '', screen: null });
+      else if (field === 'slides' && /^\s+\S/.test(line) && c.slides.length) {
+        const slide = c.slides[c.slides.length - 1];
+        const screen = /^\s+screen:\s*(\S+)\s*$/.exec(line);
+        if (screen) slide.screen = screen[1];
+        else slide.text = `${slide.text} ${line.trim()}`.trim();
+      }
       else if (field === 'short') block.short.push(line);
     }
     c.short = block.short.join('\n').trim();
     c.caption = block.caption.join('\n').trim();
     if (!c.headline) throw new Error(`${where}: ## ${lang} has no headline`);
+    if (template === 'carousel' && (c.slides.length < 2 || c.slides.length > 8))
+      throw new Error(`${where}: ## ${lang} needs 2 to 8 slides (has ${c.slides.length})`);
     if (c.short) {
       if (xLength(c.short) > 280) throw new Error(`${where}: ## ${lang} short: is ${xLength(c.short)} long on X (max 280)`);
       if (graphemes(c.short) > 300) throw new Error(`${where}: ## ${lang} short: is ${graphemes(c.short)} characters (Bluesky max 300)`);
@@ -117,7 +137,7 @@ export function parsePost(source: string, file: string): Post {
     if (!copy[l]) throw new Error(`${where}: ${l} is approved but has no ## ${l} section`);
     if (needsShort && !copy[l]!.short) throw new Error(`${where}: ${l} is approved for x/bluesky but has no short:`);
   }
-  if (template !== 'tip' && !meta.screen) throw new Error(`${where}: a ${template} post needs screen:`);
+  if ((template === 'feature' || template === 'update') && !meta.screen) throw new Error(`${where}: a ${template} post needs screen:`);
 
   return {
     id: path.basename(file, '.md'),

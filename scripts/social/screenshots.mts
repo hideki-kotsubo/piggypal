@@ -19,7 +19,7 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium, type Page } from 'playwright';
-import { DEVICE, ENTRIES, settle } from './app.mts';
+import { DEVICE, ENTRIES, INCOME, settle } from './app.mts';
 import { LANGUAGES, type Language } from './languages.mts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -102,6 +102,7 @@ try {
       ['06-accounts', '/accounts'],
       ['07-settings', '/settings'],
       ['08-language', '/settings/language'],
+      ['09-categories', '/categories'],
     ] as const) {
       await page.goto(new URL(route, baseUrl).href);
       await settle(page);
@@ -114,6 +115,16 @@ try {
         await shot('04b-transaction-detail');
       }
     }
+    // An account's own page, with a salary added so "This month" shows
+    // money in as well as out. Last, so no other shot includes it.
+    await page.goto(baseUrl);
+    await settle(page);
+    await addEntry(page, INCOME[lang]);
+    await page.goto(new URL('/accounts', baseUrl).href);
+    await settle(page);
+    await page.locator('a[href^="/accounts/"]').first().click();
+    await page.waitForTimeout(800);
+    await shot('10-account');
     await ctx.close();
     console.log(`${lang}: ${path.relative(root, dir)}`);
   }
