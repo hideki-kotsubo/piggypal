@@ -14,6 +14,16 @@ export const ENTRIES: Record<Language, string[]> = {
   fr: ['épicerie 86,20 chez iga', 'café 4,50', 'uber 18 hier', 'essence 62', 'souper 48', 'cinéma 15,90'],
 };
 
+// A salary, logged after the other shots so only the account page has
+// money in. Words from the seed keywords (seed.ts): Canadian "paycheque"
+// isn't one of them.
+export const INCOME: Record<Language, string> = {
+  en: 'salary 2400',
+  'pt-BR': 'salário 2400',
+  es: 'sueldo 2400',
+  fr: 'salaire 2400',
+};
+
 // Entries are saved last-to-first, so the last phrase sets the currency
 // the others default to (a fresh install starts in CAD, store.tsx); pt-BR
 // says "R$" there so its shots show reais. Amounts avoid "99": the starter
