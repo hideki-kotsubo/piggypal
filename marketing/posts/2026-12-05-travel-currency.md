@@ -2,7 +2,7 @@
 date: 2026-12-05
 template: tip
 platforms: facebook, linkedin, x, bluesky, instagram, threads
-approved:
+approved: en
 ---
 
 <!-- Community/travel. Parser checked 2026-11-16: "€12 coffee" → EUR,

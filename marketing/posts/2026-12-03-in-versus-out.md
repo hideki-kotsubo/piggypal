@@ -2,7 +2,7 @@
 date: 2026-12-03
 template: carousel
 platforms: facebook, linkedin, x, bluesky, instagram, threads
-approved:
+approved: en
 ---
 
 <!-- Money habits series (docs/74 D324). A habit (compare in and out), no

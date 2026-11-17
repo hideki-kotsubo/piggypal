@@ -2,7 +2,7 @@
 date: 2026-12-12
 template: tip
 platforms: facebook, linkedin, x, bluesky, instagram, threads
-approved:
+approved: en
 ---
 
 <!-- Money habits / how-to. Scheduled payments: "rent, bills and

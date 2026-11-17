@@ -2,7 +2,7 @@
 date: 2026-12-08
 template: carousel
 platforms: facebook, linkedin, x, bluesky, instagram, threads
-approved:
+approved: en
 ---
 
 <!-- How to use Flowtab series (docs/74 D324). Checked in
