@@ -199,6 +199,10 @@
   .get-card p { color: var(--ink-soft); margin: 0; }
   .install { display: grid; gap: 10px; font-size: 0.9rem; color: var(--ink-soft); }
   .install b { color: var(--ink); }
+  .install a { color: var(--flow-ink); }
+  /* Official badge; its image has ~11px of transparent padding built in. */
+  .play-badge { display: inline-flex; margin: -12px -11px; }
+  .play-badge img { height: 72px; width: auto; }
 </style>
 <script type="application/ld+json">
 {
@@ -245,9 +249,9 @@
       sign up for.</p>
       <div class="cta-row">
         <a class="btn btn-primary" href="https://app.myflowtab.com/">Open Flowtab</a>
-        <a class="btn btn-ghost" href="#features">See what it does</a>
+        <a class="play-badge" href="https://play.google.com/store/apps/details?id=com.myflowtab.app" rel="noopener"><img src="google-play-badge.png" alt="Get it on Google Play" width="186" height="72"></a>
       </div>
-      <p class="cta-note">Free · runs in your browser · install it on your phone or computer</p>
+      <p class="cta-note">Free · Android app on Google Play · or runs in any browser</p>
     </div>
 
     <div class="demo-panel" aria-label="Demo: spoken or typed phrases become entries">
@@ -459,8 +463,8 @@
       <div class="feat">
         <span class="glyph">install</span>
         <h3>Phone or computer</h3>
-        <p>Open it in any browser, then install it to your home screen or dock. It
-        opens like any other app.</p>
+        <p>Get the Android app on Google Play, or open Flowtab in any browser and
+        install it to your home screen or dock. It opens like any other app.</p>
       </div>
     </div>
   </div>
@@ -508,17 +512,18 @@
     <div class="get-card">
       <img class="app-icon" src="icon.png" alt="" width="72" height="72">
       <div>
-        <h2>Start in your browser</h2>
-        <p>No download, no sign-up. Open Flowtab and type your first expense.</p>
+        <h2>Get Flowtab</h2>
+        <p>No sign-up. Get the Android app, or open Flowtab in your browser and type your first expense.</p>
         <div class="cta-row" style="margin-top:20px;">
+          <a class="play-badge" href="https://play.google.com/store/apps/details?id=com.myflowtab.app" rel="noopener"><img src="google-play-badge.png" alt="Get it on Google Play" width="186" height="72"></a>
           <a class="btn btn-primary" href="https://app.myflowtab.com/">Open Flowtab</a>
-          <a class="btn btn-ghost" href="changelog.html">What's new</a>
         </div>
       </div>
       <div class="install">
         <span><b>iPhone / iPad:</b> open it in Safari, then Share → Add to Home Screen.</span>
-        <span><b>Android, Chrome, Edge:</b> use the Install button in Flowtab's Settings, or in the address bar.</span>
-        <span>App Store and Google Play versions are on the way.</span>
+        <span><b>Android:</b> get it on <a href="https://play.google.com/store/apps/details?id=com.myflowtab.app" rel="noopener">Google Play</a>.</span>
+        <span><b>Computer (Chrome, Edge):</b> use the Install button in Flowtab's Settings, or in the address bar.</span>
+        <span>The App Store version is on the way.</span>
       </div>
     </div>
   </div>
