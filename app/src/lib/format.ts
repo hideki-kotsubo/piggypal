@@ -49,10 +49,16 @@ export function formatRelativeDate(occurredAt: string): string {
   if (days === 0) return i18n.t('date.today');
   if (days === 1) return i18n.t('date.yesterday');
   if (days < 7) return i18n.t('date.daysAgo', { count: days });
-  return new Intl.DateTimeFormat(uiLocale(), { month: 'short', day: 'numeric' }).format(date);
+  const otherYear = date.getFullYear() !== today.getFullYear();
+  return new Intl.DateTimeFormat(uiLocale(), {
+    month: 'short',
+    day: 'numeric',
+    ...(otherYear ? { year: 'numeric' } : {}),
+  }).format(date);
 }
 
 export interface DayGroup<T> {
+  key: string; // local YYYY-MM-DD — unique, unlike label ("28 Nov" every year)
   label: string;
   items: T[];
 }
@@ -68,7 +74,7 @@ export function groupByDay<T extends { occurredAt: string }>(items: T[]): DayGro
   for (const item of items) {
     const key = item.occurredAt.slice(0, 10); // local YYYY-MM-DD, see nowLocal
     if (key !== currentKey) {
-      groups.push({ label: formatRelativeDate(item.occurredAt), items: [] });
+      groups.push({ key, label: formatRelativeDate(item.occurredAt), items: [] });
       currentKey = key;
     }
     groups[groups.length - 1].items.push(item);

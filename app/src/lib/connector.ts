@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import type { CommonPowerSyncDatabase, PowerSyncBackendConnector } from '@powersync/web';
 import { fetchPowerSyncCredentials, uploadSyncOps } from './auth';
 import type { SyncOp } from './auth';
+import { chunkOps } from './syncChunks';
 
 // docs/46 D163 — every op the server reports as `skipped` gets recorded
 // here and surfaced (Settings' sync status), never silently dropped the
@@ -77,13 +78,20 @@ export class FlowtabConnector implements PowerSyncBackendConnector {
     // Any throw here is retried later by the SDK itself (default 5s
     // backoff, per PowerSyncBackendConnector's own doc comment) — no
     // custom retry loop needed on top of that.
-    const result = await uploadSyncOps(ops);
-    // A skipped op still gets transaction.complete()'d below — the
-    // server already made its final decision on it (an ownership
-    // mismatch, a superseded budget, a not-found target), so retrying
-    // won't change the outcome. "Skipped" means "recorded, not silently
-    // lost," not "failed, try again" — see docs/46 D163.
-    recordSkips(result.skipped);
+    //
+    // One local transaction can be huge (an import writes thousands of
+    // rows at once), and the api's JSON body limit answered 413. Send it
+    // in ordered chunks; if a later chunk fails, the retry re-sends the
+    // earlier ones too, which is safe because the server upserts by id.
+    for (const chunk of chunkOps(ops)) {
+      const result = await uploadSyncOps(chunk);
+      // A skipped op still gets transaction.complete()'d below — the
+      // server already made its final decision on it (an ownership
+      // mismatch, a superseded budget, a not-found target), so retrying
+      // won't change the outcome. "Skipped" means "recorded, not silently
+      // lost," not "failed, try again" — see docs/46 D163.
+      recordSkips(result.skipped);
+    }
     await transaction.complete();
   }
 }

@@ -270,7 +270,7 @@ export function TransactionList() {
       ) : (
         <div className="recent" style={{ marginTop: '0.5rem' }}>
           {groupByDay(filtered).map((group) => (
-            <Fragment key={group.label}>
+            <Fragment key={group.key}>
               <div className="day-label">
                 <span>{group.label}</span>
                 <span className="day-subtotal">
