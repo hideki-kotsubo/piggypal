@@ -47,6 +47,14 @@ describe('utcToLocal', () => {
   it('rejects a bad date', () => {
     expect(utcToLocal('nope', TZ)).toBeNull();
   });
+  it('rejects placeholder and out-of-range years', () => {
+    expect(utcToLocal('0001-01-01T00:00:00Z', TZ)).toBeNull();
+    expect(utcToLocal('0999-05-01T10:00:00Z', TZ)).toBeNull();
+    expect(utcToLocal('+020240-05-01T10:00:00Z', TZ)).toBeNull();
+  });
+  it('flags a placeholder date as badDate', () => {
+    expect(parseFormerAppRecord(rec({ when: '0001-01-01T00:00:00Z' }), 0, TZ).issues).toContain('badDate');
+  });
 });
 
 describe('parseFormerAppRecord', () => {
