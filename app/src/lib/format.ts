@@ -20,12 +20,31 @@ export function setDollarCurrenciesInUse(currencies: Iterable<string>): void {
   explicitDollars = dollars.size > 1;
 }
 
+// Building an Intl formatter is far slower than using one, and a long
+// list formats thousands of amounts and times per render. Cache them by
+// locale + options; the locale is part of the key, so a language switch
+// just builds new ones.
+const numberFormats = new Map<string, Intl.NumberFormat>();
+const dateFormats = new Map<string, Intl.DateTimeFormat>();
+
+function numberFormat(options: Intl.NumberFormatOptions): Intl.NumberFormat {
+  const locale = uiLocale();
+  const key = `${locale}|${JSON.stringify(options)}`;
+  let f = numberFormats.get(key);
+  if (!f) numberFormats.set(key, (f = new Intl.NumberFormat(locale, options)));
+  return f;
+}
+
+function dateFormat(options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const locale = uiLocale();
+  const key = `${locale}|${JSON.stringify(options)}`;
+  let f = dateFormats.get(key);
+  if (!f) dateFormats.set(key, (f = new Intl.DateTimeFormat(locale, options)));
+  return f;
+}
+
 export function formatAmount(cents: number, currency: string): string {
-  const format = new Intl.NumberFormat(uiLocale(), {
-    style: 'currency',
-    currency,
-    currencyDisplay: 'narrowSymbol',
-  });
+  const format = numberFormat({ style: 'currency', currency, currencyDisplay: 'narrowSymbol' });
   if (!explicitDollars || !(currency in DOLLAR_SYMBOLS)) return format.format(cents / 100);
   // Only the symbol changes; the locale keeps its own order and spacing
   // ("CA$ 15,00" in pt-BR, "15,00 CA$" in fr).
@@ -50,7 +69,7 @@ export function formatRelativeDate(occurredAt: string): string {
   if (days === 1) return i18n.t('date.yesterday');
   if (days < 7) return i18n.t('date.daysAgo', { count: days });
   const otherYear = date.getFullYear() !== today.getFullYear();
-  return new Intl.DateTimeFormat(uiLocale(), {
+  return dateFormat({
     month: 'short',
     day: 'numeric',
     ...(otherYear ? { year: 'numeric' } : {}),
@@ -83,7 +102,7 @@ export function groupByDay<T extends { occurredAt: string }>(items: T[]): DayGro
 }
 
 export function formatTime(occurredAt: string): string {
-  return new Intl.DateTimeFormat(uiLocale(), { hour: 'numeric', minute: '2-digit' }).format(new Date(occurredAt));
+  return dateFormat({ hour: 'numeric', minute: '2-digit' }).format(new Date(occurredAt));
 }
 
 // docs/46 D169 — for the sign-in merge review's "which is more recent"
@@ -95,7 +114,7 @@ export function formatTime(occurredAt: string): string {
 // than a real, misleadingly precise 1970 date.
 export function formatDateTime(iso: string): string {
   if (iso === '1970-01-01T00:00:00.000Z') return i18n.t('date.never');
-  return new Intl.DateTimeFormat(uiLocale(), {
+  return dateFormat({
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(iso));
@@ -150,7 +169,7 @@ export function formatOccurrenceDate(date: string, today: string): string {
   if (date === addDays(today, -1)) return i18n.t('occurrence.yesterday');
   const [y, m, d] = date.split('-').map(Number);
   const sameYear = date.slice(0, 4) === today.slice(0, 4);
-  return new Intl.DateTimeFormat(uiLocale(), { month: 'short', day: 'numeric', ...(sameYear ? {} : { year: 'numeric' }) }).format(
+  return dateFormat({ month: 'short', day: 'numeric', ...(sameYear ? {} : { year: 'numeric' }) }).format(
     new Date(y, m - 1, d),
   );
 }
