@@ -16,7 +16,7 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
-## Unreleased
+## 0.15.8 — 2026-11-25
 
 - **Faster transaction list** with years of history: it loads more as
   you scroll, and opening a transaction or going back is instant again.
