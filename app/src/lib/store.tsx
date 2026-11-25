@@ -403,6 +403,36 @@ async function cascadeCategoryReferences(tx: SqliteTransaction, oldId: string, n
 async function cascadeAccountReferences(tx: SqliteTransaction, oldId: string, newId: string): Promise<void> {
   await tx.execute('UPDATE transactions SET account_id = ? WHERE account_id = ?', [newId, oldId]);
   await tx.execute('UPDATE scheduled_payments SET account_id = ? WHERE account_id = ?', [newId, oldId]);
+
+  // docs/50 split legs too — left out before 2026-11-25, which left legs
+  // on a deleted account (the api refused the account's DELETE on
+  // transaction_splits_account_id_fkey). A purchase split across both
+  // accounts ends with two legs on newId: they become one leg, and a
+  // purchase left on a single account stops being a split, the same shape
+  // endSplit writes.
+  const touched = await tx.getAll<{ transactionId: string }>(
+    'SELECT DISTINCT transaction_id AS transactionId FROM transaction_splits WHERE account_id = ?',
+    [oldId],
+  );
+  if (touched.length === 0) return;
+  const now = nowUtc();
+  await tx.execute('UPDATE transaction_splits SET account_id = ?, updated_at = ? WHERE account_id = ?', [newId, now, oldId]);
+  for (const { transactionId } of touched) {
+    const legs = await tx.getAll<{ id: string; accountId: string; amountCents: number }>(
+      'SELECT id, account_id AS accountId, amount_cents AS amountCents FROM transaction_splits WHERE transaction_id = ? ORDER BY id',
+      [transactionId],
+    );
+    const onNew = legs.filter((l) => l.accountId === newId);
+    if (onNew.length > 1) {
+      const sum = onNew.reduce((s, l) => s + l.amountCents, 0);
+      await tx.execute('UPDATE transaction_splits SET amount_cents = ?, updated_at = ? WHERE id = ?', [sum, now, onNew[0].id]);
+      for (const extra of onNew.slice(1)) await tx.execute('DELETE FROM transaction_splits WHERE id = ?', [extra.id]);
+    }
+    if (new Set(legs.map((l) => l.accountId)).size === 1) {
+      await tx.execute('DELETE FROM transaction_splits WHERE transaction_id = ?', [transactionId]);
+      await tx.execute('UPDATE transactions SET account_id = ?, updated_at = ? WHERE id = ?', [newId, now, transactionId]);
+    }
+  }
 }
 
 // Manual-merge-only entry points: unlike applySignInMergePlan's rewrites,
