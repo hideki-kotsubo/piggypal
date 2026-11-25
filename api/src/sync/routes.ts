@@ -323,8 +323,11 @@ syncRouter.post('/upload', requireAccessToken, async (req: AuthedRequest, res) =
         // A row other rows still point at (an account with split legs a
         // device forgot to repoint: the account merge before 2026-11-25)
         // used to 500 the whole batch on its FK, and the device retried it
-        // forever. Skipped instead, like owner-profile above: the row stays,
-        // and the device gets it back on its next download.
+        // forever. Skipped instead, like owner-profile above: the row stays.
+        // Touching updated_at matters: PowerSync only sends rows that
+        // changed, so without it the device that deleted the row never
+        // got it back and kept rows pointing at an account it no longer
+        // had (seen 2026-11-25).
         await client.query('SAVEPOINT del');
         try {
           const r = await client.query(`DELETE FROM ${op.table} WHERE id = $1 AND user_id = $2`, [op.id, userId]);
@@ -334,6 +337,7 @@ syncRouter.post('/upload', requireAccessToken, async (req: AuthedRequest, res) =
         } catch (err) {
           if ((err as { code?: string }).code !== '23503') throw err;
           await client.query('ROLLBACK TO SAVEPOINT del');
+          await client.query(`UPDATE ${op.table} SET updated_at = now() WHERE id = $1 AND user_id = $2`, [op.id, userId]);
           result.skipped.push({ table: op.table, id: op.id, reason: 'still-referenced' });
         }
         continue;
