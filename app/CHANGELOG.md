@@ -16,6 +16,16 @@ How to write an entry (docs/59):
   and Play Store release notes.
 -->
 
+## Unreleased
+
+- **Faster transaction list** with years of history: it loads more as
+  you scroll, and opening a transaction or going back is instant again.
+- Dates from earlier years now show the year in the list ("28 Nov 2024").
+- Fixed: very large changes, like merging an account with thousands of
+  transactions, could get stuck and never sync.
+- Fixed: merging two accounts left purchases split across cards pointing
+  at the account that was merged away.
+
 ## 0.15.6 — 2026-11-10
 
 - Fixed: on some accounts, the person who created the account couldn't
