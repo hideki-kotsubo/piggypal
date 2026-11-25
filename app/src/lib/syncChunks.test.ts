@@ -21,4 +21,13 @@ describe('chunkOps', () => {
     for (const c of chunks) expect(JSON.stringify({ ops: c }).length).toBeLessThan(100 * 1024);
     expect(chunks.flat()).toEqual(ops);
   });
+  it('sends every DELETE after every PUT/PATCH across all chunks', () => {
+    const del: SyncOp = { table: 'accounts', op: 'DELETE', id: 'loser' };
+    const patches = Array.from({ length: 450 }, (_, i): SyncOp => ({ table: 'transactions', op: 'PATCH', id: `t-${i}`, data: { account_id: 'survivor' } }));
+    const chunks = chunkOps([del, ...patches]);
+    const flat = chunks.flat();
+    expect(flat.at(-1)).toEqual(del);
+    expect(flat.slice(0, -1)).toEqual(patches);
+    expect(chunks[0].some((o) => o.op === 'DELETE')).toBe(false);
+  });
 });

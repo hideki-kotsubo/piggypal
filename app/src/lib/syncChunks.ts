@@ -5,11 +5,18 @@ import type { SyncOp } from './auth';
 const MAX_CHUNK_BYTES = 64 * 1024;
 const MAX_CHUNK_OPS = 200;
 
+// The api applies every PUT/PATCH before any DELETE so a merge can delete
+// a row before repointing its references (store.tsx mergeAccountInto
+// deletes the loser first) — but only within one request. Chunking split
+// a 2,900-row account merge so the DELETE went out with the first chunk
+// while most transactions still pointed at it: transactions_account_id_fkey.
+// Same order over the whole local transaction, before chunking.
 export function chunkOps(ops: SyncOp[]): SyncOp[][] {
+  const ordered = [...ops.filter((op) => op.op !== 'DELETE'), ...ops.filter((op) => op.op === 'DELETE')];
   const chunks: SyncOp[][] = [];
   let current: SyncOp[] = [];
   let bytes = 0;
-  for (const op of ops) {
+  for (const op of ordered) {
     const size = JSON.stringify(op).length + 1;
     if (current.length > 0 && (bytes + size > MAX_CHUNK_BYTES || current.length >= MAX_CHUNK_OPS)) {
       chunks.push(current);
