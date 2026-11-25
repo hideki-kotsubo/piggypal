@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, NavLink, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
@@ -46,16 +46,24 @@ export function TransactionList() {
   const [merchantExpanded, setMerchantExpanded] = useState(false);
   const [customDateOpen, setCustomDateOpen] = useState(false);
 
+  // The search box keeps its own text. It used to read it back from the
+  // URL, but React Router applies URL changes as a transition: while the
+  // list re-filtered (slow with years of history), React put the input back
+  // to its old value and the next keystroke built on that, dropping
+  // letters. The URL still gets every change (Back keeps the search), and
+  // the list filters on a deferred copy so typing never waits for it.
+  const [searchText, setSearchText] = useState(() => searchParams.get('q') ?? '');
+  const deferredSearch = useDeferredValue(searchText);
   const filters: TransactionFilters = useMemo(
     () => ({
-      q: searchParams.get('q') ?? '',
+      q: deferredSearch,
       categoryId: searchParams.get('category'),
       accountId: searchParams.get('account'),
       merchant: searchParams.get('merchant'),
       dateFrom: searchParams.get('from'),
       dateTo: searchParams.get('to'),
     }),
-    [searchParams],
+    [searchParams, deferredSearch],
   );
 
   // docs/18 D85: filter state lives in the URL, not local useState — a
@@ -193,8 +201,11 @@ export function TransactionList() {
           </svg>
           <input
             placeholder={t('transactions.searchPlaceholder')}
-            value={filters.q}
-            onChange={(e) => setParam('q', e.target.value)}
+            value={searchText}
+            onChange={(e) => {
+              setSearchText(e.target.value);
+              setParam('q', e.target.value);
+            }}
           />
         </div>
 

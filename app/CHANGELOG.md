@@ -21,6 +21,7 @@ How to write an entry (docs/59):
 - **Faster transaction list** with years of history: it loads more as
   you scroll, and opening a transaction or going back is instant again.
 - Dates from earlier years now show the year in the list ("28 Nov 2024").
+- Fixed: typing in the Transactions search box could drop letters.
 - Fixed: very large changes, like merging an account with thousands of
   transactions, could get stuck and never sync.
 - Fixed: merging two accounts left purchases split across cards pointing
