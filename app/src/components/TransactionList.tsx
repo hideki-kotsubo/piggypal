@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, NavLink, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
@@ -21,6 +21,13 @@ import { PrivateMark } from './PrivateMark';
 import type { Transaction } from '../lib/types';
 
 const MERCHANT_CAP = 8;
+// Rows rendered at first, and added each time the end comes into view.
+// A few years of imported history is thousands of rows; rendering them
+// all made opening a transaction and coming Back visibly slow.
+const PAGE_SIZE = 150;
+// How far each filter combination was scrolled out, so Back (which
+// remounts this screen) brings back the same rows instead of page one.
+const shownByQuery = new Map<string, number>();
 const DATE_PRESETS: { id: DatePreset; labelKey: string }[] = [
   { id: 'week', labelKey: 'filter.thisWeek' },
   { id: 'month', labelKey: 'filter.thisMonth' },
@@ -39,14 +46,17 @@ export function TransactionList() {
   const [merchantExpanded, setMerchantExpanded] = useState(false);
   const [customDateOpen, setCustomDateOpen] = useState(false);
 
-  const filters: TransactionFilters = {
-    q: searchParams.get('q') ?? '',
-    categoryId: searchParams.get('category'),
-    accountId: searchParams.get('account'),
-    merchant: searchParams.get('merchant'),
-    dateFrom: searchParams.get('from'),
-    dateTo: searchParams.get('to'),
-  };
+  const filters: TransactionFilters = useMemo(
+    () => ({
+      q: searchParams.get('q') ?? '',
+      categoryId: searchParams.get('category'),
+      accountId: searchParams.get('account'),
+      merchant: searchParams.get('merchant'),
+      dateFrom: searchParams.get('from'),
+      dateTo: searchParams.get('to'),
+    }),
+    [searchParams],
+  );
 
   // docs/18 D85: filter state lives in the URL, not local useState — a
   // filtered result links to /transactions/:id (docs/17), and hitting Back
@@ -64,15 +74,64 @@ export function TransactionList() {
     setOpenFilter((open) => (open === key ? null : key));
   }
 
-  const all = [...store.transactions]
-    .filter((tx) => !tx.deletedAt)
-    .sort((a, b) => (a.occurredAt < b.occurredAt ? 1 : -1));
-  const filtered = filterTransactions(all, filters, store.transactionSplits);
+  const queryKey = searchParams.toString();
+  const all = useMemo(
+    () => store.transactions.filter((tx) => !tx.deletedAt).sort((a, b) => (a.occurredAt < b.occurredAt ? 1 : -1)),
+    [store.transactions],
+  );
+  const filtered = useMemo(
+    () => filterTransactions(all, filters, store.transactionSplits),
+    [all, filters, store.transactionSplits],
+  );
   // docs/50 — filtered by account, a split purchase counts (and shows)
   // only that account's share, same as the account's balance and page.
-  const shares = filters.accountId ? accountShares(store.transactionSplits, filters.accountId) : null;
-  const amountOf = (tx: Transaction) => shares?.get(tx.id) ?? tx.amountCents;
-  const totals = totalsByCurrency(filtered, amountOf);
+  const accountFilter = filters.accountId;
+  const shares = useMemo(
+    () => (accountFilter ? accountShares(store.transactionSplits, accountFilter) : null),
+    [store.transactionSplits, accountFilter],
+  );
+  const amountOf = useCallback((tx: Transaction) => shares?.get(tx.id) ?? tx.amountCents, [shares]);
+  const totals = useMemo(() => totalsByCurrency(filtered, amountOf), [filtered, amountOf]);
+  // Day subtotals come from the whole day, even when the page ends midway
+  // through it (docs/35).
+  const dayTotals = useMemo(() => {
+    const m = new Map<string, ReturnType<typeof totalsByCurrency>>();
+    for (const g of groupByDay(filtered)) m.set(g.key, totalsByCurrency(g.items, amountOf));
+    return m;
+  }, [filtered, amountOf]);
+  const categoryById = useMemo(() => new Map(store.categories.map((c) => [c.id, c])), [store.categories]);
+  const accountById = useMemo(() => new Map(store.accounts.map((a) => [a.id, a])), [store.accounts]);
+  const splitCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const s of store.transactionSplits) m.set(s.transactionId, (m.get(s.transactionId) ?? 0) + 1);
+    return m;
+  }, [store.transactionSplits]);
+
+  const [shown, setShown] = useState(() => shownByQuery.get(queryKey) ?? PAGE_SIZE);
+  const [shownFor, setShownFor] = useState(queryKey);
+  if (shownFor !== queryKey) {
+    // A new search or filter starts again from the top.
+    setShownFor(queryKey);
+    setShown(shownByQuery.get(queryKey) ?? PAGE_SIZE);
+  }
+  useEffect(() => {
+    shownByQuery.set(queryKey, shown);
+  }, [queryKey, shown]);
+  const visible = filtered.length > shown ? filtered.slice(0, shown) : filtered;
+  const hasMore = visible.length < filtered.length;
+  const sentinel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el || !hasMore || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) setShown((n) => n + PAGE_SIZE);
+      },
+      { rootMargin: '800px 0px' },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasMore, shown]);
   const filtersActive = hasActiveFilters(filters);
 
   const rankedMerchants = store.rankedMerchants();
@@ -269,20 +328,20 @@ export function TransactionList() {
         <p className="empty-note">{filtersActive ? t('transactions.noMatches') : t('transactions.empty')}</p>
       ) : (
         <div className="recent" style={{ marginTop: '0.5rem' }}>
-          {groupByDay(filtered).map((group) => (
-            <Fragment key={group.label}>
+          {groupByDay(visible).map((group) => (
+            <Fragment key={group.key}>
               <div className="day-label">
                 <span>{group.label}</span>
                 <span className="day-subtotal">
-                  {totalsByCurrency(group.items, amountOf).map((tx, i) => (
+                  {(dayTotals.get(group.key) ?? []).map((tx, i) => (
                     <span key={tx.currency}>{i > 0 && ' · '}{formatAmount(tx.cents, tx.currency)}</span>
                   ))}
                 </span>
               </div>
               <div className="day-card">
                 {group.items.map((tx) => {
-                  const category = store.categories.find((c) => c.id === tx.categoryId);
-                  const account = store.accounts.find((a) => a.id === tx.accountId);
+                  const category = tx.categoryId ? categoryById.get(tx.categoryId) : undefined;
+                  const account = tx.accountId ? accountById.get(tx.accountId) : undefined;
                   // docs/50 — a split transaction has no single account;
                   // show how many legs it's split across instead of the
                   // misleading '—' fallback (it has 2+ accounts, not zero).
@@ -291,7 +350,7 @@ export function TransactionList() {
                     share !== undefined
                       ? t('accounts.splitLeg', { total: formatAmount(tx.amountCents, tx.currency) })
                       : tx.accountId === null
-                      ? t('transaction.splitCount', { count: store.transactionSplits.filter((s) => s.transactionId === tx.id).length })
+                      ? t('transaction.splitCount', { count: splitCounts.get(tx.id) ?? 0 })
                       : account
                         ? accountLabel(account)
                         : '—';
@@ -321,6 +380,7 @@ export function TransactionList() {
               </div>
             </Fragment>
           ))}
+          {hasMore && <div ref={sentinel} className="list-sentinel" aria-hidden="true" style={{ height: 1 }} />}
         </div>
       )}
     </main>

@@ -48,7 +48,7 @@ export function RecentList() {
       <div className="section-label">{t('home.recent')}</div>
       <div className="recent">
         {groupByDay(recent).map((group) => (
-          <Fragment key={group.label}>
+          <Fragment key={group.key}>
             <div className="day-label">
               <span>{group.label}</span>
               <span className="day-subtotal">

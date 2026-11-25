@@ -1,5 +1,5 @@
 import { appendDigit, dropDigit } from '../lib/cents';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '../lib/store';
 import { categoryLabel } from '../lib/starterLabels';
@@ -72,14 +72,14 @@ export function TransactionEditForm({ transaction, onDone }: { transaction: Tran
   // value was used as a filter, so "Costco Richmond" found nothing and
   // "Costco" found it.
   const [merchantTyping, setMerchantTyping] = useState(false);
-  const merchantSuggestions =
-    merchantStr && !merchantTyping
-      ? [merchantStr]
-      : locationSuggestions(
-          store.transactions.filter((t) => !t.deletedAt),
-          merchantStr,
-          { excludeId: transaction.id },
-        );
+  const activeTransactions = useMemo(() => store.transactions.filter((t) => !t.deletedAt), [store.transactions]);
+  const merchantSuggestions = useMemo(
+    () =>
+      merchantStr && !merchantTyping
+        ? [merchantStr]
+        : locationSuggestions(activeTransactions, merchantStr, { excludeId: transaction.id }),
+    [activeTransactions, merchantStr, merchantTyping, transaction.id],
+  );
   // <= 0, not < 0 — a brand-new blank transaction (docs/19's "+" quick-add)
   // starts at exactly $0, which a real, already-entered transaction never
   // is; treating that as expense (the common case) rather than income

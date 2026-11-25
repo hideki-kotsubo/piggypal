@@ -74,7 +74,13 @@ export function utcToLocal(iso: string, timeZone?: string): string | null {
     hourCycle: 'h23',
   }).formatToParts(d);
   const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '00';
-  return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}:${get('second')}`;
+  const local = `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}:${get('second')}`;
+  // Intl doesn't pad the year, so "0001-01-01T00:00:00Z" (a .NET
+  // DateTime.MinValue placeholder) came out as "1-12-31T…", which no
+  // Date accepts and the review screen crashed on. Years before 1900 are
+  // placeholders, not spending, so they're a bad date too.
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(local) || Number(local.slice(0, 4)) < 1900) return null;
+  return local;
 }
 
 const TYPES: Record<number, ImportKind> = { 1: 'expense', 2: 'income', 3: 'transfer' };
